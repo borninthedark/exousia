@@ -10,13 +10,14 @@ LABEL \
 
 # --- Modify the Base Package Set ---
 # Add RPM Fusion repos to the image
+# Add RPM Fusion repos using dnf
 RUN bash -c '\
     set -euo pipefail; \
     FEDORA_VERSION=$(rpm -E %fedora); \
-    rpm-ostree install \
+    dnf install -y \
       https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm \
       https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \
-    rpm-ostree upgrade \
+    dnf clean all \
 '
 
 # Use rpm-ostree to remove or replace packages from the base image.
