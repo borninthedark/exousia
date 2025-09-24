@@ -9,10 +9,15 @@ LABEL \
     description="Fedora Atomic - Bootc Custom"
 
 # --- Modify the Base Package Set ---
-RUN rpm-ostree install \
-    [https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm](https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm) -E %fedora).noarch.rpm \
-    [https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm](https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm) -E %fedora).noarch.rpm \
-    && rpm-ostree upgrade
+# Add RPM Fusion repos to the image
+RUN bash -c '\
+    set -euo pipefail; \
+    FEDORA_VERSION=$(rpm -E %fedora); \
+    rpm-ostree install \
+      https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm \
+      https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \
+    rpm-ostree upgrade \
+'
 
 # Use rpm-ostree to remove or replace packages from the base image.
 # For example, let's remove the default 'foot' terminal and replace 'dunst' notifications.
