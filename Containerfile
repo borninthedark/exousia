@@ -47,8 +47,10 @@ RUN dnf install -y \
     swaync \
     sddm \
     && dnf swap -y swaylock swaylock-effects \
-    && dnf mark hold swaylock \
     && dnf clean all
+
+# Block Swaylock 
+RUN echo "exclude=swaylock" >> /etc/dnf/dnf.conf
 
 # Enable graphical boot and set SDDM as the display manager
 RUN systemctl set-default graphical.target && \
