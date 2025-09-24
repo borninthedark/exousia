@@ -1,5 +1,5 @@
 # Base Image
-FROM localhost:500/exousia:latest
+FROM localhost:5000/exousia:latest
 
 # Add metadata for my custom bootc image
 LABEL \
