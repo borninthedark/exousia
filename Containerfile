@@ -36,6 +36,12 @@ RUN dnf install -y \
     sway \ 
     swayimg \ 
     swaybg \ 
+    wireguard-tools \ 
+    fastfetch \ 
+    htop \ 
+    btop \ 
+    direnv \ 
+    fzf \ 
     rofi \ 
     waybar \ 
     kitty \ 
