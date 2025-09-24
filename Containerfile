@@ -23,8 +23,10 @@ RUN chmod +x /usr/local/bin/*
 # Second, update all packages from the base image.
 RUN dnf upgrade -y
 
-# Third, add RPM Fusion repositories and enable the Cisco OpenH264 repo.
-RUN dnf install -y \
+# Third, install DNF plugins, then add RPM Fusion and enable the Cisco OpenH264 repo.
+# This is a more robust approach that ensures 'dnf config-manager' is available.
+RUN dnf install -y dnf-plugins-core && \
+    dnf install -y \
     [https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm](https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm) -E %fedora).noarch.rpm \
     [https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm](https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm) -E %fedora).noarch.rpm \
     && dnf config-manager --set-enabled fedora-cisco-openh264
