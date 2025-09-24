@@ -39,6 +39,7 @@ RUN dnf install -y \
 RUN dnf install -y \
     sway \
     swaybg \
+    sddm \ 
     swayimg \
     waybar \
     rofi \
