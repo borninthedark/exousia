@@ -1,4 +1,4 @@
-# Makefile for building and managing the Exousia OS configuration layer.
+# Makefile for building and managing the configuration layer.
 # This automates the build, tagging, and push process.
 
 # --- Configuration ---
