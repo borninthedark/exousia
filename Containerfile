@@ -33,14 +33,13 @@ RUN dnf upgrade -y
 RUN dnf install -y \
     https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
     https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm \
-    && dnf config-manager setopt fedora-cisco-openh264.enabled=1
+    && dnf config-manager --set-enabled fedora-cisco-openh264
 
 # Finally, install the desired set of packages using dnf5.
 RUN dnf install -y \
     sway \
     swaybg \
     swayimg \
-    swaylock-effects \
     waybar \
     rofi \
     wob \
@@ -49,5 +48,7 @@ RUN dnf install -y \
     htop \
     nwg-look \
     swaync \
+    && dnf swap -y swaylock swaylock-effects \
+    && dnf mark hold swaylock \
     && dnf clean all
 
