@@ -11,17 +11,17 @@ LABEL \
 # --- Modify the Base Package Set ---
 # Use rpm-ostree to remove or replace packages from the base image.
 # For example, let's remove the default 'foot' terminal and replace 'dunst' notifications.
-RUN rpm-ostree override remove foot dunst \
-    && dnf install -y kitty swaync \
-    && dnf clean all
+# RUN rpm-ostree override remove foot dunst \
+#     && dnf install -y kitty swaync \
+#     && dnf clean all
 
 # --- Add Your Customizations Below ---
-RUN dnf install -y \
-    glances \
-    wob \
-    pam-u2f \ 
-    pamu2fcfg \ 
-    && dnf clean all
+# RUN dnf install -y \
+#    glances \
+#    wob \
+#    pam-u2f \ 
+#    pamu2fcfg \ 
+#    && dnf clean all
 
 # --- Layer on Custom Configurations ---
 # This copies your latest configs into the system-wide override directory.
