@@ -14,21 +14,23 @@ COPY custom-repos/ /etc/yum.repos.d/
 COPY custom-configs/ /etc/sway/config.d/
 COPY scripts/ /usr/local/bin/
 
-# --- Stage 2: Execute All System Modifications ---
-# This single RUN command handles all execution steps for a more efficient layer.
-RUN \
-    # First, make all copied scripts executable.
-    chmod +x /usr/local/bin/*; \
-    \
-    # Update all packages from the base image using dnf.
-    dnf upgrade -y; \
-    \
-    # Add RPM Fusion, enable Cisco OpenH264, and install all desired packages.
-    dnf install -y \
+# --- Stage 2: Execute System Modifications ---
+# Each RUN command creates a new layer, which is cleaner and less error-prone.
+
+# First, make all copied scripts executable.
+RUN chmod +x /usr/local/bin/*
+
+# Second, update all packages from the base image.
+RUN dnf upgrade -y
+
+# Third, add RPM Fusion repositories and enable the Cisco OpenH264 repo.
+RUN dnf install -y \
     [https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm](https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm) -E %fedora).noarch.rpm \
     [https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm](https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm) -E %fedora).noarch.rpm \
-    && dnf config-manager --set-enabled fedora-cisco-openh264 \
-    && dnf install -y \
+    && dnf config-manager --set-enabled fedora-cisco-openh264
+
+# Finally, install the desired set of packages for the Sway desktop and custom tools.
+RUN dnf install -y \
     sway \
     swaybg \
     swayimg \
@@ -42,4 +44,3 @@ RUN \
     nwg-look \
     swaync \
     && dnf clean all
-
