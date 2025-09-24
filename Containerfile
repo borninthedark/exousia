@@ -49,6 +49,5 @@ RUN dnf install -y \
     nwg-look \
     swaync \
     && dnf swap -y swaylock swaylock-effects \
-    && dnf mark hold swaylock \
     && dnf clean all
 
