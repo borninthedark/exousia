@@ -1,76 +1,47 @@
-# Start from the minimal, generic Fedora bootc base image
-FROM quay.io/fedora/fedora-bootc:42
+# Base Image
+FROM localhost:5000/exousia:latest
 
-# Add metadata for the base image
+# Add metadata for my custom bootc image
 LABEL \
     name="exousia" \
-    version="2.3.0" \
+    version="0.0.2" \
     author="Princeton Strong" \
-    description="A bespoke Sway OS, built from a minimal bootc base with DNF5 and SDDM."
+    description="Fedora Atomic - Bootc Custom"
 
-# --- Stage 1: Add All Local Files ---
-COPY custom-repos/ /etc/yum.repos.d/
+# --- Modify the Base Package Set ---
+# Add RPM Fusion repos to the image
+# Add RPM Fusion repos using dnf
+# RUN bash -c '\
+#    set -euo pipefail; \
+#    FEDORA_VERSION=$(rpm -E %fedora); \
+#    dnf install -y \
+#      https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm \
+#      https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \
+#    dnf clean all \
+# '
+
+# Use rpm-ostree to remove or replace packages from the base image.
+# For example, let's remove the default 'foot' terminal and replace 'dunst' notifications.
+# RUN rpm-ostree override remove foot dunst \
+#     && dnf install -y kitty swaync \
+#     && dnf clean all
+
+# --- Add Your Customizations Below ---
+# RUN dnf install -y \
+#    glances \
+#    wob \
+#    pam-u2f \ 
+#    pamu2fcfg \ 
+#    && dnf clean all
+
+# --- Layer on Custom Configurations ---
+# This copies your latest configs into the system-wide override directory.
+# Since packages are already in the base, this is all we need to do.
 COPY custom-configs/ /etc/sway/config.d/
+
+# --- Add Custom Scripts ---
+# Copy the contents of our local 'scripts' directory into the image
 COPY scripts/ /usr/local/bin/
 
-# --- Stage 2: Execute System Modifications ---
-
-# First, make all copied scripts executable.
+# Make all scripts in that directory executable
 RUN chmod +x /usr/local/bin/*
-
-# Block Swaylock 
-RUN echo "exclude=swaylock" >> /etc/dnf/dnf.conf
-
-# Install Flatpak and add the Flathub repository
-RUN dnf install -y flatpak && \
-    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
-# Second, install dnf5 and create a system-wide alias to it.
-RUN dnf install -y dnf5 dnf5-plugins \
-    && rm -f /usr/bin/dnf \
-    && ln -s /usr/bin/dnf5 /usr/bin/dnf
-
-# Third, update all packages.
-RUN dnf upgrade -y
-
-# Fourth, enable RPM Fusion and Cisco OpenH264 repo.
-RUN dnf install -y \
-    https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
-    https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm \
-    && dnf config-manager setopt fedora-cisco-openh264.enabled=1
-
-# Install Sway desktop stack + SDDM
-RUN dnf install -y \
-    sway \
-    swaybg \
-    swayimg \
-    lsd \ 
-    bat \ 
-    direnv \ 
-    fzf \ 
-    fastfetch \ 
-    waybar \
-    rofi \
-    wob \
-    kitty \
-    neovim \
-    htop \
-    nwg-look \
-    swaync \
-    sddm \
-    && dnf swap -y swaylock swaylock-effects \
-    && dnf clean all
-
-# Enable graphical boot and set SDDM as the display manager
-RUN systemctl set-default graphical.target && \
-    systemctl enable sddm.service
-
-# Ensure SDDM uses Sway as the default session
-RUN mkdir -p /usr/share/wayland-sessions && \
-    echo "[Desktop Entry]\n\
-Name=Sway\n\
-Comment=An i3-compatible Wayland compositor\n\
-Exec=sway\n\
-Type=Application\n\
-DesktopNames=Sway\n" > /usr/share/wayland-sessions/sway.desktop
-
