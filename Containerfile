@@ -9,23 +9,22 @@ LABEL \
     description="A bespoke Sway OS, built from a minimal bootc base."
 
 # --- Stage 1: Add All Local Files ---
-# Copying files first optimizes the build cache.
+# Copying all local files first optimizes the build cache.
+COPY custom-repos/ /etc/yum.repos.d/
 COPY custom-configs/ /etc/sway/config.d/
 COPY scripts/ /usr/local/bin/
-COPY custom-repos/ /etc/yum.repos.d/
 
-# --- Stage 2: Execute System Modifications ---
-
-# Make all copied scripts executable
-RUN chmod +x /usr/local/bin/*
-
-# Upgrade all core OS packages provided by the base image.
-# This is one of the few places where 'rpm-ostree' is necessary.
-RUN rpm-ostree upgrade
-
-# Add RPM Fusion, enable Cisco OpenH264, and install all desired packages in a single layer.
-# This is the standard and most efficient way to manage packages with DNF.
-RUN dnf install -y \
+# --- Stage 2: Execute All System Modifications ---
+# This single RUN command handles all execution steps for a more efficient layer.
+RUN \
+    # First, make all copied scripts executable.
+    chmod +x /usr/local/bin/*; \
+    \
+    # Update all packages from the base image using dnf.
+    dnf upgrade -y; \
+    \
+    # Add RPM Fusion, enable Cisco OpenH264, and install all desired packages.
+    dnf install -y \
     [https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm](https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm) -E %fedora).noarch.rpm \
     [https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm](https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm) -E %fedora).noarch.rpm \
     && dnf config-manager --set-enabled fedora-cisco-openh264 \
