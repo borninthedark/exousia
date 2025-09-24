@@ -31,3 +31,4 @@ push: build
 deploy:
 	@echo "--> To follow updates, switch to the ':latest' tag:"
 	@echo "sudo bootc switch ostree-unverified-container:$(IMAGE_LATEST)"
+
