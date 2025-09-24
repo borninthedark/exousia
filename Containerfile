@@ -21,6 +21,10 @@ RUN chmod +x /usr/local/bin/*
 # Block Swaylock 
 RUN echo "exclude=swaylock" >> /etc/dnf/dnf.conf
 
+# Install Flatpak and add the Flathub repository
+RUN dnf install -y flatpak && \
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
 # Second, install dnf5 and create a system-wide alias to it.
 RUN dnf install -y dnf5 dnf5-plugins \
     && rm -f /usr/bin/dnf \
@@ -40,6 +44,11 @@ RUN dnf install -y \
     sway \
     swaybg \
     swayimg \
+    lsd \ 
+    bat \ 
+    direnv \ 
+    fzf \ 
+    fastfetch \ 
     waybar \
     rofi \
     wob \
