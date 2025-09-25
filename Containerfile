@@ -51,7 +51,7 @@ RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.
 # Plymouth configuration
 # ------------------------------
 RUN plymouth-set-default-theme bgrt-better-luks \
- && dracut -f
+ && dracut --no-kernel -f
 
 # ------------------------------
 # Enable Services
