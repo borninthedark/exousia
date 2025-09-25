@@ -1,0 +1,5 @@
+# This file lists all packages to be REMOVED from the base image.
+# Add one package per line. Comments are ignored.
+
+foot
+dunst

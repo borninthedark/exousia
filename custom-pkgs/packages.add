@@ -1,0 +1,54 @@
+# Sway
+sway
+swaybg
+swayimg
+waybar
+rofi
+wob
+swaync
+
+# Fonts
+
+# Boot Splash
+plymouth
+plymouth-system-theme
+
+# Wayland utils
+grim
+slurp
+mako
+wl-clipboard
+kanshi
+
+# Display manager
+greetd
+greetd-tuigreet
+
+# Core Utilities
+kitty
+neovim
+htop
+nwg-look
+btop
+fastfetch
+glances
+
+# Tools
+chezmoi
+lsd
+fzf
+direnv
+distrobox
+wireguard-tools
+
+# Virtualization
+virt-manager
+qemu-kvm
+
+# Security
+pam-u2f
+pamu2fcfg
+
+# Developer & Power User Tools
+ripgrep
+zoxide
