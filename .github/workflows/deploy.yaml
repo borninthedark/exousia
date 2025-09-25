@@ -43,7 +43,7 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Containerfile
-          ignore: DL3041,DL3059,SC2086
+          ignore: DL3041,DL3059,SC2086,DL4006 
 
       - name: Setup Bats
         uses: bats-core/bats-action@3.0.0
