@@ -31,7 +31,7 @@ RUN bash -c '\
     dnf clean all'
     
 # --- Install Starship ---
-RUN curl -sS https://starship.rs/install.sh | sh
+RUN curl -sS https://starship.rs/install.sh | sh --yes
 
 # --- Remove or Replace Base Packages via rpm-ostree ---
 RUN rpm-ostree override remove foot dunst \
