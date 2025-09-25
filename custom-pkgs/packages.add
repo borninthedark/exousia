@@ -4,12 +4,14 @@ swaybg
 swayimg
 waybar
 rofi-wayland
+
 wob
 swaync
 thunar
 pipewire
 wireplumber
 xdg-desktop-portal-wlr
+xfce-polkit
 flatpak-xdg-utils
 xdg-user-dirs
 xdg-utils
