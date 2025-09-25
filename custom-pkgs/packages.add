@@ -14,8 +14,7 @@ xdg-desktop-portal-wlr
 flatpak-xdg-utils
 xdg-user-dirs
 xdg-utils
-xdg-dbus-prox
-xfce
+xdg-dbus-proxy
 brightnessctl
 pulseaudio-utils
 
