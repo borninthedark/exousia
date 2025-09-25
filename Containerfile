@@ -2,7 +2,7 @@
 # Base image
 # ------------------------------
 FROM quay.io/fedora/fedora-sway-atomic:43
-MAINTAINER uryu
+LABEL maintainer="uryu"
 
 # ------------------------------
 # Copy all inputs first
@@ -23,7 +23,7 @@ RUN jq -r .packages[] /usr/share/rpm-ostree/treefile.json \
 # ------------------------------
 # DNF: Install, remove, upgrade, add repos in one layer
 # ------------------------------
-RUN set -eux; \
+RUN set -euxo pipefail; \
     dnf install -y dnf5 dnf5-plugins && \
     rm -f /usr/bin/dnf && ln -s /usr/bin/dnf5 /usr/bin/dnf; \
     FEDORA_VERSION=$(rpm -E %fedora); \
