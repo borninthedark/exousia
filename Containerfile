@@ -9,6 +9,9 @@ COPY custom-scripts/ /usr/local/bin/
 # --- Make Scripts Executable ---
 RUN chmod +x /usr/local/bin/*
 
+# This creates a group
+RUN groupadd libvirt 
+
 # --- Install DNF5 and Replace DNF ---
 RUN dnf install -y dnf5 dnf5-plugins \
     && rm -f /usr/bin/dnf \
@@ -26,6 +29,9 @@ RUN bash -c '\
       https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \
     dnf config-manager setopt fedora-cisco-openh264.enabled=1; \
     dnf clean all'
+    
+# --- Install Starship ---
+RUN curl -sS https://starship.rs/install.sh | sh
 
 # --- Remove or Replace Base Packages via rpm-ostree ---
 RUN rpm-ostree override remove foot dunst \
@@ -36,6 +42,7 @@ RUN rpm-ostree override remove foot dunst \
 RUN dnf install -y \
     wob \
     bat \ 
+    chezmoi \
     lsd \ 
     fzf \ 
     direnv \ 
