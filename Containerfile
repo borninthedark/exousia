@@ -1,22 +1,37 @@
+# ------------------------------
 # Base bootc image
+# ------------------------------
 FROM quay.io/fedora/fedora-bootc:42
 MAINTAINER uryu
 
-# --- Filesystem setup from fedora-bootc ---
-RUN rmdir /opt && ln -s -T /var/opt /opt
-RUN mkdir /var/roothome
-
-# --- Package lists ---
+# ------------------------------
+# Copy all inputs first
+# ------------------------------
 COPY --chmod=0644 ./custom-pkgs/packages.remove /usr/local/share/sericea-bootc/packages-removed
-COPY --chmod=0644 ./custom-pkgs/packages.add /usr/local/share/sericea-bootc/packages-added
-RUN jq -r .packages[] /usr/share/rpm-ostree/treefile.json > /usr/local/share/sericea-bootc/packages-fedora-bootc
+COPY --chmod=0644 ./custom-pkgs/packages.add    /usr/local/share/sericea-bootc/packages-added
+COPY --chmod=0644 custom-configs/plymouth/ /usr/share/plymouth/themes/
+COPY --chmod=0644 custom-repos/*.repo           /etc/yum.repos.d/
+COPY --chmod=0644 custom-configs/               /etc/
+COPY --chmod=0755 custom-scripts/               /usr/local/bin/
 
-# --- Repositories ---
+# ------------------------------
+# Filesystem setup
+# ------------------------------
+RUN rmdir /opt && ln -s -T /var/opt /opt \
+ && mkdir /var/roothome
+
+# ------------------------------
+# Package lists
+# ------------------------------
+RUN jq -r .packages[] /usr/share/rpm-ostree/treefile.json \
+    > /usr/local/share/sericea-bootc/packages-fedora-bootc
+
+# ------------------------------
+# Repositories
+# ------------------------------
 RUN dnf install -y dnf5 dnf5-plugins \
-    && rm -f /usr/bin/dnf \
-    && ln -s /usr/bin/dnf5 /usr/bin/dnf
-    
-COPY custom-repos/*.repo /etc/yum.repos.d/
+ && rm -f /usr/bin/dnf \
+ && ln -s /usr/bin/dnf5 /usr/bin/dnf
 
 RUN bash -c '\
     set -euo pipefail; \
@@ -24,44 +39,38 @@ RUN bash -c '\
     dnf install -y \
       https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm \
       https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \
-    dnf config-manager --setopt=fedora-cisco-openh264.enabled=1; \
+    dnf config-manager setopt fedora-cisco-openh264.enabled=1; \
     dnf clean all'
 
-# --- System Upgrade ---
+# ------------------------------
+# System upgrade
+# ------------------------------
 RUN dnf upgrade -y
 
-# --- Base Environment & Auth ---
-RUN dnf -y install @sway-desktop-environment waybar grim slurp mako wl-clipboard kanshi && dnf clean all
-RUN dnf -y install pam-u2f pamu2fcfg libfido2 && dnf clean all
-
-RUN dnf -y install authselect && mkdir -p /etc/authselect/custom/u2f-system
-COPY --chmod=0644 ./custom-configs/authselect/* /etc/authselect/custom/u2f-system/
-
+# ------------------------------
+# Groups / users
+# ------------------------------
 RUN groupadd libvirt
 
-# --- Apply Custom Package Lists ---
-RUN grep -vE '^#' /usr/local/share/sericea-bootc/packages-removed | xargs dnf -y remove || true
-RUN grep -vE '^#' /usr/local/share/sericea-bootc/packages-added | xargs dnf -y install --allowerasing || true
-RUN dnf -y autoremove && dnf clean all
+# ------------------------------
+# Apply custom package lists
+# ------------------------------
+RUN grep -vE '^#' /usr/local/share/sericea-bootc/packages-removed | xargs -r dnf remove -y \
+ && grep -vE '^#' /usr/local/share/sericea-bootc/packages-added   | xargs -r dnf install -y \
+ && dnf clean all
 
-# --- Configs & Scripts ---
-COPY ./custom-configs/sway/* /etc/sway/config.d/
-COPY --chmod=0755 ./custom-scripts/* /usr/local/bin/
+# ------------------------------
+# Plymouth configuration
+# ------------------------------
+RUN plymouth-set-default-theme bgrt-better-luks && \
+    dracut -f
 
-# --- Configure Flathub ---
-RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
-# --- Users & Auth Setup ---
-COPY --chmod=0755 ./custom-scripts/setup/* /tmp/scripts/
-RUN /tmp/scripts/config-users
-RUN /tmp/scripts/config-authselect && rm -r /tmp/scripts
-
-# --- Systemd services ---
-COPY --chmod=0644 ./custom-configs/systemd/* /usr/lib/systemd/system/
-RUN systemctl enable firstboot-setup.service || true
-RUN systemctl enable bootloader-update.service || true
-RUN systemctl mask bootc-fetch-apply-updates.timer || true
-
-# --- Cleanup + Verify ---
-RUN find /var/log -type f ! -empty -delete
-RUN bootc container lint
+# ------------------------------
+# Enable Services
+# ------------------------------
+RUN systemctl enable plymouth-start.service \
+    plymouth-read-write.service \
+    plymouth-switch-root.service \
+    plymouth-quit.service \
+    plymouth-quit-wait.service \ 
+    greetd.service
