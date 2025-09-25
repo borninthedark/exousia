@@ -38,9 +38,10 @@ jobs:
       - name: Build image with Make
         run: make build IMAGE_BASE=${{ env.IMAGE_BASE }}
 
-      # Use Makefile to run tests
-      - name: Run Bats tests with Make
-        run: make test
+      - name: Run Bats tests
+        uses: bats-core/bats-action@3.0.0
+        with:
+          args: tests/bats
 
       # --- SAST / DAST / SCA ---
       - name: Lint Containerfile
