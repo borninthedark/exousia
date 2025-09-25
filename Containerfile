@@ -27,20 +27,34 @@ RUN jq -r .packages[] /usr/share/rpm-ostree/treefile.json \
     > /usr/local/share/sericea-bootc/packages-fedora-bootc
 
 # ------------------------------
-# DNF: Install, remove, upgrade, add repos in one layer
+# DNF: Install, remove, upgrade, add repos, install polkit-gnome from Koji
 # ------------------------------
 RUN set -eux; \
+    # Use dnf5 as default
     dnf install -y dnf5 dnf5-plugins && \
     rm -f /usr/bin/dnf && ln -s /usr/bin/dnf5 /usr/bin/dnf; \
+    \
     FEDORA_VERSION=$(rpm -E %fedora); \
+    # Enable RPM Fusion repos
     dnf install -y \
       https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm \
       https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \
     dnf config-manager setopt fedora-cisco-openh264.enabled=1; \
+    \
+    # Install custom package list
     grep -vE '^#' /usr/local/share/sericea-bootc/packages-added | xargs -r dnf install -y; \
     grep -vE '^#' /usr/local/share/sericea-bootc/packages-removed | xargs -r dnf remove -y; \
+    \
+    # Install polkit-gnome directly from Koji
+    KOJI_RPM_URL="https://kojipkgs.fedoraproject.org/packages/polkit-gnome/0.105-2.fc42/x86_64/polkit-gnome-0.105-2.fc42.x86_64.rpm"; \
+    curl -L -o /tmp/polkit-gnome.rpm "$KOJI_RPM_URL"; \
+    dnf install -y /tmp/polkit-gnome.rpm; \
+    rm -f /tmp/polkit-gnome.rpm; \
+    \
+    # Upgrade system and clean cache
     dnf upgrade -y; \
     dnf clean all
+
 
 # ------------------------------
 # Add Flathub
@@ -51,6 +65,8 @@ RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.
 # Groups / users
 # ------------------------------
 RUN groupadd -r libvirt
+
+
 
 # ------------------------------
 # Plymouth configuration

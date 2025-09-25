@@ -10,7 +10,12 @@ thunar
 swaylock-effects
 pipewire
 wireplumber
-polkit-gnome
+xdg-desktop-portal-wlr
+flatpak-xdg-utils
+xdg-user-dirs
+xdg-utils
+xdg-dbus-prox
+xfce
 brightnessctl
 pulseaudio-utils
 
