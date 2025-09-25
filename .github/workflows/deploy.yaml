@@ -1,0 +1,96 @@
+name: Fedora Bootc CI - Exousia OS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  pull-requests: write
+  security-events: write
+
+concurrency:
+  group: devsec-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_REPO: ${{ github.repository_owner }}/exousia
+  FULL_IMAGE: ghcr.io/${{ github.repository_owner }}/exousia
+
+jobs:
+  build-scan-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Define the image base path for the CI environment
+      IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/exousia
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Use Makefile to build the container
+      - name: Build image with Make
+        run: make build IMAGE_BASE=${{ env.IMAGE_BASE }}
+
+      # Use Makefile to run tests
+      - name: Run Bats tests with Make
+        run: make test
+
+      # --- SAST / DAST / SCA ---
+      - name: Lint Containerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Containerfile
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+
+      - name: Cache Trivy DB
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ runner.os }}-v2
+
+      - name: Save image for Trivy scan
+        run: |
+          # The Makefile builds an image tagged with the git SHA.
+          # We save that specific image tag to a tar file for scanning.
+          podman save -o image.tar ${{ env.IMAGE_BASE }}:${{ github.sha }}
+
+      - name: Install Trivy
+        run: |
+          curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.52.2/trivy_0.52.2_Linux-64bit.tar.gz \
+            | tar -xz -C /usr/local/bin trivy
+
+      - name: Trivy scan (non-blocking)
+        continue-on-error: true
+        run: |
+          trivy image --input image.tar \
+            --scanners vuln \
+            --severity CRITICAL,HIGH \
+            --exit-code 1 \
+            --format table || echo "::warning::Trivy found CRITICAL or HIGH vulnerabilities"
+
+      - name: Semgrep static analysis
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: auto
+
+      # --- Push to GHCR ---
+      - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push images with Make
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: make push IMAGE_BASE=${{ env.IMAGE_BASE }}
