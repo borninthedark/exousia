@@ -15,12 +15,6 @@ COPY --chmod=0644 custom-configs/               /etc/
 COPY --chmod=0755 custom-scripts/               /usr/local/bin/
 
 # ------------------------------
-# Filesystem setup
-# ------------------------------
-RUN rmdir /opt && ln -s -T /var/opt /opt \
- && mkdir -p /var/roothome
-
-# ------------------------------
 # Package lists
 # ------------------------------
 RUN jq -r .packages[] /usr/share/rpm-ostree/treefile.json \
