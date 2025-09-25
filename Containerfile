@@ -34,7 +34,7 @@ RUN set -eux; \
     grep -vE '^#' /usr/local/share/sericea-bootc/packages-added | xargs -r dnf install -y; \
     grep -vE '^#' /usr/local/share/sericea-bootc/packages-removed | xargs -r dnf remove -y; \
     dnf upgrade -y; \
-    dnf clean all && dnf autoremove -y 
+    dnf clean all 
 
 # ------------------------------
 # Add Flathub
