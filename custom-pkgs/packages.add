@@ -11,7 +11,7 @@ thunar
 pipewire
 wireplumber
 xdg-desktop-portal-wlr
-xfce-polkit
+mate-polkit
 flatpak-xdg-utils
 xdg-user-dirs
 xdg-utils
