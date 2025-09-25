@@ -9,7 +9,7 @@ MAINTAINER uryu
 # ------------------------------
 COPY --chmod=0644 ./custom-pkgs/packages.remove /usr/local/share/sericea-bootc/packages-removed
 COPY --chmod=0644 ./custom-pkgs/packages.add    /usr/local/share/sericea-bootc/packages-added
-COPY --chmod=0644 custom-configs/plymouth/      /usr/share/plymouth/themes/
+COPY --chmod=0644 custom-configs/plymouth/      /usr/share/
 COPY --chmod=0644 custom-repos/*.repo           /etc/yum.repos.d/
 COPY --chmod=0644 custom-configs/               /etc/
 COPY --chmod=0755 custom-scripts/               /usr/local/bin/
