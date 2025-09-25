@@ -24,7 +24,7 @@ build:
 # 'make test' - Runs the Bats test suite.
 test:
 	@echo "--> Running Bats tests..."
-	bats tests/
+	bats tests/image_content.bats
 
 # 'make push' - Pushes the image.
 push: build

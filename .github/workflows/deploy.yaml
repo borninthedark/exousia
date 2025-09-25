@@ -38,16 +38,25 @@ jobs:
       - name: Build image with Make
         run: make build IMAGE_BASE=${{ env.IMAGE_BASE }}
 
-      - name: Run Bats tests
-        uses: bats-core/bats-action@3.0.0
-        with:
-          args: tests/bats
+
 
       # --- SAST / DAST / SCA ---
       - name: Lint Containerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Containerfile
+
+      - name: Setup Bats
+        uses: bats-core/bats-action@3.0.0
+        id: setup-bats
+
+      - name: Bats Bootc Image Test
+        shell: bash
+        id: run-bats
+        env:
+          BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
+          TERM: xterm
+        run: make test
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
