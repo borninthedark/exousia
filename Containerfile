@@ -30,9 +30,6 @@ RUN bash -c '\
     dnf config-manager setopt fedora-cisco-openh264.enabled=1; \
     dnf clean all'
     
-# --- Install Starship ---
-RUN curl -sS https://starship.rs/install.sh --yes | sh 
-
 # --- Remove or Replace Base Packages via rpm-ostree ---
 RUN rpm-ostree override remove foot dunst \
     && dnf install -y kitty swaync \
