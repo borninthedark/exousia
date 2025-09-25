@@ -35,6 +35,10 @@ RUN rpm-ostree override remove foot dunst \
 # --- Install Custom Packages ---
 RUN dnf install -y \
     wob \
+    bat \ 
+    lsd \ 
+    fzf \ 
+    direnv \ 
     neovim \
     distrobox \
     wireguard-tools \
