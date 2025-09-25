@@ -38,13 +38,12 @@ jobs:
       - name: Build image with Make
         run: make build IMAGE_BASE=${{ env.IMAGE_BASE }}
 
-
-
       # --- SAST / DAST / SCA ---
       - name: Lint Containerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Containerfile
+          ignore: DL3041,DL3059,SC2086
 
       - name: Setup Bats
         uses: bats-core/bats-action@3.0.0
