@@ -1,5 +1,5 @@
 # Base Image
-FROM quay.io/fedora/fedora-sway-atomic:42
+FROM quay.io/fedora/fedora-sway-atomic:43
 
 # --- Layer on Custom Configurations ---
 COPY custom-configs/ /etc/sway/config.d/
