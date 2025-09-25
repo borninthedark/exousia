@@ -9,7 +9,7 @@ MAINTAINER uryu
 # ------------------------------
 COPY --chmod=0644 ./custom-pkgs/packages.remove /usr/local/share/sericea-bootc/packages-removed
 COPY --chmod=0644 ./custom-pkgs/packages.add    /usr/local/share/sericea-bootc/packages-added
-COPY --chmod=0644 custom-configs/plymouth/ /usr/share/plymouth/themes/
+COPY --chmod=0644 custom-configs/plymouth/      /usr/share/plymouth/themes/
 COPY --chmod=0644 custom-repos/*.repo           /etc/yum.repos.d/
 COPY --chmod=0644 custom-configs/               /etc/
 COPY --chmod=0755 custom-scripts/               /usr/local/bin/
@@ -18,7 +18,7 @@ COPY --chmod=0755 custom-scripts/               /usr/local/bin/
 # Filesystem setup
 # ------------------------------
 RUN rmdir /opt && ln -s -T /var/opt /opt \
- && mkdir /var/roothome
+ && mkdir -p /var/roothome
 
 # ------------------------------
 # Package lists
@@ -27,50 +27,44 @@ RUN jq -r .packages[] /usr/share/rpm-ostree/treefile.json \
     > /usr/local/share/sericea-bootc/packages-fedora-bootc
 
 # ------------------------------
-# Repositories
+# DNF: Install, remove, upgrade, add repos in one layer
 # ------------------------------
-RUN dnf install -y dnf5 dnf5-plugins \
- && rm -f /usr/bin/dnf \
- && ln -s /usr/bin/dnf5 /usr/bin/dnf
-
-RUN bash -c '\
-    set -euo pipefail; \
+RUN set -eux; \
+    dnf install -y dnf5 dnf5-plugins && \
+    rm -f /usr/bin/dnf && ln -s /usr/bin/dnf5 /usr/bin/dnf; \
     FEDORA_VERSION=$(rpm -E %fedora); \
     dnf install -y \
       https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm \
       https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \
     dnf config-manager setopt fedora-cisco-openh264.enabled=1; \
-    dnf clean all'
+    grep -vE '^#' /usr/local/share/sericea-bootc/packages-added | xargs -r dnf install -y; \
+    grep -vE '^#' /usr/local/share/sericea-bootc/packages-removed | xargs -r dnf remove -y; \
+    dnf upgrade -y; \
+    dnf clean all
 
 # ------------------------------
-# System upgrade
+# Add Flathub
 # ------------------------------
-RUN dnf upgrade -y
+RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # ------------------------------
 # Groups / users
 # ------------------------------
-RUN groupadd libvirt
-
-# ------------------------------
-# Apply custom package lists
-# ------------------------------
-RUN grep -vE '^#' /usr/local/share/sericea-bootc/packages-removed | xargs -r dnf remove -y \
- && grep -vE '^#' /usr/local/share/sericea-bootc/packages-added   | xargs -r dnf install -y \
- && dnf clean all
+RUN groupadd -r libvirt
 
 # ------------------------------
 # Plymouth configuration
 # ------------------------------
-RUN plymouth-set-default-theme bgrt-better-luks && \
-    dracut -f
+RUN plymouth-set-default-theme bgrt-better-luks \
+ && dracut -f
 
 # ------------------------------
 # Enable Services
 # ------------------------------
-RUN systemctl enable plymouth-start.service \
+RUN systemctl enable \
+    plymouth-start.service \
     plymouth-read-write.service \
     plymouth-switch-root.service \
     plymouth-quit.service \
-    plymouth-quit-wait.service \ 
+    plymouth-quit-wait.service \
     greetd.service

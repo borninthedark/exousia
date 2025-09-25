@@ -6,8 +6,17 @@ waybar
 rofi
 wob
 swaync
+thunar
+swaylock-effects
+pipewire
+wireplumber
+polkit-gnome
+brightnessctl
+pulseaudio-utils
 
 # Fonts
+google-noto-sans-fonts
+fontawesome-fonts
 
 # Boot Splash
 plymouth
@@ -27,6 +36,7 @@ greetd-tuigreet
 # Core Utilities
 kitty
 neovim
+flatpak
 htop
 nwg-look
 btop
@@ -52,3 +62,5 @@ pamu2fcfg
 # Developer & Power User Tools
 ripgrep
 zoxide
+
+
