@@ -3,11 +3,10 @@ sway
 swaybg
 swayimg
 waybar
-rofi
+rofi-wayland
 wob
 swaync
 thunar
-swaylock-effects
 pipewire
 wireplumber
 xdg-desktop-portal-wlr
