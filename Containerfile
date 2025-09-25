@@ -48,13 +48,6 @@ RUN set -eux; \
 RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # ------------------------------
-# Groups / users
-# ------------------------------
-RUN groupadd -r libvirt
-
-
-
-# ------------------------------
 # Plymouth configuration
 # ------------------------------
 RUN plymouth-set-default-theme bgrt-better-luks \
