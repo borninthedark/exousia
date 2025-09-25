@@ -1,7 +1,7 @@
 # ------------------------------
-# Base bootc image
+# Base image
 # ------------------------------
-FROM quay.io/fedora/fedora-bootc:42
+FROM quay.io/fedora/fedora-sway-atomic:43
 MAINTAINER uryu
 
 # ------------------------------
@@ -48,18 +48,6 @@ RUN set -eux; \
 RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # ------------------------------
-# Plymouth configuration
+# Lint Container
 # ------------------------------
-RUN plymouth-set-default-theme bgrt-better-luks \
- && dracut --no-kernel -f
-
-# ------------------------------
-# Enable Services
-# ------------------------------
-RUN systemctl enable \
-    plymouth-start.service \
-    plymouth-read-write.service \
-    plymouth-switch-root.service \
-    plymouth-quit.service \
-    plymouth-quit-wait.service \
-    greetd.service
+RUN bootc container lint

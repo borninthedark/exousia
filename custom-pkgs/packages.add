@@ -1,47 +1,9 @@
-# Sway
-sway
-swaybg
-swayimg
-waybar
-rofi-wayland
-
-wob
-swaync
-thunar
-pipewire
-wireplumber
-xdg-desktop-portal-wlr
-mate-polkit
-flatpak-xdg-utils
-xdg-user-dirs
-xdg-utils
-xdg-dbus-proxy
-brightnessctl
-pulseaudio-utils
-
-# Fonts
-google-noto-sans-fonts
-fontawesome-fonts
-
-# Boot Splash
-plymouth
-plymouth-system-theme
-
-# Wayland utils
-grim
-slurp
-mako
-wl-clipboard
-kanshi
-
-# Display manager
-greetd
-greetd-tuigreet
-
 # Core Utilities
 kitty
 neovim
 flatpak
+wob
+swaync
 htop
 nwg-look
 btop
