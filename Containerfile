@@ -4,7 +4,7 @@ FROM quay.io/fedora/fedora-sway-atomic:42
 # --- Layer on Custom Configurations ---
 COPY custom-configs/ /etc/sway/config.d/
 COPY custom-repos/ /etc/yum.repos.d/
-COPY scripts/ /usr/local/bin/
+COPY custom-scripts/ /usr/local/bin/
 
 # --- Make Scripts Executable ---
 RUN chmod +x /usr/local/bin/*
