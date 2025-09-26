@@ -27,18 +27,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      # Define the image base path for the CI environment
       IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/exousia
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Use Makefile to build the container
+      # --- Build ---
       - name: Build image with Make
         run: make build IMAGE_BASE=${{ env.IMAGE_BASE }}
 
-      # --- SAST / DAST / SCA ---
+      # --- SAST / Linting ---
       - name: Lint Containerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
@@ -61,6 +60,7 @@ jobs:
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
 
+      # --- Vulnerability Scanning ---
       - name: Cache Trivy DB
         uses: actions/cache@v4
         with:
@@ -69,8 +69,6 @@ jobs:
 
       - name: Save image for Trivy scan
         run: |
-          # The Makefile builds an image tagged with the git SHA.
-          # We save that specific image tag to a tar file for scanning.
           podman save -o image.tar ${{ env.IMAGE_BASE }}:${{ github.sha }}
 
       - name: Install Trivy

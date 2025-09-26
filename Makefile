@@ -21,7 +21,7 @@ IMAGE_GHCR_FULL   := $(IMAGE_BASE_GHCR):$(GIT_COMMIT)
 IMAGE_GHCR_LATEST := $(IMAGE_BASE_GHCR):$(LATEST_TAG)
 
 # --- Commands ---
-.PHONY: all build test push deploy
+.PHONY: all build test push deploy clean
 
 # Default 'make' command.
 all: build
@@ -60,3 +60,10 @@ deploy:
 	@echo "sudo bootc switch ghcr.io/borninthedark/exousia:latest"
 	@echo "or with a specific commit tag:"
 	@echo "sudo bootc switch ghcr.io/borninthedark/exousia:$(GIT_COMMIT)"
+
+# 'make clean' - Removes locally built images.
+clean:
+	@echo "--> Removing local images..."
+	-podman rmi $(IMAGE_LOCAL_SHORT) $(IMAGE_LOCAL_FULL) $(IMAGE_LOCAL_LATEST) 2>/dev/null || true
+	-podman rmi $(IMAGE_GHCR_SHORT) $(IMAGE_GHCR_FULL) $(IMAGE_GHCR_LATEST) 2>/dev/null || true
+	@echo "--> Cleanup complete."
