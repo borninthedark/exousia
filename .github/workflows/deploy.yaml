@@ -43,6 +43,8 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr,prefix=pr-
             type=schedule,pattern=nightly
+          labels: |
+            org.opencontainers.image.licenses=MIT
 
       # --- Build ---
       - name: Build image with Buildah
@@ -52,15 +54,13 @@ jobs:
           image: ${{ env.IMAGE_BASE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          containerfiles: |
-            ./Containerfile
-          # Securely pass the actor as a build-arg and your PAT as a secret
+          containerfiles: ./Containerfile
           build-args: |
             GH_USER=${{ github.actor }}
-          secrets: |
-            gh_token=${{ secrets.GHCR_PAT }}
-          # Do not push yet; we will scan the image first
-          push: 'false'
+            GH_TOKEN=${{ secrets.GHCR_PAT }}
+          # Build only, push comes later
+          oci: false
+          tls-verify: true
 
       # --- SAST / Linting ---
       - name: Lint Containerfile
@@ -120,3 +120,15 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
+
+      # --- (Optional) Sign with Cosign ---
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        run: |
+          curl -sSfL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 \
+            -o /usr/local/bin/cosign && chmod +x /usr/local/bin/cosign
+
+      - name: Sign image with cosign (keyless OIDC)
+        if: github.event_name != 'pull_request'
+        run: |
+          cosign sign --yes ${{ env.IMAGE_BASE }}:${{ github.sha }}
