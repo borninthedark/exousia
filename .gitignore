@@ -1,0 +1,16 @@
+# Build artifacts and local outputs
+image.tar
+*.log
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Editor and IDE directories
+.vscode/
+.idea/
+*.swp
+*~
+
+# Local environment files (e.g., for secrets)
+.env

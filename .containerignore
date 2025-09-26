@@ -1,0 +1,20 @@
+# Ignore all Git and GitHub Action files
+.git/
+.github/
+
+# Ignore project and development files
+.gitignore
+.dockerignore
+Makefile
+README.md
+LICENSE
+
+# Ignore test files and directories
+tests/
+
+# Ignore local build artifacts
+image.tar
+
+# Ignore Editor and IDE directories
+.vscode/
+.idea/

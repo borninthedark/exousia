@@ -105,7 +105,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Push image to registry
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
