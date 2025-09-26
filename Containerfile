@@ -11,10 +11,9 @@ LABEL maintainer="uryu"
 ARG GH_USER
 
 # Create the auth.json file using the provided credentials.
-# The --mount=type=secret ensures the token is never stored in an image layer.
 RUN --mount=type=secret,id=gh_token \
     set -euxo pipefail; \
-    GH_TOKEN=$(cat /run/secrets/gh_token); \
+    GH_TOKEN=$(cat -); \
     if [ -n "$GH_TOKEN" ] && [ -n "$GH_USER" ]; then \
       echo "Configuring ghcr.io credentials..."; \
       mkdir -p /etc/containers; \
@@ -23,7 +22,7 @@ RUN --mount=type=secret,id=gh_token \
     else \
       echo "Skipping credential configuration, user or token not provided."; \
     fi
-
+    
 # ------------------------------
 # Copy all inputs first
 # ------------------------------
