@@ -23,6 +23,7 @@ RUN jq -r .packages[] /usr/share/rpm-ostree/treefile.json \
 # ------------------------------
 # DNF: Install, remove, upgrade, add repos in one layer
 # ------------------------------
+# hadolint ignore=DL3041,SC2086
 RUN set -euxo pipefail; \
     dnf install -y dnf5 dnf5-plugins && \
     rm -f /usr/bin/dnf && ln -s /usr/bin/dnf5 /usr/bin/dnf; \
@@ -34,11 +35,12 @@ RUN set -euxo pipefail; \
     grep -vE '^#' /usr/local/share/sericea-bootc/packages-added | xargs -r dnf install -y; \
     grep -vE '^#' /usr/local/share/sericea-bootc/packages-removed | xargs -r dnf remove -y; \
     dnf upgrade -y; \
-    dnf clean all 
+    dnf clean all
 
 # ------------------------------
 # Add Flathub
 # ------------------------------
+# hadolint ignore=DL3059
 RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # ------------------------------
