@@ -1,4 +1,4 @@
-name: Fedora Sericea Bootc DevSec CI 
+name: Fedora Sericea Bootc DevSec CI
 
 on:
   push:
@@ -42,7 +42,8 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           image: ${{ env.IMAGE_BASE }}
-          tags: ${{ steps.meta.outputs.tags }}
+          # REVISION: Prepend the full commit SHA to the list of tags.
+          tags: ${{ github.sha }} ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           containerfiles: |
             ./Containerfile
@@ -59,7 +60,7 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Containerfile
-          ignore: DL3041,DL3059,SC2086,DL4006,SC3037 
+          ignore: DL3041,DL3059,SC2086,DL4006
 
       - name: Setup Bats
         uses: bats-core/bats-action@3.0.0
