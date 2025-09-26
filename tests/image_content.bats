@@ -6,26 +6,26 @@
 #
 
 # -- Test Setup & Teardown -----------------------------------------------------
-
 # This function runs once before all tests. It builds the image,
 # creates a temporary container, and mounts its filesystem for inspection.
 setup_file() {
-  # Define a unique name for the test image to avoid conflicts.
-  TEST_IMAGE="localhost/custom-bootc-bats-test:latest"
-  echo "--- Building test image: $TEST_IMAGE ---"
-  
-  # Build the container image from the Containerfile in the repo root.
-  buildah bud --quiet --tag "$TEST_IMAGE" .
+ # Define a unique name for the test image to avoid conflicts.
+TEST_IMAGE="localhost/custom-bootc-bats-test:latest"
+echo "--- Building test image: $TEST_IMAGE ---"
+ 
+# Build the container image from the Containerfile in the repo root.
+buildah bud --quiet --tag "$TEST_IMAGE" .
 
-  # Create a container from the new image.
-  CONTAINER=$(buildah from "$TEST_IMAGE")
-  
-  # Mount the container's root filesystem to a temporary directory.
-  MOUNT_POINT=$(buildah mount "$CONTAINER")
+# Create a container from the new image.
+CONTAINER=$(buildah from "$TEST_IMAGE")
 
-  # Export variables to make them available in all test cases.
-  export CONTAINER MOUNT_POINT
-  echo "--- Container filesystem mounted at $MOUNT_POINT ---"
+# Use the image tag passed from the CI workflow environment variable.
+echo "--- Using test image: $TEST_IMAGE_TAG ---"
+ 
+# Create a container directly from the image already built by the workflow.
+# The --pull-never flag ensures it uses the local image.
+CONTAINER=$(buildah from --pull-never "$TEST_IMAGE_TAG")
+
 }
 
 # This function runs once after all tests. It cleans up the
