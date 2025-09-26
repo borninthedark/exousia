@@ -23,7 +23,7 @@ env:
   FULL_IMAGE: ghcr.io/${{ github.repository_owner }}/exousia
 
 jobs:
-  build-scan-and-push:
+  build-scan-push:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -97,7 +97,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Push images with Make
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

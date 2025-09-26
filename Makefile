@@ -52,6 +52,6 @@ deploy:
 
 # 'make clean' - Removes locally built images.
 clean:
-	@echo "--> Removing local images..."
+	@echo "--> Removing images..."
 	-podman rmi $(IMAGE_GHCR_SHORT) $(IMAGE_GHCR_FULL) $(IMAGE_GHCR_LATEST) 2>/dev/null || true
 	@echo "--> Cleanup complete."
