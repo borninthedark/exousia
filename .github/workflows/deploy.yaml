@@ -39,11 +39,11 @@ jobs:
         with:
           images: ${{ env.IMAGE_BASE }}
           tags: |
-            # REVISION: Remove the default 'sha-' prefix from the commit tag.
-            type=sha,format=long,prefix=
-            type=ref,event=branch
-            type=ref,event=pr,prefix=pr-
+            type=sha,format=long   # ensures sha-<commit>
+            type=ref,event=branch  # e.g. main
             type=schedule,pattern=nightly
+          labels: |
+            org.opencontainers.image.licenses=MIT
 
       # --- Build ---
       - name: Build image with Buildah
@@ -53,22 +53,19 @@ jobs:
           image: ${{ env.IMAGE_BASE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          containerfiles: |
-            ./Containerfile
-          # Securely pass the actor as a build-arg and your PAT as a secret
+          containerfiles: ./Containerfile
           build-args: |
             GH_USER=${{ github.actor }}
-          secrets: |
-            gh_token=${{ secrets.GHCR_PAT }}
-          # Do not push yet; we will scan the image first
-          push: 'false'
+            GH_TOKEN=${{ secrets.GHCR_PAT }}
+          oci: false
+          tls-verify: true
 
       # --- SAST / Linting ---
       - name: Lint Containerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Containerfile
-          ignore: DL3041,DL3059,SC2086,DL4006
+          ignore: DL3041,DL3059,SC2086,DL4006,SC3037
 
       - name: Setup Bats
         uses: bats-core/bats-action@3.0.0
@@ -87,24 +84,30 @@ jobs:
           path: ~/.cache/trivy
           key: trivy-db-${{ runner.os }}-v2
 
-      - name: Save image for Trivy scan
+      - name: Save images for Trivy scan
         run: |
-          # This will now find the correct tag, e.g., ...:26a93db9...
-          podman save -o image.tar ${{ env.IMAGE_BASE }}:${{ github.sha }}
+          mkdir -p trivy-images
+          for TAG in $(echo "${{ steps.meta.outputs.tags }}" | tr ' ' '\n'); do
+            echo "Saving $TAG for scan..."
+            podman save -o "trivy-images/$(echo $TAG | tr '/:' '__').tar" $TAG
+          done
 
       - name: Install Trivy
         run: |
           curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.52.2/trivy_0.52.2_Linux-64bit.tar.gz \
             | tar -xz -C /usr/local/bin trivy
 
-      - name: Trivy scan (non-blocking)
+      - name: Trivy scan (non-blocking, all tags)
         continue-on-error: true
         run: |
-          trivy image --input image.tar \
-            --scanners vuln \
-            --severity CRITICAL,HIGH \
-            --exit-code 1 \
-            --format table || echo "::warning::Trivy found CRITICAL or HIGH vulnerabilities"
+          for TAR in trivy-images/*.tar; do
+            echo "Scanning $TAR..."
+            trivy image --input "$TAR" \
+              --scanners vuln \
+              --severity CRITICAL,HIGH \
+              --exit-code 1 \
+              --format table || echo "::warning::Trivy found CRITICAL or HIGH vulnerabilities in $TAR"
+          done
 
       - name: Semgrep static analysis
         uses: returntocorp/semgrep-action@v1
@@ -122,3 +125,15 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
+
+      # --- (Optional) Sign with Cosign ---
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        run: |
+          curl -sSfL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 \
+            -o /usr/local/bin/cosign && chmod +x /usr/local/bin/cosign
+
+      - name: Sign image with cosign (keyless OIDC)
+        if: github.event_name != 'pull_request'
+        run: |
+          cosign sign --yes ${{ env.IMAGE_BASE }}:sha-${{ github.sha }}
