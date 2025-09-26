@@ -71,12 +71,9 @@ jobs:
         id: bats_setup # Added an ID to reference this step's outputs
         uses: bats-core/bats-action@3.0.0
 
-      # Note: This step will now correctly fail the workflow if tests do not pass.
+      # This step is now fixed to correctly load Bats libraries.
       - name: Run Bats Tests
-        run: buildah unshare -- bats -r tests
-        env:
-          # This line fixes the 'command not found' errors in your tests
-          BATS_LIB_PATH: ${{ steps.bats_setup.outputs.libpath }}
+        run: BATS_LIB_PATH="${{ steps.bats_setup.outputs.libpath }}" buildah unshare -- bats -r tests
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
@@ -88,7 +85,6 @@ jobs:
           path: ~/.cache/trivy
           key: trivy-db-${{ runner.os }}-v2
 
-      # This step is updated to avoid the YAML parsing error
       - name: Save image for Trivy scan
         run: |
           IMAGE_TO_SCAN=$(echo '${{ steps.build-image.outputs.image-with-tags }}' | jq -r '.[0]')
@@ -141,3 +137,4 @@ jobs:
           cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-registry.outputs.digest }}"
         env:
           COSIGN_EXPERIMENTAL: "true"
+
