@@ -39,11 +39,11 @@ jobs:
         with:
           images: ${{ env.IMAGE_BASE }}
           tags: |
-            type=sha,format=long   # ensures ${{ github.sha }}
-            type=ref,event=branch  # e.g. main
+            # REVISION: Remove the default 'sha-' prefix from the commit tag.
+            type=sha,format=long,prefix=
+            type=ref,event=branch
+            type=ref,event=pr,prefix=pr-
             type=schedule,pattern=nightly
-          labels: |
-            org.opencontainers.image.licenses=MIT
 
       # --- Build ---
       - name: Build image with Buildah
@@ -53,19 +53,22 @@ jobs:
           image: ${{ env.IMAGE_BASE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          containerfiles: ./Containerfile
+          containerfiles: |
+            ./Containerfile
+          # Securely pass the actor as a build-arg and your PAT as a secret
           build-args: |
             GH_USER=${{ github.actor }}
-            GH_TOKEN=${{ secrets.GHCR_PAT }}
-          oci: false
-          tls-verify: true
+          secrets: |
+            gh_token=${{ secrets.GHCR_PAT }}
+          # Do not push yet; we will scan the image first
+          push: 'false'
 
       # --- SAST / Linting ---
       - name: Lint Containerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Containerfile
-          ignore: DL3041,DL3059,SC2086,DL4006,SC3037
+          ignore: DL3041,DL3059,SC2086,DL4006
 
       - name: Setup Bats
         uses: bats-core/bats-action@3.0.0
@@ -86,7 +89,7 @@ jobs:
 
       - name: Save image for Trivy scan
         run: |
-          # Always use the SHA tag (guaranteed by metadata-action)
+          # This will now find the correct tag, e.g., ...:26a93db9...
           podman save -o image.tar ${{ env.IMAGE_BASE }}:${{ github.sha }}
 
       - name: Install Trivy
@@ -119,15 +122,3 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
-
-      # --- (Optional) Sign with Cosign ---
-      - name: Install cosign
-        if: github.event_name != 'pull_request'
-        run: |
-          curl -sSfL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 \
-            -o /usr/local/bin/cosign && chmod +x /usr/local/bin/cosign
-
-      - name: Sign image with cosign (keyless OIDC)
-        if: github.event_name != 'pull_request'
-        run: |
-          cosign sign --yes ${{ env.IMAGE_BASE }}:${{ github.sha }}
