@@ -39,9 +39,8 @@ jobs:
         with:
           images: ${{ env.IMAGE_BASE }}
           tags: |
-            type=sha,format=long
-            type=ref,event=branch
-            type=ref,event=pr,prefix=pr-
+            type=sha,format=long   # ensures ${{ github.sha }}
+            type=ref,event=branch  # e.g. main
             type=schedule,pattern=nightly
           labels: |
             org.opencontainers.image.licenses=MIT
@@ -58,7 +57,6 @@ jobs:
           build-args: |
             GH_USER=${{ github.actor }}
             GH_TOKEN=${{ secrets.GHCR_PAT }}
-          # Build only, push comes later
           oci: false
           tls-verify: true
 
@@ -88,6 +86,7 @@ jobs:
 
       - name: Save image for Trivy scan
         run: |
+          # Always use the SHA tag (guaranteed by metadata-action)
           podman save -o image.tar ${{ env.IMAGE_BASE }}:${{ github.sha }}
 
       - name: Install Trivy
