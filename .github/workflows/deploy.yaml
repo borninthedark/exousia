@@ -67,10 +67,15 @@ jobs:
 
       - name: Setup Bats
         uses: bats-core/bats-action@3.0.0
+        id: setup-bats
 
-      # FIX 1: Run Bats inside 'buildah unshare' to allow mounting in a rootless environment.
-      - name: Run Bats Tests
-        run: buildah unshare -- bats -r tests
+      - name: Bats Bootc Image Test
+        shell: bash
+        id: run-bats
+        env:
+          BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
+          TERM: xterm
+        run: make test
         continue-on-error: true
 
       - name: Run ShellCheck
