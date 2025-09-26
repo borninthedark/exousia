@@ -71,13 +71,13 @@ jobs:
 
       - name: Run Bats Tests
         env:
-          # Pass the raw JSON string and Bats library path to the step's environment
           IMAGE_WITH_TAGS_JSON: ${{ steps.build-image.outputs.image-with-tags }}
           BATS_LIB_PATH: ${{ steps.bats_setup.outputs.libpath }}
         run: |
-          # Use jq to parse the JSON and export the first tag for the test script
-          export TEST_IMAGE_TAG=$(echo "$IMAGE_WITH_TAGS_JSON" | jq -r '.[0]')
-          buildah unshare -- bats -r tests
+          # Use jq to parse the JSON and get the first tag
+          TEST_IMAGE_TAG=$(echo "$IMAGE_WITH_TAGS_JSON" | jq -r '.[0]')
+          # Prepend environment variables to the buildah unshare command to pass them into the new namespace
+          BATS_LIB_PATH="$BATS_LIB_PATH" TEST_IMAGE_TAG="$TEST_IMAGE_TAG" buildah unshare -- bats -r tests
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
