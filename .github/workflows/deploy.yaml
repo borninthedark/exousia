@@ -65,18 +65,22 @@ jobs:
           dockerfile: Containerfile
           ignore: DL3041,DL3059,SC2086,DL4006,SC3037
 
-      - name: Setup Bats
-        id: bats_setup
-        uses: bats-core/bats-action@3.0.0
+      - name: Install Bats and helper libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats
+          # Install helper libraries manually
+          git clone --depth 1 https://github.com/bats-core/bats-support /usr/lib/bats-support
+          git clone --depth 1 https://github.com/bats-core/bats-assert /usr/lib/bats-assert
+          git clone --depth 1 https://github.com/bats-core/bats-file /usr/lib/bats-file
+          git clone --depth 1 https://github.com/bats-core/bats-detik /usr/lib/bats-detik
 
       - name: Run Bats Tests
         env:
           IMAGE_WITH_TAGS_JSON: ${{ steps.build-image.outputs.image-with-tags }}
-          BATS_LIB_PATH: ${{ steps.bats_setup.outputs.libpath }}
+          BATS_LIB_PATH: /usr/lib
         run: |
-          # Use jq to parse the JSON and get the first tag
           TEST_IMAGE_TAG=$(echo "$IMAGE_WITH_TAGS_JSON" | jq -r '.[0]')
-          # Prepend environment variables to the buildah unshare command to pass them into the new namespace
           BATS_LIB_PATH="$BATS_LIB_PATH" TEST_IMAGE_TAG="$TEST_IMAGE_TAG" buildah unshare -- bats -r tests
 
       - name: Run ShellCheck
@@ -141,4 +145,3 @@ jobs:
           cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-registry.outputs.digest }}"
         env:
           COSIGN_EXPERIMENTAL: "true"
-

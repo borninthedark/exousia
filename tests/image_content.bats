@@ -1,11 +1,5 @@
 #!/usr/bin/env bats
 
-# Load Bats helper libraries
-load 'bats-support/load'
-load 'bats-assert/load'
-load 'bats-file/load'
-load 'bats-detik/load'
-
 # --- Tests ---
 
 @test "OS should be Fedora Linux 43" {
