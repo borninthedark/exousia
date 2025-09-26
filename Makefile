@@ -2,18 +2,12 @@
 
 # --- Configuration ---
 # Default image base path for local development. Can be overridden for CI.
-IMAGE_BASE_LOCAL ?= localhost:5000/exousia
 IMAGE_BASE_GHCR  ?= ghcr.io/borninthedark/exousia
 LATEST_TAG       = latest
 
 # --- Dynamic Variables ---
 GIT_VERSION      := $(shell git rev-parse --short HEAD)
 GIT_COMMIT       := $(shell git rev-parse HEAD)
-
-# Local tags
-IMAGE_LOCAL_SHORT  := $(IMAGE_BASE_LOCAL):$(GIT_VERSION)
-IMAGE_LOCAL_FULL   := $(IMAGE_BASE_LOCAL):$(GIT_COMMIT)
-IMAGE_LOCAL_LATEST := $(IMAGE_BASE_LOCAL):$(LATEST_TAG)
 
 # GHCR tags
 IMAGE_GHCR_SHORT  := $(IMAGE_BASE_GHCR):$(GIT_VERSION)
@@ -28,9 +22,8 @@ all: build
 
 # 'make build' - Builds the image with all tags.
 build:
-	@echo "--> Building image: $(IMAGE_LOCAL_LATEST) and $(IMAGE_GHCR_LATEST)"
+	@echo "--> Building image:  $(IMAGE_GHCR_LATEST)"
 	podman build \
-	  -t $(IMAGE_LOCAL_SHORT) -t $(IMAGE_LOCAL_FULL) -t $(IMAGE_LOCAL_LATEST) \
 	  -t $(IMAGE_GHCR_SHORT) -t $(IMAGE_GHCR_FULL) -t $(IMAGE_GHCR_LATEST) .
 
 # 'make test' - Runs the Bats test suite.
@@ -40,10 +33,6 @@ test:
 
 # 'make push' - Pushes all tags.
 push: build
-	@echo "--> Pushing image to local registry..."
-	podman push $(IMAGE_LOCAL_SHORT)
-	podman push $(IMAGE_LOCAL_FULL)
-	podman push $(IMAGE_LOCAL_LATEST)
 	@echo "--> Pushing image to GHCR..."
 	podman push $(IMAGE_GHCR_SHORT)
 	podman push $(IMAGE_GHCR_FULL)
@@ -64,6 +53,5 @@ deploy:
 # 'make clean' - Removes locally built images.
 clean:
 	@echo "--> Removing local images..."
-	-podman rmi $(IMAGE_LOCAL_SHORT) $(IMAGE_LOCAL_FULL) $(IMAGE_LOCAL_LATEST) 2>/dev/null || true
 	-podman rmi $(IMAGE_GHCR_SHORT) $(IMAGE_GHCR_FULL) $(IMAGE_GHCR_LATEST) 2>/dev/null || true
 	@echo "--> Cleanup complete."
