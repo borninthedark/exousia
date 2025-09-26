@@ -34,7 +34,6 @@ teardown_file() {
   echo "--- Cleaning up test resources ---"
   buildah umount "$CONTAINER"
   buildah rm "$CONTAINER"
-  buildah rmi "$TEST_IMAGE"
 }
 
 # -- OS & File Content Tests ----------------------------------------------------
