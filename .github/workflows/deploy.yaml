@@ -1,4 +1,4 @@
-name: Fedora Bootc DevSec CI - Exousia OS
+name: Fedora Sericea Bootc DevSec CI
 
 on:
   push:
