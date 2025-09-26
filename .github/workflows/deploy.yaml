@@ -69,13 +69,15 @@ jobs:
         id: bats_setup
         uses: bats-core/bats-action@3.0.0
 
-      # This step is now fixed to correctly load Bats libraries and pass the image name.
       - name: Run Bats Tests
-        run: buildah unshare -- bats -r tests
         env:
-          # This makes the primary built image tag available to the test script
-          TEST_IMAGE_TAG: ${{ fromJson(steps.build-image.outputs.image-with-tags)[0] }}
+          # Pass the raw JSON string and Bats library path to the step's environment
+          IMAGE_WITH_TAGS_JSON: ${{ steps.build-image.outputs.image-with-tags }}
           BATS_LIB_PATH: ${{ steps.bats_setup.outputs.libpath }}
+        run: |
+          # Use jq to parse the JSON and export the first tag for the test script
+          export TEST_IMAGE_TAG=$(echo "$IMAGE_WITH_TAGS_JSON" | jq -r '.[0]')
+          buildah unshare -- bats -r tests
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
@@ -87,8 +89,11 @@ jobs:
           key: trivy-db-${{ runner.os }}-v2
 
       - name: Save image for Trivy scan
+        env:
+          IMAGE_WITH_TAGS_JSON: ${{ steps.build-image.outputs.image-with-tags }}
         run: |
-          podman save -o image.tar "${{ fromJson(steps.build-image.outputs.image-with-tags)[0] }}"
+          IMAGE_TO_SCAN=$(echo "$IMAGE_WITH_TAGS_JSON" | jq -r '.[0]')
+          podman save -o image.tar "$IMAGE_TO_SCAN"
 
       - name: Install Trivy
         run: |
