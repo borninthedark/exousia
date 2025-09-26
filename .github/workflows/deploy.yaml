@@ -1,4 +1,4 @@
-name: Fedora Sericea Bootc DevSec CI
+name: Fedora Sericea Bootc DevSec CI 
 
 on:
   push:
@@ -46,11 +46,12 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           containerfiles: |
             ./Containerfile
+          # Pass the actor as a build-arg and your PAT as the secret
           build-args: |
             GH_USER=${{ github.actor }}
-          # The 'secrets' input is not supported. Pipe the secret to stdin instead.
-          stdin: |
-            ${{ secrets.GHCR_PAT }}
+          secrets: |
+            gh_token=${{ secrets.GHCR_PAT }}
+          # Scan BEFORE Push
           push: 'false'
 
       # --- SAST / Linting ---
@@ -79,7 +80,7 @@ jobs:
 
       - name: Save image for Trivy scan
         run: |
-          podman save -o image.tar ${{ steps.meta.outputs.tags }}
+          podman save -o image.tar ${{ env.IMAGE_BASE }}:${{ github.sha }}
 
       - name: Install Trivy
         run: |
@@ -110,4 +111,9 @@ jobs:
           password: ${{ secrets.GHCR_PAT }}
 
       - name: Push image to registry
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        id: push-to-registry
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ env.IMAGE_BASE }}
+          tags: ${{ steps.meta.outputs.tags }}
