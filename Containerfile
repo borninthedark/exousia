@@ -5,6 +5,26 @@ FROM quay.io/fedora/fedora-sway-atomic:42
 LABEL maintainer="uryu"
 
 # ------------------------------
+# Bake in GHCR credentials for bootc
+# ------------------------------
+# Accept the GitHub username as a build-arg and the token as a secret.
+ARG GH_USER
+
+# Create the auth.json file using the provided credentials.
+# The --mount=type=secret ensures the token is never stored in an image layer.
+RUN --mount=type=secret,id=gh_token \
+    set -euxo pipefail; \
+    GH_TOKEN=$(cat /run/secrets/gh_token); \
+    if [ -n "$GH_TOKEN" ] && [ -n "$GH_USER" ]; then \
+      echo "Configuring ghcr.io credentials..."; \
+      mkdir -p /etc/containers; \
+      AUTH_SECRET=$(echo -n "${GH_USER}:${GH_TOKEN}" | base64 -w 0); \
+      echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"$AUTH_SECRET\"}}}" > /etc/containers/auth.json; \
+    else \
+      echo "Skipping credential configuration, user or token not provided."; \
+    fi
+
+# ------------------------------
 # Copy all inputs first
 # ------------------------------
 COPY --chmod=0644 ./custom-pkgs/packages.remove /usr/local/share/sericea-bootc/packages-removed
@@ -47,3 +67,4 @@ RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.
 # Lint Container
 # ------------------------------
 RUN bootc container lint
+
