@@ -1,4 +1,4 @@
-name: Fedora Bootc CI - Exousia OS
+name: Fedora Bootc DevSec CI - Exousia OS
 
 on:
   push:
@@ -19,42 +19,48 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_REPO: ${{ github.repository_owner }}/exousia
-  FULL_IMAGE: ghcr.io/${{ github.repository_owner }}/exousia
+  IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/exousia
 
 jobs:
   build-scan-push:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/exousia
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Generate image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_BASE }}
+
       # --- Build ---
-      - name: Build image with Make
-        run: make build IMAGE_BASE=${{ env.IMAGE_BASE }}
+      - name: Build image with Buildah
+        id: build-image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: ${{ env.IMAGE_BASE }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          containerfiles: |
+            ./Containerfile
+          # Scan BEFORE Push
+          push: 'false'
 
       # --- SAST / Linting ---
       - name: Lint Containerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Containerfile
-          ignore: DL3041,DL3059,SC2086,DL4006 
+          ignore: DL3041,DL3059,SC2086,DL4006
 
       - name: Setup Bats
         uses: bats-core/bats-action@3.0.0
-        id: setup-bats
 
-      - name: Bats Bootc Image Test
-        shell: bash
-        id: run-bats
-        env:
-          BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
-          TERM: xterm
-        run: make test
+      - name: Run Bats Tests
+        run: bats -r tests
         continue-on-error: true
 
       - name: Run ShellCheck
@@ -95,10 +101,14 @@ jobs:
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push images with Make
+      - name: Push image to registry
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        run: make push IMAGE_BASE=${{ env.IMAGE_BASE }}
+        id: push-to-registry
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ env.IMAGE_BASE }}
+          tags: ${{ steps.meta.outputs.tags }}

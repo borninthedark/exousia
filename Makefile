@@ -1,57 +1,34 @@
-# Makefile for managing the Exousia OS build process.
+# Makefile for managing the single-stage Exousia OS build process.
 
 # --- Configuration ---
-# Default image base path for local development. Can be overridden for CI.
-IMAGE_BASE_GHCR  ?= ghcr.io/borninthedark/exousia
-LATEST_TAG       = latest
+REGISTRY      = localhost:5000
+IMAGE_NAME    = exousia
+LATEST_TAG    = latest
 
 # --- Dynamic Variables ---
-GIT_VERSION      := $(shell git rev-parse --short HEAD)
-GIT_COMMIT       := $(shell git rev-parse HEAD)
-
-# GHCR tags
-IMAGE_GHCR_SHORT  := $(IMAGE_BASE_GHCR):$(GIT_VERSION)
-IMAGE_GHCR_FULL   := $(IMAGE_BASE_GHCR):$(GIT_COMMIT)
-IMAGE_GHCR_LATEST := $(IMAGE_BASE_GHCR):$(LATEST_TAG)
+GIT_VERSION       := $(shell git rev-parse --short HEAD)
+IMAGE_GIT         := $(REGISTRY)/$(IMAGE_NAME):$(GIT_VERSION)
+IMAGE_LATEST      := $(REGISTRY)/$(IMAGE_NAME):$(LATEST_TAG)
 
 # --- Commands ---
-.PHONY: all build test push deploy clean
+.PHONY: all build push deploy
 
 # Default 'make' command.
 all: build
 
-# 'make build' - Builds the image with all tags.
+# 'make build' - Builds the image and applies two tags: git hash and ':latest'.
 build:
-	@echo "--> Building image:  $(IMAGE_GHCR_LATEST)"
-	podman build \
-	  -t $(IMAGE_GHCR_SHORT) -t $(IMAGE_GHCR_FULL) -t $(IMAGE_GHCR_LATEST) .
+	@echo "--> Building GOLD image with tags: $(GIT_VERSION) and $(LATEST_TAG)"
+	podman build -t $(IMAGE_GIT) -t $(IMAGE_LATEST) .
 
-# 'make test' - Runs the Bats test suite.
-test:
-	@echo "--> Running Bats tests..."
-	bats tests/image_content.bats
-
-# 'make push' - Pushes all tags.
+# 'make push' - Pushes the gold image. This is your most common command.
 push: build
-	@echo "--> Pushing image to GHCR..."
-	podman push $(IMAGE_GHCR_SHORT)
-	podman push $(IMAGE_GHCR_FULL)
-	podman push $(IMAGE_GHCR_LATEST)
+	@echo "--> Pushing GOLD image to local registry..."
+	podman push $(IMAGE_GIT)
+	podman push $(IMAGE_LATEST)
 
-# 'make deploy' - Provides instructions for switching to the new image.
+# 'make deploy' - Provides instructions for switching to the image.
 deploy:
-	@echo "--> To switch to the locally built image, run:"
-	@echo "sudo bootc switch ostree-unverified-container:$(IMAGE_LOCAL_LATEST)"
-	@echo "or with a specific commit tag:"
-	@echo "sudo bootc switch ostree-unverified-container:$(IMAGE_LOCAL_FULL)"
-	@echo ""
-	@echo "--> To switch to the GHCR image, run:"
-	@echo "sudo bootc switch ghcr.io/borninthedark/exousia:latest"
-	@echo "or with a specific commit tag:"
-	@echo "sudo bootc switch ghcr.io/borninthedark/exousia:$(GIT_COMMIT)"
+	@echo "--> To follow updates, switch to the ':latest' tag:"
+	@echo "sudo bootc switch ostree-unverified-container:$(IMAGE_LATEST)"
 
-# 'make clean' - Removes locally built images.
-clean:
-	@echo "--> Removing images..."
-	-podman rmi $(IMAGE_GHCR_SHORT) $(IMAGE_GHCR_FULL) $(IMAGE_GHCR_LATEST) 2>/dev/null || true
-	@echo "--> Cleanup complete."
