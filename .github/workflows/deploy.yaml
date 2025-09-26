@@ -68,11 +68,15 @@ jobs:
           ignore: DL3041,DL3059,SC2086,DL4006,SC3037
 
       - name: Setup Bats
+        id: bats_setup # Added an ID to reference this step's outputs
         uses: bats-core/bats-action@3.0.0
 
+      # Note: This step will now correctly fail the workflow if tests do not pass.
       - name: Run Bats Tests
         run: buildah unshare -- bats -r tests
-        continue-on-error: true
+        env:
+          # This line fixes the 'command not found' errors in your tests
+          BATS_LIB_PATH: ${{ steps.bats_setup.outputs.libpath }}
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
@@ -84,9 +88,11 @@ jobs:
           path: ~/.cache/trivy
           key: trivy-db-${{ runner.os }}-v2
 
+      # This step is updated to avoid the YAML parsing error
       - name: Save image for Trivy scan
         run: |
-          podman save -o image.tar ${{ fromJSON(steps.build-image.outputs.image-with-tags)[0] }}
+          IMAGE_TO_SCAN=$(echo '${{ steps.build-image.outputs.image-with-tags }}' | jq -r '.[0]')
+          podman save -o image.tar "$IMAGE_TO_SCAN"
 
       - name: Install Trivy
         run: |
