@@ -1,57 +1,121 @@
-name: Fedora Sericea Bootc DevSec CI
+name: Fedora Bootc DevSec CI - Exousia OS
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+  workflow_dispatch:
   schedule:
-    - cron: "0 3 * * *" # Nightly build
+    - cron: "0 3 * * *" # Nightly build at 3 AM UTC
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  pull-requests: write
+  security-events: write
+
+concurrency:
+  group: devsec-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: borninthedark/exousia
+  IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/exousia
 
 jobs:
   build-scan-push:
     runs-on: ubuntu-24.04
-
-    permissions:
-      contents: read
-      packages: write
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker metadata
+      - name: Generate image tags
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.IMAGE_BASE }}
           tags: |
+            type=sha,format=long
             type=ref,event=branch
             type=ref,event=pr,prefix=pr-
-            type=sha
             type=schedule,pattern=nightly
 
-      # Build image (does NOT push)
-      - name: Build image
+      # --- Build ---
+      - name: Build image with Buildah
+        id: build-image
         uses: redhat-actions/buildah-build@v2
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          image: ${{ env.IMAGE_BASE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          containerfiles: ./Containerfile
+          containerfiles: |
+            ./Containerfile
+          # Securely pass the actor as a build-arg and your PAT as a secret
           build-args: |
             GH_USER=${{ github.actor }}
-            GH_TOKEN=${{ secrets.GHCR_PAT }}
+          secrets: |
+            gh_token=${{ secrets.GHCR_PAT }}
+          # Do not push yet; we will scan the image first
+          push: 'false'
 
-      # Push image to GHCR using GHCR_PAT
-      - name: Push to GHCR
+      # --- SAST / Linting ---
+      - name: Lint Containerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Containerfile
+          ignore: DL3041,DL3059,SC2086,DL4006
+
+      - name: Setup Bats
+        uses: bats-core/bats-action@3.0.0
+
+      - name: Run Bats Tests
+        run: buildah unshare -- bats -r tests
+        continue-on-error: true
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+
+      # --- Vulnerability Scanning ---
+      - name: Cache Trivy DB
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ runner.os }}-v2
+
+      - name: Save image for Trivy scan
+        run: |
+          podman save -o image.tar ${{ env.IMAGE_BASE }}:${{ github.sha }}
+
+      - name: Install Trivy
+        run: |
+          curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.52.2/trivy_0.52.2_Linux-64bit.tar.gz \
+            | tar -xz -C /usr/local/bin trivy
+
+      - name: Trivy scan (non-blocking)
+        continue-on-error: true
+        run: |
+          trivy image --input image.tar \
+            --scanners vuln \
+            --severity CRITICAL,HIGH \
+            --exit-code 1 \
+            --format table || echo "::warning::Trivy found CRITICAL or HIGH vulnerabilities"
+
+      - name: Semgrep static analysis
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: auto
+
+      # --- Push to GHCR ---
+      - name: Push image to registry
+        if: github.event_name != 'pull_request'
+        id: push-to-registry
         uses: redhat-actions/push-to-registry@v2
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          image: ${{ env.IMAGE_BASE }}
           tags: ${{ steps.meta.outputs.tags }}
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
