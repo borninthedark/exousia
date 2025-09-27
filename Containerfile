@@ -5,17 +5,11 @@ FROM quay.io/fedora/fedora-sway-atomic:42
 LABEL maintainer="uryu"
 
 # ------------------------------
-# Unified Auth Strategy for Bootc & Podman
+# Unified Auth Strategy for Bootc & Podman # this is definitely getting a test
 # ------------------------------
-# 1. Copy the tmpfiles.d config to create symlinks at boot.
 COPY --chmod=0644 containers-auth.conf /usr/lib/tmpfiles.d/containers-auth.conf
-
-# 2. Securely mount the credential secret at build time and copy it to a
-#    persistent location in the image. This file becomes the single source of truth.
-RUN --mount=type=secret,id=registry-creds,required=false \
-    cp /run/secrets/registry-creds /usr/lib/container-auth.json && \
-    chmod 0600 /usr/lib/container-auth.json && \
-    ln -sr /usr/lib/container-auth.json /etc/ostree/auth.json
+COPY --chmod=0600 ./bootc-secrets/auth.json /usr/lib/container-auth.json 
+RUN ln -sr /usr/lib/container-auth.json /etc/ostree/auth.json
     
 # ------------------------------
 # Copy all inputs first
