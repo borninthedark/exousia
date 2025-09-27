@@ -1,6 +1,9 @@
 #!/usr/bin/env bats
 
-load './_helper.bash'
+load 'bats-support/load'
+load 'bats-assert/load'
+load 'bats-file/load'
+load 'bats-detik/detik.bash'
 
 setup_file() {
     if [ -z "$TEST_IMAGE_TAG" ]; then
