@@ -62,6 +62,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           containerfiles: ./Containerfile
+          secrets: |
+            id=registry-creds,src=./bootc-secrets/auth.json
           oci: false
           tls-verify: true
 

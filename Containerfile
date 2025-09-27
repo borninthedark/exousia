@@ -5,10 +5,17 @@ FROM quay.io/fedora/fedora-sway-atomic:42
 LABEL maintainer="uryu"
 
 # ------------------------------
-# Bake in GHCR credentials for bootc
+# Unified Auth Strategy for Bootc & Podman
 # ------------------------------
-# Copy the auth.json file created by the CI workflow.
-COPY --chmod=0600 bootc-secrets/auth.json /etc/containers/auth.json
+# 1. Copy the tmpfiles.d config to create symlinks at boot.
+COPY --chmod=0644 containers-auth.conf /usr/lib/tmpfiles.d/containers-auth.conf
+
+# 2. Securely mount the credential secret at build time and copy it to a
+#    persistent location in the image. This file becomes the single source of truth.
+RUN --mount=type=secret,id=registry-creds,required=true \
+    cp /run/secrets/registry-creds /usr/lib/container-auth.json && \
+    chmod 0600 /usr/lib/container-auth.json && \
+    ln -sr /usr/lib/container-auth.json /etc/ostree/auth.json
     
 # ------------------------------
 # Copy all inputs first
