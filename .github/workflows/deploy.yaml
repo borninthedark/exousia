@@ -107,20 +107,55 @@ jobs:
         id: bats_setup
         uses: bats-core/bats-action@3.0.0
 
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: image-tar
+      
+      - name: Load image from tarball
+        run: podman load -i image.tar
+
+      - name: Lint Containerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Containerfile
+          ignore: DL3041,DL3059,SC2086,DL4006,SC3037
+
+      - name: Setup Bats
+        uses: bats-core/bats-action@3.0.0
+
+      - name: Install Bats libraries
+        run: |
+          mkdir -p /usr/lib
+          git clone --depth 1 https://github.com/bats-core/bats-support /usr/lib/bats-support
+          git clone --depth 1 https://github.com/bats-core/bats-assert /usr/lib/bats-assert
+          git clone --depth 1 https://github.com/bats-core/bats-file /usr/lib/bats-file
+          git clone --depth 1 https://github.com/bats-core/bats-detik /usr/lib/bats-detik
+
       - name: Run Bats tests
         shell: bash
         run: |
           ALL_TAGS_VALUE="${{ needs.build.outputs.tags }}"
           TEST_IMAGE_TAG=$(echo "$ALL_TAGS_VALUE" | head -n1)
-
-          # Explicitly construct BATS_LIB_PATH from installed libraries
-          export BATS_LIB_PATH="${{ steps.bats_setup.outputs.support-path }}:\
-          ${{ steps.bats_setup.outputs.assert-path }}:\
-          ${{ steps.bats_setup.outputs.file-path }}:\
-          ${{ steps.bats_setup.outputs.detik-path }}"
+          
+          # Directly name the Path, no Variables
+          export BATS_LIB_PATH="/usr/lib/bats-support:/usr/lib/bats-assert:/usr/lib/bats-file:/usr/lib/bats-detik"
 
           TEST_IMAGE_TAG="$TEST_IMAGE_TAG" \
           buildah unshare -- bats -r tests
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
