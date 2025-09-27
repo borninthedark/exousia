@@ -80,7 +80,7 @@ jobs:
           path: image.tar
           retention-days: 1
 
-   test:
+  test:
     name: Test
     needs: build
     runs-on: ubuntu-24.04
