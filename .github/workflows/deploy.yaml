@@ -39,6 +39,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_BASE }}
           tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,format=long
             type=ref,event=branch
             type=schedule,pattern=nightly
@@ -89,9 +90,11 @@ jobs:
 
       - name: Save image for Trivy scan
         run: |
-          TAG="$(echo "${{ steps.build-image.outputs.tags }}" | head -n1)"
-          echo "Using tag: $TAG"
-          podman save -o image.tar "${{ steps.build-image.outputs.image }}:$TAG"
+          # The 'tags' output from the meta step provides the full image reference.
+          # We use the first tag for the scan.
+          FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          echo "Saving tag for scan: $FIRST_TAG"
+          podman save -o image.tar "$FIRST_TAG"
 
       - name: Install Trivy
         run: |
@@ -136,7 +139,7 @@ jobs:
       - name: Sign the container image
         if: github.event_name != 'pull_request'
         run: |
-          TAG="$(echo "${{ steps.build-image.outputs.tags }}" | head -n1)"
-          cosign sign --yes "${{ steps.build-image.outputs.image }}:$TAG"
+          echo "Signing image by digest: ${{ steps.push-to-registry.outputs.digest }}"
+          cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-registry.outputs.digest }}"
         env:
           COSIGN_EXPERIMENTAL: "true"
