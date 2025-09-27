@@ -1,28 +1,15 @@
 #!/usr/bin/env bats
 
-#
-# CI-friendly Bats tests for the custom fedora-bootc image.
-# These tests mount the container filesystem to verify its contents.
-#
-
-# -- Test Setup & Teardown -----------------------------------------------------
-
 setup_file() {
-    # This check ensures the workflow is passing the image tag correctly.
     if [ -z "$TEST_IMAGE_TAG" ]; then
         echo "FATAL: TEST_IMAGE_TAG environment variable is not set." >&2
         return 1
     fi
     echo "--- Using test image: $TEST_IMAGE_TAG ---"
 
-    # Create a container from the image built in the 'build' job.
-    # The --pull-never flag ensures it uses the local image from the runner.
     CONTAINER=$(buildah from --pull-never "$TEST_IMAGE_TAG")
-    
-    # Mount the container's root filesystem to a temporary directory.
     MOUNT_POINT=$(buildah mount "$CONTAINER")
 
-    # Export variables to make them available in all test cases.
     export CONTAINER MOUNT_POINT
     echo "--- Container filesystem mounted at $MOUNT_POINT ---"
 }
@@ -31,13 +18,9 @@ teardown_file() {
     echo "--- Cleaning up test resources ---"
     buildah umount "$CONTAINER"
     buildah rm "$CONTAINER"
-    # The test job does not create its own image, so we don't remove one.
 }
 
-# -- OS & File Content Tests ----------------------------------------------------
-
 @test "OS should be Fedora Linux 42" {
-    # Validates the 'FROM' line in the Containerfile.
     run grep 'VERSION_ID=42' "$MOUNT_POINT/etc/os-release"
     assert_success
 }
@@ -71,8 +54,6 @@ teardown_file() {
     assert_success "'config-authselect' script should be executable"
 }
 
-# -- Repository & Package Tests -----------------------------------------------
-
 @test "RPM Fusion repositories should be configured" {
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-free.repo"
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-nonfree.repo"
@@ -92,8 +73,6 @@ teardown_file() {
     run buildah run "$CONTAINER" -- rpm -q dunst
     assert_failure "'dunst' should be removed"
 }
-
-# -- Flatpak Configuration Tests ----------------------------------------------
 
 @test "Flathub remote should be added" {
     run buildah run "$CONTAINER" -- flatpak remotes --show-details
