@@ -7,21 +7,8 @@ LABEL maintainer="uryu"
 # ------------------------------
 # Bake in GHCR credentials for bootc
 # ------------------------------
-# Accept the GitHub username as a build-arg and the token as a secret.
-ARG GH_USER
-
-# Create the auth.json file using the provided credentials.
-RUN --mount=type=secret,id=gh_token \
-    set -euxo pipefail; \
-    GH_TOKEN=$(cat -); \
-    if [ -n "$GH_TOKEN" ] && [ -n "$GH_USER" ]; then \
-      echo "Configuring ghcr.io credentials..."; \
-      mkdir -p /etc/containers; \
-      AUTH_SECRET=$(echo -n "${GH_USER}:${GH_TOKEN}" | base64 -w 0); \
-      echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"$AUTH_SECRET\"}}}" > /etc/containers/auth.json; \
-    else \
-      echo "Skipping credential configuration, user or token not provided."; \
-    fi
+# Copy the auth.json file created by the CI workflow.
+COPY --chmod=0600 bootc-secrets/auth.json /etc/containers/auth.json
     
 # ------------------------------
 # Copy all inputs first
@@ -66,4 +53,3 @@ RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.
 # Lint Container
 # ------------------------------
 RUN bootc container lint
-

@@ -46,6 +46,13 @@ jobs:
           labels: |
             org.opencontainers.image.licenses=MIT
 
+      - name: Create auth.json for bootc
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p ./bootc-secrets
+          AUTH_SECRET=$(echo -n "${{ github.actor }}:${{ secrets.GHCR_PAT }}" | base64 -w 0)
+          echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"$AUTH_SECRET\"}}}" > ./bootc-secrets/auth.json
+
       - name: Login to GitHub Container Registry for Build
         if: github.event_name != 'pull_request'
         uses: redhat-actions/podman-login@v1
@@ -62,10 +69,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           containerfiles: ./Containerfile
-          build-args: |
-            GH_USER=${{ github.actor }}
-          secrets: |
-            gh_token=${{ secrets.GHCR_PAT }}
           oci: false
           tls-verify: true
 
@@ -152,3 +155,4 @@ jobs:
           cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-registry.outputs.digest }}"
         env:
           COSIGN_EXPERIMENTAL: "true"
+
