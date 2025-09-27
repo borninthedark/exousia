@@ -69,11 +69,13 @@ jobs:
         uses: bats-core/bats-action@3.0.0
         id: setup-bats
 
-      - name: Run Bats Bootc Image Tests
-        uses: bats-core/bats-action@3.0.0
-        with:
-          bats-version: 1.11.0
-          args: tests/image_content.bats
+      - name: Bats Bootc Image Test
+        shell: bash
+        id: run-bats
+        env:
+          BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
+          TERM: xterm
+        run: make test
         continue-on-error: true
 
       - name: Run ShellCheck
@@ -87,7 +89,9 @@ jobs:
 
       - name: Save image for Trivy scan
         run: |
-          podman save -o image.tar ${{ env.IMAGE_BASE }}:${{ github.sha }}
+          TAG="$(echo "${{ steps.build-image.outputs.tags }}" | head -n1)"
+          echo "Using tag: $TAG"
+          podman save -o image.tar "${{ steps.build-image.outputs.image }}:$TAG"
 
       - name: Install Trivy
         run: |
@@ -132,6 +136,7 @@ jobs:
       - name: Sign the container image
         if: github.event_name != 'pull_request'
         run: |
-          cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-registry.outputs.digest }}"
+          TAG="$(echo "${{ steps.build-image.outputs.tags }}" | head -n1)"
+          cosign sign --yes "${{ steps.build-image.outputs.image }}:$TAG"
         env:
           COSIGN_EXPERIMENTAL: "true"
