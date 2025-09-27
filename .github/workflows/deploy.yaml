@@ -88,11 +88,8 @@ jobs:
           key: trivy-db-${{ runner.os }}-v2
 
       - name: Save image for Trivy scan
-        env:
-          IMAGE_WITH_TAGS_JSON: ${{ steps.build-image.outputs.image-with-tags }}
         run: |
-          IMAGE_TO_SCAN=$(echo "$IMAGE_WITH_TAGS_JSON" | jq -r '.[0]')
-          podman save -o image.tar "$IMAGE_TO_SCAN"
+          podman save -o image.tar ${{ env.IMAGE_BASE }}:${{ github.sha }}
 
       - name: Install Trivy
         run: |
