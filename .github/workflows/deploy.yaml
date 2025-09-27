@@ -113,7 +113,12 @@ jobs:
           ALL_TAGS_VALUE="${{ needs.build.outputs.tags }}"
           TEST_IMAGE_TAG=$(echo "$ALL_TAGS_VALUE" | head -n1)
 
-          BATS_LIB_PATH="${{ steps.setup-bats.outputs.lib-path }}" \
+          # Explicitly construct BATS_LIB_PATH from installed libraries
+          export BATS_LIB_PATH="${{ steps.bats_setup.outputs.support-path }}:\
+${{ steps.bats_setup.outputs.assert-path }}:\
+${{ steps.bats_setup.outputs.file-path }}:\
+${{ steps.bats_setup.outputs.detik-path }}"
+
           TEST_IMAGE_TAG="$TEST_IMAGE_TAG" \
           buildah unshare -- bats -r tests
 
@@ -210,4 +215,3 @@ jobs:
           cosign sign --yes "${{ env.IMAGE_BASE }}@${{ needs.push.outputs.digest }}"
         env:
           COSIGN_EXPERIMENTAL: "true"
-

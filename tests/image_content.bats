@@ -1,5 +1,7 @@
 #!/usr/bin/env bats
 
+load './_helper.bash'
+
 setup_file() {
     if [ -z "$TEST_IMAGE_TAG" ]; then
         echo "FATAL: TEST_IMAGE_TAG environment variable is not set." >&2
