@@ -88,8 +88,8 @@ jobs:
         env:
           BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
           TERM: xterm
-        run: bats -r tests
-        continue-on-error: true # until I can sort the error
+        run: buildah unshare -- bats -r tests # Unsharing is caring
+        continue-on-error: true 
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
