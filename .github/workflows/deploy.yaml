@@ -192,9 +192,9 @@ jobs:
         uses: redhat-actions/push-to-registry@v2
         with:
           image: ${{ env.IMAGE_BASE }}
-          tags: ${{ needs.build.outputs.tags }}
+          tags: ${{ needs.build.outputs.tags || 'latest' }}
           registry: ${{ env.REGISTRY }}
-
+      
   sign:
     name: Sign
     needs: push
