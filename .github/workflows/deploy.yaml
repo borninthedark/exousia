@@ -46,6 +46,14 @@ jobs:
           labels: |
             org.opencontainers.image.licenses=MIT
 
+      - name: Login to GitHub Container Registry for Build
+        if: github.event_name != 'pull_request'
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
       - name: Build image with Buildah
         id: build-image
         uses: redhat-actions/buildah-build@v2
@@ -54,11 +62,10 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           containerfiles: ./Containerfile
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
           build-args: |
             GH_USER=${{ github.actor }}
-            GH_TOKEN=${{ secrets.GHCR_PAT }}
+          secrets: |
+            gh_token=${{ secrets.GHCR_PAT }}
           oci: false
           tls-verify: true
 
@@ -145,4 +152,3 @@ jobs:
           cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-registry.outputs.digest }}"
         env:
           COSIGN_EXPERIMENTAL: "true"
-
