@@ -12,6 +12,7 @@ glances
 
 # Tools
 chezmoi
+bat
 lsd
 fzf
 direnv
