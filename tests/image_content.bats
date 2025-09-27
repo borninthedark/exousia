@@ -37,7 +37,9 @@ teardown_file() {
     run grep -q "ghcr.io" "$MOUNT_POINT/usr/lib/container-auth.json"
     assert_success "/usr/lib/container-auth.json should contain ghcr.io"
 
-    assert_link "$MOUNT_POINT/etc/ostree/auth.json"
+    run test -L "$MOUNT_POINT/etc/ostree/auth.json"
+    assert_success "/etc/ostree/auth.json should be a symbolic link"
+
     run readlink "$MOUNT_POINT/etc/ostree/auth.json"
     assert_output --partial "/usr/lib/container-auth.json"
   else

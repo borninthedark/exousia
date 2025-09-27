@@ -9,7 +9,7 @@ LABEL maintainer="uryu"
 # ------------------------------
 COPY --chmod=0644 containers-auth.conf /usr/lib/tmpfiles.d/containers-auth.conf
 COPY --chmod=0600 ./bootc-secrets/auth.json /usr/lib/container-auth.json 
-RUN ln -sr /usr/lib/container-auth.json /etc/ostree/auth.json
+RUN ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
     
 # ------------------------------
 # Copy all inputs first
