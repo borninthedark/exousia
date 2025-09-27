@@ -25,10 +25,13 @@ env:
   IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/exousia
 
 jobs:
-  build-test-scan-push-sign:
-    name: Bootc CI/CD
+  build:
+    name: Build
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+      labels: ${{ steps.meta.outputs.labels }}
 
     steps:
       - name: Checkout repository
@@ -67,6 +70,35 @@ jobs:
           oci: false
           tls-verify: true
 
+      - name: Save image for subsequent jobs
+        run: |
+          FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          podman save -o image.tar "$FIRST_TAG"
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-tar
+          path: image.tar
+          retention-days: 1
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: image-tar
+      
+      - name: Load image from tarball
+        run: podman load -i image.tar
+
       - name: Lint Containerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
@@ -79,26 +111,39 @@ jobs:
 
       - name: Run Bats tests
         shell: bash
-        run: |
-          TEST_IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          BATS_LIB_PATH="${{ steps.setup-bats.outputs.lib-path }}" TEST_IMAGE_TAG="$TEST_IMAGE_TAG" \
-          buildah unshare -- bats -r tests
         env:
+          BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
           TERM: xterm
+        run: |
+          ALL_TAGS_VALUE="${{ needs.build.outputs.tags }}"
+          TEST_IMAGE_TAG=$(echo "$ALL_TAGS_VALUE" | head -n1)
+
+          TEST_IMAGE_TAG="$TEST_IMAGE_TAG" \
+          buildah unshare -- bats -r tests
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
+
+  scan:
+    name: Scan
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: image-tar
 
       - name: Cache Trivy DB
         uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
           key: trivy-db-${{ runner.os }}-v2
-
-      - name: Save image for Trivy scan
-        run: |
-          FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          podman save -o image.tar "$FIRST_TAG"
 
       - name: Install Trivy
         run: |
@@ -119,8 +164,25 @@ jobs:
         with:
           config: auto
 
+  push:
+    name: Push
+    needs: [test, scan]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      digest: ${{ steps.push-to-registry.outputs.digest }}
+
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: image-tar
+      
+      - name: Load image from tarball
+        run: podman load -i image.tar
+
       - name: Login to GitHub Container Registry
-        if: github.event_name != 'pull_request'
         uses: redhat-actions/podman-login@v1
         with:
           registry: ${{ env.REGISTRY }}
@@ -128,22 +190,28 @@ jobs:
           password: ${{ secrets.GHCR_PAT }}
 
       - name: Push image to registry
-        if: github.event_name != 'pull_request'
         id: push-to-registry
         uses: redhat-actions/push-to-registry@v2
         with:
           image: ${{ env.IMAGE_BASE }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ needs.build.outputs.tags || 'latest' }}
           registry: ${{ env.REGISTRY }}
       
+  sign:
+    name: Sign
+    needs: push
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
       - name: Install Cosign
-        if: github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@v3.5.0
 
       - name: Sign the container image
-        if: github.event_name != 'pull_request'
         run: |
-          echo "Signing image by digest: ${{ steps.push-to-registry.outputs.digest }}"
-          cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-registry.outputs.digest }}"
+          echo "Signing image by digest: ${{ needs.push.outputs.digest }}"
+          cosign sign --yes "${{ env.IMAGE_BASE }}@${{ needs.push.outputs.digest }}"
         env:
           COSIGN_EXPERIMENTAL: "true"
+
