@@ -104,33 +104,6 @@ jobs:
           ignore: DL3041,DL3059,SC2086,DL4006,SC3037
 
       - name: Setup Bats
-        id: bats_setup
-        uses: bats-core/bats-action@3.0.0
-
-  test:
-    name: Test
-    needs: build
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download image artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: image-tar
-      
-      - name: Load image from tarball
-        run: podman load -i image.tar
-
-      - name: Lint Containerfile
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: Containerfile
-          ignore: DL3041,DL3059,SC2086,DL4006,SC3037
-
-      - name: Setup Bats
         uses: bats-core/bats-action@3.0.0
 
       - name: Install Bats libraries
