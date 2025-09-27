@@ -54,6 +54,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           containerfiles: ./Containerfile
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
           build-args: |
             GH_USER=${{ github.actor }}
             GH_TOKEN=${{ secrets.GHCR_PAT }}
@@ -143,3 +145,4 @@ jobs:
           cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-registry.outputs.digest }}"
         env:
           COSIGN_EXPERIMENTAL: "true"
+
