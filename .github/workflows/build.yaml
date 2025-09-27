@@ -26,7 +26,7 @@ env:
 
 jobs:
   build-test-scan-push-sign:
-    name: Sericea CI 
+    name: Sericea DevSec CI 
     runs-on: ubuntu-24.04
     timeout-minutes: 45
 
