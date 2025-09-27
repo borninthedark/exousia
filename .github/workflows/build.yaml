@@ -49,6 +49,12 @@ jobs:
             type=schedule,pattern=nightly
           labels: |
             org.opencontainers.image.licenses=MIT
+            
+       - name: Lint Containerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Containerfile
+          ignore: DL3041,DL3059,SC2086,DL4006,SC3037
 
       - name: Create auth.json secret for build
         run: |
@@ -95,12 +101,6 @@ jobs:
       
       - name: Load image from tarball
         run: podman load -i image.tar
-
-      - name: Lint Containerfile
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: Containerfile
-          ignore: DL3041,DL3059,SC2086,DL4006,SC3037
 
       - name: Setup Bats and bats libs
         id: setup-bats
