@@ -53,7 +53,7 @@ jobs:
           AUTH_SECRET=$(echo -n "${{ github.actor }}:${{ secrets.GHCR_PAT }}" | base64 -w 0)
           echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"$AUTH_SECRET\"}}}" > ./bootc-secrets/auth.json
 
-      - name: Login to GitHub Container Registry for Build
+      - name: Login to GitHub Container Registry
         if: github.event_name != 'pull_request'
         uses: redhat-actions/podman-login@v1
         with:
@@ -126,14 +126,6 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: auto
-
-      - name: Login to GitHub Container Registry
-        if: github.event_name != 'pull_request'
-        uses: redhat-actions/podman-login@v1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
 
       - name: Push image to registry
         if: github.event_name != 'pull_request'
