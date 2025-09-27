@@ -1,11 +1,11 @@
 # ------------------------------
 # Base image
 # ------------------------------
-FROM quay.io/fedora/fedora-sway-atomic:42
+FROM quay.io/fedora/fedora-sway-atomic:43
 LABEL maintainer="uryu"
 
 # ------------------------------
-# Unified Auth Strategy for Bootc & Podman # this is definitely getting a test
+# Unified Auth Strategy for Bootc & Podman 
 # ------------------------------
 COPY --chmod=0644 containers-auth.conf /usr/lib/tmpfiles.d/containers-auth.conf
 COPY --chmod=0600 ./bootc-secrets/auth.json /usr/lib/container-auth.json 

@@ -25,18 +25,23 @@ teardown_file() {
     buildah rm "$CONTAINER"
 }
 
-@test "OS should be Fedora Linux 42" {
-    run grep 'VERSION_ID=42' "$MOUNT_POINT/etc/os-release"
+@test "OS should be Fedora Linux 43" {
+    run grep 'VERSION_ID=43' "$MOUNT_POINT/etc/os-release"
     assert_success
 }
 
-@test "GHCR credentials file should be configured in CI" {
+@test "Container auth files should be correctly configured in CI" {
   if [[ "${CI}" == "true" ]]; then
-    assert_file_exists "$MOUNT_POINT/etc/containers/auth.json"
-    run grep -q "ghcr.io" "$MOUNT_POINT/etc/containers/auth.json"
-    assert_success
+    assert_file_exists "$MOUNT_POINT/usr/lib/tmpfiles.d/containers-auth.conf"
+    assert_file_exists "$MOUNT_POINT/usr/lib/container-auth.json"
+    run grep -q "ghcr.io" "$MOUNT_POINT/usr/lib/container-auth.json"
+    assert_success "/usr/lib/container-auth.json should contain ghcr.io"
+
+    assert_link "$MOUNT_POINT/etc/ostree/auth.json"
+    run readlink "$MOUNT_POINT/etc/ostree/auth.json"
+    assert_output --partial "/usr/lib/container-auth.json"
   else
-    skip "Credential test is skipped outside of CI environment"
+    skip "Auth file test is skipped outside of CI environment"
   fi
 }
 
@@ -83,4 +88,3 @@ teardown_file() {
     run buildah run "$CONTAINER" -- flatpak remotes --show-details
     assert_output --partial 'flathub'
 }
-
