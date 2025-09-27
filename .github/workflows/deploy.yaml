@@ -115,9 +115,9 @@ jobs:
 
           # Explicitly construct BATS_LIB_PATH from installed libraries
           export BATS_LIB_PATH="${{ steps.bats_setup.outputs.support-path }}:\
-${{ steps.bats_setup.outputs.assert-path }}:\
-${{ steps.bats_setup.outputs.file-path }}:\
-${{ steps.bats_setup.outputs.detik-path }}"
+          ${{ steps.bats_setup.outputs.assert-path }}:\
+          ${{ steps.bats_setup.outputs.file-path }}:\
+          ${{ steps.bats_setup.outputs.detik-path }}"
 
           TEST_IMAGE_TAG="$TEST_IMAGE_TAG" \
           buildah unshare -- bats -r tests
