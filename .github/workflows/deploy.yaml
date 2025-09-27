@@ -107,16 +107,19 @@ jobs:
         id: bats_setup
         uses: bats-core/bats-action@3.0.0
 
-      - name: Run Bats Tests
+      - name: Run Bats tests
+        shell: bash
+        env:
+          BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
+          TERM: xterm
         run: |
-          BATS_LIB_PATH_VALUE="${{ steps.bats_setup.outputs.libpath }}"
           ALL_TAGS_VALUE="${{ needs.build.outputs.tags }}"
           TEST_IMAGE_TAG=$(echo "$ALL_TAGS_VALUE" | head -n1)
-          
-          echo "Using BATS_LIB_PATH: $BATS_LIB_PATH_VALUE"
+
+          echo "Using BATS_LIB_PATH: $BATS_LIB_PATH"
           echo "Using TEST_IMAGE_TAG: $TEST_IMAGE_TAG"
 
-          BATS_LIB_PATH="$BATS_LIB_PATH_VALUE" TEST_IMAGE_TAG="$TEST_IMAGE_TAG" \
+          BATS_LIB_PATH="$BATS_LIB_PATH" TEST_IMAGE_TAG="$TEST_IMAGE_TAG" \
           buildah unshare -- bats -r tests
 
       - name: Run ShellCheck
