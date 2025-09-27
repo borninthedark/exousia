@@ -50,6 +50,13 @@ jobs:
           labels: |
             org.opencontainers.image.licenses=MIT
 
+      - name: Create auth.json for bootc
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p ./bootc-secrets
+          AUTH_SECRET=$(echo -n "${{ github.actor }}:${{ secrets.GHCR_PAT }}" | base64 -w 0)
+          echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"$AUTH_SECRET\"}}}" > ./bootc-secrets/auth.json
+
       - name: Build image with Buildah
         id: build-image
         uses: redhat-actions/buildah-build@v2
