@@ -81,9 +81,9 @@ jobs:
       - name: Run Bats Tests
         env:
           BATS_LIB_PATH: ${{ steps.bats_setup.outputs.libpath }}
-          TEST_IMAGE_TAG: ${{ fromJson(steps.build-image.outputs.image-with-tags)[0] }}
+          IMAGE_WITH_TAGS_JSON: ${{ steps.build-image.outputs.image-with-tags }}
         run: |
-          # Pass env vars directly to ensure they are available in the new user namespace
+          TEST_IMAGE_TAG=$(echo "$IMAGE_WITH_TAGS_JSON" | jq -r '.[0]')
           BATS_LIB_PATH="${BATS_LIB_PATH}" TEST_IMAGE_TAG="${TEST_IMAGE_TAG}" \
           buildah unshare -- bats -r tests
 
