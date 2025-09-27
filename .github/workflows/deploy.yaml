@@ -7,7 +7,7 @@ on:
     branches: ["main"]
   workflow_dispatch:
   schedule:
-    - cron: "0 3 * * *" # Nightly build at 3 AM UTC
+    - cron: "20 4 * * *" # Nightly build at 4:20 AM UTC
 
 permissions:
   contents: read
