@@ -80,7 +80,7 @@ jobs:
           path: image.tar
           retention-days: 1
 
-  test:
+   test:
     name: Test
     needs: build
     runs-on: ubuntu-24.04
@@ -93,7 +93,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: image-tar
-      
+
       - name: Load image from tarball
         run: podman load -i image.tar
 
@@ -103,32 +103,21 @@ jobs:
           dockerfile: Containerfile
           ignore: DL3041,DL3059,SC2086,DL4006,SC3037
 
-      - name: Setup Bats
+      - name: Setup Bats and bats libs
+        id: setup-bats
         uses: bats-core/bats-action@3.0.0
-
-      - name: Install Bats libraries
-        run: |
-          mkdir -p /usr/lib
-          git clone --depth 1 https://github.com/bats-core/bats-support /usr/lib/bats-support
-          git clone --depth 1 https://github.com/bats-core/bats-assert /usr/lib/bats-assert
-          git clone --depth 1 https://github.com/bats-core/bats-file /usr/lib/bats-file
-          git clone --depth 1 https://github.com/bats-core/bats-detik /usr/lib/bats-detik
 
       - name: Run Bats tests
         shell: bash
+        env:
+          BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
+          TERM: xterm
         run: |
           ALL_TAGS_VALUE="${{ needs.build.outputs.tags }}"
           TEST_IMAGE_TAG=$(echo "$ALL_TAGS_VALUE" | head -n1)
-          
-          # Directly name the Path, no Variables
-          export BATS_LIB_PATH="/usr/lib/bats-support:/usr/lib/bats-assert:/usr/lib/bats-file:/usr/lib/bats-detik"
 
           TEST_IMAGE_TAG="$TEST_IMAGE_TAG" \
           buildah unshare -- bats -r tests
-
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
-
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
