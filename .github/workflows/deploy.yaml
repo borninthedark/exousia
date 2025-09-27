@@ -69,13 +69,11 @@ jobs:
         uses: bats-core/bats-action@3.0.0
         id: setup-bats
 
-      - name: Bats Bootc Image Test
-        shell: bash
-        id: run-bats
-        env:
-          BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
-          TERM: xterm
-        run: make test
+      - name: Run Bats Bootc Image Tests
+        uses: bats-core/bats-action@3.0.0
+        with:
+          bats-version: 1.11.0
+          args: tests/image_content.bats
         continue-on-error: true
 
       - name: Run ShellCheck
