@@ -75,8 +75,8 @@ jobs:
         env:
           BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
           TERM: xterm
-        run: make test
-        continue-on-error: true
+        run: bats -r tests
+        continue-on-error: false
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
