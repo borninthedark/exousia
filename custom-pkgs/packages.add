@@ -26,6 +26,7 @@ qemu-kvm
 # Security
 pam-u2f
 pamu2fcfg
+lynis
 
 # Developer & Power User Tools
 ripgrep
