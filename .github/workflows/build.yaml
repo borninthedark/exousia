@@ -1,4 +1,4 @@
-name: Fedora Sericea Bootc DevSec CI (Unified Workflow)
+name: Fedora Sericea Bootc DevSec CI
 
 on:
   push:
