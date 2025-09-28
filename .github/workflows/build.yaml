@@ -23,10 +23,11 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/exousia
+  DOCKERHUB_IMAGE_BASE: ${{ env.DOCKER_BASE }}
 
 jobs:
   build-test-scan-push-sign:
-    name: Sericea DevSec CI 
+    name: Sericea DevSec CI
     runs-on: ubuntu-24.04
     timeout-minutes: 45
 
@@ -35,11 +36,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate image tags and labels
+      - name: Generate image tags and labels for both registries
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_BASE }}
+          images: |
+            ${{ env.IMAGE_BASE }}
+            ${{ env.DOCKERHUB_IMAGE_BASE }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,format=long
@@ -64,6 +67,7 @@ jobs:
         id: build-image
         uses: redhat-actions/buildah-build@v2
         with:
+          # Buildah builds the image with a base name; tags are applied at push time
           image: ${{ env.IMAGE_BASE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -85,7 +89,7 @@ jobs:
           # Use the first tag generated as the image to test against
           FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
           echo "Running tests against image: $FIRST_TAG"
-          
+
           TEST_IMAGE_TAG="$FIRST_TAG" \
           buildah unshare -- bats -r tests
 
@@ -109,7 +113,7 @@ jobs:
         run: |
           # Use the first tag generated as the image to scan
           FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          
+
           trivy image "$FIRST_TAG" \
             --scanners vuln \
             --severity CRITICAL,HIGH \
@@ -130,24 +134,44 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
 
-      - name: Push image to registry
+      - name: Login to Docker Hub
         if: github.event_name != 'pull_request'
-        id: push-to-registry
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push image to GHCR
+        if: github.event_name != 'pull_request'
+        id: push-to-ghcr
         uses: redhat-actions/push-to-registry@v2
         with:
           image: ${{ env.IMAGE_BASE }}
           tags: ${{ steps.meta.outputs.tags }}
           registry: ${{ env.REGISTRY }}
 
+      - name: Push image to Docker Hub
+        if: github.event_name != 'pull_request'
+        id: push-to-dockerhub
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ env.DOCKERHUB_IMAGE_BASE }}
+          tags: ${{ steps.meta.outputs.tags }}
+          registry: docker.io
+
       # ======================== SIGN STAGE ========================== #
       - name: Install Cosign for image signing
         if: github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@v3.5.0
 
-      - name: Sign the container image
+      - name: Sign the container images
         if: github.event_name != 'pull_request'
         run: |
-          echo "Signing image by digest: ${{ steps.push-to-registry.outputs.digest }}"
-          cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-registry.outputs.digest }}"
+          echo "Signing GHCR image by digest: ${{ steps.push-to-ghcr.outputs.digest }}"
+          cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-ghcr.outputs.digest }}"
+
+          echo "Signing Docker Hub image by digest: ${{ steps.push-to-dockerhub.outputs.digest }}"
+          cosign sign --yes "${{ env.DOCKERHUB_IMAGE_BASE }}@${{ steps.push-to-dockerhub.outputs.digest }}"
         env:
           COSIGN_EXPERIMENTAL: "true"
