@@ -1,7 +1,3 @@
-Of course. Here is the updated `README.md` based on the new workflow details.
-
------
-
 # Fedora Sway Atomic (`bootc`) Image
 
 [](https://www.google.com/search?q=https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/actions/workflows/main.yml)
