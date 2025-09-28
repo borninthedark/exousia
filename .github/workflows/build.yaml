@@ -60,8 +60,7 @@ jobs:
       - name: Create auth.json secret for build
         run: |
           mkdir -p ./bootc-secrets
-          AUTH_SECRET=$(echo -n "${{ github.actor }}:${{ secrets.GHCR_PAT }}" | base64 -w 0)
-          echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"$AUTH_SECRET\"}}}" > ./bootc-secrets/auth.json
+          echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"\"}}}" > ./bootc-secrets/auth.json
 
       - name: Build image with Buildah
         id: build-image
