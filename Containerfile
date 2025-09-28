@@ -1,7 +1,7 @@
 # ------------------------------
 # Base image
 # ------------------------------
-FROM quay.io/fedora/fedora-sway-atomic:42
+FROM quay.io/fedora/fedora-sway-atomic:43
 LABEL maintainer="uryu"
 
 # ------------------------------
