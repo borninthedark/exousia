@@ -25,8 +25,8 @@ teardown_file() {
     buildah rm "$CONTAINER"
 }
 
-@test "OS should be Fedora Linux 42" {
-    run grep 'VERSION_ID=42' "$MOUNT_POINT/etc/os-release"
+@test "OS should be Fedora Linux 43" {
+    run grep 'VERSION_ID=43' "$MOUNT_POINT/etc/os-release"
     assert_success
 }
 

@@ -12,59 +12,74 @@ The pipeline is defined in a single, unified GitHub Actions workflow that automa
 
 The first stage assembles the container image and prepares it for the subsequent stages.
 
-  * **Lint**: The `Containerfile` is first linted using **Hadolint** to ensure it follows best practices.
-  * **Tagging**: Image tags are dynamically generated for both registries based on the event trigger (e.g., `latest`, `nightly`, branch name, and commit SHA).
-  * **Build**: The image is built using **Buildah**, a daemonless container image builder well-suited for CI environments.
+* **Lint**: The `Containerfile` is first linted using **Hadolint** to ensure it follows best practices.
+* **Tagging**: Image tags are dynamically generated for both registries based on the event trigger (e.g., `latest`, `nightly`, branch name, and commit SHA).
+* **Build**: The image is built using **Buildah**, a daemonless container image builder well-suited for CI environments.
 
------
+---
 
 ### 2\. Test Stage 🧪
 
 After a successful build, the image and repository scripts undergo automated testing to ensure quality and correctness.
 
-  * **Integration Tests**: The **Bats (Bash Automated Testing System)** framework runs tests against the built container to verify its configuration and functionality.
-  * **Script Analysis**: All shell scripts in the repository are linted with **ShellCheck** to catch common scripting errors.
+* **Integration Tests**: The **Bats (Bash Automated Testing System)** framework runs tests against the built container to verify its configuration and functionality.
+* **Script Analysis**: All shell scripts in the repository are linted with **ShellCheck** to catch common scripting errors.
 
------
+---
 
 ### 3\. Scan Stage 🛡️
 
 Security is a critical part of the pipeline. The built image and source code are scanned for vulnerabilities and potential security issues.
 
-  * **Vulnerability Scan**: **Trivy** scans the container image for `CRITICAL` and `HIGH` severity CVEs. This step is non-blocking (for now) but will issue a warning if vulnerabilities are found.
-  * **Static Analysis**: **Semgrep** performs static analysis on the repository's code to find potential bugs and security flaws.
+* **Vulnerability Scan**: **Trivy** scans the container image for `CRITICAL` and `HIGH` severity CVEs. This step is non-blocking (for now) but will issue a warning if vulnerabilities are found.
+* **Static Analysis**: **Semgrep** performs static analysis on the repository's code to find potential bugs and security flaws.
 
------
+---
 
 ### 4\. Push & Sign Stage 🚀
 
 If the test and scan stages pass, and the event is not a pull request, the image is published and cryptographically signed.
 
-  * **Push**: The image is pushed to both **GitHub Container Registry (GHCR)** and **Docker Hub** with all the tags generated during the build stage.
-  * **Sign**: Both the GHCR and Docker Hub images are signed using **Cosign** and the keyless signing provider **Sigstore**. This creates a verifiable attestation, ensuring each image's integrity and provenance.
+* **Push**: The image is pushed to both **GitHub Container Registry (GHCR)** and **Docker Hub** with all the tags generated during the build stage.
+* **Sign**: Both the GHCR and Docker Hub images are signed using **Cosign** and the keyless signing provider **Sigstore**. This creates a verifiable attestation, ensuring each image's integrity and provenance.
 
------
+---
 
 ## Getting Started
 
-To use this project, you can fork the repository and customize the image to your needs. I first installed a Fedora Atomic Spin (Sway), and then rebased to a bootc compatible image. My system has been managed with bootc & with images built from this pipeline. I've tested this with Fedora versions 42 & 43. 
+To use this project, you can fork the repository and customize the image to your needs. I first installed a Fedora Atomic Spin (Sway), and then rebased to a bootc compatible image. My system has been managed with bootc & with images built from this pipeline. I've tested this with Fedora versions 42 & 43.
 
 ### Issues
 
 I can only get the ```sudo bootc switch```, & ```sudo bootc upgrade``` commands to fully work with Docker Hub. Using the first command with the GHCR gives me a "403 Forbidden | Invalid Username/Password" error, even though skopeo inspect, and podman pull work just fine.
 
-So, while this pipeline pushes images to both registries, my system pulls from Docker Hub. This may change once I figure out the source of the token permissions error. 
+So, while this pipeline pushes images to both registries, my system pulls from Docker Hub. This may change once I figure out the source of the token permissions error.
 
 ### Customization
 
-The primary file for customization is the `Containerfile`. The 'custom-*' directories have content that can capriciously be modified to create your desired OS image. Currently, it's set for an atomic image, but this will be adapted to directly support and produce a working full custom fedora-bootc image. 
+The primary file for customization is the `Containerfile`. The 'custom-*' directories have content that can capriciously be modified to create your desired OS image. Currently, it's set for an atomic image, but this will be adapted to directly support and produce a working full custom fedora-bootc image.
 
 ### Required Secrets
 
 This workflow requires secrets to push the container image to GHCR and Docker Hub. You must add these to your repository's secrets under `Settings > Secrets and variables > Actions`.
 
-  * **For GitHub Container Registry (GHCR):**
-      * `GHCR_PAT`: A GitHub Personal Access Token (PAT) with the `write:packages` scope.
-  * **For Docker Hub:**
-      * `DOCKERHUB_USERNAME`: Your Docker Hub username.
-      * `DOCKERHUB_TOKEN`: A Docker Hub Access Token with `Read, Write, Delete` permissions.
+* **For GitHub Container Registry (GHCR):**
+    * `GHCR_PAT`: A GitHub Personal Access Token (PAT) with the `write:packages` scope.
+* **For Docker Hub:**
+    * `DOCKERHUB_USERNAME`: Your Docker Hub username.
+    * `DOCKERHUB_TOKEN`: A Docker Hub Access Token with `Read, Write, Delete` permissions.
+
+---
+
+## Citations
+
+This ever expanding section is for acknowledging the helpful articles, documentation, and other resources used in creating this project.
+
+* *[Example] How to workaround rpm dependency?:* `https://github.com/coreos/bootupd/issues/468` 
+* *[Example] Unification of boot loader updates, phase 1:* `https://gitlab.com/fedora/bootc/tracker/-/issues/61` 
+* *[Example] Add Plymouth to Fedora-Bootc:* `https://www.reddit.com/r/Fedora/comments/1nq636t/comment/ngbgfkh/`
+* *[Example] Official Bootc Docs:* `https://bootc-dev.github.io/bootc/intro.html`
+* *[Example] Fedora Docs - Getting Started With Bootc:* `https://docs.fedoraproject.org/en-US/bootc/getting-started/`
+
+
+
