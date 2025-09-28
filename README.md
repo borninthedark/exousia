@@ -49,9 +49,15 @@ If the test and scan stages pass, and the event is not a pull request, the image
 
 To use this project, you can fork the repository and customize the image to your needs. I first installed a Fedora Atomic Spin (Sway), and then rebased to a bootc compatible image. My system has been managed with bootc & with images built from this pipeline. I've tested this with Fedora versions 42 & 43. 
 
+### Issues
+
+I can only get the ```sudo bootc switch```, & ```sudo bootc upgrade``` commands to fully work with Docker Hub. Using the first command with the GHCR gives me a "403 Forbidden | Invalid Username/Password" error, even though skopeo inspect, and podman pull work just fine.
+
+So, while this pipeline pushes images to both registries, my system pulls from Docker Hub. This may change once I figure out the source of the token permissions error. 
+
 ### Customization
 
-The primary file for customization is the `Containerfile`. You can add or remove packages and run commands here to create your desired OS image.
+The primary file for customization is the `Containerfile`. The 'custom-*' directories have content that can capriciously be modified to create your desired OS image. Currently, it's set for an atomic image, but this will be adapted to directly support and produce a working full custom fedora-bootc image. 
 
 ### Required Secrets
 
