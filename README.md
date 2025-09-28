@@ -31,7 +31,7 @@ After a successful build, the image and repository scripts undergo automated tes
 
 Security is a critical part of the pipeline. The built image and source code are scanned for vulnerabilities and potential security issues.
 
-  * **Vulnerability Scan**: **Trivy** scans the container image for `CRITICAL` and `HIGH` severity CVEs. This step is non-blocking but will issue a warning if vulnerabilities are found.
+  * **Vulnerability Scan**: **Trivy** scans the container image for `CRITICAL` and `HIGH` severity CVEs. This step is non-blocking (for now) but will issue a warning if vulnerabilities are found.
   * **Static Analysis**: **Semgrep** performs static analysis on the repository's code to find potential bugs and security flaws.
 
 -----
