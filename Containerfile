@@ -28,15 +28,14 @@ COPY --chmod=0644 sysusers/bootc.conf /usr/lib/sysusers.d/bootc.conf
 RUN test -f /etc/passwd || touch /etc/passwd; \
     test -f /etc/group  || touch /etc/group
 
-# Create system users to ensure they exist before subsequent layers
-RUN systemd-sysusers || true
-
-# Create directories and set permissions now that users are guaranteed to exist
+# Create system users and their home directories
 RUN set -e; \
-    mkdir -p /var/lib/greetd /var/lib/rtkit /var/lib/greeter; \
+    # Generate passwd/group entries from sysusers.d config
+    systemd-sysusers --replace=/usr/lib/sysusers.d/bootc.conf; \
+    mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit; \
     chown -R greeter:greeter /var/lib/greeter || true; \
-    chown -R greetd:greetd /var/lib/greetd || true
-
+    chown -R greetd:greetd   /var/lib/greetd || true
+    
 # Create a minimal greetd config that references the greeter user
 RUN set -e; \
     mkdir -p /etc/greetd; \
