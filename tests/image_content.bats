@@ -289,7 +289,8 @@ teardown_file() {
 @test "Greeter user (greeter) should have correct UID/GID and shell" {
     run chroot "$MOUNT_POINT" getent passwd greeter
     assert_success
-    [[ "$output" =~ ^greeter:x:241:241:Greeter Login User:/var/lib/greeter:/sbin/nologin$ ]]
+    echo "$output" | grep -Eq '^greeter:x:241:241:Greeter Login User:/var/lib/greeter:/sbin/nologin$'
+    assert_success
 }
 
 @test "Greeter user (greetd) should have correct UID/GID and shell" {
@@ -321,6 +322,8 @@ teardown_file() {
 @test "Sysusers configuration files for greetd/rtkit should exist" {
     run find "$MOUNT_POINT/usr/lib/sysusers.d" -name "*.conf"
     assert_success
-    [[ "$output" =~ greetd\.conf ]] || skip "No greetd sysusers config found"
-    [[ "$output" =~ rtkit\.conf ]] || skip "No rtkit sysusers config found"
+    echo "$output" | grep -Eq 'greetd\.conf'
+    assert_success
+    echo "$output" | grep -Eq 'rtkit\.conf'
+    assert_success
 }
