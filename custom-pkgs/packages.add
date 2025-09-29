@@ -4,6 +4,7 @@ neovim
 flatpak
 wob
 swaync
+fuzzel
 htop
 nwg-look
 btop
@@ -13,6 +14,7 @@ glances
 # Tools
 chezmoi
 bat
+wf-recorder
 lsd
 fzf
 direnv
