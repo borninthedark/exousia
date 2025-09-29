@@ -230,13 +230,3 @@ teardown_file() {
     run buildah run "$CONTAINER" -- rpm -q lynis
     assert_success "'lynis' should be installed"
 }
-
-@test "Version file should exist if created" {
-    # This file is created by fedora-version-switcher
-    # It may not exist in fresh builds, so we just check if it exists
-    if [ -f "$MOUNT_POINT/usr/local/share/sericea-bootc/.fedora-version" ]; then
-        assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/.fedora-version"
-    else
-        skip "Version file not present (optional)"
-    fi
-}

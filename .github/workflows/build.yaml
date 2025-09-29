@@ -2,9 +2,9 @@ name: Fedora Bootc DevSec CI
 
 on:
   push:
-    branches: ["fedora-bootc"]
+    branches: ["main"]
   pull_request:
-    branches: ["fedora-bootc"]
+    branches: ["main"]
   workflow_dispatch:
     inputs:
       fedora_version:
