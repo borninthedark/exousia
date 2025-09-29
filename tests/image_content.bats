@@ -80,6 +80,10 @@ teardown_file() {
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-removed"
 }
 
+@test "Sway package list should exist (packages.sway)" {
+    assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-sway"
+}
+
 @test "Fedora base packages list should exist" {
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-fedora-bootc"
 }
@@ -87,6 +91,18 @@ teardown_file() {
 @test "Custom Plymouth theme should be copied" {
     assert_dir_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/"
     assert_file_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/bgrt-better-luks.plymouth"
+}
+
+@test "Plymouth should be configured correctly" {
+    # Check if plymouth is installed
+    run buildah run "$CONTAINER" -- rpm -q plymouth
+    assert_success "Plymouth should be installed"
+    
+    # Check if dracut config exists
+    assert_file_exists "$MOUNT_POINT/usr/lib/dracut/dracut.conf.d/plymouth.conf"
+    
+    # Check if bootc kargs config exists
+    assert_file_exists "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
 }
 
 @test "Custom script 'autotiling' should be executable" {
@@ -151,6 +167,17 @@ teardown_file() {
 @test "bootc should be installed" {
     run buildah run "$CONTAINER" -- rpm -q bootc
     assert_success "bootc should be installed for bootable container support"
+}
+
+@test "Sway desktop components should be installed" {
+    run buildah run "$CONTAINER" -- rpm -q sway
+    assert_success "Sway window manager should be installed"
+    
+    run buildah run "$CONTAINER" -- rpm -q waybar
+    assert_success "Waybar should be installed"
+    
+    run buildah run "$CONTAINER" -- rpm -q swaylock
+    assert_success "Swaylock should be installed"
 }
 
 @test "Package 'kitty' from 'packages.add' should be installed" {

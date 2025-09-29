@@ -28,7 +28,7 @@ RUN ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
 # ------------------------------
 COPY --chmod=0644 ./custom-pkgs/packages.remove /usr/local/share/sericea-bootc/packages-removed
 COPY --chmod=0644 ./custom-pkgs/packages.add    /usr/local/share/sericea-bootc/packages-added
-COPY --chmod=0644 ./custom-pkgs/packages.desktop /usr/local/share/sericea-bootc/packages-desktop
+COPY --chmod=0644 ./custom-pkgs/packages.sway   /usr/local/share/sericea-bootc/packages-sway
 COPY --chmod=0644 custom-configs/plymouth/themes/bgrt-better-luks/ /usr/share/plymouth/themes/bgrt-better-luks/
 COPY --chmod=0644 custom-repos/*.repo           /etc/yum.repos.d/
 COPY --chmod=0644 custom-configs/               /etc/
@@ -57,10 +57,10 @@ RUN set -euxo pipefail; \
       https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \
     dnf config-manager setopt fedora-cisco-openh264.enabled=1; \
     if [ "$BUILD_IMAGE_TYPE" = "fedora-bootc" ]; then \
-        echo "==> Building from fedora-bootc base - installing desktop packages..."; \
-        grep -vE '^#|^$' /usr/local/share/sericea-bootc/packages-desktop | xargs -r dnf install -y; \
+        echo "==> Building from fedora-bootc base - installing Sway desktop packages..."; \
+        grep -vE '^#|^$' /usr/local/share/sericea-bootc/packages-sway | xargs -r dnf install -y --skip-unavailable; \
     else \
-        echo "==> Building from fedora-sway-atomic - skipping desktop packages (already included)"; \
+        echo "==> Building from fedora-sway-atomic - skipping Sway desktop packages (already included)"; \
     fi; \
     echo "==> Installing custom packages from packages.add..."; \
     grep -vE '^#|^$' /usr/local/share/sericea-bootc/packages-added | xargs -r dnf install -y; \
