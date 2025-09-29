@@ -60,20 +60,20 @@ teardown_file() {
 # --- CI container auth config checks ---
 
 @test "Container auth files should be correctly configured in CI" {
-  if [[ "${CI}" == "true" ]]; then
-    assert_file_exists "$MOUNT_POINT/usr/lib/tmpfiles.d/containers-auth.conf"
-    assert_file_exists "$MOUNT_POINT/usr/lib/container-auth.json"
-    run grep -q "ghcr.io" "$MOUNT_POINT/usr/lib/container-auth.json"
-    assert_success "/usr/lib/container-auth.json should contain ghcr.io"
+    if [[ "${CI}" == "true" ]]; then
+        assert_file_exists "$MOUNT_POINT/usr/lib/tmpfiles.d/containers-auth.conf"
+        assert_file_exists "$MOUNT_POINT/usr/lib/container-auth.json"
+        run grep -q "ghcr.io" "$MOUNT_POINT/usr/lib/container-auth.json"
+        assert_success "/usr/lib/container-auth.json should contain ghcr.io"
 
-    run test -L "$MOUNT_POINT/etc/ostree/auth.json"
-    assert_success "/etc/ostree/auth.json should be a symbolic link"
+        run test -L "$MOUNT_POINT/etc/ostree/auth.json"
+        assert_success "/etc/ostree/auth.json should be a symbolic link"
 
-    run readlink "$MOUNT_POINT/etc/ostree/auth.json"
-    assert_output --partial "/usr/lib/container-auth.json"
-  else
-    skip "Auth file test is skipped outside of CI environment"
-  fi
+        run readlink "$MOUNT_POINT/etc/ostree/auth.json"
+        assert_output --partial "/usr/lib/container-auth.json"
+    else
+        skip "Auth file test is skipped outside of CI environment"
+    fi
 }
 
 # --- Custom package list and Plymouth ---
@@ -276,6 +276,11 @@ teardown_file() {
 
 # --- Greeter / system users (new expansions) ---
 
+@test "System user 'greeter' should exist" {
+    run chroot "$MOUNT_POINT" getent passwd greeter
+    assert_success
+}
+
 @test "System users 'greetd' and 'rtkit' should exist" {
     run chroot "$MOUNT_POINT" getent passwd greetd
     assert_success
@@ -290,7 +295,14 @@ teardown_file() {
     assert_success
 }
 
-@test "Greeter user should have correct UID/GID and shell" {
+@test "Greeter user (greeter) should have correct UID/GID and shell" {
+    run chroot "$MOUNT_POINT" getent passwd greeter
+    assert_success
+    # Expect: greeter:x:241:241:Greeter Login User:/var/lib/greeter:/sbin/nologin
+    [[ "$output" =~ ^greeter:x:241:241:Greeter Login User:/var/lib/greeter:/sbin/nologin$ ]]
+}
+
+@test "Greeter user (greetd) should have correct UID/GID and shell" {
     run chroot "$MOUNT_POINT" getent passwd greetd
     assert_success
     [[ "$output" =~ ^greetd:x:[0-9]{1,3}:[0-9]{1,3}:.*:/var/lib/greetd:/sbin/nologin$ ]]
@@ -306,6 +318,12 @@ teardown_file() {
     assert_dir_exists "$MOUNT_POINT/var/lib/greetd"
     run stat -c "%U:%G" "$MOUNT_POINT/var/lib/greetd"
     assert_output "greetd:greetd"
+}
+
+@test "Greeter home directory should exist and be owned by greeter" {
+    assert_dir_exists "$MOUNT_POINT/var/lib/greeter"
+    run stat -c "%U:%G" "$MOUNT_POINT/var/lib/greeter"
+    assert_output "greeter:greeter"
 }
 
 @test "Sysusers configuration files for greetd/rtkit should exist" {
