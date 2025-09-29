@@ -407,11 +407,8 @@ main() {
             ;;
         41|42|43|rawhide)
             if validate_version "$1"; then
-                local target_version
-                local target_image_type
-                
-                target_version="$1"
-                target_image_type="${2:-$CURRENT_IMAGE_TYPE}"
+                local target_version="$1"
+                local target_image_type="${2:-$CURRENT_IMAGE_TYPE}"
                 
                 # Validate image type if provided
                 if [[ $# -ge 2 ]] && ! validate_image_type "$target_image_type"; then
@@ -422,6 +419,8 @@ main() {
                 fi
                 
                 print_header
+                
+                # Call switch_version
                 switch_version "$target_version" "$target_image_type"
                 
                 if [[ "${CI:-false}" != "true" ]]; then
