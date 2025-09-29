@@ -33,7 +33,7 @@ RUN systemd-sysusers || true
 
 # Create directories and set permissions now that users are guaranteed to exist
 RUN set -e; \
-    mkdir -p /var/lib/{greetd,greeter,rtkit}; \
+    mkdir -p /var/lib/greetd /var/lib/rtkit /var/lib/greeter; \
     chown -R greeter:greeter /var/lib/greeter || true; \
     chown -R greetd:greetd /var/lib/greetd || true
 
