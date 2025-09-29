@@ -11,7 +11,7 @@ This repository contains the configuration to build a custom, container-based im
 - **Base Image:** `Unknown`
 - **Image Type:** `unknown`
 - **Fedora Version:** unknown
-- **Last Updated:** 2025-09-29 22:37:05 UTC
+- **Last Updated:** 2025-09-29 23:31:39 UTC
 - **Build Status:** [![Build Status](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions)
 
 ## 🏗️ CI/CD Workflow: Fedora Bootc DevSec CI
@@ -20,10 +20,6 @@ The pipeline is defined in a single, unified GitHub Actions workflow that automa
 - Pushes and pull requests to the `main` branch
 - Nightly schedule (`20 4 * * *` UTC)
 - Manual workflow dispatch with version/image type selection
-- This was a custom build to make rebasing from an atomic image to fedora-bootc easier, and use sway. We'll see what happens after that. 
-- To that end, this image largely assumes your /etc and user home directories will be maintained outside of this pipeline. For now. This will most immediately impact user and group management, and probably related systemd services. 
-
-Ex: Create the greeter user and group outside of this (for now), and assign correct perms if you're using greetd. 
 
 ### 1. Build Stage 🏗️
 
@@ -224,4 +220,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 **Built with ❤️ using Fedora bootc**
 
-*This README was automatically generated on 2025-09-29 22:37:05 UTC*
+*This README was automatically generated on 2025-09-29 23:31:39 UTC*
