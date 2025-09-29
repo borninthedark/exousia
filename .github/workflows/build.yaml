@@ -96,37 +96,6 @@ jobs:
           echo "---" >> $GITHUB_STEP_SUMMARY
           echo "*Image types are from the official [Fedora bootc project](https://docs.fedoraproject.org/en-US/bootc/)*" >> $GITHUB_STEP_SUMMARY
 
-      - name: Commit configuration change (if on main branch)
-        if: github.event_name == 'workflow_dispatch' && (github.event.inputs.fedora_version != 'current' || github.event.inputs.image_type != 'current') && github.ref == 'refs/heads/main'
-        env:
-          VERSION: ${{ github.event.inputs.fedora_version }}
-          IMAGE_TYPE: ${{ github.event.inputs.image_type }}
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          
-          if [[ -n $(git status --porcelain) ]]; then
-            git add Containerfile .fedora-version
-            
-            # Create descriptive commit message
-            if [[ "$VERSION" != "current" ]] && [[ "$IMAGE_TYPE" != "current" ]]; then
-              git commit -m "chore: switch to Fedora $VERSION with $IMAGE_TYPE base" \
-                         -m "Updated bootc base image configuration" \
-                         -m "Version: $VERSION" \
-                         -m "Image: $IMAGE_TYPE"
-            elif [[ "$VERSION" != "current" ]]; then
-              git commit -m "chore: switch to Fedora $VERSION" \
-                         -m "Updated Fedora version for bootc image"
-            else
-              git commit -m "chore: switch to $IMAGE_TYPE base image" \
-                         -m "Changed bootc base image type"
-            fi
-            
-            git push
-          else
-            echo "No changes to commit"
-          fi
-
       - name: Generate image tags and labels for both registries
         id: meta
         uses: docker/metadata-action@v5
