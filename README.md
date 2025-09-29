@@ -1,55 +1,66 @@
-# Fedora Sway Atomic (`bootc`) Image
+# Fedora Bootc Custom Image
 
 [![CI/CD Pipeline](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions/workflows/build.yaml)
-[![Fedora 42](https://img.shields.io/badge/Fedora-42-51A2DA?logo=fedora)](https://fedoraproject.org)
+[![Fedora Version](https://img.shields.io/badge/Fedora-43-51A2DA?logo=fedora)](https://fedoraproject.org)
 [![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
 
-This repository contains the configuration to build a custom, container-based immutable version of **Fedora Sway (Sericea)** using [`bootc`](https://github.com/containers/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions.
+This repository contains the configuration to build a custom, container-based immutable operating system using [**Fedora bootc**](https://docs.fedoraproject.org/en-US/bootc/). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions.
 
-## CI/CD Workflow: `Sericea DevSec CI`
+## 📋 Current Configuration
 
-The pipeline is defined in a single, unified GitHub Actions workflow that automates the entire image lifecycle. The workflow is triggered on pushes and pull requests to the `main` branch, on a nightly schedule (`20 4 * * *`), or by manual dispatch.
+- **Base Image:** `Fedora Sway Atomic Desktop`
+- **Image Type:** `fedora-sway-atomic`
+- **Fedora Version:** 43
+- **Last Updated:** 2025-09-29 14:41:17 UTC
+- **Build Status:** [![Build Status](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions)
+
+## 🏗️ CI/CD Workflow: Fedora Bootc DevSec CI
+
+The pipeline is defined in a single, unified GitHub Actions workflow that automates the entire image lifecycle. The workflow is triggered on:
+- Pushes and pull requests to the `main` branch
+- Nightly schedule (`20 4 * * *` UTC)
+- Manual workflow dispatch with version/image type selection
 
 ### 1. Build Stage 🏗️
 
-The first stage assembles the container image and prepares it for the subsequent stages.
+The first stage assembles the container image and prepares it for subsequent stages.
 
-* **Lint**: The `Containerfile` is first linted using **Hadolint** to ensure it follows best practices.
-* **Tagging**: Image tags are dynamically generated for both registries based on the event trigger (e.g., `latest`, `nightly`, branch name, and commit SHA).
-* **Build**: The image is built using **Buildah**, a daemonless container image builder well-suited for CI environments.
-
----
+- **Lint**: The `Containerfile` is linted using **Hadolint** to ensure best practices
+- **Tagging**: Image tags are dynamically generated based on event triggers (`latest`, `nightly`, branch name, commit SHA)
+- **Build**: The image is built using **Buildah**, a daemonless container image builder optimized for CI environments
+- **Version Switching**: Supports dynamic Fedora version and base image type switching via workflow dispatch
 
 ### 2. Test Stage 🧪
 
-After a successful build, the image and repository scripts undergo automated testing to ensure quality and correctness.
+After a successful build, the image and repository scripts undergo automated testing.
 
-* **Integration Tests**: The **Bats (Bash Automated Testing System)** framework runs tests against the built container to verify its configuration and functionality.
-* **Script Analysis**: All shell scripts in the repository are linted with **ShellCheck** to catch common scripting errors.
-
----
+- **Integration Tests**: **Bats (Bash Automated Testing System)** runs tests against the built container
+- **Script Analysis**: All shell scripts are linted with **ShellCheck**
+- **Bootc Validation**: Runs `bootc container lint` to verify bootc compliance
 
 ### 3. Scan Stage 🛡️
 
-Security is a critical part of the pipeline. The built image and source code are scanned for vulnerabilities and potential security issues.
+Security scanning ensures the image meets security standards.
 
-* **Vulnerability Scan**: **Trivy** scans the container image for `CRITICAL` and `HIGH` severity CVEs. This step is non-blocking (for now) but will issue a warning if vulnerabilities are found.
-* **Static Analysis**: **Semgrep** performs static analysis on the repository's code to find potential bugs and security flaws.
-
----
+- **Vulnerability Scan**: **Trivy** scans for `CRITICAL` and `HIGH` severity CVEs
+- **Static Analysis**: **Semgrep** performs static code analysis
 
 ### 4. Push & Sign Stage 🚀
 
-If the test and scan stages pass, and the event is not a pull request, the image is published and cryptographically signed.
+If tests pass and the event is not a pull request, the image is published and cryptographically signed.
 
-* **Push**: The image is pushed to both **GitHub Container Registry (GHCR)** and **Docker Hub** with all the tags generated during the build stage.
-* **Sign**: Both the GHCR and Docker Hub images are signed using **Cosign** and the keyless signing provider **Sigstore**. This creates a verifiable attestation, ensuring each image's integrity and provenance.
+- **Push**: Image pushed to **GitHub Container Registry (GHCR)** and **Docker Hub**
+- **Sign**: Images signed using **Cosign** and **Sigstore** for integrity verification
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
-To use this project, you can fork the repository and customize the image to your needs. I first installed a Fedora Atomic Spin (Sway), and then rebased to a bootc compatible image. My system has been managed with bootc & with images built from this pipeline. I've tested this with Fedora versions 42 & 43.
+### Prerequisites
+
+- A system running Fedora (preferably an Atomic variant)
+- Access to either Docker Hub or GHCR
+- Basic understanding of bootc and container workflows
 
 ### Using the Pre-built Image
 
@@ -80,112 +91,133 @@ sudo systemctl reboot
 ```bash
 # Clone the repository
 git clone https://github.com/borninthedark/exousia.git
-cd exousia
+cd $(basename borninthedark/exousia)
 
 # Build the image
 make build
 
 # Push to local registry (optional)
 make push
-
-# Deploy to your system
-make deploy
 ```
 
 ---
 
-## Customization
+## 🔧 Customization
 
-The primary file for customization is the `Containerfile`. The 'custom-*' directories have content that can be modified to create your desired OS image. Currently, it's set for an atomic image, but this will be adapted to directly support and produce a working full custom fedora-bootc image.
+### Switching Fedora Versions
 
-### Package Management
+Use the version switcher script to change Fedora versions or base image types:
+
+```bash
+# Switch to Fedora 43
+./custom-scripts/fedora-version-switcher 43
+
+# Switch to Fedora 42 with standard bootc base
+./custom-scripts/fedora-version-switcher 42 fedora-bootc
+
+# Switch to Sway Atomic desktop
+./custom-scripts/fedora-version-switcher 42 fedora-sway-atomic
+
+# List available options
+./custom-scripts/fedora-version-switcher list
+```
+
+Or use GitHub Actions workflow dispatch:
+
+1. Go to **Actions** → **Fedora Bootc DevSec CI**
+2. Click **Run workflow**
+3. Select desired Fedora version and image type
+4. Click **Run workflow**
+
+The README will automatically update to reflect the new configuration.
+
+### Modifying Packages
 
 Edit the package lists in `custom-pkgs/`:
 
-- **`packages.add`** - Packages to install on top of the base image
-- **`packages.remove`** - Packages to remove from the base image
+- `packages.add` - Packages to install
+- `packages.remove` - Packages to remove from base image
 
-Current customizations include:
-- **Added**: kitty, neovim, htop, btop, distrobox, virt-manager, pam-u2f, and more
-- **Removed**: foot, dunst, rofi-wayland
-
-### Configuration Files
+### Adding Custom Configuration
 
 Place configuration files in the appropriate `custom-configs/` subdirectories:
 
 - `custom-configs/sway/` - Sway window manager configuration
-- `custom-configs/greetd/` - Display manager configuration  
+- `custom-configs/greetd/` - Display manager configuration
 - `custom-configs/plymouth/` - Boot splash configuration
 
 ### Custom Scripts
 
-Add executable scripts to `custom-scripts/` - they will be copied to `/usr/local/bin/`:
-
-- `autotiling` - Automatic tiling layout for Sway
-- `config-authselect` - U2F authentication setup
-- `lid` - Laptop lid state handler
-- `fedora-version-switcher` - Switch between Fedora versions (fedora-bootc branch)
-- `generate-readme` - Dynamic README generator (fedora-bootc branch)
-
-### Custom Repositories
-
-Additional repositories in `custom-repos/`:
-
-- RPM Fusion (free and nonfree)
-- nwg-shell COPR
-- swaylock-effects COPR
+Add executable scripts to `custom-scripts/` - they will be copied to `/usr/local/bin/`
 
 ---
 
-## Required Secrets
+## 🔐 Required Secrets
 
-This workflow requires secrets to push the container image to GHCR and Docker Hub. You must add these to your repository's secrets under `Settings > Secrets and variables > Actions`.
+To use the full CI/CD pipeline, configure these secrets in your repository:
 
-* **For GitHub Container Registry (GHCR):**
-    * `GHCR_PAT`: A GitHub Personal Access Token (PAT) with the `write:packages` scope.
-* **For Docker Hub:**
-    * `DOCKERHUB_USERNAME`: Your Docker Hub username.
-    * `DOCKERHUB_TOKEN`: A Docker Hub Access Token with `Read, Write, Delete` permissions.
+**Settings → Secrets and variables → Actions**
+
+### For GitHub Container Registry (GHCR):
+- `GHCR_PAT`: Personal Access Token with `write:packages` scope
+
+### For Docker Hub:
+- `DOCKERHUB_USERNAME`: Your Docker Hub username
+- `DOCKERHUB_TOKEN`: Access token with Read, Write, Delete permissions
 
 ---
 
-## Known Issues
+## 🐛 Known Issues
 
 ### GHCR Authentication
 
-I can only get the `sudo bootc switch` & `sudo bootc upgrade` commands to fully work with Docker Hub. Using the first command with the GHCR gives me a "403 Forbidden | Invalid Username/Password" error, even though skopeo inspect, and podman pull work just fine.
+Currently experiencing authentication issues with `bootc switch` and `bootc upgrade` when using GHCR. The commands work flawlessly with Docker Hub. While `skopeo inspect` and `podman pull` work with GHCR, bootc operations return "403 Forbidden | Invalid Username/Password" errors.
 
-So, while this pipeline pushes images to both registries, my system pulls from Docker Hub. This may change once I figure out the source of the token permissions error.
+**Workaround:** Use Docker Hub for bootc operations until this is resolved.
 
 ---
 
-## Project Structure
+## 📚 Documentation & Resources
 
-```
-exousia/
-├── Containerfile              # Main build instructions
-├── Makefile                   # Local build automation
-├── containers-auth.conf       # Container auth configuration
-├── custom-configs/            # System configuration files
-│   ├── sway/                 # Sway WM configs
-│   ├── greetd/               # Display manager
-│   └── plymouth/             # Boot splash themes
-├── custom-pkgs/               # Package management
-│   ├── packages.add          # Packages to install
-│   └── packages.remove       # Packages to remove
-├── custom-repos/              # Additional repositories
-│   ├── nwg-shell.repo
-│   └── swaylock-effects.repo
-├── custom-scripts/            # Custom utility scripts
-│   ├── autotiling
-│   ├── config-authselect
-│   ├── lid
-│   ├── fedora-version-switcher    # (fedora-bootc branch)
-│   └── generate-readme             # (fedora-bootc branch)
-├── tests/                     # Bats test suite
-│   └── image_content.bats
-└── .github/
-    └── workflows/
-        └── build.yaml        # CI/CD pipeline
-```
+### Official Documentation
+- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)
+- [bootc Project](https://bootc-dev.github.io/bootc/)
+- [Base Images](https://docs.fedoraproject.org/en-US/bootc/base-images/)
+- [Building Containers](https://docs.fedoraproject.org/en-US/bootc/building-containers/)
 
+### Community Resources
+- [Fedora Discussion - bootc](https://discussion.fedoraproject.org/tag/bootc)
+- [bootc Issue Tracker](https://gitlab.com/fedora/bootc/tracker)
+
+### Articles & Guides
+- [Getting Started With Bootc](https://docs.fedoraproject.org/en-US/bootc/getting-started/)
+- [How to rebase to Fedora Silverblue 43 Beta](https://fedoramagazine.org/how-to-rebase-to-fedora-silverblue-43-beta/)
+- [A Great Journey Towards Fedora CoreOS and Bootc](https://fedoramagazine.org/a-great-journey-towards-fedora-coreos-and-bootc/)
+- [Building Your Own Atomic Bootc Desktop](https://fedoramagazine.org/building-your-own-atomic-bootc-desktop/)
+
+### Technical References
+- [Bootupd RPM dependency workaround](https://github.com/coreos/bootupd/issues/468)
+- [Unification of boot loader updates](https://gitlab.com/fedora/bootc/tracker/-/issues/61)
+- [Add Plymouth to Fedora-Bootc](https://www.reddit.com/r/Fedora/comments/1nq636t/comment/ngbgfkh/)
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- The Fedora Project and bootc maintainers
+- The broader container and immutable OS community
+- All contributors to the referenced documentation and guides
+
+---
+
+**Built with ❤️ using Fedora bootc**
+
+*This README was automatically generated on 2025-09-29 14:41:17 UTC*
