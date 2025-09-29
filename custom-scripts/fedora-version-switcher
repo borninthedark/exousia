@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Accept version and image type from arguments
+target_version="${1:-}"
+target_image_type="${2:-}"
+
+if [[ -z "$target_version" || -z "$target_image_type" ]]; then
+  echo "Usage: $0 <version> <image_type>"
+  exit 1
+fi
+
 # Fedora Version Switcher for Bootc Images
 # Allows switching between Fedora versions and base image types for building custom bootc images
 # Based on official Fedora bootc documentation
@@ -12,19 +21,19 @@ CONTAINERFILE="${PROJECT_ROOT}/Containerfile"
 VERSION_FILE="${PROJECT_ROOT}/.fedora-version"
 
 # Current supported Fedora versions (as of September 2025)
-# Fedora 41: Released October 29, 2024 (supported until ~1 month after F43)
-# Fedora 42: Released April 15, 2025 (current stable)
-# Fedora 43: Beta available, final release October 28, 2025
-# Rawhide: Rolling development (always available)
 SUPPORTED_VERSIONS=("41" "42" "43" "rawhide")
 CURRENT_VERSION=""
 CURRENT_IMAGE_TYPE=""
 
 # Available base image types from official Fedora bootc project
-# See: https://docs.fedoraproject.org/en-US/bootc/base-images/
 declare -A IMAGE_TYPES=(
     ["fedora-bootc"]="quay.io/fedora/fedora-bootc"
     ["fedora-sway-atomic"]="quay.io/fedora/fedora-sway-atomic"
+)
+
+declare -A IMAGE_DESCRIPTIONS=(
+    ["fedora-bootc"]="Minimal server base - requires desktop packages"
+    ["fedora-sway-atomic"]="Full Sway desktop - pre-configured"
 )
 
 # Color codes for output (disabled in CI)
@@ -45,104 +54,87 @@ print_header() {
     echo
 }
 
-print_success() {
-    echo -e "${GREEN}✓${NC} $1"
-}
+print_success() { echo -e "${GREEN}✓${NC} $1"; }
+print_error()   { echo -e "${RED}✗${NC} $1" >&2; }
+print_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
+print_info()    { echo -e "${BLUE}ℹ${NC} $1"; }
 
-print_error() {
-    echo -e "${RED}✗${NC} $1" >&2
-}
-
-print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
-}
-
-print_info() {
-    echo -e "${BLUE}ℹ${NC} $1"
+save_version() {
+    local version=$1
+    local image_type=$2
+    echo "${version}:${image_type}" > "$VERSION_FILE"
 }
 
 detect_current_config() {
+    if [[ -f "$VERSION_FILE" ]]; then
+        if [[ -s "$VERSION_FILE" ]]; then
+            CURRENT_VERSION=$(cut -d: -f1 < "$VERSION_FILE")
+            CURRENT_IMAGE_TYPE=$(cut -d: -f2 < "$VERSION_FILE")
+            if [[ -n "$CURRENT_VERSION" && -n "$CURRENT_IMAGE_TYPE" ]]; then
+                return 0
+            fi
+        fi
+    fi
+    
     if [[ ! -f "$CONTAINERFILE" ]]; then
-        print_error "Containerfile not found at $CONTAINERFILE"
+        print_error "Neither .fedora-version nor Containerfile found"
         exit 1
     fi
     
-    # Detect image type and version from FROM line
-    local from_line
-    from_line=$(grep "^FROM" "$CONTAINERFILE" | head -n1)
+    local version_arg
+    version_arg=$(grep "^ARG FEDORA_VERSION=" "$CONTAINERFILE" | cut -d= -f2)
+    local type_arg
+    type_arg=$(grep "^ARG IMAGE_TYPE=" "$CONTAINERFILE" | cut -d= -f2)
     
-    if [[ "$from_line" =~ fedora-sway-atomic:([0-9]+|rawhide) ]]; then
-        CURRENT_IMAGE_TYPE="fedora-sway-atomic"
-        CURRENT_VERSION="${BASH_REMATCH[1]}"
-    elif [[ "$from_line" =~ fedora-bootc:([0-9]+|rawhide) ]]; then
-        CURRENT_IMAGE_TYPE="fedora-bootc"
-        CURRENT_VERSION="${BASH_REMATCH[1]}"
+    if [[ -n "$version_arg" && -n "$type_arg" ]]; then
+        CURRENT_VERSION="$version_arg"
+        CURRENT_IMAGE_TYPE="$type_arg"
+        print_warning "No .fedora-version file found, using defaults from Containerfile"
+        print_warning "Creating .fedora-version file..."
+        save_version "$CURRENT_VERSION" "$CURRENT_IMAGE_TYPE"
     else
-        print_warning "Could not detect current version from Containerfile"
+        print_error "Could not detect configuration from .fedora-version or Containerfile"
         CURRENT_VERSION="unknown"
         CURRENT_IMAGE_TYPE="unknown"
     fi
 }
 
-save_version() {
-    echo "$1:$CURRENT_IMAGE_TYPE" > "$VERSION_FILE"
-}
-
 list_versions() {
     echo "Currently using: ${GREEN}Fedora $CURRENT_VERSION${NC} (${CURRENT_IMAGE_TYPE})"
+    echo "  ${YELLOW}▸${NC} ${IMAGE_DESCRIPTIONS[$CURRENT_IMAGE_TYPE]:-Unknown image type}"
     echo
     echo "═══════════════════════════════════════════════════════════"
     echo "Available Fedora Versions:"
     echo "═══════════════════════════════════════════════════════════"
     echo
     echo "  ${BLUE}41${NC}  Fedora 41 (Released Oct 2024)"
-    echo "      └─ Supported until ~1 month after F43 release"
     echo
     echo "  ${BLUE}42${NC}  Fedora 42 (Released Apr 2025) ${GREEN}← Current Stable${NC}"
-    echo "      └─ ~13 months of support (until ~May 2026)"
     echo
     echo "  ${BLUE}43${NC}  Fedora 43 Beta (Final release Oct 28, 2025)"
-    echo "      └─ Beta available for testing, GA coming soon"
     echo
     echo "  ${BLUE}rawhide${NC}  Rawhide (Rolling development)"
-    echo "      └─ Bleeding edge, for development only"
     echo
     echo "═══════════════════════════════════════════════════════════"
     echo "Available Base Image Types:"
     echo "═══════════════════════════════════════════════════════════"
     echo
-    echo "  ${BLUE}fedora-bootc${NC}"
-    echo "      Full server-oriented bootc base image"
-    echo "      Includes: bootc, kernel, systemd, NetworkManager,"
-    echo "                podman, filesystem tools, and more"
-    echo "      Source: quay.io/fedora/fedora-bootc"
-    echo "      Docs: https://docs.fedoraproject.org/en-US/bootc/"
-    echo
-    echo "  ${BLUE}fedora-sway-atomic${NC}"
-    echo "      Fedora Atomic Desktop with Sway compositor"
-    echo "      Built on Fedora bootc with Sway desktop environment"
-    echo "      Source: quay.io/fedora/fedora-sway-atomic"
-    echo
-    echo "═══════════════════════════════════════════════════════════"
+    echo "  ${BLUE}fedora-bootc${NC} - Minimal Server Base"
+    echo "  ${BLUE}fedora-sway-atomic${NC} - Full Sway Desktop"
     echo
 }
 
 validate_version() {
     local version=$1
     for v in "${SUPPORTED_VERSIONS[@]}"; do
-        if [[ "$v" == "$version" ]]; then
-            return 0
-        fi
+        if [[ "$v" == "$version" ]]; then return 0; fi
     done
     return 1
 }
 
 validate_image_type() {
     local type=$1
-    if [[ -n "${IMAGE_TYPES[$type]:-}" ]]; then
-        return 0
-    fi
-    return 1
+    [[ -n "${IMAGE_TYPES[$type]:-}" ]]
 }
 
 backup_containerfile() {
@@ -156,110 +148,36 @@ switch_version() {
     local target_version=$1
     local target_image_type="${2:-$CURRENT_IMAGE_TYPE}"
     
-    if [[ "$target_version" == "$CURRENT_VERSION" ]] && [[ "$target_image_type" == "$CURRENT_IMAGE_TYPE" ]]; then
+    if [[ "$target_version" == "$CURRENT_VERSION" && "$target_image_type" == "$CURRENT_IMAGE_TYPE" ]]; then
         print_warning "Already using Fedora $target_version ($target_image_type)"
-        return 0
+        exit 0
     fi
     
     print_info "Switching configuration:"
     echo "  From: Fedora $CURRENT_VERSION ($CURRENT_IMAGE_TYPE)"
     echo "  To:   Fedora $target_version ($target_image_type)"
-    echo
     
-    # Create backup (skip in CI to avoid cluttering the workspace)
+    if [[ "$target_image_type" == "fedora-bootc" ]]; then
+        print_warning "Switching to fedora-bootc will install desktop packages and enable services"
+    elif [[ "$target_image_type" == "fedora-sway-atomic" ]]; then
+        print_info "Switching to fedora-sway-atomic will skip packages.desktop and service enablement"
+    fi
+    
     if [[ "${CI:-false}" != "true" ]]; then
         backup_containerfile
     fi
     
-    # Get the target image base URL
-    local target_image
-    target_image="${IMAGE_TYPES[$target_image_type]}"
-    
-    # Update the FROM line in Containerfile
-    # Match both fedora-sway-atomic and fedora-bootc patterns
-    sed -i "s|FROM quay.io/fedora/fedora-\(sway-atomic\|bootc\):[0-9]\+\|FROM quay.io/fedora/fedora-\(sway-atomic\|bootc\):rawhide|FROM ${target_image}:${target_version}|g" "$CONTAINERFILE"
-    
-    # Update current image type
+    save_version "$target_version" "$target_image_type"
     CURRENT_IMAGE_TYPE="$target_image_type"
-    
-    # Save the version to file
-    save_version "$target_version"
+    CURRENT_VERSION="$target_version"
     
     print_success "Successfully switched to Fedora $target_version ($target_image_type)"
-    
-    # Show the updated FROM line
-    echo
-    print_info "Updated Containerfile FROM line:"
-    grep "^FROM" "$CONTAINERFILE" | sed 's/^/  /'
-    
-    return 0
+    exit 0
 }
 
 show_usage() {
-    cat << EOF
-Usage: $0 [VERSION] [IMAGE_TYPE]
-
-Switch the Fedora version and/or base image type in the Containerfile for
-building custom bootable container images.
-
-═══════════════════════════════════════════════════════════════════════
-VERSIONS:
-═══════════════════════════════════════════════════════════════════════
-    41          Fedora 41 (Oct 2024 - ~Nov 2025)
-    42          Fedora 42 (Current stable, Apr 2025 - ~May 2026)
-    43          Fedora 43 Beta (Final release Oct 28, 2025)
-    rawhide     Rawhide (Rolling development, bleeding edge)
-
-═══════════════════════════════════════════════════════════════════════
-IMAGE TYPES (optional):
-═══════════════════════════════════════════════════════════════════════
-    fedora-bootc         Official Fedora bootc base image
-                         Server-oriented, includes bootc, kernel, systemd,
-                         NetworkManager, podman, filesystem tools, etc.
-                         
-    fedora-sway-atomic   Fedora Atomic Desktop with Sway compositor
-                         Desktop-focused bootc image with Wayland/Sway
-
-═══════════════════════════════════════════════════════════════════════
-COMMANDS:
-═══════════════════════════════════════════════════════════════════════
-    list           List all available versions and image types
-    current        Show current version and image type
-    help           Show this help message
-
-═══════════════════════════════════════════════════════════════════════
-EXAMPLES:
-═══════════════════════════════════════════════════════════════════════
-    $0 42
-        Switch to Fedora 42 (keeps current image type)
-        
-    $0 43 fedora-bootc
-        Switch to Fedora 43 with standard bootc base image
-        
-    $0 42 fedora-sway-atomic
-        Switch to Fedora 42 with Sway Atomic desktop
-        
-    $0 rawhide
-        Switch to Rawhide rolling release
-        
-    $0 list
-        List available versions with detailed information
-        
-    $0 current
-        Show current configuration
-
-═══════════════════════════════════════════════════════════════════════
-NOTES:
-═══════════════════════════════════════════════════════════════════════
-    • Fedora provides approximately 13 months of support per release
-    • The N-2 release reaches EOL 4 weeks after N is released
-    • Upgrades across more than 2 releases are not supported
-    • Rawhide is for development/testing only, not production use
-    • Base images are built from official Fedora bootc project
-    
-    Documentation: https://docs.fedoraproject.org/en-US/bootc/
-
-EOF
+    echo "Usage: $0 <version> <image_type>"
+    echo "Run with 'list', 'current', or 'help' for more information."
 }
 
 main() {
@@ -274,58 +192,30 @@ main() {
     
     case "$1" in
         help|--help|-h)
-            print_header
-            show_usage
-            exit 0
-            ;;
+            print_header; show_usage; exit 0 ;;
         list|--list|-l)
-            print_header
-            list_versions
-            exit 0
-            ;;
+            print_header; list_versions; exit 0 ;;
         current|--current|-c)
             echo "Current: Fedora $CURRENT_VERSION ($CURRENT_IMAGE_TYPE)"
-            exit 0
-            ;;
+            exit 0 ;;
         41|42|43|rawhide)
             if validate_version "$1"; then
-                local target_version
-                local target_image_type
-                
-                target_version="$1"
-                target_image_type="${2:-$CURRENT_IMAGE_TYPE}"
-                
-                # Validate image type if provided
+                local target_version="$1"
+                local target_image_type="${2:-$CURRENT_IMAGE_TYPE}"
                 if [[ $# -ge 2 ]] && ! validate_image_type "$target_image_type"; then
                     print_error "Invalid image type: $target_image_type"
-                    echo
-                    echo "Valid image types: fedora-bootc, fedora-sway-atomic"
                     exit 1
                 fi
-                
                 print_header
                 switch_version "$target_version" "$target_image_type"
-                
-                if [[ "${CI:-false}" != "true" ]]; then
-                    echo
-                    print_info "Next steps:"
-                    echo "  1. Review changes:    git diff Containerfile"
-                    echo "  2. Build the image:   make build"
-                    echo "  3. Test locally:      podman-bootc run <image>"
-                    echo "  4. Commit changes:    git add Containerfile .fedora-version"
-                    echo "                        git commit -m 'Switch to Fedora $target_version'"
-                fi
-                exit 0
             else
                 print_error "Invalid version: $1"
-                echo
                 list_versions
                 exit 1
             fi
             ;;
         *)
             print_error "Unknown argument: $1"
-            echo
             show_usage
             exit 1
             ;;
