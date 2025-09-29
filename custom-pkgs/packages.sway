@@ -1,6 +1,7 @@
 # Desktop Packages - Only installed when using fedora-bootc base
 # These packages transform fedora-bootc into a Sway desktop environment
 # This file is NOT used when building from fedora-sway-atomic
+# Packages in packages.add are installed separately and should NOT be duplicated here
 
 # Core Sway Desktop Components
 sway
