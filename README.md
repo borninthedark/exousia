@@ -308,6 +308,20 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
+## Citations
+
+This ever-expanding section acknowledges the helpful articles, documentation, and other resources used in creating this project.
+
+    How to workaround rpm dependency?: https://github.com/coreos/bootupd/issues/468
+    Unification of boot loader updates, phase 1: https://gitlab.com/fedora/bootc/tracker/-/issues/61
+    Add Plymouth to Fedora-Bootc: https://www.reddit.com/r/Fedora/comments/1nq636t/comment/ngbgfkh/
+    Official Bootc Docs: https://bootc-dev.github.io/bootc/intro.html
+    Fedora Docs – Getting Started With Bootc: https://docs.fedoraproject.org/en-US/bootc/getting-started/
+    Fedora Magazine – How to rebase to Fedora Silverblue 43 Beta: https://fedoramagazine.org/how-to-rebase-to-fedora-silverblue-43-beta/
+    Fedora Magazine – A Great Journey Towards Fedora CoreOS and Bootc: https://fedoramagazine.org/a-great-journey-towards-fedora-coreos-and-bootc/
+    Fedora Magazine – Building Your Own Atomic Bootc Desktop: https://fedoramagazine.org/building-your-own-atomic-bootc-desktop/
+
+
 **Built with ❤️ using Fedora bootc & Fedora Atomic**
 
 *Last updated: September 2025*
