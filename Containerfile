@@ -78,7 +78,8 @@ RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.
 # ------------------------------
 # Configure Plymouth boot splash
 # ------------------------------
-RUN ln -sf /tmp /var/tmp
+# Remove existing /var/tmp directory and create symlink to /tmp
+RUN rm -rf /var/tmp && ln -sf /tmp /var/tmp
 
 # Add plymouth to dracut modules
 RUN echo 'add_dracutmodules+=" plymouth "' >> /usr/lib/dracut/dracut.conf.d/plymouth.conf
