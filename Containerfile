@@ -18,23 +18,24 @@ ENV BUILD_IMAGE_TYPE=${IMAGE_TYPE}
 
 
 # ------------------------------
-# Add sysusers definitions so systemd-sysusers can create required users/groups 
+# Add sysusers definitions so systemd-sysusers can create required users/groups
 # ------------------------------
-# Copy sysusers definition and invoke systemd-sysusers at build time
+# Copy sysusers definition
 COPY --chmod=0644 sysusers/bootc.conf /usr/lib/sysusers.d/bootc.conf
 
 # Ensure /etc/passwd and /etc/group exist (safety for minimal images)
 RUN test -f /etc/passwd || touch /etc/passwd; \
     test -f /etc/group  || touch /etc/group
 
-# Create directories expected by system users and run systemd-sysusers to populate /etc/{passwd,group}
+# Create system users to ensure they exist before subsequent layers
+RUN systemd-sysusers || true
+
+# Create directories and set permissions now that users are guaranteed to exist
 RUN set -e; \
     mkdir -p /var/lib/greetd /var/lib/rtkit; \
-    systemd-sysusers || true; \
-    chown -R 240:240 /var/lib/greetd || true
-    
-# Create a minimal greetd config that references the greeter user (optional but recommended)
-# This ensures greetd knows which user to run the greeter as.
+    chown -R greetd:greetd /var/lib/greetd || true
+
+# Create a minimal greetd config that references the greeter user
 RUN set -e; \
     mkdir -p /etc/greetd; \
     printf '[security]\n# Run greeter as this user\nuser = "greetd"\n\n[default]\n# no-session configured here; system should provide session handling\n' \
