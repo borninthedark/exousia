@@ -17,6 +17,16 @@ setup_file() {
 
     export CONTAINER MOUNT_POINT
     echo "--- Container filesystem mounted at $MOUNT_POINT ---"
+    
+    # Detect Fedora version from the mounted container
+    if [ -f "$MOUNT_POINT/etc/os-release" ]; then
+        FEDORA_VERSION=$(grep -oP 'VERSION_ID=\K\d+' "$MOUNT_POINT/etc/os-release" || echo "unknown")
+        export FEDORA_VERSION
+        echo "--- Detected Fedora version: $FEDORA_VERSION ---"
+    else
+        echo "WARNING: Could not detect Fedora version from /etc/os-release" >&2
+        export FEDORA_VERSION="unknown"
+    fi
 }
 
 teardown_file() {
@@ -25,9 +35,27 @@ teardown_file() {
     buildah rm "$CONTAINER"
 }
 
-@test "OS should be Fedora Linux 42" {
-    run grep 'VERSION_ID=42' "$MOUNT_POINT/etc/os-release"
-    assert_success
+@test "OS should be Fedora Linux" {
+    run grep 'ID=fedora' "$MOUNT_POINT/etc/os-release"
+    assert_success "Should be running Fedora Linux"
+}
+
+@test "OS version should match expected Fedora versions (41, 42, 43, or rawhide)" {
+    run grep -E 'VERSION_ID=(41|42|43)' "$MOUNT_POINT/etc/os-release"
+    if [ "$status" -ne 0 ]; then
+        # Check if it's rawhide
+        run grep 'VARIANT_ID=rawhide' "$MOUNT_POINT/etc/os-release"
+        assert_success "Should be Fedora 41, 42, 43, or rawhide"
+    fi
+}
+
+@test "Detected Fedora version is valid" {
+    if [[ "$FEDORA_VERSION" == "unknown" ]]; then
+        skip "Could not detect Fedora version"
+    fi
+    
+    # Version should be 41, 42, or 43
+    [[ "$FEDORA_VERSION" =~ ^(41|42|43)$ ]]
 }
 
 @test "Container auth files should be correctly configured in CI" {
@@ -52,8 +80,13 @@ teardown_file() {
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-removed"
 }
 
+@test "Fedora base packages list should exist" {
+    assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-fedora-bootc"
+}
+
 @test "Custom Plymouth theme should be copied" {
     assert_dir_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/"
+    assert_file_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/bgrt-better-luks.plymouth"
 }
 
 @test "Custom script 'autotiling' should be executable" {
@@ -66,14 +99,44 @@ teardown_file() {
     assert_success "'config-authselect' script should be executable"
 }
 
+@test "Custom script 'lid' should be executable" {
+    run test -x "$MOUNT_POINT/usr/local/bin/lid"
+    assert_success "'lid' script should be executable"
+}
+
+@test "Custom script 'fedora-version-switcher' should be executable" {
+    run test -x "$MOUNT_POINT/usr/local/bin/fedora-version-switcher"
+    assert_success "'fedora-version-switcher' script should be executable"
+}
+
+@test "Custom script 'generate-readme' should be executable" {
+    run test -x "$MOUNT_POINT/usr/local/bin/generate-readme"
+    assert_success "'generate-readme' script should be executable"
+}
+
 @test "RPM Fusion repositories should be configured" {
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-free.repo"
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-nonfree.repo"
 }
 
+@test "Custom repositories should be configured" {
+    assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/nwg-shell.repo"
+    assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/swaylock-effects.repo"
+}
+
 @test "DNF5 should be installed" {
     run buildah run "$CONTAINER" -- rpm -q dnf5
-    assert_success
+    assert_success "DNF5 should be installed"
+}
+
+@test "DNF5 should be symlinked as default dnf" {
+    run test -L "$MOUNT_POINT/usr/bin/dnf"
+    assert_success "/usr/bin/dnf should be a symlink to dnf5"
+}
+
+@test "bootc should be installed" {
+    run buildah run "$CONTAINER" -- rpm -q bootc
+    assert_success "bootc should be installed for bootable container support"
 }
 
 @test "Package 'kitty' from 'packages.add' should be installed" {
@@ -81,12 +144,89 @@ teardown_file() {
     assert_success "'kitty' should be installed"
 }
 
+@test "Package 'neovim' from 'packages.add' should be installed" {
+    run buildah run "$CONTAINER" -- rpm -q neovim
+    assert_success "'neovim' should be installed"
+}
+
+@test "Package 'htop' from 'packages.add' should be installed" {
+    run buildah run "$CONTAINER" -- rpm -q htop
+    assert_success "'htop' should be installed"
+}
+
+@test "Package 'distrobox' from 'packages.add' should be installed" {
+    run buildah run "$CONTAINER" -- rpm -q distrobox
+    assert_success "'distrobox' should be installed"
+}
+
+@test "Package 'foot' from 'packages.remove' should NOT be installed" {
+    run buildah run "$CONTAINER" -- rpm -q foot
+    assert_failure "'foot' should be removed"
+}
+
 @test "Package 'dunst' from 'packages.remove' should NOT be installed" {
     run buildah run "$CONTAINER" -- rpm -q dunst
     assert_failure "'dunst' should be removed"
 }
 
+@test "Package 'rofi-wayland' from 'packages.remove' should NOT be installed" {
+    run buildah run "$CONTAINER" -- rpm -q rofi-wayland
+    assert_failure "'rofi-wayland' should be removed"
+}
+
 @test "Flathub remote should be added" {
     run buildah run "$CONTAINER" -- flatpak remotes --show-details
     assert_output --partial 'flathub'
+}
+
+@test "Sway configuration should be present" {
+    assert_file_exists "$MOUNT_POINT/etc/sway/config.d/51-display.conf"
+    assert_file_exists "$MOUNT_POINT/etc/sway/config.d/61-bindings.conf"
+    assert_file_exists "$MOUNT_POINT/etc/sway/config.d/95-theme.conf"
+}
+
+@test "Greetd configuration should be present" {
+    assert_file_exists "$MOUNT_POINT/etc/greetd/config.toml"
+}
+
+@test "Image should pass bootc container lint" {
+    run buildah run "$CONTAINER" -- bootc container lint
+    assert_success "Image should pass bootc container lint checks"
+}
+
+@test "Systemd should be present and functional" {
+    run buildah run "$CONTAINER" -- rpm -q systemd
+    assert_success "systemd should be installed"
+}
+
+@test "Kernel should be installed" {
+    # Check for kernel package - it may be named kernel, kernel-core, or have version prefix
+    run buildah run "$CONTAINER" -- sh -c "rpm -qa | grep -E '^kernel(-core)?-[0-9]' || rpm -q kernel || rpm -q kernel-core"
+    assert_success "A kernel package should be installed"
+}
+
+@test "NetworkManager should be installed for bootc" {
+    run buildah run "$CONTAINER" -- rpm -q NetworkManager
+    assert_success "NetworkManager should be installed for networking"
+}
+
+@test "Podman should be installed for container support" {
+    run buildah run "$CONTAINER" -- rpm -q podman
+    assert_success "Podman should be installed for OCI container support"
+}
+
+@test "Virtualization packages should be installed" {
+    run buildah run "$CONTAINER" -- rpm -q virt-manager
+    assert_success "'virt-manager' should be installed"
+    
+    run buildah run "$CONTAINER" -- rpm -q qemu-kvm
+    assert_success "'qemu-kvm' should be installed"
+}
+
+@test "Security packages should be installed" {
+    run buildah run "$CONTAINER" -- rpm -q pam-u2f
+    assert_success "'pam-u2f' should be installed"
+    
+    run buildah run "$CONTAINER" -- rpm -q lynis
+    assert_success "'lynis' should be installed"
 }

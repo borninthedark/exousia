@@ -1,14 +1,16 @@
 # Fedora Sway Atomic (`bootc`) Image
 
-[](https://www.google.com/search?q=https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/actions/workflows/main.yml)
+[![CI/CD Pipeline](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions/workflows/build.yaml)
+[![Fedora 42](https://img.shields.io/badge/Fedora-42-51A2DA?logo=fedora)](https://fedoraproject.org)
+[![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
 
-This repository contains the configuration to build a custom, container-based immutable version of **Fedora Sway (Sericea)** using [`bootc`](https://www.google.com/search?q=%5Bhttps://github.com/containers/bootc%5D\(https://github.com/containers/bootc\)). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions.
+This repository contains the configuration to build a custom, container-based immutable version of **Fedora Sway (Sericea)** using [`bootc`](https://github.com/containers/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions.
 
 ## CI/CD Workflow: `Sericea DevSec CI`
 
 The pipeline is defined in a single, unified GitHub Actions workflow that automates the entire image lifecycle. The workflow is triggered on pushes and pull requests to the `main` branch, on a nightly schedule (`20 4 * * *`), or by manual dispatch.
 
-### 1\. Build Stage 🏗️
+### 1. Build Stage 🏗️
 
 The first stage assembles the container image and prepares it for the subsequent stages.
 
@@ -18,7 +20,7 @@ The first stage assembles the container image and prepares it for the subsequent
 
 ---
 
-### 2\. Test Stage 🧪
+### 2. Test Stage 🧪
 
 After a successful build, the image and repository scripts undergo automated testing to ensure quality and correctness.
 
@@ -27,7 +29,7 @@ After a successful build, the image and repository scripts undergo automated tes
 
 ---
 
-### 3\. Scan Stage 🛡️
+### 3. Scan Stage 🛡️
 
 Security is a critical part of the pipeline. The built image and source code are scanned for vulnerabilities and potential security issues.
 
@@ -36,7 +38,7 @@ Security is a critical part of the pipeline. The built image and source code are
 
 ---
 
-### 4\. Push & Sign Stage 🚀
+### 4. Push & Sign Stage 🚀
 
 If the test and scan stages pass, and the event is not a pull request, the image is published and cryptographically signed.
 
@@ -49,17 +51,93 @@ If the test and scan stages pass, and the event is not a pull request, the image
 
 To use this project, you can fork the repository and customize the image to your needs. I first installed a Fedora Atomic Spin (Sway), and then rebased to a bootc compatible image. My system has been managed with bootc & with images built from this pipeline. I've tested this with Fedora versions 42 & 43.
 
-### Issues
+### Using the Pre-built Image
 
-I can only get the ```sudo bootc switch```, & ```sudo bootc upgrade``` commands to fully work with Docker Hub. Using the first command with the GHCR gives me a "403 Forbidden | Invalid Username/Password" error, even though skopeo inspect, and podman pull work just fine.
+#### From Docker Hub (Recommended)
 
-So, while this pipeline pushes images to both registries, my system pulls from Docker Hub. This may change once I figure out the source of the token permissions error.
+```bash
+# Switch to the custom bootc image
+sudo bootc switch docker.io/borninthedark/exousia:latest
 
-### Customization
+# Apply the update
+sudo bootc upgrade
+sudo systemctl reboot
+```
 
-The primary file for customization is the `Containerfile`. The 'custom-*' directories have content that can capriciously be modified to create your desired OS image. Currently, it's set for an atomic image, but this will be adapted to directly support and produce a working full custom fedora-bootc image.
+#### From GitHub Container Registry
 
-### Required Secrets
+```bash
+# Switch to the custom bootc image
+sudo bootc switch ghcr.io/borninthedark/exousia:latest
+
+# Apply the update
+sudo bootc upgrade
+sudo systemctl reboot
+```
+
+### Building Locally
+
+```bash
+# Clone the repository
+git clone https://github.com/borninthedark/exousia.git
+cd exousia
+
+# Build the image
+make build
+
+# Push to local registry (optional)
+make push
+
+# Deploy to your system
+make deploy
+```
+
+---
+
+## Customization
+
+The primary file for customization is the `Containerfile`. The 'custom-*' directories have content that can be modified to create your desired OS image. Currently, it's set for an atomic image, but this will be adapted to directly support and produce a working full custom fedora-bootc image.
+
+### Package Management
+
+Edit the package lists in `custom-pkgs/`:
+
+- **`packages.add`** - Packages to install on top of the base image
+- **`packages.remove`** - Packages to remove from the base image
+
+Current customizations include:
+- **Added**: kitty, neovim, htop, btop, distrobox, virt-manager, pam-u2f, and more
+- **Removed**: foot, dunst, rofi-wayland
+
+### Configuration Files
+
+Place configuration files in the appropriate `custom-configs/` subdirectories:
+
+- `custom-configs/sway/` - Sway window manager configuration
+- `custom-configs/greetd/` - Display manager configuration  
+- `custom-configs/plymouth/` - Boot splash configuration
+
+### Custom Scripts
+
+Add executable scripts to `custom-scripts/` - they will be copied to `/usr/local/bin/`:
+
+- `autotiling` - Automatic tiling layout for Sway
+- `config-authselect` - U2F authentication setup
+- `lid` - Laptop lid state handler
+- `fedora-version-switcher` - Switch between Fedora versions (fedora-bootc branch)
+- `generate-readme` - Dynamic README generator (fedora-bootc branch)
+
+### Custom Repositories
+
+Additional repositories in `custom-repos/`:
+
+- RPM Fusion (free and nonfree)
+- nwg-shell COPR
+- swaylock-effects COPR
+
+---
+
+## Required Secrets
 
 This workflow requires secrets to push the container image to GHCR and Docker Hub. You must add these to your repository's secrets under `Settings > Secrets and variables > Actions`.
 
@@ -71,15 +149,43 @@ This workflow requires secrets to push the container image to GHCR and Docker Hu
 
 ---
 
-## Citations
+## Known Issues
 
-This ever-expanding section acknowledges the helpful articles, documentation, and other resources used in creating this project.
+### GHCR Authentication
 
-* *How to workaround rpm dependency?:* `https://github.com/coreos/bootupd/issues/468`  
-* *Unification of boot loader updates, phase 1:* `https://gitlab.com/fedora/bootc/tracker/-/issues/61`  
-* *Add Plymouth to Fedora-Bootc:* `https://www.reddit.com/r/Fedora/comments/1nq636t/comment/ngbgfkh/`  
-* *Official Bootc Docs:* `https://bootc-dev.github.io/bootc/intro.html`  
-* *Fedora Docs – Getting Started With Bootc:* `https://docs.fedoraproject.org/en-US/bootc/getting-started/`  
-* *Fedora Magazine – How to rebase to Fedora Silverblue 43 Beta:* `https://fedoramagazine.org/how-to-rebase-to-fedora-silverblue-43-beta/`  
-* *Fedora Magazine – A Great Journey Towards Fedora CoreOS and Bootc:* `https://fedoramagazine.org/a-great-journey-towards-fedora-coreos-and-bootc/`  
-* *Fedora Magazine – Building Your Own Atomic Bootc Desktop:* `https://fedoramagazine.org/building-your-own-atomic-bootc-desktop/`  
+I can only get the `sudo bootc switch` & `sudo bootc upgrade` commands to fully work with Docker Hub. Using the first command with the GHCR gives me a "403 Forbidden | Invalid Username/Password" error, even though skopeo inspect, and podman pull work just fine.
+
+So, while this pipeline pushes images to both registries, my system pulls from Docker Hub. This may change once I figure out the source of the token permissions error.
+
+---
+
+## Project Structure
+
+```
+exousia/
+├── Containerfile              # Main build instructions
+├── Makefile                   # Local build automation
+├── containers-auth.conf       # Container auth configuration
+├── custom-configs/            # System configuration files
+│   ├── sway/                 # Sway WM configs
+│   ├── greetd/               # Display manager
+│   └── plymouth/             # Boot splash themes
+├── custom-pkgs/               # Package management
+│   ├── packages.add          # Packages to install
+│   └── packages.remove       # Packages to remove
+├── custom-repos/              # Additional repositories
+│   ├── nwg-shell.repo
+│   └── swaylock-effects.repo
+├── custom-scripts/            # Custom utility scripts
+│   ├── autotiling
+│   ├── config-authselect
+│   ├── lid
+│   ├── fedora-version-switcher    # (fedora-bootc branch)
+│   └── generate-readme             # (fedora-bootc branch)
+├── tests/                     # Bats test suite
+│   └── image_content.bats
+└── .github/
+    └── workflows/
+        └── build.yaml        # CI/CD pipeline
+```
+

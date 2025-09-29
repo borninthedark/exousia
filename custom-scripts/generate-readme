@@ -1,0 +1,376 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Dynamic README Generator for Fedora Bootc Images
+# Generates comprehensive documentation with current build configuration
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+CONTAINERFILE="${REPO_ROOT}/Containerfile"
+README_FILE="${REPO_ROOT}/README.md"
+
+# Color codes for output (disabled in CI)
+if [[ "${CI:-false}" == "true" ]]; then
+    GREEN='' BLUE='' YELLOW='' NC=''
+else
+    GREEN='\033[0;32m'
+    BLUE='\033[0;34m'
+    YELLOW='\033[1;33m'
+    NC='\033[0m'
+fi
+
+print_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_info() {
+    echo -e "${BLUE}ℹ${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+# Extract configuration from Containerfile
+extract_config() {
+    if [[ ! -f "$CONTAINERFILE" ]]; then
+        echo "ERROR: Containerfile not found at $CONTAINERFILE" >&2
+        exit 1
+    fi
+    
+    local from_line
+    from_line=$(grep "^FROM" "$CONTAINERFILE" | head -n1)
+    
+    # Extract Fedora version
+    FEDORA_VERSION=$(echo "$from_line" | grep -oP '\d+|rawhide' || echo "unknown")
+    
+    # Extract image type
+    if [[ "$from_line" =~ fedora-sway-atomic ]]; then
+        IMAGE_TYPE="fedora-sway-atomic"
+        IMAGE_TYPE_DISPLAY="Fedora Sway Atomic Desktop"
+    elif [[ "$from_line" =~ fedora-bootc ]]; then
+        IMAGE_TYPE="fedora-bootc"
+        IMAGE_TYPE_DISPLAY="Fedora bootc Base"
+    else
+        IMAGE_TYPE="unknown"
+        IMAGE_TYPE_DISPLAY="Unknown"
+    fi
+    
+    # Build date
+    BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+    
+    # GitHub repository (from environment or git remote)
+    if [[ -n "${GITHUB_REPOSITORY:-}" ]]; then
+        GITHUB_REPO="$GITHUB_REPOSITORY"
+    else
+        # Try to extract from git remote
+        GITHUB_REPO=$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null | \
+                      sed -E 's|.*github\.com[:/]||' | sed 's|\.git$||' || echo "USER/REPO")
+    fi
+    
+    GITHUB_OWNER=$(echo "$GITHUB_REPO" | cut -d'/' -f1)
+}
+
+# Generate the README content
+generate_readme() {
+    cat > "$README_FILE" << EOF
+# Fedora Bootc Custom Image
+
+[![CI/CD Pipeline](https://github.com/${GITHUB_REPO}/actions/workflows/build.yaml/badge.svg)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yaml)
+[![Fedora Version](https://img.shields.io/badge/Fedora-${FEDORA_VERSION}-51A2DA?logo=fedora)](https://fedoraproject.org)
+[![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
+
+This repository contains the configuration to build a custom, container-based immutable operating system using [**Fedora bootc**](https://docs.fedoraproject.org/en-US/bootc/). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions.
+
+## 📋 Current Configuration
+
+- **Base Image:** \`${IMAGE_TYPE_DISPLAY}\`
+- **Image Type:** \`${IMAGE_TYPE}\`
+- **Fedora Version:** ${FEDORA_VERSION}
+- **Last Updated:** ${BUILD_DATE}
+- **Build Status:** [![Build Status](https://github.com/${GITHUB_REPO}/actions/workflows/build.yaml/badge.svg)](https://github.com/${GITHUB_REPO}/actions)
+
+## 🏗️ CI/CD Workflow: Fedora Bootc DevSec CI
+
+The pipeline is defined in a single, unified GitHub Actions workflow that automates the entire image lifecycle. The workflow is triggered on:
+- Pushes and pull requests to the \`main\` branch
+- Nightly schedule (\`20 4 * * *\` UTC)
+- Manual workflow dispatch with version/image type selection
+
+### 1. Build Stage 🏗️
+
+The first stage assembles the container image and prepares it for subsequent stages.
+
+- **Lint**: The \`Containerfile\` is linted using **Hadolint** to ensure best practices
+- **Tagging**: Image tags are dynamically generated based on event triggers (\`latest\`, \`nightly\`, branch name, commit SHA)
+- **Build**: The image is built using **Buildah**, a daemonless container image builder optimized for CI environments
+- **Version Switching**: Supports dynamic Fedora version and base image type switching via workflow dispatch
+
+### 2. Test Stage 🧪
+
+After a successful build, the image and repository scripts undergo automated testing.
+
+- **Integration Tests**: **Bats (Bash Automated Testing System)** runs tests against the built container
+- **Script Analysis**: All shell scripts are linted with **ShellCheck**
+- **Bootc Validation**: Runs \`bootc container lint\` to verify bootc compliance
+
+### 3. Scan Stage 🛡️
+
+Security scanning ensures the image meets security standards.
+
+- **Vulnerability Scan**: **Trivy** scans for \`CRITICAL\` and \`HIGH\` severity CVEs
+- **Static Analysis**: **Semgrep** performs static code analysis
+
+### 4. Push & Sign Stage 🚀
+
+If tests pass and the event is not a pull request, the image is published and cryptographically signed.
+
+- **Push**: Image pushed to **GitHub Container Registry (GHCR)** and **Docker Hub**
+- **Sign**: Images signed using **Cosign** and **Sigstore** for integrity verification
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- A system running Fedora (preferably an Atomic variant)
+- Access to either Docker Hub or GHCR
+- Basic understanding of bootc and container workflows
+
+### Using the Pre-built Image
+
+#### From Docker Hub (Recommended)
+
+\`\`\`bash
+# Switch to the custom bootc image
+sudo bootc switch docker.io/${GITHUB_OWNER}/exousia:latest
+
+# Apply the update
+sudo bootc upgrade
+sudo systemctl reboot
+\`\`\`
+
+#### From GitHub Container Registry
+
+\`\`\`bash
+# Switch to the custom bootc image
+sudo bootc switch ghcr.io/${GITHUB_OWNER}/exousia:latest
+
+# Apply the update
+sudo bootc upgrade
+sudo systemctl reboot
+\`\`\`
+
+### Building Locally
+
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/${GITHUB_REPO}.git
+cd \$(basename ${GITHUB_REPO})
+
+# Build the image
+make build
+
+# Push to local registry (optional)
+make push
+\`\`\`
+
+---
+
+## 🔧 Customization
+
+### Switching Fedora Versions
+
+Use the version switcher script to change Fedora versions or base image types:
+
+\`\`\`bash
+# Switch to Fedora 43
+./custom-scripts/fedora-version-switcher 43
+
+# Switch to Fedora 42 with standard bootc base
+./custom-scripts/fedora-version-switcher 42 fedora-bootc
+
+# Switch to Sway Atomic desktop
+./custom-scripts/fedora-version-switcher 42 fedora-sway-atomic
+
+# List available options
+./custom-scripts/fedora-version-switcher list
+\`\`\`
+
+Or use GitHub Actions workflow dispatch:
+
+1. Go to **Actions** → **Fedora Bootc DevSec CI**
+2. Click **Run workflow**
+3. Select desired Fedora version and image type
+4. Click **Run workflow**
+
+The README will automatically update to reflect the new configuration.
+
+### Modifying Packages
+
+Edit the package lists in \`custom-pkgs/\`:
+
+- \`packages.add\` - Packages to install
+- \`packages.remove\` - Packages to remove from base image
+
+### Adding Custom Configuration
+
+Place configuration files in the appropriate \`custom-configs/\` subdirectories:
+
+- \`custom-configs/sway/\` - Sway window manager configuration
+- \`custom-configs/greetd/\` - Display manager configuration
+- \`custom-configs/plymouth/\` - Boot splash configuration
+
+### Custom Scripts
+
+Add executable scripts to \`custom-scripts/\` - they will be copied to \`/usr/local/bin/\`
+
+---
+
+## 🔐 Required Secrets
+
+To use the full CI/CD pipeline, configure these secrets in your repository:
+
+**Settings → Secrets and variables → Actions**
+
+### For GitHub Container Registry (GHCR):
+- \`GHCR_PAT\`: Personal Access Token with \`write:packages\` scope
+
+### For Docker Hub:
+- \`DOCKERHUB_USERNAME\`: Your Docker Hub username
+- \`DOCKERHUB_TOKEN\`: Access token with Read, Write, Delete permissions
+
+---
+
+## 🐛 Known Issues
+
+### GHCR Authentication
+
+Currently experiencing authentication issues with \`bootc switch\` and \`bootc upgrade\` when using GHCR. The commands work flawlessly with Docker Hub. While \`skopeo inspect\` and \`podman pull\` work with GHCR, bootc operations return "403 Forbidden | Invalid Username/Password" errors.
+
+**Workaround:** Use Docker Hub for bootc operations until this is resolved.
+
+---
+
+## 📚 Documentation & Resources
+
+### Official Documentation
+- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)
+- [bootc Project](https://bootc-dev.github.io/bootc/)
+- [Base Images](https://docs.fedoraproject.org/en-US/bootc/base-images/)
+- [Building Containers](https://docs.fedoraproject.org/en-US/bootc/building-containers/)
+
+### Community Resources
+- [Fedora Discussion - bootc](https://discussion.fedoraproject.org/tag/bootc)
+- [bootc Issue Tracker](https://gitlab.com/fedora/bootc/tracker)
+
+### Articles & Guides
+- [Getting Started With Bootc](https://docs.fedoraproject.org/en-US/bootc/getting-started/)
+- [How to rebase to Fedora Silverblue 43 Beta](https://fedoramagazine.org/how-to-rebase-to-fedora-silverblue-43-beta/)
+- [A Great Journey Towards Fedora CoreOS and Bootc](https://fedoramagazine.org/a-great-journey-towards-fedora-coreos-and-bootc/)
+- [Building Your Own Atomic Bootc Desktop](https://fedoramagazine.org/building-your-own-atomic-bootc-desktop/)
+
+### Technical References
+- [Bootupd RPM dependency workaround](https://github.com/coreos/bootupd/issues/468)
+- [Unification of boot loader updates](https://gitlab.com/fedora/bootc/tracker/-/issues/61)
+- [Add Plymouth to Fedora-Bootc](https://www.reddit.com/r/Fedora/comments/1nq636t/comment/ngbgfkh/)
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- The Fedora Project and bootc maintainers
+- The broader container and immutable OS community
+- All contributors to the referenced documentation and guides
+
+---
+
+**Built with ❤️ using Fedora bootc**
+
+*This README was automatically generated on ${BUILD_DATE}*
+EOF
+}
+
+show_usage() {
+    cat << EOF
+Usage: $0 [OPTIONS]
+
+Generate a dynamic README.md with current build configuration.
+
+OPTIONS:
+    --dry-run       Show what would be generated without writing
+    --help          Show this help message
+
+ENVIRONMENT VARIABLES:
+    GITHUB_REPOSITORY    GitHub repository (e.g., user/repo)
+    CI                   Set to 'true' in CI environments
+
+EXAMPLES:
+    $0                  Generate and write README.md
+    $0 --dry-run        Preview README content without writing
+
+EOF
+}
+
+main() {
+    local dry_run=false
+    
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dry-run)
+                dry_run=true
+                shift
+                ;;
+            --help|-h)
+                show_usage
+                exit 0
+                ;;
+            *)
+                echo "Unknown option: $1" >&2
+                show_usage
+                exit 1
+                ;;
+        esac
+    done
+    
+    print_info "Extracting configuration from Containerfile..."
+    extract_config
+    
+    print_info "Configuration detected:"
+    echo "  - Fedora Version: $FEDORA_VERSION"
+    echo "  - Image Type: $IMAGE_TYPE_DISPLAY"
+    echo "  - GitHub Repo: $GITHUB_REPO"
+    echo
+    
+    if [[ "$dry_run" == true ]]; then
+        print_info "Dry run mode - displaying generated content:"
+        echo "─────────────────────────────────────────────"
+        generate_readme
+        cat "$README_FILE"
+        echo "─────────────────────────────────────────────"
+        print_warning "Dry run complete - README.md was not modified"
+    else
+        print_info "Generating README.md..."
+        generate_readme
+        print_success "README.md generated successfully at: $README_FILE"
+        
+        if [[ "${CI:-false}" != "true" ]]; then
+            echo
+            print_info "Next steps:"
+            echo "  1. Review the generated README: less README.md"
+            echo "  2. Commit the changes: git add README.md && git commit"
+        fi
+    fi
+}
+
+main "$@"
