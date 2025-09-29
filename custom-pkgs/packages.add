@@ -5,11 +5,14 @@ flatpak
 wob
 rtkit
 cargo
+git
 swaync
 fuzzel
 htop
 nwg-look
 btop
+etckeeper
+starship
 fastfetch
 glances
 

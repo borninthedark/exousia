@@ -25,6 +25,10 @@ xorg-x11-server-Xwayland
 
 # Session and Authentication
 xfce-polkit
+xdg-utils 
+xdg-user-dirs 
+xdg-dbus-proxy
+flatpak-xdg-utils
 xdg-desktop-portal
 xdg-desktop-portal-wlr
 xdg-desktop-portal-gtk
