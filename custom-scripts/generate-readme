@@ -38,7 +38,8 @@ extract_config() {
         exit 1
     fi
     
-    local from_line=$(grep "^FROM" "$CONTAINERFILE" | head -n1)
+    local from_line
+    from_line=$(grep "^FROM" "$CONTAINERFILE" | head -n1)
     
     # Extract Fedora version
     FEDORA_VERSION=$(echo "$from_line" | grep -oP '\d+|rawhide' || echo "unknown")

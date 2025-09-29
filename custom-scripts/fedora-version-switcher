@@ -68,7 +68,8 @@ detect_current_config() {
     fi
     
     # Detect image type and version from FROM line
-    local from_line=$(grep "^FROM" "$CONTAINERFILE" | head -n1)
+    local from_line
+    from_line=$(grep "^FROM" "$CONTAINERFILE" | head -n1)
     
     if [[ "$from_line" =~ fedora-sway-atomic:([0-9]+|rawhide) ]]; then
         CURRENT_IMAGE_TYPE="fedora-sway-atomic"
@@ -170,7 +171,8 @@ switch_version() {
     fi
     
     # Get the target image base URL
-    local target_image="${IMAGE_TYPES[$target_image_type]}"
+    local target_image
+    target_image="${IMAGE_TYPES[$target_image_type]}"
     
     # Update the FROM line in Containerfile
     # Match both fedora-sway-atomic and fedora-bootc patterns
