@@ -27,6 +27,11 @@ declare -A IMAGE_TYPES=(
     ["fedora-sway-atomic"]="quay.io/fedora/fedora-sway-atomic"
 )
 
+declare -A IMAGE_DESCRIPTIONS=(
+    ["fedora-bootc"]="Minimal server base - requires desktop packages"
+    ["fedora-sway-atomic"]="Full Sway desktop - pre-configured"
+)
+
 # Color codes for output (disabled in CI)
 if [[ "${CI:-false}" == "true" ]]; then
     RED='' GREEN='' YELLOW='' BLUE='' NC=''
@@ -90,6 +95,7 @@ save_version() {
 
 list_versions() {
     echo "Currently using: ${GREEN}Fedora $CURRENT_VERSION${NC} (${CURRENT_IMAGE_TYPE})"
+    echo "  ${YELLOW}▸${NC} ${IMAGE_DESCRIPTIONS[$CURRENT_IMAGE_TYPE]:-Unknown image type}"
     echo
     echo "═══════════════════════════════════════════════════════════"
     echo "Available Fedora Versions:"
@@ -111,16 +117,18 @@ list_versions() {
     echo "Available Base Image Types:"
     echo "═══════════════════════════════════════════════════════════"
     echo
-    echo "  ${BLUE}fedora-bootc${NC}"
-    echo "      Full server-oriented bootc base image"
-    echo "      Includes: bootc, kernel, systemd, NetworkManager,"
-    echo "                podman, filesystem tools, and more"
+    echo "  ${BLUE}fedora-bootc${NC} - Minimal Server Base"
+    echo "      ${YELLOW}Requires:${NC} Desktop packages installed via packages.desktop"
+    echo "      ${YELLOW}Enables:${NC}  graphical.target, greetd, libvirtd,"
+    echo "               systemd-resolved, NetworkManager"
+    echo "      ${GREEN}Use case:${NC} Full control over desktop environment"
     echo "      Source: quay.io/fedora/fedora-bootc"
-    echo "      Docs: https://docs.fedoraproject.org/en-US/bootc/"
     echo
-    echo "  ${BLUE}fedora-sway-atomic${NC}"
-    echo "      Fedora Atomic Desktop with Sway compositor"
-    echo "      Built on Fedora bootc with Sway desktop environment"
+    echo "  ${BLUE}fedora-sway-atomic${NC} - Full Sway Desktop"
+    echo "      ${GREEN}Includes:${NC} Pre-configured Sway desktop environment"
+    echo "      ${YELLOW}Skips:${NC}    packages.desktop (already has desktop)"
+    echo "      ${YELLOW}Skips:${NC}    Service enablement (pre-configured)"
+    echo "      ${GREEN}Use case:${NC} Ready-to-use Sway desktop"
     echo "      Source: quay.io/fedora/fedora-sway-atomic"
     echo
     echo "═══════════════════════════════════════════════════════════"
@@ -164,6 +172,21 @@ switch_version() {
     print_info "Switching configuration:"
     echo "  From: Fedora $CURRENT_VERSION ($CURRENT_IMAGE_TYPE)"
     echo "  To:   Fedora $target_version ($target_image_type)"
+    
+    # Show what will happen based on image type
+    if [[ "$target_image_type" == "fedora-bootc" ]]; then
+        echo
+        print_warning "Switching to fedora-bootc will:"
+        echo "  • Install desktop packages from packages.desktop"
+        echo "  • Enable graphical.target, greetd, libvirtd"
+        echo "  • Enable systemd-resolved, NetworkManager"
+    elif [[ "$target_image_type" == "fedora-sway-atomic" ]]; then
+        echo
+        print_info "Switching to fedora-sway-atomic will:"
+        echo "  • Skip packages.desktop (desktop pre-installed)"
+        echo "  • Skip service enablement (pre-configured)"
+    fi
+    
     echo
     
     # Create backup (skip in CI to avoid cluttering the workspace)
@@ -213,12 +236,16 @@ VERSIONS:
 ═══════════════════════════════════════════════════════════════════════
 IMAGE TYPES (optional):
 ═══════════════════════════════════════════════════════════════════════
-    fedora-bootc         Official Fedora bootc base image
-                         Server-oriented, includes bootc, kernel, systemd,
-                         NetworkManager, podman, filesystem tools, etc.
+    fedora-bootc         Minimal server base (adds desktop via Containerfile)
+                         • Installs packages.desktop for Sway environment
+                         • Enables: graphical.target, greetd, libvirtd,
+                           systemd-resolved, NetworkManager
+                         • Use when you want full control over the desktop
                          
-    fedora-sway-atomic   Fedora Atomic Desktop with Sway compositor
-                         Desktop-focused bootc image with Wayland/Sway
+    fedora-sway-atomic   Full Sway desktop (desktop pre-configured)
+                         • Skips packages.desktop (already included)
+                         • Skips service enablement (pre-configured)
+                         • Use for ready-to-use Sway experience
 
 ═══════════════════════════════════════════════════════════════════════
 COMMANDS:
@@ -234,10 +261,10 @@ EXAMPLES:
         Switch to Fedora 42 (keeps current image type)
         
     $0 43 fedora-bootc
-        Switch to Fedora 43 with standard bootc base image
+        Switch to Fedora 43 with bootc base (installs desktop)
         
     $0 42 fedora-sway-atomic
-        Switch to Fedora 42 with Sway Atomic desktop
+        Switch to Fedora 42 with pre-configured Sway desktop
         
     $0 rawhide
         Switch to Rawhide rolling release
@@ -247,6 +274,14 @@ EXAMPLES:
         
     $0 current
         Show current configuration
+
+═══════════════════════════════════════════════════════════════════════
+PACKAGE BEHAVIOR:
+═══════════════════════════════════════════════════════════════════════
+    packages.add      - Always installed (both image types)
+    packages.remove   - Always removed (both image types)
+    packages.desktop  - Only installed with fedora-bootc base
+                        (skipped for fedora-sway-atomic)
 
 ═══════════════════════════════════════════════════════════════════════
 NOTES:
@@ -285,6 +320,7 @@ main() {
             ;;
         current|--current|-c)
             echo "Current: Fedora $CURRENT_VERSION ($CURRENT_IMAGE_TYPE)"
+            echo "  ${IMAGE_DESCRIPTIONS[$CURRENT_IMAGE_TYPE]:-Unknown image type}"
             exit 0
             ;;
         41|42|43|rawhide)
@@ -313,7 +349,7 @@ main() {
                     echo "  2. Build the image:   make build"
                     echo "  3. Test locally:      podman-bootc run <image>"
                     echo "  4. Commit changes:    git add Containerfile .fedora-version"
-                    echo "                        git commit -m 'Switch to Fedora $target_version'"
+                    echo "                        git commit -m 'Switch to Fedora $target_version ($target_image_type)'"
                 fi
                 exit 0
             else

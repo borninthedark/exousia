@@ -1,0 +1,99 @@
+# Desktop Packages - Only installed when using fedora-bootc base
+# These packages transform fedora-bootc into a Sway desktop environment
+# This file is NOT used when building from fedora-sway-atomic
+
+# Core Sway Desktop Components
+sway
+swaylock
+swayidle
+swaybg
+waybar
+
+# Display Manager
+greetd
+greetd-tuigreet
+
+# Boot Splash
+plymouth
+plymouth-system-theme
+plymouth-plugin-two-step
+
+# Wayland Infrastructure
+wayland-protocols
+wlroots
+xorg-x11-server-Xwayland
+
+# Session and Authentication
+polkit
+polkit-gnome
+xdg-desktop-portal
+xdg-desktop-portal-wlr
+
+# Terminal Emulator (if not in packages.add)
+# foot is a good lightweight option for Sway
+
+# Audio
+pipewire
+pipewire-alsa
+pipewire-pulseaudio
+wireplumber
+
+# Graphics and Fonts
+mesa-dri-drivers
+mesa-vulkan-drivers
+google-noto-sans-fonts
+google-noto-serif-fonts
+dejavu-sans-fonts
+dejavu-sans-mono-fonts
+
+# File Manager and Basic GUI Tools
+thunar
+thunar-archive-plugin
+thunar-volman
+gvfs
+gvfs-mtp
+gvfs-gphoto2
+
+# Image Viewer
+imv
+
+# PDF Viewer
+zathura
+zathura-pdf-mupdf
+
+# Screenshot Tools
+grim
+slurp
+
+# Brightness Control
+brightnessctl
+
+# Notification Daemon (already in your packages.add as swaync)
+# swaync
+
+# Application Launcher (already in your packages.add as fuzzel)
+# fuzzy
+
+# Network Management GUI
+nm-connection-editor
+network-manager-applet
+
+# Bluetooth
+bluez
+bluez-tools
+blueman
+
+# Power Management
+tlp
+powertop
+
+# GTK Themes and Icons
+adwaita-icon-theme
+adwaita-gtk2-theme
+gnome-themes-extra
+
+# Clipboard Manager
+wl-clipboard
+
+# Screenshot Annotation
+swappy
