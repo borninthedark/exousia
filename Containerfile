@@ -32,10 +32,10 @@ RUN test -f /etc/passwd || touch /etc/passwd; \
 RUN systemd-sysusers || true
 
 RUN set -e; \
-    systemd-sysusers /usr/lib/sysusers.d/bootc.conf; \
+    systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf; \
     mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit; \
-    chown -R greeter:greeter /var/lib/greeter || true; \
-    chown -R greetd:greetd   /var/lib/greetd || true
+    chown -R 241:241 /var/lib/greeter || true; \
+    chown -R 240:240 /var/lib/greetd || true
     
 # Create a minimal greetd config that references the greeter user
 RUN set -e; \

@@ -24,7 +24,7 @@ wlroots
 xorg-x11-server-Xwayland
 
 # Session and Authentication
-polkit-gnome-authentication-agent-1
+xfce-polkit
 xdg-desktop-portal
 xdg-desktop-portal-wlr
 xdg-desktop-portal-gtk
