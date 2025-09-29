@@ -2,9 +2,9 @@ name: Fedora Bootc DevSec CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["build-bootc"]
   pull_request:
-    branches: ["main"]
+    branches: ["build-bootc"]
   workflow_dispatch:
     inputs:
       fedora_version:
@@ -147,7 +147,7 @@ jobs:
             ${{ env.IMAGE_BASE }}
             ${{ env.DOCKERHUB_IMAGE_BASE }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/build-bootc' }}
             type=sha,format=long
             type=ref,event=branch
             type=schedule,pattern=nightly
@@ -331,13 +331,13 @@ jobs:
           echo "- [Base Images](https://docs.fedoraproject.org/en-US/bootc/base-images/)" >> $GITHUB_STEP_SUMMARY
 
       - name: Generate dynamic README
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/build-bootc'
         run: |
           chmod +x ./custom-scripts/generate-readme
           ./custom-scripts/generate-readme
 
       - name: Commit updated README and version file
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/build-bootc'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
