@@ -24,9 +24,9 @@ ENV BUILD_IMAGE_TYPE=${IMAGE_TYPE}
 COPY --chmod=0644 sysusers/sericea-bootc.conf /usr/lib/sysusers.d/sericea-bootc.conf
 
 # Ensure /etc/passwd and /etc/group exist (safety for minimal images)
-RUN test -f /etc/passwd || touch /etc/passwd && \
+RUN test -f /etc/passwd || touch /etc/passwd; \
     test -f /etc/group  || touch /etc/group
-
+    
 # Create directories expected by system users and run systemd-sysusers to populate /etc/{passwd,group}
 RUN set -e; \
     mkdir -p /var/lib/greetd /var/lib/rtkit; \
