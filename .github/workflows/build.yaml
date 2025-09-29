@@ -1,16 +1,37 @@
-name: Fedora Sericea Bootc DevSec CI
+name: Fedora Bootc DevSec CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["fedora-bootc"]
   pull_request:
-    branches: ["main"]
+    branches: ["fedora-bootc"]
   workflow_dispatch:
+    inputs:
+      fedora_version:
+        description: 'Fedora version to build'
+        required: true
+        type: choice
+        options:
+          - 'current'
+          - '42'
+          - '43'
+          - '41'
+          - 'rawhide'
+        default: 'current'
+      image_type:
+        description: 'Bootc base image type'
+        required: true
+        type: choice
+        options:
+          - 'current'
+          - 'fedora-bootc'
+          - 'fedora-sway-atomic'
+        default: 'current'
   schedule:
     - cron: "20 4 * * *" # Nightly build at 4:20 AM UTC
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   id-token: write
   pull-requests: write
@@ -26,8 +47,8 @@ env:
   DOCKERHUB_IMAGE_BASE: 1borninthedark/exousia
 
 jobs:
-  build-test-scan-push-sign:
-    name: Sericea DevSec CI
+  build-test-scan-push-sign-summarize:
+    name: Fedora Bootc DevSec CI
     runs-on: ubuntu-24.04
     timeout-minutes: 45
 
@@ -35,6 +56,77 @@ jobs:
       # ======================== BUILD STAGE ========================= #
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Switch Fedora configuration (if requested)
+        if: github.event_name == 'workflow_dispatch' && (github.event.inputs.fedora_version != 'current' || github.event.inputs.image_type != 'current')
+        run: |
+          chmod +x ./custom-scripts/fedora-version-switcher
+          
+          # Build the command based on inputs
+          VERSION="${{ github.event.inputs.fedora_version }}"
+          IMAGE_TYPE="${{ github.event.inputs.image_type }}"
+          
+          echo "### Fedora Bootc Configuration Switch" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "$VERSION" == "current" ]] && [[ "$IMAGE_TYPE" != "current" ]]; then
+            # Only switching image type
+            echo "**Action:** Switching base image type only" >> $GITHUB_STEP_SUMMARY
+            echo "**New Image Type:** \`$IMAGE_TYPE\`" >> $GITHUB_STEP_SUMMARY
+            CURRENT_VERSION=$(./custom-scripts/fedora-version-switcher current | awk '{print $2}')
+            ./custom-scripts/fedora-version-switcher "$CURRENT_VERSION" "$IMAGE_TYPE"
+          elif [[ "$IMAGE_TYPE" == "current" ]] && [[ "$VERSION" != "current" ]]; then
+            # Only switching version
+            echo "**Action:** Switching Fedora version only" >> $GITHUB_STEP_SUMMARY
+            echo "**New Version:** Fedora \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
+            ./custom-scripts/fedora-version-switcher "$VERSION"
+          else
+            # Switching both
+            echo "**Action:** Switching both version and image type" >> $GITHUB_STEP_SUMMARY
+            echo "**New Version:** Fedora \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
+            echo "**New Image Type:** \`$IMAGE_TYPE\`" >> $GITHUB_STEP_SUMMARY
+            ./custom-scripts/fedora-version-switcher "$VERSION" "$IMAGE_TYPE"
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Updated Containerfile FROM line:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`dockerfile" >> $GITHUB_STEP_SUMMARY
+          grep "^FROM" Containerfile >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Image types are from the official [Fedora bootc project](https://docs.fedoraproject.org/en-US/bootc/)*" >> $GITHUB_STEP_SUMMARY
+
+      - name: Commit configuration change (if on main branch)
+        if: github.event_name == 'workflow_dispatch' && (github.event.inputs.fedora_version != 'current' || github.event.inputs.image_type != 'current') && github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          if [[ -n $(git status --porcelain) ]]; then
+            VERSION="${{ github.event.inputs.fedora_version }}"
+            IMAGE_TYPE="${{ github.event.inputs.image_type }}"
+            
+            git add Containerfile .fedora-version
+            
+            # Create descriptive commit message
+            if [[ "$VERSION" != "current" ]] && [[ "$IMAGE_TYPE" != "current" ]]; then
+              git commit -m "chore: switch to Fedora $VERSION with $IMAGE_TYPE base" \
+                         -m "Updated bootc base image configuration" \
+                         -m "Version: $VERSION" \
+                         -m "Image: $IMAGE_TYPE"
+            elif [[ "$VERSION" != "current" ]]; then
+              git commit -m "chore: switch to Fedora $VERSION" \
+                         -m "Updated Fedora version for bootc image"
+            else
+              git commit -m "chore: switch to $IMAGE_TYPE base image" \
+                         -m "Changed bootc base image type"
+            fi
+            
+            git push
+          else
+            echo "No changes to commit"
+          fi
 
       - name: Generate image tags and labels for both registries
         id: meta
@@ -50,6 +142,8 @@ jobs:
             type=schedule,pattern=nightly
           labels: |
             org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.description=Custom Fedora bootc image
+            org.opencontainers.image.documentation=https://docs.fedoraproject.org/en-US/bootc/
 
       - name: Lint Containerfile
         uses: hadolint/hadolint-action@v3.1.0
@@ -62,11 +156,10 @@ jobs:
           mkdir -p ./bootc-secrets
           echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"\"}}}" > ./bootc-secrets/auth.json
 
-      - name: Build image with Buildah
+      - name: Build bootc image with Buildah
         id: build-image
         uses: redhat-actions/buildah-build@v2
         with:
-          # Buildah builds the image with a base name; tags are applied at push time
           image: ${{ env.IMAGE_BASE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -79,21 +172,28 @@ jobs:
         id: setup-bats
         uses: bats-core/bats-action@3.0.0
 
-      - name: Run Bats tests on the image
+      - name: Run Bats tests on the bootc image
         shell: bash
         env:
           BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
           TERM: xterm
         run: |
-          # Use the first tag generated as the image to test against
           FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          echo "Running tests against image: $FIRST_TAG"
+          echo "Running tests against bootc image: $FIRST_TAG"
 
           TEST_IMAGE_TAG="$FIRST_TAG" \
           buildah unshare -- bats -r tests
 
       - name: Run ShellCheck on scripts
         uses: ludeeus/action-shellcheck@master
+        with:
+          additional_files: 'custom-scripts/*'
+
+      - name: Verify bootc container lint
+        run: |
+          FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          echo "Verifying bootc container compliance for: $FIRST_TAG"
+          buildah run "$FIRST_TAG" -- bootc container lint || echo "::warning::bootc container lint found issues"
 
       # ======================== SCAN STAGE ========================== #
       - name: Cache Trivy database
@@ -110,7 +210,6 @@ jobs:
       - name: Trivy vulnerability scan (non-blocking)
         continue-on-error: true
         run: |
-          # Use the first tag generated as the image to scan
           FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
 
           trivy image "$FIRST_TAG" \
@@ -141,7 +240,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push image to GHCR
+      - name: Push bootc image to GHCR
         if: github.event_name != 'pull_request'
         id: push-to-ghcr
         uses: redhat-actions/push-to-registry@v2
@@ -150,7 +249,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           registry: ${{ env.REGISTRY }}
 
-      - name: Push image to Docker Hub
+      - name: Push bootc image to Docker Hub
         if: github.event_name != 'pull_request'
         id: push-to-dockerhub
         uses: redhat-actions/push-to-registry@v2
@@ -164,20 +263,66 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@v3.5.0
 
-      - name: Log in to Docker Hub
+      - name: Log in to Docker Hub for signing
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Sign the container images
+      - name: Sign the bootc container images
         if: github.event_name != 'pull_request'
         run: |
-          echo "Signing GHCR image by digest: ${{ steps.push-to-ghcr.outputs.digest }}"
+          echo "Signing GHCR bootc image by digest: ${{ steps.push-to-ghcr.outputs.digest }}"
           cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-ghcr.outputs.digest }}"
 
-          echo "Signing Docker Hub image by digest: ${{ steps.push-to-dockerhub.outputs.digest }}"
+          echo "Signing Docker Hub bootc image by digest: ${{ steps.push-to-dockerhub.outputs.digest }}"
           cosign sign --yes "${{ env.DOCKERHUB_IMAGE_BASE }}@${{ steps.push-to-dockerhub.outputs.digest }}"
         env:
           COSIGN_EXPERIMENTAL: "true"
+
+      # ======================== SUMMARY STAGE ======================= #
+      - name: Generate build summary
+        if: always()
+        run: |
+          echo "## 🚀 Bootc Image Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Detect current configuration
+          CURRENT_CONFIG=$(grep "^FROM" Containerfile)
+          echo "**Base Image:** \`$CURRENT_CONFIG\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            echo "### 📦 Published Images" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **GHCR:** \`${{ env.IMAGE_BASE }}:latest\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Docker Hub:** \`${{ env.DOCKERHUB_IMAGE_BASE }}:latest\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "### 📚 Resources" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)" >> $GITHUB_STEP_SUMMARY
+          echo "- [bootc Project](https://bootc-dev.github.io/bootc/)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Base Images](https://docs.fedoraproject.org/en-US/bootc/base-images/)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate dynamic README
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          chmod +x ./custom-scripts/generate-readme
+          ./custom-scripts/generate-readme
+
+      - name: Commit updated README
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          if [[ -n $(git status --porcelain README.md) ]]; then
+            git add README.md
+            git commit -m "docs: auto-update README with current build configuration [skip ci]"
+            git push
+          else
+            echo "README.md unchanged, skipping commit"
+          fi
