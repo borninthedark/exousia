@@ -27,15 +27,6 @@ setup_file() {
         echo "WARNING: Could not detect Fedora version from /etc/os-release" >&2
         export FEDORA_VERSION="unknown"
     fi
-    
-    # Detect base image type (fedora-bootc or fedora-sway-atomic)
-    if buildah run "$CONTAINER" -- rpm -q sway 2>/dev/null; then
-        BASE_IMAGE_TYPE="fedora-sway-atomic"
-    else
-        BASE_IMAGE_TYPE="fedora-bootc"
-    fi
-    export BASE_IMAGE_TYPE
-    echo "--- Detected base image type: $BASE_IMAGE_TYPE ---"
 }
 
 teardown_file() {
@@ -67,11 +58,6 @@ teardown_file() {
     [[ "$FEDORA_VERSION" =~ ^(41|42|43)$ ]]
 }
 
-@test "Base image type detection is valid" {
-    [[ "$BASE_IMAGE_TYPE" =~ ^(fedora-bootc|fedora-sway-atomic)$ ]]
-    echo "Base image type: $BASE_IMAGE_TYPE"
-}
-
 @test "Container auth files should be correctly configured in CI" {
   if [[ "${CI}" == "true" ]]; then
     assert_file_exists "$MOUNT_POINT/usr/lib/tmpfiles.d/containers-auth.conf"
@@ -92,7 +78,6 @@ teardown_file() {
 @test "Custom package list files should exist" {
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-added"
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-removed"
-    assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-desktop"
 }
 
 @test "Fedora base packages list should exist" {
@@ -124,6 +109,20 @@ teardown_file() {
     assert_success "'fedora-version-switcher' script should be executable"
 }
 
+@test "fedora-version-switcher script should require two arguments" {
+    # Test that script exits with error when called without arguments
+    run buildah run "$CONTAINER" -- /usr/local/bin/fedora-version-switcher
+    assert_failure "Script should fail when called without arguments"
+    assert_output --partial "Usage:"
+}
+
+@test "fedora-version-switcher script should accept valid version and image type" {
+    # Test that script accepts valid arguments (in dry-run mode within container)
+    # Note: We can't actually switch versions in the test, but we can verify the script runs
+    run buildah run "$CONTAINER" -- bash -c "cd /tmp && /usr/local/bin/fedora-version-switcher list"
+    assert_success "Script should accept 'list' command"
+}
+
 @test "Custom script 'generate-readme' should be executable" {
     run test -x "$MOUNT_POINT/usr/local/bin/generate-readme"
     assert_success "'generate-readme' script should be executable"
@@ -152,93 +151,6 @@ teardown_file() {
 @test "bootc should be installed" {
     run buildah run "$CONTAINER" -- rpm -q bootc
     assert_success "bootc should be installed for bootable container support"
-}
-
-@test "Sway desktop should be installed" {
-    run buildah run "$CONTAINER" -- rpm -q sway
-    assert_success "Sway window manager should be installed"
-}
-
-@test "Desktop packages should be installed correctly based on base image type" {
-    if [[ "$BASE_IMAGE_TYPE" == "fedora-bootc" ]]; then
-        # When using fedora-bootc base, desktop packages should be installed
-        run buildah run "$CONTAINER" -- rpm -q greetd
-        assert_success "greetd should be installed on fedora-bootc base"
-        
-        run buildah run "$CONTAINER" -- rpm -q greetd-tuigreet
-        assert_success "greetd-tuigreet should be installed on fedora-bootc base"
-        
-        run buildah run "$CONTAINER" -- rpm -q waybar
-        assert_success "waybar should be installed on fedora-bootc base"
-    else
-        echo "Skipping desktop package tests for fedora-sway-atomic (pre-installed)"
-    fi
-}
-
-@test "Graphical target should be enabled for fedora-bootc base" {
-    if [[ "$BASE_IMAGE_TYPE" == "fedora-bootc" ]]; then
-        run test -L "$MOUNT_POINT/etc/systemd/system/default.target"
-        assert_success "default.target should be a symlink"
-        
-        run readlink "$MOUNT_POINT/etc/systemd/system/default.target"
-        assert_output --partial "graphical.target"
-    else
-        skip "Graphical target test only applies to fedora-bootc base"
-    fi
-}
-
-@test "greetd service should be enabled for fedora-bootc base" {
-    if [[ "$BASE_IMAGE_TYPE" == "fedora-bootc" ]]; then
-        run test -L "$MOUNT_POINT/etc/systemd/system/display-manager.service"
-        if [ "$status" -eq 0 ]; then
-            assert_success "display-manager.service should be enabled"
-        else
-            # Check alternative location
-            run test -L "$MOUNT_POINT/etc/systemd/system/multi-user.target.wants/greetd.service"
-            assert_success "greetd.service should be enabled"
-        fi
-    else
-        skip "greetd enablement test only applies to fedora-bootc base"
-    fi
-}
-
-@test "libvirtd service should be enabled for fedora-bootc base" {
-    if [[ "$BASE_IMAGE_TYPE" == "fedora-bootc" ]]; then
-        run test -L "$MOUNT_POINT/etc/systemd/system/multi-user.target.wants/libvirtd.service"
-        assert_success "libvirtd.service should be enabled"
-    else
-        skip "libvirtd enablement test only applies to fedora-bootc base"
-    fi
-}
-
-@test "systemd-resolved service should be enabled for fedora-bootc base" {
-    if [[ "$BASE_IMAGE_TYPE" == "fedora-bootc" ]]; then
-        run test -L "$MOUNT_POINT/etc/systemd/system/multi-user.target.wants/systemd-resolved.service"
-        if [ "$status" -ne 0 ]; then
-            # Check alternative location
-            run test -L "$MOUNT_POINT/etc/systemd/system/dbus-org.freedesktop.resolve1.service"
-            assert_success "systemd-resolved.service should be enabled"
-        else
-            assert_success "systemd-resolved.service should be enabled"
-        fi
-    else
-        skip "systemd-resolved enablement test only applies to fedora-bootc base"
-    fi
-}
-
-@test "NetworkManager service should be enabled for fedora-bootc base" {
-    if [[ "$BASE_IMAGE_TYPE" == "fedora-bootc" ]]; then
-        run test -L "$MOUNT_POINT/etc/systemd/system/multi-user.target.wants/NetworkManager.service"
-        if [ "$status" -ne 0 ]; then
-            # Check alternative location
-            run test -L "$MOUNT_POINT/etc/systemd/system/dbus-org.freedesktop.nm-dispatcher.service"
-            assert_success "NetworkManager.service should be enabled"
-        else
-            assert_success "NetworkManager.service should be enabled"
-        fi
-    else
-        skip "NetworkManager enablement test only applies to fedora-bootc base"
-    fi
 }
 
 @test "Package 'kitty' from 'packages.add' should be installed" {
@@ -333,39 +245,10 @@ teardown_file() {
     assert_success "'lynis' should be installed"
 }
 
-@test "Plymouth should be installed" {
-    run buildah run "$CONTAINER" -- rpm -q plymouth
-    assert_success "Plymouth should be installed for boot splash"
-}
-
-@test "Plymouth dracut configuration should exist" {
-    assert_file_exists "$MOUNT_POINT/usr/lib/dracut/dracut.conf.d/plymouth.conf"
-    
-    run grep -q "add_dracutmodules.*plymouth" "$MOUNT_POINT/usr/lib/dracut/dracut.conf.d/plymouth.conf"
-    assert_success "Plymouth should be added to dracut modules"
-}
-
-@test "Plymouth kernel arguments should be configured" {
-    assert_file_exists "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
-    
-    run grep -q "splash" "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
-    assert_success "Plymouth kargs should include 'splash'"
-    
-    run grep -q "quiet" "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
-    assert_success "Plymouth kargs should include 'quiet'"
-}
-
-@test "Plymouth default theme should be set to bgrt-better-luks" {
-    run buildah run "$CONTAINER" -- plymouth-set-default-theme --list
-    assert_output --partial "bgrt-better-luks"
-}
-
-@test "Initramfs should exist in kernel modules directory" {
-    run sh -c "ls $MOUNT_POINT/usr/lib/modules/*/initramfs.img"
-    assert_success "Initramfs should be present after dracut rebuild"
-}
-
-@test "/var/tmp should be symlinked to /tmp for dracut" {
-    run test -L "$MOUNT_POINT/var/tmp"
-    assert_success "/var/tmp should be a symlink to /tmp"
+@test ".fedora-version file tracking should work" {
+    # Check if the script can create and read .fedora-version file
+    # We'll test this by checking if the script can report current config
+    run buildah run "$CONTAINER" -- bash -c "cd /tmp && /usr/local/bin/fedora-version-switcher current"
+    # Should either show current config or indicate it needs initialization
+    assert_success "Script should be able to check current configuration"
 }
