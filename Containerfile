@@ -87,6 +87,7 @@ RUN echo 'add_dracutmodules+=" plymouth "' >> /usr/lib/dracut/dracut.conf.d/plym
 RUN plymouth-set-default-theme bgrt-better-luks
 
 # Rebuild initramfs with plymouth support
+# hadolint ignore=DL3003
 RUN set -x; \
     kver=$(cd /usr/lib/modules && echo *); \
     dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
