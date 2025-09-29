@@ -11,7 +11,7 @@ This repository contains the configuration to build a custom, container-based im
 - **Base Image:** `Unknown`
 - **Image Type:** `unknown`
 - **Fedora Version:** unknown
-- **Last Updated:** 2025-09-29 19:17:01 UTC
+- **Last Updated:** 2025-09-29 19:29:59 UTC
 - **Build Status:** [![Build Status](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions)
 
 ## 🏗️ CI/CD Workflow: Fedora Bootc DevSec CI
@@ -220,4 +220,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 **Built with ❤️ using Fedora bootc**
 
-*This README was automatically generated on 2025-09-29 19:17:01 UTC*
+*This README was automatically generated on 2025-09-29 19:29:59 UTC*
