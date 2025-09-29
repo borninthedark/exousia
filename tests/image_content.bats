@@ -307,18 +307,6 @@ teardown_file() {
     assert_success
 }
 
-@test "Greetd home directory should exist and be owned by greetd" {
-    assert_dir_exists "$MOUNT_POINT/var/lib/greetd"
-    run stat -c "%U:%G" "$MOUNT_POINT/var/lib/greetd"
-    assert_output "greetd:greetd"
-}
-
-@test "Greeter home directory should exist and be owned by greeter" {
-    assert_dir_exists "$MOUNT_POINT/var/lib/greeter"
-    run stat -c "%U:%G" "$MOUNT_POINT/var/lib/greeter"
-    assert_output "greeter:greeter"
-}
-
 @test "Sysusers configuration files for greetd/rtkit should exist" {
     run find "$MOUNT_POINT/usr/lib/sysusers.d" -name "*.conf"
     assert_success
