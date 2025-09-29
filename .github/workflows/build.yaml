@@ -47,7 +47,7 @@ env:
   DOCKERHUB_IMAGE_BASE: 1borninthedark/exousia
 
 jobs:
-  build-test-scan-push-sign-summarize:
+  build-test-scan-push-sign:
     name: Fedora Bootc DevSec CI
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -59,12 +59,11 @@ jobs:
 
       - name: Switch Fedora configuration (if requested)
         if: github.event_name == 'workflow_dispatch' && (github.event.inputs.fedora_version != 'current' || github.event.inputs.image_type != 'current')
+        env:
+          VERSION: ${{ github.event.inputs.fedora_version }}
+          IMAGE_TYPE: ${{ github.event.inputs.image_type }}
         run: |
           chmod +x ./custom-scripts/fedora-version-switcher
-          
-          # Build the command based on inputs
-          VERSION="${{ github.event.inputs.fedora_version }}"
-          IMAGE_TYPE="${{ github.event.inputs.image_type }}"
           
           echo "### Fedora Bootc Configuration Switch" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -99,14 +98,14 @@ jobs:
 
       - name: Commit configuration change (if on main branch)
         if: github.event_name == 'workflow_dispatch' && (github.event.inputs.fedora_version != 'current' || github.event.inputs.image_type != 'current') && github.ref == 'refs/heads/main'
+        env:
+          VERSION: ${{ github.event.inputs.fedora_version }}
+          IMAGE_TYPE: ${{ github.event.inputs.image_type }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
           if [[ -n $(git status --porcelain) ]]; then
-            VERSION="${{ github.event.inputs.fedora_version }}"
-            IMAGE_TYPE="${{ github.event.inputs.image_type }}"
-            
             git add Containerfile .fedora-version
             
             # Create descriptive commit message
