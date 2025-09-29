@@ -66,6 +66,12 @@ print_info() {
     echo -e "${BLUE}ℹ${NC} $1"
 }
 
+save_version() {
+    local version=$1
+    local image_type=$2
+    echo "${version}:${image_type}" > "$VERSION_FILE"
+}
+
 detect_current_config() {
     # First, try to read from .fedora-version file
     if [[ -f "$VERSION_FILE" ]]; then

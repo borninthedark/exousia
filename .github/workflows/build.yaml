@@ -167,7 +167,7 @@ jobs:
           mkdir -p ./bootc-secrets
           echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"\"}}}" > ./bootc-secrets/auth.json
 
-      - name: Build bootc image with Buildah
+      - name: Build image with Buildah
         id: build-image
         uses: redhat-actions/buildah-build@v2
         with:
