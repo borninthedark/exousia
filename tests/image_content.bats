@@ -274,14 +274,12 @@ teardown_file() {
     assert_success
 }
 
-# --- Greeter / system users (new expansions) ---
-
-@test "System user 'greeter' should exist" {
+@test "System user (greeter) should exist" {
     run chroot "$MOUNT_POINT" getent passwd greeter
     assert_success
 }
 
-@test "System users 'greetd' and 'rtkit' should exist" {
+@test "System users (greetd and rtkit) should exist" {
     run chroot "$MOUNT_POINT" getent passwd greetd
     assert_success
     run chroot "$MOUNT_POINT" getent passwd rtkit
@@ -291,7 +289,6 @@ teardown_file() {
 @test "Greeter user (greeter) should have correct UID/GID and shell" {
     run chroot "$MOUNT_POINT" getent passwd greeter
     assert_success
-    # Expect: greeter:x:241:241:Greeter Login User:/var/lib/greeter:/sbin/nologin
     [[ "$output" =~ ^greeter:x:241:241:Greeter Login User:/var/lib/greeter:/sbin/nologin$ ]]
 }
 
