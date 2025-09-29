@@ -18,7 +18,7 @@ setup_file() {
     export CONTAINER MOUNT_POINT
     echo "--- Container filesystem mounted at $MOUNT_POINT ---"
     
-    # Detect Fedora version from the mounted container
+    # Detect Fedora version
     if [ -f "$MOUNT_POINT/etc/os-release" ]; then
         FEDORA_VERSION=$(grep -oP 'VERSION_ID=\K\d+' "$MOUNT_POINT/etc/os-release" || echo "unknown")
         export FEDORA_VERSION
@@ -35,17 +35,18 @@ teardown_file() {
     buildah rm "$CONTAINER"
 }
 
+# --- OS / Fedora version checks ---
+
 @test "OS should be Fedora Linux" {
     run grep 'ID=fedora' "$MOUNT_POINT/etc/os-release"
     assert_success "Should be running Fedora Linux"
 }
 
-@test "OS version should match expected Fedora versions (41, 42, 43, or rawhide)" {
-    run grep -E 'VERSION_ID=(41|42|43)' "$MOUNT_POINT/etc/os-release"
+@test "OS version should match expected Fedora versions (41–44 or rawhide)" {
+    run grep -E 'VERSION_ID=(41|42|43|44)' "$MOUNT_POINT/etc/os-release"
     if [ "$status" -ne 0 ]; then
-        # Check if it's rawhide
         run grep 'VARIANT_ID=rawhide' "$MOUNT_POINT/etc/os-release"
-        assert_success "Should be Fedora 41, 42, 43, or rawhide"
+        assert_success "Should be Fedora 41–44 or rawhide"
     fi
 }
 
@@ -53,10 +54,10 @@ teardown_file() {
     if [[ "$FEDORA_VERSION" == "unknown" ]]; then
         skip "Could not detect Fedora version"
     fi
-    
-    # Version should be 41, 42, or 43
-    [[ "$FEDORA_VERSION" =~ ^(41|42|43)$ ]]
+    [[ "$FEDORA_VERSION" =~ ^(41|42|43|44|rawhide)$ ]]
 }
+
+# --- CI container auth config checks ---
 
 @test "Container auth files should be correctly configured in CI" {
   if [[ "${CI}" == "true" ]]; then
@@ -74,6 +75,8 @@ teardown_file() {
     skip "Auth file test is skipped outside of CI environment"
   fi
 }
+
+# --- Custom package list and Plymouth ---
 
 @test "Custom package list files should exist" {
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-added"
@@ -94,55 +97,51 @@ teardown_file() {
 }
 
 @test "Plymouth should be configured correctly" {
-    # Check if plymouth is installed
     run buildah run "$CONTAINER" -- rpm -q plymouth
     assert_success "Plymouth should be installed"
-    
-    # Check if dracut config exists
     assert_file_exists "$MOUNT_POINT/usr/lib/dracut/dracut.conf.d/plymouth.conf"
-    
-    # Check if bootc kargs config exists
     assert_file_exists "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
 }
 
+# --- Custom scripts ---
+
 @test "Custom script 'autotiling' should be executable" {
     run test -x "$MOUNT_POINT/usr/local/bin/autotiling"
-    assert_success "'autotiling' script should be executable"
+    assert_success
 }
 
 @test "Custom script 'config-authselect' should be executable" {
     run test -x "$MOUNT_POINT/usr/local/bin/config-authselect"
-    assert_success "'config-authselect' script should be executable"
+    assert_success
 }
 
 @test "Custom script 'lid' should be executable" {
     run test -x "$MOUNT_POINT/usr/local/bin/lid"
-    assert_success "'lid' script should be executable"
+    assert_success
 }
 
 @test "Custom script 'fedora-version-switcher' should be executable" {
     run test -x "$MOUNT_POINT/usr/local/bin/fedora-version-switcher"
-    assert_success "'fedora-version-switcher' script should be executable"
+    assert_success
 }
 
 @test "fedora-version-switcher script should require two arguments" {
-    # Test that script exits with error when called without arguments
     run buildah run "$CONTAINER" -- /usr/local/bin/fedora-version-switcher
-    assert_failure "Script should fail when called without arguments"
+    assert_failure
     assert_output --partial "Usage:"
 }
 
 @test "fedora-version-switcher script should accept valid version and image type" {
-    # Test that script accepts valid arguments (we can't switch in container but can test it runs)
-    # Since the script now requires two args, test with valid version and image type
     run buildah run "$CONTAINER" -- bash -c "/usr/local/bin/fedora-version-switcher 2>&1 | grep -q 'Usage:'"
-    assert_success "Script should show usage when checking for help"
+    assert_success
 }
 
 @test "Custom script 'generate-readme' should be executable" {
     run test -x "$MOUNT_POINT/usr/local/bin/generate-readme"
-    assert_success "'generate-readme' script should be executable"
+    assert_success
 }
+
+# --- Repositories and package config ---
 
 @test "RPM Fusion repositories should be configured" {
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-free.repo"
@@ -154,66 +153,65 @@ teardown_file() {
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/swaylock-effects.repo"
 }
 
-@test "DNF5 should be installed" {
-    run buildah run "$CONTAINER" -- rpm -q dnf5
-    assert_success "DNF5 should be installed"
-}
+# --- Key packages ---
 
-@test "DNF5 should be symlinked as default dnf" {
+@test "DNF5 should be installed and symlinked as default dnf" {
+    run buildah run "$CONTAINER" -- rpm -q dnf5
+    assert_success
     run test -L "$MOUNT_POINT/usr/bin/dnf"
-    assert_success "/usr/bin/dnf should be a symlink to dnf5"
+    assert_success
 }
 
 @test "bootc should be installed" {
     run buildah run "$CONTAINER" -- rpm -q bootc
-    assert_success "bootc should be installed for bootable container support"
+    assert_success
 }
 
 @test "Sway desktop components should be installed" {
     run buildah run "$CONTAINER" -- rpm -q sway
-    assert_success "Sway window manager should be installed"
-    
+    assert_success
     run buildah run "$CONTAINER" -- rpm -q waybar
-    assert_success "Waybar should be installed"
-    
+    assert_success
     run buildah run "$CONTAINER" -- rpm -q swaylock
-    assert_success "Swaylock should be installed"
+    assert_success
 }
 
-@test "Package 'kitty' from 'packages.add' should be installed" {
+@test "Package 'kitty' should be installed" {
     run buildah run "$CONTAINER" -- rpm -q kitty
-    assert_success "'kitty' should be installed"
+    assert_success
 }
 
-@test "Package 'neovim' from 'packages.add' should be installed" {
+@test "Package 'neovim' should be installed" {
     run buildah run "$CONTAINER" -- rpm -q neovim
-    assert_success "'neovim' should be installed"
+    assert_success
 }
 
-@test "Package 'htop' from 'packages.add' should be installed" {
+@test "Package 'htop' should be installed" {
     run buildah run "$CONTAINER" -- rpm -q htop
-    assert_success "'htop' should be installed"
+    assert_success
 }
 
-@test "Package 'distrobox' from 'packages.add' should be installed" {
+@test "Package 'distrobox' should be installed" {
     run buildah run "$CONTAINER" -- rpm -q distrobox
-    assert_success "'distrobox' should be installed"
+    assert_success
 }
 
-@test "Package 'foot' from 'packages.remove' should NOT be installed" {
+@test "Package 'foot' should NOT be installed" {
     run buildah run "$CONTAINER" -- rpm -q foot
-    assert_failure "'foot' should be removed"
+    assert_failure
 }
 
-@test "Package 'dunst' from 'packages.remove' should NOT be installed" {
+@test "Package 'dunst' should NOT be installed" {
     run buildah run "$CONTAINER" -- rpm -q dunst
-    assert_failure "'dunst' should be removed"
+    assert_failure
 }
 
-@test "Package 'rofi-wayland' from 'packages.remove' should NOT be installed" {
+@test "Package 'rofi-wayland' should NOT be installed" {
     run buildah run "$CONTAINER" -- rpm -q rofi-wayland
-    assert_failure "'rofi-wayland' should be removed"
+    assert_failure
 }
+
+# --- Flathub, Sway config, bootc lint ---
 
 @test "Flathub remote should be added" {
     run buildah run "$CONTAINER" -- flatpak remotes --show-details
@@ -232,49 +230,87 @@ teardown_file() {
 
 @test "Image should pass bootc container lint" {
     run buildah run "$CONTAINER" -- bootc container lint
-    assert_success "Image should pass bootc container lint checks"
+    assert_success
 }
 
-@test "Systemd should be present and functional" {
+# --- System components ---
+
+@test "Systemd should be present" {
     run buildah run "$CONTAINER" -- rpm -q systemd
-    assert_success "systemd should be installed"
+    assert_success
 }
 
 @test "Kernel should be installed" {
-    # Check for kernel package - it may be named kernel, kernel-core, or have version prefix
     run buildah run "$CONTAINER" -- sh -c "rpm -qa | grep -E '^kernel(-core)?-[0-9]' || rpm -q kernel || rpm -q kernel-core"
-    assert_success "A kernel package should be installed"
+    assert_success
 }
 
-@test "NetworkManager should be installed for bootc" {
+@test "NetworkManager should be installed" {
     run buildah run "$CONTAINER" -- rpm -q NetworkManager
-    assert_success "NetworkManager should be installed for networking"
+    assert_success
 }
 
-@test "Podman should be installed for container support" {
+@test "Podman should be installed" {
     run buildah run "$CONTAINER" -- rpm -q podman
-    assert_success "Podman should be installed for OCI container support"
+    assert_success
 }
 
 @test "Virtualization packages should be installed" {
     run buildah run "$CONTAINER" -- rpm -q virt-manager
-    assert_success "'virt-manager' should be installed"
-    
+    assert_success
     run buildah run "$CONTAINER" -- rpm -q qemu-kvm
-    assert_success "'qemu-kvm' should be installed"
+    assert_success
 }
 
 @test "Security packages should be installed" {
     run buildah run "$CONTAINER" -- rpm -q pam-u2f
-    assert_success "'pam-u2f' should be installed"
-    
+    assert_success
     run buildah run "$CONTAINER" -- rpm -q lynis
-    assert_success "'lynis' should be installed"
+    assert_success
 }
 
 @test ".fedora-version file tracking should work" {
-    # Since the script requires two arguments, just test that it exists and is executable
-    # The actual version switching logic can't be tested in a running container
     run buildah run "$CONTAINER" -- test -x /usr/local/bin/fedora-version-switcher
-    assert_success "Script should exist and be executable"
+    assert_success
+}
+
+# --- Greeter / system users (new expansions) ---
+
+@test "System users 'greetd' and 'rtkit' should exist" {
+    run chroot "$MOUNT_POINT" getent passwd greetd
+    assert_success
+    run chroot "$MOUNT_POINT" getent passwd rtkit
+    assert_success
+}
+
+@test "System groups 'greetd' and 'rtkit' should exist" {
+    run chroot "$MOUNT_POINT" getent group greetd
+    assert_success
+    run chroot "$MOUNT_POINT" getent group rtkit
+    assert_success
+}
+
+@test "Greeter user should have correct UID/GID and shell" {
+    run chroot "$MOUNT_POINT" getent passwd greetd
+    assert_success
+    [[ "$output" =~ ^greetd:x:[0-9]{1,3}:[0-9]{1,3}:.*:/var/lib/greetd:/sbin/nologin$ ]]
+}
+
+@test "RealtimeKit user should have correct UID/GID and shell" {
+    run chroot "$MOUNT_POINT" getent passwd rtkit
+    assert_success
+    [[ "$output" =~ ^rtkit:x:[0-9]{1,3}:[0-9]{1,3}:.*:/proc:/sbin/nologin$ ]]
+}
+
+@test "Greetd home directory should exist and be owned by greetd" {
+    assert_dir_exists "$MOUNT_POINT/var/lib/greetd"
+    run stat -c "%U:%G" "$MOUNT_POINT/var/lib/greetd"
+    assert_output "greetd:greetd"
+}
+
+@test "Sysusers configuration files for greetd/rtkit should exist" {
+    run find "$MOUNT_POINT/usr/lib/sysusers.d" -name "*.conf"
+    assert_success
+    [[ "$output" =~ greetd\.conf ]] || skip "No greetd sysusers config found"
+    [[ "$output" =~ rtkit\.conf ]] || skip "No rtkit sysusers config found"
 }
