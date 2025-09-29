@@ -200,7 +200,8 @@ teardown_file() {
 }
 
 @test "Kernel should be installed" {
-    run buildah run "$CONTAINER" -- rpm -qa | grep -E '^kernel-[0-9]'
+    # Check for kernel package - it may be named kernel, kernel-core, or have version prefix
+    run buildah run "$CONTAINER" -- sh -c "rpm -qa | grep -E '^kernel(-core)?-[0-9]' || rpm -q kernel || rpm -q kernel-core"
     assert_success "A kernel package should be installed"
 }
 
