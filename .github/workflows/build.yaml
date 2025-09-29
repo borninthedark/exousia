@@ -2,9 +2,9 @@ name: Fedora Bootc DevSec CI
 
 on:
   push:
-    branches: ["build-bootc"]
+    branches: ["main"]
   pull_request:
-    branches: ["build-bootc"]
+    branches: ["main"]
   workflow_dispatch:
     inputs:
       fedora_version:
@@ -57,11 +57,40 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Detect current configuration
+        id: detect-config
+        run: |
+          # Read from .fedora-version file if it exists
+          if [[ -f .fedora-version ]]; then
+            VERSION=$(cat .fedora-version | cut -d: -f1)
+            IMAGE_TYPE=$(cat .fedora-version | cut -d: -f2)
+          else
+            # Fallback: parse from Containerfile
+            FROM_LINE=$(grep "^FROM" Containerfile | head -n1)
+            if [[ "$FROM_LINE" =~ fedora-sway-atomic:([0-9]+|rawhide) ]]; then
+              IMAGE_TYPE="fedora-sway-atomic"
+              VERSION="${BASH_REMATCH[1]}"
+            elif [[ "$FROM_LINE" =~ fedora-bootc:([0-9]+|rawhide) ]]; then
+              IMAGE_TYPE="fedora-bootc"
+              VERSION="${BASH_REMATCH[1]}"
+            else
+              echo "Could not detect version/type, using defaults"
+              VERSION="43"
+              IMAGE_TYPE="fedora-sway-atomic"
+            fi
+          fi
+          
+          echo "DETECTED_VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "DETECTED_IMAGE_TYPE=$IMAGE_TYPE" >> $GITHUB_OUTPUT
+          echo "Detected: Fedora $VERSION with $IMAGE_TYPE"
+
       - name: Switch Fedora configuration (if requested)
         if: github.event_name == 'workflow_dispatch' && (github.event.inputs.fedora_version != 'current' || github.event.inputs.image_type != 'current')
         env:
           VERSION: ${{ github.event.inputs.fedora_version }}
           IMAGE_TYPE: ${{ github.event.inputs.image_type }}
+          CURRENT_VERSION: ${{ steps.detect-config.outputs.DETECTED_VERSION }}
+          CURRENT_IMAGE_TYPE: ${{ steps.detect-config.outputs.DETECTED_IMAGE_TYPE }}
         run: |
           chmod +x ./custom-scripts/fedora-version-switcher
           
@@ -72,13 +101,12 @@ jobs:
             # Only switching image type
             echo "**Action:** Switching base image type only" >> $GITHUB_STEP_SUMMARY
             echo "**New Image Type:** \`$IMAGE_TYPE\`" >> $GITHUB_STEP_SUMMARY
-            CURRENT_VERSION=$(./custom-scripts/fedora-version-switcher current | awk '{print $2}')
             ./custom-scripts/fedora-version-switcher "$CURRENT_VERSION" "$IMAGE_TYPE"
           elif [[ "$IMAGE_TYPE" == "current" ]] && [[ "$VERSION" != "current" ]]; then
             # Only switching version
             echo "**Action:** Switching Fedora version only" >> $GITHUB_STEP_SUMMARY
             echo "**New Version:** Fedora \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
-            ./custom-scripts/fedora-version-switcher "$VERSION"
+            ./custom-scripts/fedora-version-switcher "$VERSION" "$CURRENT_IMAGE_TYPE"
           else
             # Switching both
             echo "**Action:** Switching both version and image type" >> $GITHUB_STEP_SUMMARY
@@ -88,13 +116,28 @@ jobs:
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Updated Containerfile FROM line:**" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`dockerfile" >> $GITHUB_STEP_SUMMARY
-          grep "^FROM" Containerfile >> $GITHUB_STEP_SUMMARY
+          echo "**Configuration written to .fedora-version:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          cat .fedora-version >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
           echo "*Image types are from the official [Fedora bootc project](https://docs.fedoraproject.org/en-US/bootc/)*" >> $GITHUB_STEP_SUMMARY
+
+      - name: Read build configuration for next steps
+        id: build-config
+        run: |
+          if [[ -f .fedora-version ]]; then
+            VERSION=$(cat .fedora-version | cut -d: -f1)
+            IMAGE_TYPE=$(cat .fedora-version | cut -d: -f2)
+          else
+            VERSION="${{ steps.detect-config.outputs.DETECTED_VERSION }}"
+            IMAGE_TYPE="${{ steps.detect-config.outputs.DETECTED_IMAGE_TYPE }}"
+          fi
+          
+          echo "BUILD_VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "BUILD_IMAGE_TYPE=$IMAGE_TYPE" >> $GITHUB_OUTPUT
+          echo "Building: Fedora $VERSION with $IMAGE_TYPE"
 
       - name: Generate image tags and labels for both registries
         id: meta
@@ -104,7 +147,7 @@ jobs:
             ${{ env.IMAGE_BASE }}
             ${{ env.DOCKERHUB_IMAGE_BASE }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/build-bootc' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,format=long
             type=ref,event=branch
             type=schedule,pattern=nightly
@@ -132,6 +175,9 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           containerfiles: ./Containerfile
+          build-args: |
+            FEDORA_VERSION=${{ steps.build-config.outputs.BUILD_VERSION }}
+            IMAGE_TYPE=${{ steps.build-config.outputs.BUILD_IMAGE_TYPE }}
           oci: false
           tls-verify: true
 
@@ -256,9 +302,18 @@ jobs:
           echo "## 🚀 Bootc Image Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Detect current configuration
-          CURRENT_CONFIG=$(grep "^FROM" Containerfile)
-          echo "**Base Image:** \`$CURRENT_CONFIG\`" >> $GITHUB_STEP_SUMMARY
+          # Show configuration used
+          if [[ -f .fedora-version ]]; then
+            VERSION=$(cat .fedora-version | cut -d: -f1)
+            IMAGE_TYPE=$(cat .fedora-version | cut -d: -f2)
+          else
+            VERSION="${{ steps.build-config.outputs.BUILD_VERSION }}"
+            IMAGE_TYPE="${{ steps.build-config.outputs.BUILD_IMAGE_TYPE }}"
+          fi
+          
+          echo "**Configuration:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Fedora Version: \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Base Image Type: \`$IMAGE_TYPE\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [[ "${{ github.event_name }}" != "pull_request" ]]; then
@@ -276,21 +331,21 @@ jobs:
           echo "- [Base Images](https://docs.fedoraproject.org/en-US/bootc/base-images/)" >> $GITHUB_STEP_SUMMARY
 
       - name: Generate dynamic README
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/build-bootc'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         run: |
           chmod +x ./custom-scripts/generate-readme
           ./custom-scripts/generate-readme
 
-      - name: Commit updated README
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/build-bootc'
+      - name: Commit updated README and version file
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          if [[ -n $(git status --porcelain README.md) ]]; then
-            git add README.md
-            git commit -m "docs: auto-update README with current build configuration [skip ci]"
+          if [[ -n $(git status --porcelain README.md .fedora-version) ]]; then
+            git add README.md .fedora-version
+            git commit -m "docs: auto-update README and version file [skip ci]"
             git push
           else
-            echo "README.md unchanged, skipping commit"
+            echo "No changes to commit"
           fi

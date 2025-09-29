@@ -1,23 +1,20 @@
 # ------------------------------
-# Base image
+# Build arguments for base image selection
 # ------------------------------
-FROM quay.io/fedora/fedora-sway-atomic:43
+ARG FEDORA_VERSION=43
+ARG IMAGE_TYPE=fedora-sway-atomic
+
+# ------------------------------
+# Base image - dynamically selected
+# ------------------------------
+FROM quay.io/fedora/${IMAGE_TYPE}:${FEDORA_VERSION}
 LABEL maintainer="uryu"
 
 # ------------------------------
-# Detect base image type for conditional logic
+# Set image type for conditional logic
 # ------------------------------
-ARG BASE_IMAGE_TYPE="auto"
-RUN if [ "$BASE_IMAGE_TYPE" = "auto" ]; then \
-        if rpm -q sway 2>/dev/null; then \
-            echo "fedora-sway-atomic" > /tmp/base-image-type; \
-        else \
-            echo "fedora-bootc" > /tmp/base-image-type; \
-        fi; \
-    else \
-        echo "$BASE_IMAGE_TYPE" > /tmp/base-image-type; \
-    fi && \
-    echo "Detected base image type: $(cat /tmp/base-image-type)"
+ARG IMAGE_TYPE
+ENV BUILD_IMAGE_TYPE=${IMAGE_TYPE}
 
 # ------------------------------
 # Unified Auth Strategy for Bootc & Podman 
@@ -52,7 +49,6 @@ RUN if [ -f /usr/share/rpm-ostree/treefile.json ]; then \
 # ------------------------------
 # hadolint ignore=DL3041,SC2086
 RUN set -euxo pipefail; \
-    BASE_TYPE=$(cat /tmp/base-image-type); \
     dnf install -y dnf5 dnf5-plugins && \
     rm -f /usr/bin/dnf && ln -s /usr/bin/dnf5 /usr/bin/dnf; \
     FEDORA_VERSION=$(rpm -E %fedora); \
@@ -60,12 +56,16 @@ RUN set -euxo pipefail; \
       https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm \
       https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \
     dnf config-manager setopt fedora-cisco-openh264.enabled=1; \
-    if [ "$BASE_TYPE" = "fedora-bootc" ]; then \
-        echo "Installing desktop packages for fedora-bootc base..."; \
-        grep -vE '^#' /usr/local/share/sericea-bootc/packages-desktop | xargs -r dnf install -y; \
+    if [ "$BUILD_IMAGE_TYPE" = "fedora-bootc" ]; then \
+        echo "==> Building from fedora-bootc base - installing desktop packages..."; \
+        grep -vE '^#|^$' /usr/local/share/sericea-bootc/packages-desktop | xargs -r dnf install -y; \
+    else \
+        echo "==> Building from fedora-sway-atomic - skipping desktop packages (already included)"; \
     fi; \
-    grep -vE '^#' /usr/local/share/sericea-bootc/packages-added | xargs -r dnf install -y; \
-    grep -vE '^#' /usr/local/share/sericea-bootc/packages-removed | xargs -r dnf remove -y; \
+    echo "==> Installing custom packages from packages.add..."; \
+    grep -vE '^#|^$' /usr/local/share/sericea-bootc/packages-added | xargs -r dnf install -y; \
+    echo "==> Removing packages from packages.remove..."; \
+    grep -vE '^#|^$' /usr/local/share/sericea-bootc/packages-removed | xargs -r dnf remove -y; \
     dnf upgrade -y; \
     dnf clean all
 
@@ -100,19 +100,17 @@ RUN mkdir -p /usr/lib/bootc/kargs.d && \
 # ------------------------------
 # Enable systemd services based on base image type
 # ------------------------------
-RUN BASE_TYPE=$(cat /tmp/base-image-type); \
-    if [ "$BASE_TYPE" = "fedora-bootc" ]; then \
-        echo "Enabling services for fedora-bootc base..."; \
+RUN if [ "$BUILD_IMAGE_TYPE" = "fedora-bootc" ]; then \
+        echo "==> Enabling services for fedora-bootc base..."; \
         systemctl set-default graphical.target; \
         systemctl enable greetd.service; \
         systemctl enable libvirtd.service; \
         systemctl enable systemd-resolved.service; \
         systemctl enable NetworkManager.service; \
-        echo "Services enabled: graphical.target (default), greetd, libvirtd, systemd-resolved, NetworkManager"; \
+        echo "==> Services enabled: graphical.target (default), greetd, libvirtd, systemd-resolved, NetworkManager"; \
     else \
-        echo "Skipping service enablement - using fedora-sway-atomic defaults"; \
-    fi && \
-    rm -f /tmp/base-image-type
+        echo "==> Skipping service enablement - using fedora-sway-atomic defaults"; \
+    fi
 
 # ------------------------------
 # Lint Container

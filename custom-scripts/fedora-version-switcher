@@ -67,23 +67,37 @@ print_info() {
 }
 
 detect_current_config() {
+    # First, try to read from .fedora-version file
+    if [[ -f "$VERSION_FILE" ]]; then
+        if [[ -s "$VERSION_FILE" ]]; then
+            CURRENT_VERSION=$(cat "$VERSION_FILE" | cut -d: -f1)
+            CURRENT_IMAGE_TYPE=$(cat "$VERSION_FILE" | cut -d: -f2)
+            
+            # Validate the values
+            if [[ -n "$CURRENT_VERSION" ]] && [[ -n "$CURRENT_IMAGE_TYPE" ]]; then
+                return 0
+            fi
+        fi
+    fi
+    
+    # Fallback: try to detect from Containerfile
     if [[ ! -f "$CONTAINERFILE" ]]; then
-        print_error "Containerfile not found at $CONTAINERFILE"
+        print_error "Neither .fedora-version nor Containerfile found"
         exit 1
     fi
     
-    # Detect image type and version from FROM line
-    local from_line
-    from_line=$(grep "^FROM" "$CONTAINERFILE" | head -n1)
+    # Try to parse ARG directives from Containerfile
+    local version_arg=$(grep "^ARG FEDORA_VERSION=" "$CONTAINERFILE" | cut -d= -f2)
+    local type_arg=$(grep "^ARG IMAGE_TYPE=" "$CONTAINERFILE" | cut -d= -f2)
     
-    if [[ "$from_line" =~ fedora-sway-atomic:([0-9]+|rawhide) ]]; then
-        CURRENT_IMAGE_TYPE="fedora-sway-atomic"
-        CURRENT_VERSION="${BASH_REMATCH[1]}"
-    elif [[ "$from_line" =~ fedora-bootc:([0-9]+|rawhide) ]]; then
-        CURRENT_IMAGE_TYPE="fedora-bootc"
-        CURRENT_VERSION="${BASH_REMATCH[1]}"
+    if [[ -n "$version_arg" ]] && [[ -n "$type_arg" ]]; then
+        CURRENT_VERSION="$version_arg"
+        CURRENT_IMAGE_TYPE="$type_arg"
+        print_warning "No .fedora-version file found, using defaults from Containerfile"
+        print_warning "Creating .fedora-version file..."
+        save_version "$CURRENT_VERSION" "$CURRENT_IMAGE_TYPE"
     else
-        print_warning "Could not detect current version from Containerfile"
+        print_error "Could not detect configuration from .fedora-version or Containerfile"
         CURRENT_VERSION="unknown"
         CURRENT_IMAGE_TYPE="unknown"
     fi
@@ -165,6 +179,68 @@ switch_version() {
     local target_image_type="${2:-$CURRENT_IMAGE_TYPE}"
     
     if [[ "$target_version" == "$CURRENT_VERSION" ]] && [[ "$target_image_type" == "$CURRENT_IMAGE_TYPE" ]]; then
+        print_warning "Already using Fedora $target_version ($target_image_type)"
+        return 0
+    fi
+    
+    print_info "Switching configuration:"
+    echo "  From: Fedora $CURRENT_VERSION ($CURRENT_IMAGE_TYPE)"
+    echo "  To:   Fedora $target_version ($target_image_type)"
+    
+    # Show what will happen based on image type
+    if [[ "$target_image_type" == "fedora-bootc" ]]; then
+        echo
+        print_warning "Switching to fedora-bootc will:"
+        echo "  • Install desktop packages from packages.desktop"
+        echo "  • Enable graphical.target, greetd, libvirtd"
+        echo "  • Enable systemd-resolved, NetworkManager"
+        echo "  • Use FROM quay.io/fedora/fedora-bootc:$target_version"
+    elif [[ "$target_image_type" == "fedora-sway-atomic" ]]; then
+        echo
+        print_info "Switching to fedora-sway-atomic will:"
+        echo "  • Skip packages.desktop (desktop pre-installed)"
+        echo "  • Skip service enablement (pre-configured)"
+        echo "  • Use FROM quay.io/fedora/fedora-sway-atomic:$target_version"
+    fi
+    
+    echo
+    
+    # Create backup (skip in CI to avoid cluttering the workspace)
+    if [[ "${CI:-false}" != "true" ]]; then
+        backup_containerfile
+    fi
+    
+    # Update the .fedora-version file (this is what Makefile and CI use)
+    save_version "$target_version" "$target_image_type"
+    
+    # Update current image type
+    CURRENT_IMAGE_TYPE="$target_image_type"
+    CURRENT_VERSION="$target_version"
+    
+    print_success "Successfully switched to Fedora $target_version ($target_image_type)"
+    
+    # Show the configuration
+    echo
+    print_info "Configuration saved to .fedora-version:"
+    cat "$VERSION_FILE" | sed 's/^/  /'
+    
+    echo
+    print_info "Build arguments will be:"
+    echo "  FEDORA_VERSION=$target_version"
+    echo "  IMAGE_TYPE=$target_image_type"
+    
+    echo
+    print_info "This will result in:"
+    echo "  FROM quay.io/fedora/${target_image_type}:${target_version}"
+    
+    return 0
+}
+
+save_version() {
+    local version=$1
+    local image_type=$2
+    echo "${version}:${image_type}" > "$VERSION_FILE"
+}
         print_warning "Already using Fedora $target_version ($target_image_type)"
         return 0
     fi
@@ -345,10 +421,10 @@ main() {
                 if [[ "${CI:-false}" != "true" ]]; then
                     echo
                     print_info "Next steps:"
-                    echo "  1. Review changes:    git diff Containerfile"
+                    echo "  1. Review changes:    cat .fedora-version"
                     echo "  2. Build the image:   make build"
-                    echo "  3. Test locally:      podman-bootc run <image>"
-                    echo "  4. Commit changes:    git add Containerfile .fedora-version"
+                    echo "  3. Test locally:      podman run --rm <image> cat /etc/os-release"
+                    echo "  4. Commit changes:    git add .fedora-version"
                     echo "                        git commit -m 'Switch to Fedora $target_version ($target_image_type)'"
                 fi
                 exit 0
