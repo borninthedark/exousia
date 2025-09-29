@@ -53,32 +53,39 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      # ======================== BUILD STAGE ========================= #
+    # ======================== BUILD STAGE ========================= #
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Detect current configuration
         id: detect-config
         run: |
-          # Read from .fedora-version file if it exists
-          if [[ -f .fedora-version ]]; then
+          # Read from .fedora-version file if it exists and is not empty
+          if [[ -f .fedora-version ]] && [[ -s .fedora-version ]]; then
             VERSION=$(cat .fedora-version | cut -d: -f1)
             IMAGE_TYPE=$(cat .fedora-version | cut -d: -f2)
+            echo "Detected from .fedora-version file"
           else
             # Fallback: parse from Containerfile
             FROM_LINE=$(grep "^FROM" Containerfile | head -n1)
             if [[ "$FROM_LINE" =~ fedora-sway-atomic:([0-9]+|rawhide) ]]; then
               IMAGE_TYPE="fedora-sway-atomic"
               VERSION="${BASH_REMATCH[1]}"
+              echo "Detected from Containerfile (sway-atomic)"
             elif [[ "$FROM_LINE" =~ fedora-bootc:([0-9]+|rawhide) ]]; then
               IMAGE_TYPE="fedora-bootc"
               VERSION="${BASH_REMATCH[1]}"
+              echo "Detected from Containerfile (bootc)"
             else
               echo "Could not detect version/type, using defaults"
               VERSION="43"
               IMAGE_TYPE="fedora-sway-atomic"
             fi
           fi
+          
+          # Ensure we have valid values
+          VERSION="${VERSION:-43}"
+          IMAGE_TYPE="${IMAGE_TYPE:-fedora-sway-atomic}"
           
           echo "DETECTED_VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "DETECTED_IMAGE_TYPE=$IMAGE_TYPE" >> $GITHUB_OUTPUT
@@ -97,28 +104,58 @@ jobs:
           echo "### Fedora Bootc Configuration Switch" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          if [[ "$VERSION" == "current" ]] && [[ "$IMAGE_TYPE" != "current" ]]; then
-            # Only switching image type
-            echo "**Action:** Switching base image type only" >> $GITHUB_STEP_SUMMARY
-            echo "**New Image Type:** \`$IMAGE_TYPE\`" >> $GITHUB_STEP_SUMMARY
-            ./custom-scripts/fedora-version-switcher "$CURRENT_VERSION" "$IMAGE_TYPE"
-          elif [[ "$IMAGE_TYPE" == "current" ]] && [[ "$VERSION" != "current" ]]; then
-            # Only switching version
-            echo "**Action:** Switching Fedora version only" >> $GITHUB_STEP_SUMMARY
-            echo "**New Version:** Fedora \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
-            ./custom-scripts/fedora-version-switcher "$VERSION" "$CURRENT_IMAGE_TYPE"
-          else
-            # Switching both
-            echo "**Action:** Switching both version and image type" >> $GITHUB_STEP_SUMMARY
-            echo "**New Version:** Fedora \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
-            echo "**New Image Type:** \`$IMAGE_TYPE\`" >> $GITHUB_STEP_SUMMARY
-            ./custom-scripts/fedora-version-switcher "$VERSION" "$IMAGE_TYPE"
+          # Debug output
+          echo "Debug: VERSION input = '$VERSION'"
+          echo "Debug: IMAGE_TYPE input = '$IMAGE_TYPE'"
+          echo "Debug: CURRENT_VERSION = '$CURRENT_VERSION'"
+          echo "Debug: CURRENT_IMAGE_TYPE = '$CURRENT_IMAGE_TYPE'"
+          
+          # Ensure we have valid fallback values
+          CURRENT_VERSION="${CURRENT_VERSION:-43}"
+          CURRENT_IMAGE_TYPE="${CURRENT_IMAGE_TYPE:-fedora-sway-atomic}"
+          
+          # Determine what to switch
+          TARGET_VERSION="$VERSION"
+          TARGET_IMAGE_TYPE="$IMAGE_TYPE"
+          
+          # Replace 'current' with actual current values
+          if [[ "$TARGET_VERSION" == "current" ]]; then
+            TARGET_VERSION="$CURRENT_VERSION"
           fi
+          if [[ "$TARGET_IMAGE_TYPE" == "current" ]]; then
+            TARGET_IMAGE_TYPE="$CURRENT_IMAGE_TYPE"
+          fi
+          
+          # Log what we're doing
+          if [[ "$VERSION" == "current" ]] && [[ "$IMAGE_TYPE" != "current" ]]; then
+            echo "**Action:** Switching base image type only" >> $GITHUB_STEP_SUMMARY
+            echo "**Current Version:** Fedora \`$CURRENT_VERSION\`" >> $GITHUB_STEP_SUMMARY
+            echo "**New Image Type:** \`$TARGET_IMAGE_TYPE\`" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$IMAGE_TYPE" == "current" ]] && [[ "$VERSION" != "current" ]]; then
+            echo "**Action:** Switching Fedora version only" >> $GITHUB_STEP_SUMMARY
+            echo "**New Version:** Fedora \`$TARGET_VERSION\`" >> $GITHUB_STEP_SUMMARY
+            echo "**Current Image Type:** \`$CURRENT_IMAGE_TYPE\`" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$VERSION" != "current" ]] && [[ "$IMAGE_TYPE" != "current" ]]; then
+            echo "**Action:** Switching both version and image type" >> $GITHUB_STEP_SUMMARY
+            echo "**New Version:** Fedora \`$TARGET_VERSION\`" >> $GITHUB_STEP_SUMMARY
+            echo "**New Image Type:** \`$TARGET_IMAGE_TYPE\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Action:** No changes (both set to 'current')" >> $GITHUB_STEP_SUMMARY
+            echo "**Keeping:** Fedora \`$CURRENT_VERSION\` with \`$CURRENT_IMAGE_TYPE\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Execute the switch with the resolved values
+          echo "Running: ./custom-scripts/fedora-version-switcher $TARGET_VERSION $TARGET_IMAGE_TYPE"
+          ./custom-scripts/fedora-version-switcher "$TARGET_VERSION" "$TARGET_IMAGE_TYPE"
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Configuration written to .fedora-version:**" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          cat .fedora-version >> $GITHUB_STEP_SUMMARY
+          if [[ -f .fedora-version ]]; then
+            cat .fedora-version >> $GITHUB_STEP_SUMMARY
+          else
+            echo "$TARGET_VERSION:$TARGET_IMAGE_TYPE" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
@@ -127,13 +164,21 @@ jobs:
       - name: Read build configuration for next steps
         id: build-config
         run: |
-          if [[ -f .fedora-version ]]; then
+          # Try to read from .fedora-version file first
+          if [[ -f .fedora-version ]] && [[ -s .fedora-version ]]; then
             VERSION=$(cat .fedora-version | cut -d: -f1)
             IMAGE_TYPE=$(cat .fedora-version | cut -d: -f2)
+            echo "Read from .fedora-version: $VERSION:$IMAGE_TYPE"
           else
+            # Fall back to detected values
             VERSION="${{ steps.detect-config.outputs.DETECTED_VERSION }}"
             IMAGE_TYPE="${{ steps.detect-config.outputs.DETECTED_IMAGE_TYPE }}"
+            echo "Using detected values: $VERSION:$IMAGE_TYPE"
           fi
+          
+          # Final fallback to defaults if still empty
+          VERSION="${VERSION:-43}"
+          IMAGE_TYPE="${IMAGE_TYPE:-fedora-sway-atomic}"
           
           echo "BUILD_VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "BUILD_IMAGE_TYPE=$IMAGE_TYPE" >> $GITHUB_OUTPUT
@@ -155,7 +200,7 @@ jobs:
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.description=Custom Fedora bootc image
             org.opencontainers.image.documentation=https://docs.fedoraproject.org/en-US/bootc/
-
+            
       - name: Lint Containerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
