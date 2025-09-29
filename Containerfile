@@ -22,6 +22,12 @@ ENV BUILD_IMAGE_TYPE=${IMAGE_TYPE}
 COPY --chmod=0644 containers-auth.conf /usr/lib/tmpfiles.d/containers-auth.conf
 COPY --chmod=0600 ./bootc-secrets/auth.json /usr/lib/container-auth.json 
 RUN ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
+
+# ------------------------------
+# Directory Structure Requirements
+# ------------------------------
+RUN mkdir -p /var/roothome /var/opt /usr/lib/extensions && \
+    ln -sf /var/opt /opt
     
 # ------------------------------
 # Copy all inputs first
@@ -117,3 +123,8 @@ RUN if [ "$BUILD_IMAGE_TYPE" = "fedora-bootc" ]; then \
 # Lint Container
 # ------------------------------
 RUN bootc container lint
+
+# ------------------------------
+# Explicitly Enable ComposeFS
+# ------------------------------
+RUN echo "composefs=true" >> /etc/ostree/repo.config || true
