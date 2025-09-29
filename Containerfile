@@ -23,6 +23,7 @@ ENV BUILD_IMAGE_TYPE=${IMAGE_TYPE}
 # Copy sysusers definition
 COPY --chmod=0644 sysusers/bootc.conf /usr/lib/sysusers.d/bootc.conf
 
+
 # Ensure /etc/passwd and /etc/group exist (safety for minimal images)
 RUN test -f /etc/passwd || touch /etc/passwd; \
     test -f /etc/group  || touch /etc/group
@@ -32,8 +33,10 @@ RUN systemd-sysusers || true
 
 # Create directories and set permissions now that users are guaranteed to exist
 RUN set -e; \
-    mkdir -p /var/lib/greetd /var/lib/rtkit; \
-    chown -R greetd:greetd /var/lib/greetd || true
+    mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit; \
+    chown -R greeter:greeter /var/lib/greeter || true; \
+    chown -R greetd:greetd   /var/lib/greetd || true
+
 
 # Create a minimal greetd config that references the greeter user
 RUN set -e; \
