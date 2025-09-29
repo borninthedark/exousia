@@ -81,24 +81,20 @@ RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.
 RUN ln -sf /tmp /var/tmp
 
 # Add plymouth to dracut modules
-RUN cat <<EOF >> /usr/lib/dracut/dracut.conf.d/plymouth.conf
-add_dracutmodules+=" plymouth "
-EOF
+RUN echo 'add_dracutmodules+=" plymouth "' >> /usr/lib/dracut/dracut.conf.d/plymouth.conf
 
 # Set default plymouth theme to our custom theme
 RUN plymouth-set-default-theme bgrt-better-luks
 
 # Rebuild initramfs with plymouth support
 RUN set -x; \
-    kver=\$(cd /usr/lib/modules && echo *); \
-    dracut -vf /usr/lib/modules/\$kver/initramfs.img \$kver
+    kver=$(cd /usr/lib/modules && echo *); \
+    dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
 
 # Add kernel arguments for plymouth
 RUN mkdir -p /usr/lib/bootc/kargs.d && \
-    cat <<EOF >> /usr/lib/bootc/kargs.d/plymouth.toml
-kargs = ["splash", "quiet"]
-match-architectures = ["x86_64", "aarch64"]
-EOF
+    printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' \
+    > /usr/lib/bootc/kargs.d/plymouth.toml
 
 # ------------------------------
 # Enable systemd services based on base image type
