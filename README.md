@@ -73,10 +73,6 @@ This workflow requires secrets to push the container image to GHCR and Docker Hu
 
 ## Citations
 
-This ever expanding section is for acknowledging the helpful articles, documentation, and other resources used in creating this project.
-
-## Citations
-
 This ever-expanding section acknowledges the helpful articles, documentation, and other resources used in creating this project.
 
 * *How to workaround rpm dependency?:* `https://github.com/coreos/bootupd/issues/468`  
