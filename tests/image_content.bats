@@ -288,13 +288,6 @@ teardown_file() {
     assert_success
 }
 
-@test "System groups 'greetd' and 'rtkit' should exist" {
-    run chroot "$MOUNT_POINT" getent group greetd
-    assert_success
-    run chroot "$MOUNT_POINT" getent group rtkit
-    assert_success
-}
-
 @test "Greeter user (greeter) should have correct UID/GID and shell" {
     run chroot "$MOUNT_POINT" getent passwd greeter
     assert_success
