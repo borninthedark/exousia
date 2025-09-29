@@ -47,7 +47,7 @@ env:
   DOCKERHUB_IMAGE_BASE: 1borninthedark/exousia
 
 jobs:
-  build-test-scan-push-sign:
+  build-test-scan-push-sign-doc:
     name: Fedora Bootc DevSec CI
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -280,7 +280,7 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "true"
 
-      # ======================== SUMMARY STAGE ======================= #
+      # ======================== SUMMARY / DOCUMENT STAGE ======================= #
       - name: Generate build summary
         if: always()
         run: |
