@@ -28,16 +28,18 @@ RUN test -f /etc/passwd || touch /etc/passwd && \
     test -f /etc/group  || touch /etc/group
 
 # Create directories expected by system users and run systemd-sysusers to populate /etc/{passwd,group}
-RUN mkdir -p /var/lib/greetd /var/lib/rtkit && \
-    systemd-sysusers || true && \
-    chown -R greetd:greetd /var/lib/greetd || true
+RUN set -e; \
+    mkdir -p /var/lib/greetd /var/lib/rtkit; \
+    systemd-sysusers || true; \
+    chown -R 240:240 /var/lib/greetd || true
     
 # Create a minimal greetd config that references the greeter user (optional but recommended)
 # This ensures greetd knows which user to run the greeter as.
-RUN mkdir -p /etc/greetd && \
+RUN set -e; \
+    mkdir -p /etc/greetd; \
     printf '[security]\n# Run greeter as this user\nuser = "greetd"\n\n[default]\n# no-session configured here; system should provide session handling\n' \
       > /etc/greetd/config.toml || true
-
+      
 # ------------------------------
 # Unified Auth Strategy for Bootc & Podman 
 # ------------------------------
