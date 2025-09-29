@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Accept version and image type from arguments
+target_version="${1:-}"
+target_image_type="${2:-}"
+
+if [[ -z "$target_version" || -z "$target_image_type" ]]; then
+  echo "Usage: $0 <version> <image_type>"
+  exit 1
+fi
+
 # Fedora Version Switcher for Bootc Images
 # Allows switching between Fedora versions and base image types for building custom bootc images
 # Based on official Fedora bootc documentation
