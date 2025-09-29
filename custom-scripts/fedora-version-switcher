@@ -138,7 +138,8 @@ validate_image_type() {
 }
 
 backup_containerfile() {
-    local backup_file="${CONTAINERFILE}.bak.$(date +%Y%m%d_%H%M%S)"
+    local backup_file
+    backup_file="${CONTAINERFILE}.bak.$(date +%Y%m%d_%H%M%S)"
     cp "$CONTAINERFILE" "$backup_file"
     print_info "Backup created: $backup_file"
 }
