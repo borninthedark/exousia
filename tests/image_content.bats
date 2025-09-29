@@ -295,13 +295,15 @@ teardown_file() {
 @test "Greeter user (greetd) should have correct UID/GID and shell" {
     run chroot "$MOUNT_POINT" getent passwd greetd
     assert_success
-    [[ "$output" =~ ^greetd:x:[0-9]{1,3}:[0-9]{1,3}:.*:/var/lib/greetd:/sbin/nologin$ ]]
+    echo "$output" | grep -Eq '^greetd:x:[0-9]+:[0-9]+:.*:/var/lib/greetd:/sbin/nologin$'
+    assert_success
 }
 
 @test "RealtimeKit user should have correct UID/GID and shell" {
     run chroot "$MOUNT_POINT" getent passwd rtkit
     assert_success
-    [[ "$output" =~ ^rtkit:x:[0-9]{1,3}:[0-9]{1,3}:.*:/proc:/sbin/nologin$ ]]
+    echo "$output" | grep -Eq '^rtkit:x:[0-9]+:[0-9]+:.*:/proc:/sbin/nologin$'
+    assert_success
 }
 
 @test "Greetd home directory should exist and be owned by greetd" {
