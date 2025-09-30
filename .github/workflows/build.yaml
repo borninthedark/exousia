@@ -84,10 +84,10 @@ jobs:
 
       - name: Detect and resolve Fedora configuration
         id: config
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.fedora_version || 'current' }}
+          INPUT_IMAGE_TYPE: ${{ github.event.inputs.image_type || 'current' }}
         run: |
-          INPUT_VERSION="${{ github.event.inputs.fedora_version || 'current' }}"
-          INPUT_IMAGE_TYPE="${{ github.event.inputs.image_type || 'current' }}"
-          
           echo "Input version: $INPUT_VERSION"
           echo "Input image type: $INPUT_IMAGE_TYPE"
           
