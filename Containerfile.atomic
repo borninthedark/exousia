@@ -71,21 +71,30 @@ RUN if [ -f /usr/share/rpm-ostree/treefile.json ]; then \
     fi
 
 # ------------------------------
-# Package management
+# DNF: Install, remove, upgrade, add repos in one layer
 # ------------------------------
+# hadolint ignore=DL3041,SC2086
 RUN set -euxo pipefail; \
     dnf install -y dnf5 dnf5-plugins && \
-    rm -f /usr/bin/dnf && ln -sf /usr/bin/dnf5 /usr/bin/dnf; \
+    rm -f /usr/bin/dnf && ln -s /usr/bin/dnf5 /usr/bin/dnf; \
     FEDORA_VERSION=$(rpm -E %fedora); \
     dnf install -y \
       https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm \
       https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \
     dnf config-manager setopt fedora-cisco-openh264.enabled=1; \
+    if [ "$BUILD_IMAGE_TYPE" = "fedora-bootc" ]; then \
+        echo "==> Building from fedora-bootc base - installing Sway desktop packages..."; \
+        grep -vE '^#|^$' /usr/local/share/sericea-bootc/packages-sway | xargs -r dnf install -y --skip-unavailable; \
+    else \
+        echo "==> Building from fedora-sway-atomic - skipping Sway desktop packages (already included)"; \
+    fi; \
+    echo "==> Installing custom packages from packages.add..."; \
     grep -vE '^#|^$' /usr/local/share/sericea-bootc/packages-added | xargs -r dnf install -y; \
+    echo "==> Removing packages from packages.remove..."; \
     grep -vE '^#|^$' /usr/local/share/sericea-bootc/packages-removed | xargs -r dnf remove -y; \
     dnf upgrade -y; \
     dnf clean all
-
+    
 # ------------------------------
 # Flathub
 # ------------------------------
