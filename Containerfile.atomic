@@ -29,6 +29,21 @@ RUN set -e; \
     mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit; 
 
 # ------------------------------
+# Greetd configuration
+# ------------------------------
+# Explicitly set a greeter user and sway session
+RUN mkdir -p /etc/greetd
+COPY --chmod=0644 custom-configs/greetd.toml /etc/greetd/config.toml
+
+# Example greetd.toml (ensure you provide this in custom-configs):
+# [terminal]
+# vt = 1
+#
+# [default_session]
+# command = "sway --config /etc/greetd/sway-config"
+# user = "greeter"
+
+# ------------------------------
 # Auth
 # ------------------------------
 COPY --chmod=0644 containers-auth.conf /usr/lib/tmpfiles.d/containers-auth.conf
@@ -47,11 +62,21 @@ COPY --chmod=0644 custom-configs/               /etc/
 COPY --chmod=0755 custom-scripts/               /usr/local/bin/
 
 # ------------------------------
+# Package lists
+# ------------------------------
+RUN if [ -f /usr/share/rpm-ostree/treefile.json ]; then \
+        jq -r .packages[] /usr/share/rpm-ostree/treefile.json \
+        > /usr/local/share/sericea-bootc/packages-fedora-bootc; \
+    else \
+        touch /usr/local/share/sericea-bootc/packages-fedora-bootc; \
+    fi
+
+# ------------------------------
 # Package management
 # ------------------------------
 RUN set -euxo pipefail; \
     dnf install -y dnf5 dnf5-plugins && \
-    ln -sf /usr/bin/dnf5 /usr/bin/dnf; \
+    rm -f /usr/bin/dnf && ln -s /usr/bin/dnf5 /usr/bin/dnf; \
     FEDORA_VERSION=$(rpm -E %fedora); \
     dnf install -y \
       https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm \

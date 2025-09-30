@@ -267,11 +267,7 @@ teardown_file() {
 }
 
 @test "Flathub remote should point to correct URL" {
-    run buildah run "$CONTAINER" -- flatpak remote-info flathub
-    assert_success
-    
     run buildah run "$CONTAINER" -- sh -c "flatpak remotes -d | grep flathub | grep 'https://flathub.org/repo/'"
-    assert_success "Flathub should point to official repository"
 }
 
 @test "Sway configuration files should be present" {

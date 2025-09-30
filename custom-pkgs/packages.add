@@ -33,6 +33,7 @@ wireguard-tools
 # Virtualization
 virt-manager
 qemu-kvm
+libvirt
 
 # Security
 pam-u2f
