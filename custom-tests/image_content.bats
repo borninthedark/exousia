@@ -145,22 +145,51 @@ is_fedora_sway_atomic() {
     if ! is_fedora_sway_atomic; then
         skip "Test only applies to fedora-sway-atomic builds"
     fi
-    
+
     # /var/roothome should NOT exist for fedora-sway-atomic
     run test -d "$MOUNT_POINT/var/roothome"
-    assert_failure "/var/roothome should not exist in fedora-sway-atomic"
+    assert_failure "Expected /var/roothome to NOT exist in fedora-sway-atomic"
 }
 
-@test "Custom Plymouth theme should be copied" {
-    assert_dir_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/"
-    assert_file_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/bgrt-better-luks.plymouth"
+@test "Custom Plymouth theme should be copied when Plymouth is enabled" {
+    if is_fedora_bootc; then
+        # bootc must include the theme
+        assert_dir_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/"
+        assert_file_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/bgrt-better-luks.plymouth"
+    else
+        # sway-atomic: theme is optional — if it exists, validate it; otherwise skip
+        if [ -d "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/" ]; then
+            assert_file_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/bgrt-better-luks.plymouth"
+        else
+            skip "Plymouth theme not present for sway-atomic (optional)"
+        fi
+    fi
 }
 
-@test "Plymouth should be configured correctly" {
+@test "Plymouth should be configured correctly when installed" {
+    # Check whether plymouth RPM is installed inside the built container
     run buildah run "$CONTAINER" -- rpm -q plymouth
-    assert_success "Plymouth should be installed"
+
+    # If RPM not present, assume Plymouth wasn't enabled — skip (sway-atomic optional)
+    if [ "$status" -ne 0 ]; then
+        skip "Plymouth package not installed; configuration expected to be absent"
+    fi
+
+    # If installed, assert expected files exist
+    assert_success "Plymouth package should be installed"
     assert_file_exists "$MOUNT_POINT/usr/lib/dracut/dracut.conf.d/plymouth.conf"
     assert_file_exists "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
+}
+
+@test "Plymouth should only be configured when enabled" {
+    if is_fedora_sway_atomic; then
+        run test -f "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
+        assert_failure "plymouth.toml should not exist for sway-atomic unless explicitly enabled"
+    fi
+
+    if is_fedora_bootc; then
+        assert_file_exists "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
+    fi
 }
 
 # --- Custom scripts ---

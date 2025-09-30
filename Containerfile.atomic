@@ -2,6 +2,7 @@
 # Build arguments
 # ------------------------------
 ARG FEDORA_VERSION=43
+ARG ENABLE_PLYMOUTH=false   # default: off for fedora-sway-atomic
 
 # ------------------------------
 # Base image
@@ -101,19 +102,22 @@ RUN set -euxo pipefail; \
 RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # ------------------------------
-# Plymouth
+# Plymouth (conditional)
 # ------------------------------
-RUN rm -rf /var/tmp && ln -sf /tmp /var/tmp
-RUN echo 'add_dracutmodules+=" plymouth "' >> /usr/lib/dracut/dracut.conf.d/plymouth.conf
-RUN plymouth-set-default-theme bgrt-better-luks
-RUN set -x; kver=$(cd /usr/lib/modules && echo *); dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
-RUN mkdir -p /usr/lib/bootc/kargs.d && \
-    printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' > /usr/lib/bootc/kargs.d/plymouth.toml
+RUN if [ "${ENABLE_PLYMOUTH}" = "true" ]; then \
+      echo "==> Enabling Plymouth setup..."; \
+      rm -rf /var/tmp && ln -sf /tmp /var/tmp && \
+      echo 'add_dracutmodules+=" plymouth "' >> /usr/lib/dracut/dracut.conf.d/plymouth.conf && \
+      plymouth-set-default-theme bgrt-better-luks && \
+      kver=$(cd /usr/lib/modules && echo *); \
+      dracut -vf /usr/lib/modules/$kver/initramfs.img $kver && \
+      mkdir -p /usr/lib/bootc/kargs.d && \
+      printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' \
+        > /usr/lib/bootc/kargs.d/plymouth.toml ; \
+    else \
+      echo "==> Skipping Plymouth setup (ENABLE_PLYMOUTH=${ENABLE_PLYMOUTH})"; \
+    fi
 
-# ------------------------------
-# Services (skip, sway-atomic handles defaults)
-# ------------------------------
-RUN echo "==> Skipping explicit service enablement - sway-atomic provides defaults"
 
 # ------------------------------
 # Lint + ComposeFS

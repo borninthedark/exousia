@@ -1,10 +1,10 @@
-name: Fedora Bootc DevSec CI
+name: Fedora Sericea Image CI
 
 on:
   push:
-    branches: ["build-fixes"]
+    branches: ["tests"]
   pull_request:
-    branches: ["build-fixes"]
+    branches: ["tests"]
   workflow_dispatch:
     inputs:
       fedora_version:
@@ -183,6 +183,7 @@ jobs:
           build-args: |
             FEDORA_VERSION=${{ steps.config.outputs.BUILD_VERSION }}
             IMAGE_TYPE=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
+            ENABLE_PLYMOUTH=${{ steps.config.outputs.BUILD_IMAGE_TYPE == 'fedora-bootc' && 'true' || 'false' }}
           oci: false
           tls-verify: true
 
