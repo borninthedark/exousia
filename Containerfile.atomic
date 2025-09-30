@@ -33,7 +33,7 @@ RUN set -e; \
 # ------------------------------
 # Explicitly set a greeter user and sway session
 RUN mkdir -p /etc/greetd
-COPY --chmod=0644 custom-configs/greetd/greetd.toml /etc/greetd/config.toml
+COPY --chmod=0644 custom-configs/greetd/config.toml /etc/greetd/config.toml
 
 # Example greetd.toml (ensure you provide this in custom-configs):
 # [terminal]
