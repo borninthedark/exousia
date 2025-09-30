@@ -11,10 +11,9 @@ setup_file() {
         return 1
     fi
     echo "--- Using test image: $TEST_IMAGE_TAG ---"
-
+    
     CONTAINER=$(buildah from --pull-never "$TEST_IMAGE_TAG")
     MOUNT_POINT=$(buildah mount "$CONTAINER")
-
     export CONTAINER MOUNT_POINT
     echo "--- Container filesystem mounted at $MOUNT_POINT ---"
     
@@ -28,8 +27,22 @@ setup_file() {
         export FEDORA_VERSION="unknown"
     fi
     
-    # Detect base image type from build environment variable
-    IMAGE_TYPE=$(buildah run "$CONTAINER" -- printenv BUILD_IMAGE_TYPE 2>/dev/null || echo "unknown")
+    # Detect base image type - try build arg first, then variant detection
+    IMAGE_TYPE=$(buildah run "$CONTAINER" -- printenv BUILD_IMAGE_TYPE 2>/dev/null || echo "")
+    
+    # Fallback: detect from /etc/os-release variant
+    if [[ -z "$IMAGE_TYPE" ]] && [ -f "$MOUNT_POINT/etc/os-release" ]; then
+        if grep -q "VARIANT_ID=sway-atomic" "$MOUNT_POINT/etc/os-release" 2>/dev/null; then
+            IMAGE_TYPE="fedora-sway-atomic"
+        elif grep -q "bootc" "$MOUNT_POINT/etc/os-release" 2>/dev/null; then
+            IMAGE_TYPE="fedora-bootc"
+        else
+            IMAGE_TYPE="unknown"
+        fi
+    fi
+    
+    [[ -z "$IMAGE_TYPE" ]] && IMAGE_TYPE="unknown"
+    
     export IMAGE_TYPE
     echo "--- Detected image type: $IMAGE_TYPE ---"
 }
@@ -64,9 +77,9 @@ teardown_file() {
     [[ "$FEDORA_VERSION" =~ ^(41|42|43|44|rawhide)$ ]]
 }
 
-@test "Build image type environment variable should be set" {
+@test "Build image type should be valid" {
     if [[ "$IMAGE_TYPE" == "unknown" ]]; then
-        skip "Could not detect BUILD_IMAGE_TYPE"
+        skip "Could not detect image type - tests will use fallback logic"
     fi
     [[ "$IMAGE_TYPE" =~ ^(fedora-bootc|fedora-sway-atomic)$ ]]
 }
@@ -82,10 +95,10 @@ teardown_file() {
         
         run grep -q "ghcr.io" "$MOUNT_POINT/usr/lib/container-auth.json"
         assert_success "/usr/lib/container-auth.json should contain ghcr.io"
-
+        
         run test -L "$MOUNT_POINT/etc/ostree/auth.json"
         assert_success "/etc/ostree/auth.json should be a symbolic link"
-
+        
         run readlink "$MOUNT_POINT/etc/ostree/auth.json"
         assert_output --partial "/usr/lib/container-auth.json"
     else
@@ -147,15 +160,10 @@ teardown_file() {
     assert_file_executable "$MOUNT_POINT/usr/local/bin/fedora-version-switcher"
 }
 
-@test "fedora-version-switcher script should require two arguments" {
+@test "fedora-version-switcher script should require arguments" {
     run buildah run "$CONTAINER" -- /usr/local/bin/fedora-version-switcher
     assert_failure
     assert_output --partial "Usage:"
-}
-
-@test "fedora-version-switcher script should handle valid inputs correctly" {
-    run buildah run "$CONTAINER" -- bash -c "/usr/local/bin/fedora-version-switcher 2>&1 | grep -q 'Usage:'"
-    assert_success
 }
 
 @test "Custom script 'generate-readme' should be executable" {
@@ -205,6 +213,7 @@ teardown_file() {
 }
 
 @test "Sway desktop components should be installed" {
+    # Sway components are pre-installed in fedora-sway-atomic, added in fedora-bootc
     run buildah run "$CONTAINER" -- rpm -q sway
     assert_success "Sway window manager should be installed"
     
@@ -272,6 +281,7 @@ teardown_file() {
 
 @test "Flathub remote should point to correct URL" {
     run buildah run "$CONTAINER" -- sh -c "flatpak remotes -d | grep flathub | grep 'https://flathub.org/repo/'"
+    assert_success
 }
 
 @test "Sway configuration files should be present" {
@@ -401,7 +411,7 @@ teardown_file() {
 # Conditional Tests Based on Image Type
 # ============================================================================
 
-@test "Directory structure should be correct for image type" {
+@test "Directory structure should be correct for fedora-bootc base" {
     if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
         assert_dir_exists "$MOUNT_POINT/var/roothome"
         assert_dir_exists "$MOUNT_POINT/var/opt"
@@ -413,32 +423,32 @@ teardown_file() {
         run readlink "$MOUNT_POINT/opt"
         assert_output "/var/opt" "/opt should point to /var/opt"
     else
-        echo "# Skipping fedora-bootc specific directory checks for $IMAGE_TYPE" >&3
+        skip "Test only applies to fedora-bootc base image"
     fi
 }
 
 @test "Services should be enabled based on image type" {
-    if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
-        run buildah run "$CONTAINER" -- systemctl is-enabled greetd.service
-        assert_success "greetd should be enabled for fedora-bootc"
-        
-        run buildah run "$CONTAINER" -- systemctl is-enabled libvirtd.service
-        assert_success "libvirtd should be enabled for fedora-bootc"
-        
-        run buildah run "$CONTAINER" -- systemctl get-default
-        assert_output "graphical.target" "Default target should be graphical for fedora-bootc"
-    else
-        echo "# Skipping fedora-bootc specific service checks for $IMAGE_TYPE" >&3
-    fi
+    # greetd should be enabled for both types
+    run buildah run "$CONTAINER" -- systemctl is-enabled greetd.service
+    assert_success "greetd should be enabled"
+    
+    # Check default target
+    run buildah run "$CONTAINER" -- systemctl get-default
+    assert_output "graphical.target" "Default target should be graphical"
+    
+    # libvirtd should be enabled
+    run buildah run "$CONTAINER" -- systemctl is-enabled libvirtd.service
+    assert_success "libvirtd should be enabled"
 }
 
-@test "Sway packages should only be installed for fedora-bootc base" {
+@test "Sway installation verification for fedora-bootc base" {
     if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
-        # Verify key Sway components are installed
-        run buildah run "$CONTAINER" -- rpm -q sway
-        assert_success "Sway should be installed for fedora-bootc base"
+        # For fedora-bootc base, Sway must be explicitly installed
+        run buildah run "$CONTAINER" -- rpm -q sway waybar swaylock
+        assert_success "Sway components should be installed for fedora-bootc base"
     else
-        echo "# Sway packages expected pre-installed in $IMAGE_TYPE" >&3
+        # For fedora-sway-atomic, Sway comes pre-installed
+        echo "# Sway packages pre-installed in $IMAGE_TYPE" >&3
     fi
 }
 
