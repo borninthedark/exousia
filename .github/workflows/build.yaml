@@ -61,14 +61,11 @@ jobs:
         run: |
           echo "Verifying required configuration files..."
           
-          # Ensure Sway config directory exists
           if [[ ! -d custom-configs/sway ]]; then
             echo "::error::Missing custom-configs/sway directory"
-            echo "Required files: sway.desktop, environment, start-sway"
             exit 1
           fi
           
-          # Verify critical Sway files exist
           for file in sway.desktop environment start-sway; do
             if [[ ! -f "custom-configs/sway/$file" ]]; then
               echo "::error::Missing custom-configs/sway/$file"
@@ -77,7 +74,6 @@ jobs:
           done
           echo "✓ All required Sway configuration files present"
           
-          # Verify package lists exist
           for file in packages.add packages.remove packages.sway; do
             if [[ ! -f "custom-pkgs/$file" ]]; then
               echo "::error::Missing custom-pkgs/$file"
@@ -89,14 +85,12 @@ jobs:
       - name: Detect and resolve Fedora configuration
         id: config
         run: |
-          # Get inputs (default to 'current' if not provided)
           INPUT_VERSION="${{ github.event.inputs.fedora_version || 'current' }}"
           INPUT_IMAGE_TYPE="${{ github.event.inputs.image_type || 'current' }}"
           
           echo "Input version: $INPUT_VERSION"
           echo "Input image type: $INPUT_IMAGE_TYPE"
           
-          # Detect current configuration
           if [[ -f .fedora-version ]] && [[ -s .fedora-version ]]; then
             CURRENT_VERSION=$(cut -d: -f1 .fedora-version)
             CURRENT_IMAGE_TYPE=$(cut -d: -f2 .fedora-version)
@@ -107,7 +101,6 @@ jobs:
             echo "Using defaults: $CURRENT_VERSION:$CURRENT_IMAGE_TYPE"
           fi
           
-          # Resolve target configuration
           TARGET_VERSION="${CURRENT_VERSION}"
           TARGET_IMAGE_TYPE="${CURRENT_IMAGE_TYPE}"
           
@@ -121,7 +114,6 @@ jobs:
           
           echo "Resolved target: Fedora $TARGET_VERSION with $TARGET_IMAGE_TYPE"
           
-          # Apply configuration if changed
           if [[ "$TARGET_VERSION" != "$CURRENT_VERSION" ]] || [[ "$TARGET_IMAGE_TYPE" != "$CURRENT_IMAGE_TYPE" ]]; then
             chmod +x ./custom-scripts/fedora-version-switcher
             ./custom-scripts/fedora-version-switcher "$TARGET_VERSION" "$TARGET_IMAGE_TYPE"
@@ -130,11 +122,9 @@ jobs:
             echo "Configuration unchanged"
           fi
           
-          # Output final configuration
           echo "BUILD_VERSION=$TARGET_VERSION" >> $GITHUB_OUTPUT
           echo "BUILD_IMAGE_TYPE=$TARGET_IMAGE_TYPE" >> $GITHUB_OUTPUT
           
-          # Add to step summary
           echo "### 🔧 Build Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **Fedora Version:** $TARGET_VERSION" >> $GITHUB_STEP_SUMMARY
           echo "- **Base Image Type:** $TARGET_IMAGE_TYPE" >> $GITHUB_STEP_SUMMARY
@@ -160,7 +150,8 @@ jobs:
       - name: Lint Containerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: Containerfile
+          dockerfile: |
+            ${{ steps.config.outputs.BUILD_IMAGE_TYPE == 'fedora-bootc' && 'Containerfile.bootc' || 'Containerfile.atomic' }}
           ignore: DL3041,DL3059,SC2086,DL4006,SC3037
 
       - name: Create auth.json secret for build
@@ -175,14 +166,15 @@ jobs:
           image: ${{ env.IMAGE_BASE }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          containerfiles: ./Containerfile
+          containerfiles: |
+            ${{ steps.config.outputs.BUILD_IMAGE_TYPE == 'fedora-bootc' && './Containerfile.bootc' || './Containerfile.atomic' }}
           build-args: |
             FEDORA_VERSION=${{ steps.config.outputs.BUILD_VERSION }}
             IMAGE_TYPE=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
           oci: false
           tls-verify: true
 
-      # ======================== TEST STAGE ========================== #
+    # ======================== TEST STAGE ========================== #
       - name: Setup Bats testing framework
         id: setup-bats
         uses: bats-core/bats-action@3.0.0
@@ -210,7 +202,7 @@ jobs:
           echo "Verifying bootc container compliance for: $FIRST_TAG"
           buildah run "$FIRST_TAG" -- bootc container lint || echo "::warning::bootc container lint found issues"
 
-      # ======================== SCAN STAGE ========================== #
+    # ======================== SCAN STAGE ========================== #
       - name: Cache Trivy database
         uses: actions/cache@v4
         with:
@@ -238,7 +230,7 @@ jobs:
         with:
           config: auto
 
-      # ======================== PUSH STAGE ========================== #
+    # ======================== PUSH STAGE ========================== #
       - name: Login to GitHub Container Registry
         if: github.event_name != 'pull_request'
         uses: redhat-actions/podman-login@v1
@@ -273,7 +265,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           registry: docker.io
 
-      # ======================== SIGN STAGE ========================== #
+    # ======================== SIGN STAGE ========================== #
       - name: Install Cosign for image signing
         if: github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@v3.5.0
@@ -296,14 +288,13 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "true"
 
-      # ======================== SUMMARY / DOCUMENT STAGE ======================= #
+    # ======================== SUMMARY / DOCUMENT STAGE ======================= #
       - name: Generate build summary
         if: always()
         run: |
           echo "## 🚀 Bootc Image Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Show configuration used
           if [[ -f .fedora-version ]]; then
             VERSION=$(cut -d: -f1 .fedora-version)
             IMAGE_TYPE=$(cut -d: -f2 .fedora-version)
