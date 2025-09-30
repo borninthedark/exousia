@@ -26,7 +26,7 @@ RUN systemd-sysusers || true
 
 RUN set -e; \
     systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf; \
-    mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit; \
+    mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit; 
 
 # ------------------------------
 # Auth
