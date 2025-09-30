@@ -8,18 +8,21 @@ This repository contains the configuration to build a custom, container-based im
 
 ## 🎯 Philosophy: Exousia
 
-The name and purpose of this project is rooted in the Greek concept of [**Exousia**](https://en.wikipedia.org/wiki/Exousia) (ἐξουσία) - meaning **authority** and **power**. In classical Greek, exousia represents not just the ability to do something, but the *right* and *legitimate authority* to exercise complete control.
+Exousia (ἐξουσία) is Greek for "authority" and "power." It specifically means the right to exercise complete control.
 
-This pipeline embodies that principle: creating an **uncompromising authority** on building images *exactly* how I want them. No compromises, no limitations - complete sovereignty over every aspect of my operating system's configuration, packages, and behavior. Every component is intentional, every choice is deliberate, and the result is a system that answers to no one but its creator.
+This project embodies that principle: a build pipeline for creating container images exactly as you specify them. No imposed defaults, no locked configurations. Full transparency and control over every package, setting, and behavior in your operating system.
 
-In an age of opinionated distributions and locked-down platforms, Exousia represents the right to command your own computing environment with absolute authority.
+Comprehensive testing ensures what you build actually works. Over 50 automated tests validate packages, configurations, services, and security across multiple base image types.
+
+Build what you need, how you need it, with confidence.
+
 
 ## 📋 Current Configuration
 
 - **Base Image:** `Fedora bootc Base`
 - **Image Type:** `fedora-bootc`
 - **Fedora Version:** 42
-- **Last Updated:** 2025-09-30 18:48:54 UTC
+- **Last Updated:** 2025-09-30 19:08:18 UTC
 - **Build Status:** [![Build Status](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions)
 
 ## 🏗️ CI/CD Workflow: Fedora Bootc DevSec CI
@@ -228,4 +231,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 **Built with ❤️ using Fedora bootc**
 
-*This README was automatically generated on 2025-09-30 18:48:54 UTC*
+*This README was automatically generated on 2025-09-30 19:08:18 UTC*
