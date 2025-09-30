@@ -1,22 +1,23 @@
 # Fedora Bootc Custom Image
 
 [![CI/CD Pipeline](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions/workflows/build.yaml)
-[![Fedora Version](https://img.shields.io/badge/Fedora-unknown-51A2DA?logo=fedora)](https://fedoraproject.org)
+[![Fedora Version](https://img.shields.io/badge/Fedora-42-51A2DA?logo=fedora)](https://fedoraproject.org)
 [![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
 
 This repository contains the configuration to build a custom, container-based immutable operating system using [**Fedora bootc**](https://docs.fedoraproject.org/en-US/bootc/). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions.
 
 ## 📋 Current Configuration
 
-- **Base Image:** `Unknown`
-- **Image Type:** `unknown`
-- **Fedora Version:** unknown
-- **Last Updated:** 2025-09-30 00:50:08 UTC
+- **Base Image:** `Fedora Sway Atomic Desktop`
+- **Image Type:** `fedora-sway-atomic`
+- **Fedora Version:** 42
+- **Last Updated:** 2025-09-30 17:39:39 UTC
 - **Build Status:** [![Build Status](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions)
 
 ## 🏗️ CI/CD Workflow: Fedora Bootc DevSec CI
 
 The pipeline is defined in a single, unified GitHub Actions workflow that automates the entire image lifecycle. The workflow is triggered on:
+
 - Pushes and pull requests to the `main` branch
 - Nightly schedule (`20 4 * * *` UTC)
 - Manual workflow dispatch with version/image type selection
@@ -159,9 +160,11 @@ To use the full CI/CD pipeline, configure these secrets in your repository:
 **Settings → Secrets and variables → Actions**
 
 ### For GitHub Container Registry (GHCR):
+
 - `GHCR_PAT`: Personal Access Token with `write:packages` scope
 
 ### For Docker Hub:
+
 - `DOCKERHUB_USERNAME`: Your Docker Hub username
 - `DOCKERHUB_TOKEN`: Access token with Read, Write, Delete permissions
 
@@ -180,22 +183,26 @@ Currently experiencing authentication issues with `bootc switch` and `bootc upgr
 ## 📚 Documentation & Resources
 
 ### Official Documentation
+
 - [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)
 - [bootc Project](https://bootc-dev.github.io/bootc/)
 - [Base Images](https://docs.fedoraproject.org/en-US/bootc/base-images/)
 - [Building Containers](https://docs.fedoraproject.org/en-US/bootc/building-containers/)
 
 ### Community Resources
+
 - [Fedora Discussion - bootc](https://discussion.fedoraproject.org/tag/bootc)
 - [bootc Issue Tracker](https://gitlab.com/fedora/bootc/tracker)
 
 ### Articles & Guides
+
 - [Getting Started With Bootc](https://docs.fedoraproject.org/en-US/bootc/getting-started/)
 - [How to rebase to Fedora Silverblue 43 Beta](https://fedoramagazine.org/how-to-rebase-to-fedora-silverblue-43-beta/)
 - [A Great Journey Towards Fedora CoreOS and Bootc](https://fedoramagazine.org/a-great-journey-towards-fedora-coreos-and-bootc/)
 - [Building Your Own Atomic Bootc Desktop](https://fedoramagazine.org/building-your-own-atomic-bootc-desktop/)
 
 ### Technical References
+
 - [Bootupd RPM dependency workaround](https://github.com/coreos/bootupd/issues/468)
 - [Unification of boot loader updates](https://gitlab.com/fedora/bootc/tracker/-/issues/61)
 - [Add Plymouth to Fedora-Bootc](https://www.reddit.com/r/Fedora/comments/1nq636t/comment/ngbgfkh/)
@@ -220,4 +227,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 **Built with ❤️ using Fedora bootc**
 
-*This README was automatically generated on 2025-09-30 00:50:08 UTC*
+*This README was automatically generated on 2025-09-30 17:39:39 UTC*
