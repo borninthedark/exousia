@@ -201,7 +201,7 @@ jobs:
           echo "Running tests against bootc image: $FIRST_TAG"
 
           TEST_IMAGE_TAG="$FIRST_TAG" \
-          buildah unshare -- bats -r tests
+          buildah unshare -- bats -r custom-tests
 
       - name: Run ShellCheck on scripts
         uses: ludeeus/action-shellcheck@master
