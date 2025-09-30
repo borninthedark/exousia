@@ -278,7 +278,7 @@ teardown_file() {
 
 @test "Greetd configuration should be present and valid" {
     assert_file_exists "$MOUNT_POINT/etc/greetd/config.toml"
-    assert_success "Greetd config should exist
+    assert_success "Greetd config should exist"
 }
 
 @test "Image should pass bootc container lint" {
