@@ -283,7 +283,7 @@ teardown_file() {
     run buildah run "$CONTAINER" -- flatpak remotes -d
     assert_success
     assert_output --partial "flathub"
-    assert_output --partial "https://flathub.org/repo/"
+    assert_output --partial "https://dl.flathub.org/repo/"
 }
 
 @test "Sway configuration files should be present" {
@@ -446,13 +446,16 @@ teardown_file() {
     run buildah run "$CONTAINER" -- systemctl get-default
     assert_output "graphical.target" "Default target should be graphical"
     
-    # libvirtd should be enabled if installed
-    run buildah run "$CONTAINER" -- rpm -q libvirt
-    if [ "$status" -eq 0 ]; then
-        run buildah run "$CONTAINER" -- systemctl is-enabled libvirtd.service
-        assert_success "libvirtd should be enabled when libvirt is installed"
+    # libvirtd should be enabled only for fedora-bootc base
+    # (fedora-sway-atomic has it installed but disabled by default)
+    if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
+        run buildah run "$CONTAINER" -- rpm -q libvirt
+        if [ "$status" -eq 0 ]; then
+            run buildah run "$CONTAINER" -- systemctl is-enabled libvirtd.service
+            assert_success "libvirtd should be enabled for fedora-bootc base"
+        fi
     else
-        skip "libvirt not installed"
+        echo "# Skipping libvirtd enabled check for $IMAGE_TYPE (not required)" >&3
     fi
 }
 
