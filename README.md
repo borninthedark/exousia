@@ -1,17 +1,28 @@
 # Fedora Bootc Custom Image
 
 [![CI/CD Pipeline](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions/workflows/build.yaml)
-[![Fedora Version](https://img.shields.io/badge/Fedora-unknown-51A2DA?logo=fedora)](https://fedoraproject.org)
+[![Fedora Version](https://img.shields.io/badge/Fedora-42-51A2DA?logo=fedora)](https://fedoraproject.org)
 [![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
 
 This repository contains the configuration to build a custom, container-based immutable operating system using [**Fedora bootc**](https://docs.fedoraproject.org/en-US/bootc/). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions.
 
+## 🎯 Philosophy: Exousia
+
+Exousia (ἐξουσία) is Greek for "authority" and "power." It specifically means the right to exercise complete control.
+
+This project embodies that principle: a build pipeline for creating container images exactly as you specify them. No imposed defaults, no locked configurations. Full transparency and control over every package, setting, and behavior in your operating system.
+
+Comprehensive testing ensures what you build actually works. Over 50 automated tests validate packages, configurations, services, and security across multiple base image types.
+
+Build what you need, how you need it, with confidence.
+
+
 ## 📋 Current Configuration
 
-- **Base Image:** `Unknown`
-- **Image Type:** `unknown`
-- **Fedora Version:** unknown
-- **Last Updated:** 2025-09-30 04:40:56 UTC
+- **Base Image:** `Fedora Sway Atomic Desktop`
+- **Image Type:** `fedora-sway-atomic`
+- **Fedora Version:** 42
+
 - **Build Status:** [![Build Status](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions)
 
 ## 🏗️ CI/CD Workflow: Fedora Bootc DevSec CI
@@ -220,4 +231,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 **Built with ❤️ using Fedora bootc**
 
-*This README was automatically generated on 2025-09-30 04:40:56 UTC*
+*This README was automatically generated on 2025-09-30 21:27:37 UTC*
+

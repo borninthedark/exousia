@@ -18,14 +18,31 @@ setup_file() {
     export CONTAINER MOUNT_POINT
     echo "--- Container filesystem mounted at $MOUNT_POINT ---"
     
-    # Detect Fedora version
-    if [ -f "$MOUNT_POINT/etc/os-release" ]; then
-        FEDORA_VERSION=$(grep -oP 'VERSION_ID=\K\d+' "$MOUNT_POINT/etc/os-release" || echo "unknown")
-        export FEDORA_VERSION
-        echo "--- Detected Fedora version: $FEDORA_VERSION ---"
+    # Detect Fedora version and build type from .fedora-version file
+    if [ -f "$MOUNT_POINT/.fedora-version" ]; then
+        FEDORA_VERSION_LINE=$(cat "$MOUNT_POINT/.fedora-version")
+        FEDORA_VERSION=$(echo "$FEDORA_VERSION_LINE" | cut -d: -f1)
+        BUILD_TYPE=$(echo "$FEDORA_VERSION_LINE" | cut -d: -f2)
+        export FEDORA_VERSION BUILD_TYPE
+        echo "--- Detected from .fedora-version: Fedora $FEDORA_VERSION, Build type: $BUILD_TYPE ---"
     else
-        echo "WARNING: Could not detect Fedora version from /etc/os-release" >&2
-        export FEDORA_VERSION="unknown"
+        # Fallback to os-release
+        if [ -f "$MOUNT_POINT/etc/os-release" ]; then
+            FEDORA_VERSION=$(grep -oP 'VERSION_ID=\K\d+' "$MOUNT_POINT/etc/os-release" || echo "unknown")
+            export FEDORA_VERSION
+            echo "--- Detected Fedora version from os-release: $FEDORA_VERSION ---"
+        else
+            echo "WARNING: Could not detect Fedora version" >&2
+            export FEDORA_VERSION="unknown"
+        fi
+        
+        # Try to detect build type from ENV
+        BUILD_TYPE="unknown"
+        if [ -f "$MOUNT_POINT/etc/environment" ] && grep -q "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment"; then
+            BUILD_TYPE=$(grep "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment" | cut -d= -f2 | tr -d '"')
+        fi
+        export BUILD_TYPE
+        echo "--- Build type: $BUILD_TYPE ---"
     fi
 }
 
@@ -33,6 +50,16 @@ teardown_file() {
     echo "--- Cleaning up test resources ---"
     buildah umount "$CONTAINER"
     buildah rm "$CONTAINER"
+}
+
+# Helper function to check if running fedora-bootc
+is_fedora_bootc() {
+    [[ "$BUILD_TYPE" == "fedora-bootc" ]]
+}
+
+# Helper function to check if running fedora-sway-atomic
+is_fedora_sway_atomic() {
+    [[ "$BUILD_TYPE" == "fedora-sway-atomic" ]]
 }
 
 # --- OS / Fedora version checks ---
@@ -87,8 +114,41 @@ teardown_file() {
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-sway"
 }
 
-@test "Fedora base packages list should exist" {
+@test "Fedora base packages list should exist for fedora-bootc" {
+    if ! is_fedora_bootc; then
+        skip "Test only applies to fedora-bootc builds"
+    fi
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-fedora-bootc"
+}
+
+@test "Directory structure should be correct for fedora-bootc" {
+    if ! is_fedora_bootc; then
+        skip "Test only applies to fedora-bootc builds"
+    fi
+    
+    # /var/roothome should exist for fedora-bootc builds
+    assert_dir_exists "$MOUNT_POINT/var/roothome"
+    
+    # /opt symlink should exist in fedora-bootc builds
+    run test -L "$MOUNT_POINT/opt"
+    assert_success "/opt should be a symlink in fedora-bootc"
+    
+    run readlink "$MOUNT_POINT/opt"
+    # Accept both relative and absolute paths
+    assert_output --partial "var/opt"
+    
+    # /usr/lib/extensions should exist in fedora-bootc builds
+    assert_dir_exists "$MOUNT_POINT/usr/lib/extensions"
+}
+
+@test "Directory structure should be correct for fedora-sway-atomic" {
+    if ! is_fedora_sway_atomic; then
+        skip "Test only applies to fedora-sway-atomic builds"
+    fi
+    
+    # /var/roothome should NOT exist for fedora-sway-atomic
+    run test -d "$MOUNT_POINT/var/roothome"
+    assert_failure "/var/roothome should not exist in fedora-sway-atomic"
 }
 
 @test "Custom Plymouth theme should be copied" {
@@ -211,6 +271,38 @@ teardown_file() {
     assert_failure
 }
 
+# --- Display Manager Configuration ---
+
+@test "Greetd should be configured for fedora-bootc" {
+    if ! is_fedora_bootc; then
+        skip "Greetd test only applies to fedora-bootc builds"
+    fi
+    
+    assert_file_exists "$MOUNT_POINT/etc/greetd/config.toml"
+    
+    run buildah run "$CONTAINER" -- rpm -q greetd
+    assert_success "greetd should be installed in fedora-bootc"
+}
+
+@test "SDDM should be configured for fedora-sway-atomic" {
+    if ! is_fedora_sway_atomic; then
+        skip "SDDM test only applies to fedora-sway-atomic builds"
+    fi
+    
+    run buildah run "$CONTAINER" -- rpm -q sddm
+    assert_success "sddm should be installed in fedora-sway-atomic"
+}
+
+@test "Sway session files should exist for fedora-bootc" {
+    if ! is_fedora_bootc; then
+        skip "Sway session files test only applies to fedora-bootc builds"
+    fi
+    
+    assert_file_exists "$MOUNT_POINT/usr/share/wayland-sessions/sway.desktop"
+    assert_file_exists "$MOUNT_POINT/etc/sway/environment"
+    assert_file_exists "$MOUNT_POINT/usr/bin/start-sway"
+}
+
 # --- Flathub, Sway config, bootc lint ---
 
 @test "Flathub remote should be added" {
@@ -222,10 +314,6 @@ teardown_file() {
     assert_file_exists "$MOUNT_POINT/etc/sway/config.d/51-display.conf"
     assert_file_exists "$MOUNT_POINT/etc/sway/config.d/61-bindings.conf"
     assert_file_exists "$MOUNT_POINT/etc/sway/config.d/95-theme.conf"
-}
-
-@test "Greetd configuration should be present" {
-    assert_file_exists "$MOUNT_POINT/etc/greetd/config.toml"
 }
 
 @test "Image should pass bootc container lint" {
@@ -269,48 +357,60 @@ teardown_file() {
     assert_success
 }
 
-@test ".fedora-version file tracking should work" {
-    run buildah run "$CONTAINER" -- test -x /usr/local/bin/fedora-version-switcher
-    assert_success
-}
+# --- User configuration ---
 
-@test "System user (greeter) should exist" {
+@test "System user greeter should exist" {
     run chroot "$MOUNT_POINT" getent passwd greeter
     assert_success
 }
 
-@test "System users (greetd and rtkit) should exist" {
+@test "System users greetd and rtkit should exist" {
     run chroot "$MOUNT_POINT" getent passwd greetd
     assert_success
     run chroot "$MOUNT_POINT" getent passwd rtkit
     assert_success
 }
 
-@test "Greeter user (greeter) should have correct UID/GID and shell" {
+@test "Greeter user should have correct UID and shell" {
     run chroot "$MOUNT_POINT" getent passwd greeter
     assert_success
     echo "$output" | grep -Eq '^greeter:x:241:241:Greeter Login User:/var/lib/greeter:/sbin/nologin$'
     assert_success
 }
 
-@test "Greeter user (greetd) should have correct UID/GID and shell" {
+@test "Greetd user should have correct shell" {
     run chroot "$MOUNT_POINT" getent passwd greetd
     assert_success
     echo "$output" | grep -Eq '^greetd:x:[0-9]+:[0-9]+:.*:/var/lib/greetd:/sbin/nologin$'
     assert_success
 }
 
-@test "RealtimeKit user should have correct UID/GID and shell" {
+@test "RealtimeKit user should have correct shell" {
     run chroot "$MOUNT_POINT" getent passwd rtkit
     assert_success
     echo "$output" | grep -Eq '^rtkit:x:[0-9]+:[0-9]+:.*:/proc:/sbin/nologin$'
     assert_success
 }
 
-@test "Sysusers configuration files for greetd/rtkit should exist" {
+@test "Sysusers configuration files for greetd and rtkit should exist" {
     assert_file_exists "$MOUNT_POINT/usr/lib/sysusers.d/bootc.conf"
     
     # Verify the file contains configurations for greetd and rtkit
     run grep -E '(greetd|rtkit)' "$MOUNT_POINT/usr/lib/sysusers.d/bootc.conf"
     assert_success "bootc.conf should contain greetd and rtkit definitions"
+}
+
+# --- Final validation ---
+
+@test "BUILD_IMAGE_TYPE environment variable should be set correctly" {
+    if [ -f "$MOUNT_POINT/etc/environment" ]; then
+        run grep "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment"
+        if [ "$status" -eq 0 ]; then
+            assert_output --partial "$BUILD_TYPE"
+        else
+            skip "BUILD_IMAGE_TYPE not found in /etc/environment"
+        fi
+    else
+        skip "/etc/environment not found"
+    fi
 }

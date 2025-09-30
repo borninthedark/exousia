@@ -4,10 +4,78 @@ set -euo pipefail
 # Dynamic README Generator for Fedora Bootc Images
 # Generates comprehensive documentation with current build configuration
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-CONTAINERFILE="${REPO_ROOT}/Containerfile"
+# Determine repository root more reliably
+if [[ -n "${GITHUB_WORKSPACE:-}" ]]; then
+    # Use GITHUB_WORKSPACE in CI environment
+    REPO_ROOT="$GITHUB_WORKSPACE"
+elif [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+    # Use BASH_SOURCE for local execution
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+else
+    # Fallback to current directory
+    REPO_ROOT="$(pwd)"
+fi
+
 README_FILE="${REPO_ROOT}/README.md"
+FEDORA_VERSION_FILE="${REPO_ROOT}/.fedora-version"
+
+# Determine which Containerfile to use based on .fedora-version file
+determine_containerfile() {
+    local image_type="${1:-}"
+    
+    # First, try to read from .fedora-version file (matches workflow behavior)
+    if [[ -f "$FEDORA_VERSION_FILE" ]] && [[ -s "$FEDORA_VERSION_FILE" ]]; then
+        local version_info
+        version_info=$(cat "$FEDORA_VERSION_FILE")
+        local detected_image_type
+        detected_image_type=$(echo "$version_info" | cut -d: -f2)
+        
+        if [[ -n "$detected_image_type" ]]; then
+            image_type="$detected_image_type"
+            print_info "Detected image type from .fedora-version: $image_type"
+        fi
+    fi
+    
+    # Determine Containerfile path based on image type (matches workflow logic)
+    if [[ "$image_type" == "fedora-bootc" ]]; then
+        if [[ -f "${REPO_ROOT}/Containerfile.bootc" ]]; then
+            echo "${REPO_ROOT}/Containerfile.bootc"
+            return
+        fi
+    elif [[ "$image_type" == "fedora-sway-atomic" ]]; then
+        if [[ -f "${REPO_ROOT}/Containerfile.atomic" ]]; then
+            echo "${REPO_ROOT}/Containerfile.atomic"
+            return
+        fi
+    fi
+    
+    # Try to detect from symlink
+    if [[ -L "${REPO_ROOT}/Containerfile" ]]; then
+        local target
+        target=$(readlink "${REPO_ROOT}/Containerfile")
+        if [[ "$target" == *"Containerfile.atomic"* ]]; then
+            echo "${REPO_ROOT}/Containerfile.atomic"
+            return
+        elif [[ "$target" == *"Containerfile.bootc"* ]]; then
+            echo "${REPO_ROOT}/Containerfile.bootc"
+            return
+        fi
+    fi
+    
+    # Fallback: try to find any available Containerfile
+    for file in "${REPO_ROOT}/Containerfile.atomic" "${REPO_ROOT}/Containerfile.bootc" "${REPO_ROOT}/Containerfile"; do
+        if [[ -f "$file" ]]; then
+            echo "$file"
+            return
+        fi
+    done
+    
+    # Default fallback
+    echo "${REPO_ROOT}/Containerfile"
+}
+
+CONTAINERFILE=$(determine_containerfile "${IMAGE_TYPE:-}")
 
 # Color codes for output (disabled in CI)
 if [[ "${CI:-false}" == "true" ]]; then
@@ -31,29 +99,91 @@ print_warning() {
     echo -e "${YELLOW}⚠${NC} $1"
 }
 
+print_error() {
+    echo -e "\033[0;31m✗${NC} $1" >&2
+}
+
 # Extract configuration from Containerfile
 extract_config() {
+    # Debug: Show paths being used
+    print_info "Repository root: $REPO_ROOT"
+    print_info "Looking for Containerfile at: $CONTAINERFILE"
+    
+    # Read current configuration from .fedora-version if available
+    if [[ -f "$FEDORA_VERSION_FILE" ]] && [[ -s "$FEDORA_VERSION_FILE" ]]; then
+        local version_info
+        version_info=$(cat "$FEDORA_VERSION_FILE")
+        FEDORA_VERSION=$(echo "$version_info" | cut -d: -f1)
+        IMAGE_TYPE=$(echo "$version_info" | cut -d: -f2)
+        print_info "Configuration from .fedora-version: Fedora $FEDORA_VERSION with $IMAGE_TYPE"
+    fi
+    
+    # Check if Containerfile exists
     if [[ ! -f "$CONTAINERFILE" ]]; then
-        echo "ERROR: Containerfile not found at $CONTAINERFILE" >&2
+        print_error "Containerfile not found at $CONTAINERFILE"
+        
+        # Try to find Containerfile variants
+        print_info "Searching for Containerfile variants..."
+        local possible_locations=(
+            "${REPO_ROOT}/Containerfile.atomic"
+            "${REPO_ROOT}/Containerfile.bootc"
+            "${REPO_ROOT}/Containerfile"
+            "${REPO_ROOT}/containerfile"
+            "${REPO_ROOT}/Dockerfile"
+        )
+        
+        for loc in "${possible_locations[@]}"; do
+            if [[ -f "$loc" ]]; then
+                print_info "Found Containerfile at: $loc"
+                CONTAINERFILE="$loc"
+                break
+            fi
+        done
+        
+        # If still not found, list directory contents for debugging
+        if [[ ! -f "$CONTAINERFILE" ]]; then
+            print_error "Could not locate any Containerfile variant. Directory contents:"
+            ls -la "$REPO_ROOT" >&2 || true
+            exit 1
+        fi
+    fi
+    
+    print_success "Using Containerfile: $CONTAINERFILE"
+    
+    local from_line
+    from_line=$(grep -i "^FROM" "$CONTAINERFILE" | head -n1)
+    
+    if [[ -z "$from_line" ]]; then
+        print_error "No FROM line found in Containerfile"
         exit 1
     fi
     
-    local from_line
-    from_line=$(grep "^FROM" "$CONTAINERFILE" | head -n1)
+    # Extract Fedora version from Containerfile if not already set from .fedora-version
+    if [[ -z "${FEDORA_VERSION:-}" ]]; then
+        FEDORA_VERSION=$(echo "$from_line" | grep -oP '\d+|rawhide' || echo "unknown")
+    fi
     
-    # Extract Fedora version
-    FEDORA_VERSION=$(echo "$from_line" | grep -oP '\d+|rawhide' || echo "unknown")
-    
-    # Extract image type
-    if [[ "$from_line" =~ fedora-sway-atomic ]]; then
-        IMAGE_TYPE="fedora-sway-atomic"
-        IMAGE_TYPE_DISPLAY="Fedora Sway Atomic Desktop"
-    elif [[ "$from_line" =~ fedora-bootc ]]; then
-        IMAGE_TYPE="fedora-bootc"
-        IMAGE_TYPE_DISPLAY="Fedora bootc Base"
+    # Extract image type from Containerfile if not already set from .fedora-version
+    if [[ -z "${IMAGE_TYPE:-}" ]]; then
+        if [[ "$from_line" =~ fedora-sway-atomic ]]; then
+            IMAGE_TYPE="fedora-sway-atomic"
+            IMAGE_TYPE_DISPLAY="Fedora Sway Atomic Desktop"
+        elif [[ "$from_line" =~ fedora-bootc ]]; then
+            IMAGE_TYPE="fedora-bootc"
+            IMAGE_TYPE_DISPLAY="Fedora bootc Base"
+        else
+            IMAGE_TYPE="unknown"
+            IMAGE_TYPE_DISPLAY="Unknown"
+        fi
     else
-        IMAGE_TYPE="unknown"
-        IMAGE_TYPE_DISPLAY="Unknown"
+        # Set display name based on IMAGE_TYPE from .fedora-version
+        if [[ "$IMAGE_TYPE" == "fedora-sway-atomic" ]]; then
+            IMAGE_TYPE_DISPLAY="Fedora Sway Atomic Desktop"
+        elif [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
+            IMAGE_TYPE_DISPLAY="Fedora bootc Base"
+        else
+            IMAGE_TYPE_DISPLAY="$IMAGE_TYPE"
+        fi
     fi
     
     # Build date
@@ -64,8 +194,13 @@ extract_config() {
         GITHUB_REPO="$GITHUB_REPOSITORY"
     else
         # Try to extract from git remote
-        GITHUB_REPO=$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null | \
-                      sed -E 's|.*github\.com[:/]||' | sed 's|\.git$||' || echo "USER/REPO")
+        if GITHUB_REPO=$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null | \
+                      sed -E 's|.*github\.com[:/]||' | sed 's|\.git$||'); then
+            print_info "Detected GitHub repository from git remote: $GITHUB_REPO"
+        else
+            print_warning "Could not detect GitHub repository, using placeholder"
+            GITHUB_REPO="USER/REPO"
+        fi
     fi
     
     GITHUB_OWNER=$(echo "$GITHUB_REPO" | cut -d'/' -f1)
@@ -81,6 +216,17 @@ generate_readme() {
 [![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
 
 This repository contains the configuration to build a custom, container-based immutable operating system using [**Fedora bootc**](https://docs.fedoraproject.org/en-US/bootc/). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions.
+
+## 🎯 Philosophy: Exousia
+
+Exousia (ἐξουσία) is Greek for "authority" and "power." It specifically means the right to exercise complete control.
+
+This project embodies that principle: a build pipeline for creating container images exactly as you specify them. No imposed defaults, no locked configurations. Full transparency and control over every package, setting, and behavior in your operating system.
+
+Comprehensive testing ensures what you build actually works. Over 50 automated tests validate packages, configurations, services, and security across multiple base image types.
+
+Build what you need, how you need it, with confidence.
+
 
 ## 📋 Current Configuration
 
@@ -307,22 +453,38 @@ Usage: $0 [OPTIONS]
 Generate a dynamic README.md with current build configuration.
 
 OPTIONS:
-    --dry-run       Show what would be generated without writing
-    --help          Show this help message
+    --image-type TYPE   Specify image type (fedora-bootc or fedora-sway-atomic)
+    --containerfile PATH Specify path to Containerfile
+    --dry-run          Show what would be generated without writing
+    --help             Show this help message
 
 ENVIRONMENT VARIABLES:
     GITHUB_REPOSITORY    GitHub repository (e.g., user/repo)
+    IMAGE_TYPE           Image type hint (fedora-bootc or fedora-sway-atomic)
     CI                   Set to 'true' in CI environments
 
+CONTAINERFILE SELECTION:
+    The script will look for Containerfiles in this order:
+    1. Read from .fedora-version file (VERSION:IMAGE_TYPE format)
+    2. Containerfile.bootc (if image type is fedora-bootc)
+    3. Containerfile.atomic (if image type is fedora-sway-atomic)
+    4. Containerfile symlink target
+    5. Any available Containerfile variant
+
 EXAMPLES:
-    $0                  Generate and write README.md
-    $0 --dry-run        Preview README content without writing
+    $0                                    # Auto-detect from .fedora-version
+    $0 --image-type fedora-sway-atomic   # Use Containerfile.atomic
+    $0 --image-type fedora-bootc         # Use Containerfile.bootc
+    $0 --containerfile ./Containerfile.atomic  # Specify exact file
+    $0 --dry-run                         # Preview without writing
 
 EOF
 }
 
 main() {
     local dry_run=false
+    local custom_containerfile=""
+    local custom_image_type=""
     
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -330,6 +492,14 @@ main() {
             --dry-run)
                 dry_run=true
                 shift
+                ;;
+            --image-type)
+                custom_image_type="$2"
+                shift 2
+                ;;
+            --containerfile)
+                custom_containerfile="$2"
+                shift 2
                 ;;
             --help|-h)
                 show_usage
@@ -343,12 +513,25 @@ main() {
         esac
     done
     
+    # Override IMAGE_TYPE if provided
+    if [[ -n "$custom_image_type" ]]; then
+        IMAGE_TYPE="$custom_image_type"
+        print_info "Using custom image type: $IMAGE_TYPE"
+    fi
+    
+    # Override CONTAINERFILE if provided
+    if [[ -n "$custom_containerfile" ]]; then
+        CONTAINERFILE="$custom_containerfile"
+        print_info "Using custom Containerfile: $CONTAINERFILE"
+    fi
+    
     print_info "Extracting configuration from Containerfile..."
     extract_config
     
     print_info "Configuration detected:"
     echo "  - Fedora Version: $FEDORA_VERSION"
     echo "  - Image Type: $IMAGE_TYPE_DISPLAY"
+    echo "  - Containerfile: $(basename "$CONTAINERFILE")"
     echo "  - GitHub Repo: $GITHUB_REPO"
     echo
     

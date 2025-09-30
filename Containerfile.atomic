@@ -1,63 +1,56 @@
 # ------------------------------
-# Build arguments for base image selection
+# Build arguments
 # ------------------------------
 ARG FEDORA_VERSION=43
-ARG IMAGE_TYPE=fedora-sway-atomic
 
 # ------------------------------
-# Base image - dynamically selected
+# Base image
 # ------------------------------
-FROM quay.io/fedora/${IMAGE_TYPE}:${FEDORA_VERSION}
+FROM quay.io/fedora/fedora-sway-atomic:${FEDORA_VERSION}
 LABEL maintainer="uryu"
 
 # ------------------------------
-# Set image type for conditional logic
+# Environment
 # ------------------------------
-ARG IMAGE_TYPE
-ENV BUILD_IMAGE_TYPE=${IMAGE_TYPE}
-
+ENV BUILD_IMAGE_TYPE=fedora-sway-atomic
 
 # ------------------------------
-# Add sysusers definitions so systemd-sysusers can create required users/groups
+# Sysusers setup
 # ------------------------------
-# Copy sysusers definition
 COPY --chmod=0644 sysusers/bootc.conf /usr/lib/sysusers.d/bootc.conf
 
-
-# Ensure /etc/passwd and /etc/group exist (safety for minimal images)
 RUN test -f /etc/passwd || touch /etc/passwd; \
     test -f /etc/group  || touch /etc/group
 
-# Create system users to ensure they exist before subsequent layers
 RUN systemd-sysusers || true
 
 RUN set -e; \
     systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf; \
-    mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit; \
-    chown -R 241:241 /var/lib/greeter || true; \
-    chown -R 240:240 /var/lib/greetd || true
-    
-# Create a minimal greetd config that references the greeter user
-RUN set -e; \
-    mkdir -p /etc/greetd; \
-    printf '[security]\n# Run greeter as this user\nuser = "greetd"\n\n[default]\n# no-session configured here; system should provide session handling\n' \
-      > /etc/greetd/config.toml || true
-      
+    mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit; 
+
 # ------------------------------
-# Unified Auth Strategy for Bootc & Podman 
+# Greetd configuration
+# ------------------------------
+# Explicitly set a greeter user and sway session
+COPY --chmod=0644 custom-configs/greetd/config.toml /etc/greetd/config.toml
+
+# Example greetd.toml (ensure you provide this in custom-configs):
+# [terminal]
+# vt = 1
+#
+# [default_session]
+# command = "sway --config /etc/greetd/sway-config"
+# user = "greeter"
+
+# ------------------------------
+# Auth
 # ------------------------------
 COPY --chmod=0644 containers-auth.conf /usr/lib/tmpfiles.d/containers-auth.conf
-COPY --chmod=0600 ./bootc-secrets/auth.json /usr/lib/container-auth.json 
+COPY --chmod=0600 ./bootc-secrets/auth.json /usr/lib/container-auth.json
 RUN ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
 
 # ------------------------------
-# Directory Structure Requirements
-# ------------------------------
-RUN mkdir -p /var/roothome /var/opt /usr/lib/extensions && \
-    ln -sf /var/opt /opt
-    
-# ------------------------------
-# Copy all inputs first
+# Copy configs
 # ------------------------------
 COPY --chmod=0644 ./custom-pkgs/packages.remove /usr/local/share/sericea-bootc/packages-removed
 COPY --chmod=0644 ./custom-pkgs/packages.add    /usr/local/share/sericea-bootc/packages-added
@@ -101,57 +94,29 @@ RUN set -euxo pipefail; \
     grep -vE '^#|^$' /usr/local/share/sericea-bootc/packages-removed | xargs -r dnf remove -y; \
     dnf upgrade -y; \
     dnf clean all
-
+    
 # ------------------------------
-# Add Flathub
+# Flathub
 # ------------------------------
-# hadolint ignore=DL3059
 RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # ------------------------------
-# Configure Plymouth boot splash
+# Plymouth
 # ------------------------------
-# Remove existing /var/tmp directory and create symlink to /tmp
 RUN rm -rf /var/tmp && ln -sf /tmp /var/tmp
-
-# Add plymouth to dracut modules
 RUN echo 'add_dracutmodules+=" plymouth "' >> /usr/lib/dracut/dracut.conf.d/plymouth.conf
-
-# Set default plymouth theme to our custom theme
 RUN plymouth-set-default-theme bgrt-better-luks
-
-# Rebuild initramfs with plymouth support
-# hadolint ignore=DL3003
-RUN set -x; \
-    kver=$(cd /usr/lib/modules && echo *); \
-    dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
-
-# Add kernel arguments for plymouth
+RUN set -x; kver=$(cd /usr/lib/modules && echo *); dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
 RUN mkdir -p /usr/lib/bootc/kargs.d && \
-    printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' \
-    > /usr/lib/bootc/kargs.d/plymouth.toml
+    printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' > /usr/lib/bootc/kargs.d/plymouth.toml
 
 # ------------------------------
-# Enable systemd services based on base image type
+# Services (skip, sway-atomic handles defaults)
 # ------------------------------
-RUN if [ "$BUILD_IMAGE_TYPE" = "fedora-bootc" ]; then \
-        echo "==> Enabling services for fedora-bootc base..."; \
-        systemctl set-default graphical.target; \
-        systemctl enable greetd.service; \
-        systemctl enable libvirtd.service; \
-        systemctl enable systemd-resolved.service; \
-        systemctl enable NetworkManager.service; \
-        echo "==> Services enabled: graphical.target (default), greetd, libvirtd, systemd-resolved, NetworkManager"; \
-    else \
-        echo "==> Skipping service enablement - using fedora-sway-atomic defaults"; \
-    fi
+RUN echo "==> Skipping explicit service enablement - sway-atomic provides defaults"
 
 # ------------------------------
-# Lint Container
+# Lint + ComposeFS
 # ------------------------------
 RUN bootc container lint
-
-# ------------------------------
-# Explicitly Enable ComposeFS
-# ------------------------------
 RUN echo "composefs=true" >> /etc/ostree/repo.config || true
