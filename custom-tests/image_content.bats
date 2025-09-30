@@ -215,6 +215,8 @@ is_fedora_sway_atomic() {
     assert_success
 }
 
+# --- Repositories and package config ---
+
 @test "RPM Fusion repositories should be configured" {
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-free.repo"
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-nonfree.repo"
@@ -371,40 +373,40 @@ is_fedora_sway_atomic() {
 
 # --- User configuration ---
 
-@test "System user (greeter) should exist" {
+@test "System user greeter should exist" {
     run chroot "$MOUNT_POINT" getent passwd greeter
     assert_success
 }
 
-@test "System users (greetd and rtkit) should exist" {
+@test "System users greetd and rtkit should exist" {
     run chroot "$MOUNT_POINT" getent passwd greetd
     assert_success
     run chroot "$MOUNT_POINT" getent passwd rtkit
     assert_success
 }
 
-@test "Greeter user (greeter) should have correct UID/GID and shell" {
+@test "Greeter user should have correct UID and shell" {
     run chroot "$MOUNT_POINT" getent passwd greeter
     assert_success
-    echo "$output" | grep -Eq '^greeter:x:241:241:Greeter Login User:/var/lib/greeter:/sbin/nologin
+    echo "$output" | grep -Eq '^greeter:x:241:241:Greeter Login User:/var/lib/greeter:/sbin/nologin$'
     assert_success
 }
 
-@test "Greeter user (greetd) should have correct UID/GID and shell" {
+@test "Greetd user should have correct shell" {
     run chroot "$MOUNT_POINT" getent passwd greetd
     assert_success
-    echo "$output" | grep -Eq '^greetd:x:[0-9]+:[0-9]+:.*:/var/lib/greetd:/sbin/nologin
+    echo "$output" | grep -Eq '^greetd:x:[0-9]+:[0-9]+:.*:/var/lib/greetd:/sbin/nologin$'
     assert_success
 }
 
-@test "RealtimeKit user should have correct UID/GID and shell" {
+@test "RealtimeKit user should have correct shell" {
     run chroot "$MOUNT_POINT" getent passwd rtkit
     assert_success
-    echo "$output" | grep -Eq '^rtkit:x:[0-9]+:[0-9]+:.*:/proc:/sbin/nologin
+    echo "$output" | grep -Eq '^rtkit:x:[0-9]+:[0-9]+:.*:/proc:/sbin/nologin$'
     assert_success
 }
 
-@test "Sysusers configuration files for greetd/rtkit should exist" {
+@test "Sysusers configuration files for greetd and rtkit should exist" {
     assert_file_exists "$MOUNT_POINT/usr/lib/sysusers.d/bootc.conf"
     
     # Verify the file contains configurations for greetd and rtkit
