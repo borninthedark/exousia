@@ -1,17 +1,17 @@
 # Fedora Bootc Custom Image
 
 [![CI/CD Pipeline](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions/workflows/build.yaml)
-[![Fedora Version](https://img.shields.io/badge/Fedora-43-51A2DA?logo=fedora)](https://fedoraproject.org)
+[![Fedora Version](https://img.shields.io/badge/Fedora-42-51A2DA?logo=fedora)](https://fedoraproject.org)
 [![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
 
 This repository contains the configuration to build a custom, container-based immutable operating system using [**Fedora bootc**](https://docs.fedoraproject.org/en-US/bootc/). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions.
 
 ## 📋 Current Configuration
 
-- **Base Image:** `Fedora Sway Atomic Desktop`
-- **Image Type:** `fedora-sway-atomic`
-- **Fedora Version:** 43
-- **Last Updated:** 2025-09-30 17:49:56 UTC
+- **Base Image:** `Fedora bootc Base`
+- **Image Type:** `fedora-bootc`
+- **Fedora Version:** 42
+- **Last Updated:** 2025-09-30 18:32:02 UTC
 - **Build Status:** [![Build Status](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions)
 
 ## 🏗️ CI/CD Workflow: Fedora Bootc DevSec CI
@@ -227,4 +227,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 **Built with ❤️ using Fedora bootc**
 
-*This README was automatically generated on 2025-09-30 17:49:56 UTC*
+*This README was automatically generated on 2025-09-30 18:32:02 UTC*
