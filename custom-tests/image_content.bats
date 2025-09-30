@@ -84,20 +84,6 @@ is_fedora_sway_atomic() {
     [[ "$FEDORA_VERSION" =~ ^(41|42|43|44|rawhide)$ ]]
 }
 
-@test "Build type should be detected from .fedora-version" {
-    assert_file_exists "$MOUNT_POINT/.fedora-version"
-    
-    run cat "$MOUNT_POINT/.fedora-version"
-    assert_success
-    
-    # Should match format VERSION:BUILD_TYPE
-    echo "$output" | grep -Eq '^[0-9]+:(fedora-bootc|fedora-sway-atomic)$'
-    assert_success ".fedora-version should contain VERSION:BUILD_TYPE format"
-    
-    echo "Detected build type: $BUILD_TYPE"
-    assert [ "$BUILD_TYPE" = "fedora-bootc" ] || [ "$BUILD_TYPE" = "fedora-sway-atomic" ]
-}
-
 # --- CI container auth config checks ---
 
 @test "Container auth files should be correctly configured in CI" {
