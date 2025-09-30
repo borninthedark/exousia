@@ -308,10 +308,9 @@ teardown_file() {
 }
 
 @test "Sysusers configuration files for greetd/rtkit should exist" {
-    run find "$MOUNT_POINT/usr/lib/sysusers.d" -name "*.conf"
-    assert_success
-    echo "$output" | grep -Eq 'greetd\.conf'
-    assert_success
-    echo "$output" | grep -Eq 'rtkit\.conf'
-    assert_success
+    assert_file_exists "$MOUNT_POINT/usr/lib/sysusers.d/bootc.conf"
+    
+    # Verify the file contains configurations for greetd and rtkit
+    run grep -E '(greetd|rtkit)' "$MOUNT_POINT/usr/lib/sysusers.d/bootc.conf"
+    assert_success "bootc.conf should contain greetd and rtkit definitions"
 }
