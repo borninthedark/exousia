@@ -2,9 +2,9 @@ name: Fedora Sericea Image CI
 
 on:
   push:
-    branches: ["tests"]
+    branches: ["plymouth"]
   pull_request:
-    branches: ["tests"]
+    branches: ["plymouth"]
   workflow_dispatch:
     inputs:
       fedora_version:
@@ -192,17 +192,17 @@ jobs:
         id: setup-bats
         uses: bats-core/bats-action@3.0.0
 
-      - name: Run Bats tests on the bootc image
+      - name: Run Bats plymouth on the bootc image
         shell: bash
         env:
           BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
           TERM: xterm
         run: |
           FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          echo "Running tests against bootc image: $FIRST_TAG"
+          echo "Running plymouth against bootc image: $FIRST_TAG"
 
           TEST_IMAGE_TAG="$FIRST_TAG" \
-          buildah unshare -- bats -r custom-tests
+          buildah unshare -- bats -r custom-plymouth
 
       - name: Run ShellCheck on scripts
         uses: ludeeus/action-shellcheck@master
