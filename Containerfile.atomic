@@ -1,0 +1,89 @@
+# ------------------------------
+# Build arguments
+# ------------------------------
+ARG FEDORA_VERSION=43
+
+# ------------------------------
+# Base image
+# ------------------------------
+FROM quay.io/fedora/fedora-sway-atomic:${FEDORA_VERSION}
+LABEL maintainer="uryu"
+
+# ------------------------------
+# Environment
+# ------------------------------
+ENV BUILD_IMAGE_TYPE=fedora-sway-atomic
+
+# ------------------------------
+# Sysusers setup
+# ------------------------------
+COPY --chmod=0644 sysusers/bootc.conf /usr/lib/sysusers.d/bootc.conf
+
+RUN test -f /etc/passwd || touch /etc/passwd; \
+    test -f /etc/group  || touch /etc/group
+
+RUN systemd-sysusers || true
+
+RUN set -e; \
+    systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf; \
+    mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit; \
+
+# ------------------------------
+# Auth
+# ------------------------------
+COPY --chmod=0644 containers-auth.conf /usr/lib/tmpfiles.d/containers-auth.conf
+COPY --chmod=0600 ./bootc-secrets/auth.json /usr/lib/container-auth.json
+RUN ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
+
+# ------------------------------
+# Copy configs
+# ------------------------------
+COPY --chmod=0644 ./custom-pkgs/packages.remove /usr/local/share/sericea-bootc/packages-removed
+COPY --chmod=0644 ./custom-pkgs/packages.add    /usr/local/share/sericea-bootc/packages-added
+COPY --chmod=0644 ./custom-pkgs/packages.sway   /usr/local/share/sericea-bootc/packages-sway
+COPY --chmod=0644 custom-configs/plymouth/themes/bgrt-better-luks/ /usr/share/plymouth/themes/bgrt-better-luks/
+COPY --chmod=0644 custom-repos/*.repo           /etc/yum.repos.d/
+COPY --chmod=0644 custom-configs/               /etc/
+COPY --chmod=0755 custom-scripts/               /usr/local/bin/
+
+# ------------------------------
+# Package management
+# ------------------------------
+RUN set -euxo pipefail; \
+    dnf install -y dnf5 dnf5-plugins && \
+    ln -sf /usr/bin/dnf5 /usr/bin/dnf; \
+    FEDORA_VERSION=$(rpm -E %fedora); \
+    dnf install -y \
+      https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm \
+      https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \
+    dnf config-manager setopt fedora-cisco-openh264.enabled=1; \
+    grep -vE '^#|^$' /usr/local/share/sericea-bootc/packages-added | xargs -r dnf install -y; \
+    grep -vE '^#|^$' /usr/local/share/sericea-bootc/packages-removed | xargs -r dnf remove -y; \
+    dnf upgrade -y; \
+    dnf clean all
+
+# ------------------------------
+# Flathub
+# ------------------------------
+RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+# ------------------------------
+# Plymouth
+# ------------------------------
+RUN rm -rf /var/tmp && ln -sf /tmp /var/tmp
+RUN echo 'add_dracutmodules+=" plymouth "' >> /usr/lib/dracut/dracut.conf.d/plymouth.conf
+RUN plymouth-set-default-theme bgrt-better-luks
+RUN set -x; kver=$(cd /usr/lib/modules && echo *); dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
+RUN mkdir -p /usr/lib/bootc/kargs.d && \
+    printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' > /usr/lib/bootc/kargs.d/plymouth.toml
+
+# ------------------------------
+# Services (skip, sway-atomic handles defaults)
+# ------------------------------
+RUN echo "==> Skipping explicit service enablement - sway-atomic provides defaults"
+
+# ------------------------------
+# Lint + ComposeFS
+# ------------------------------
+RUN bootc container lint
+RUN echo "composefs=true" >> /etc/ostree/repo.config || true

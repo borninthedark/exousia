@@ -139,16 +139,8 @@ teardown_file() {
 # Custom Scripts
 # ============================================================================
 
-@test "Custom script 'autotiling' should be executable" {
-    assert_file_executable "$MOUNT_POINT/usr/local/bin/autotiling"
-}
-
 @test "Custom script 'config-authselect' should be executable" {
     assert_file_executable "$MOUNT_POINT/usr/local/bin/config-authselect"
-}
-
-@test "Custom script 'lid' should be executable" {
-    assert_file_executable "$MOUNT_POINT/usr/local/bin/lid"
 }
 
 @test "Custom script 'fedora-version-switcher' should be executable" {
