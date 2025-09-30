@@ -15,6 +15,11 @@ etckeeper
 fastfetch
 glances
 
+# Audio & Media
+mpd
+pavucontrol
+ranger
+
 # Tools
 chezmoi
 bat

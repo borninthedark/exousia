@@ -16,13 +16,11 @@ LABEL maintainer="uryu"
 ARG IMAGE_TYPE
 ENV BUILD_IMAGE_TYPE=${IMAGE_TYPE}
 
-
 # ------------------------------
 # Add sysusers definitions so systemd-sysusers can create required users/groups
 # ------------------------------
 # Copy sysusers definition
 COPY --chmod=0644 sysusers/bootc.conf /usr/lib/sysusers.d/bootc.conf
-
 
 # Ensure /etc/passwd and /etc/group exist (safety for minimal images)
 RUN test -f /etc/passwd || touch /etc/passwd; \
@@ -51,10 +49,15 @@ COPY --chmod=0600 ./bootc-secrets/auth.json /usr/lib/container-auth.json
 RUN ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
 
 # ------------------------------
-# Directory Structure Requirements
+# Directory Structure Requirements (only for fedora-bootc base)
 # ------------------------------
-RUN mkdir -p /var/roothome /var/opt /usr/lib/extensions && \
-    ln -sf /var/opt /opt
+RUN if [ "$BUILD_IMAGE_TYPE" = "fedora-bootc" ]; then \
+        echo "==> Creating directory structure for fedora-bootc base..."; \
+        mkdir -p /var/roothome /var/opt /usr/lib/extensions && \
+        ln -sf /var/opt /opt; \
+    else \
+        echo "==> Skipping directory structure creation - using fedora-sway-atomic defaults"; \
+    fi
     
 # ------------------------------
 # Copy all inputs first
@@ -66,6 +69,11 @@ COPY --chmod=0644 custom-configs/plymouth/themes/bgrt-better-luks/ /usr/share/pl
 COPY --chmod=0644 custom-repos/*.repo           /etc/yum.repos.d/
 COPY --chmod=0644 custom-configs/               /etc/
 COPY --chmod=0755 custom-scripts/               /usr/local/bin/
+
+# Copy Sway session files (only used for fedora-bootc base)
+COPY --chmod=0644 custom-configs/sway/sway.desktop /usr/share/wayland-sessions/sway.desktop
+COPY --chmod=0644 custom-configs/sway/environment /etc/sway/environment
+COPY --chmod=0755 custom-configs/sway/start-sway /usr/bin/start-sway
 
 # ------------------------------
 # Package lists

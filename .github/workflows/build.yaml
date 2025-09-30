@@ -2,9 +2,9 @@ name: Fedora Bootc DevSec CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["build-fixes"]
   pull_request:
-    branches: ["main"]
+    branches: ["build-fixes"]
   workflow_dispatch:
     inputs:
       fedora_version:
@@ -56,6 +56,40 @@ jobs:
     # ======================== BUILD STAGE ========================= #
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Verify required file structure
+        run: |
+          echo "Verifying required configuration files..."
+          
+          # Ensure Sway config directory exists
+          if [[ ! -d custom-configs/sway ]]; then
+            echo "::error::Missing custom-configs/sway directory"
+            echo "Required files:"
+            echo "  - custom-configs/sway/sway.desktop"
+            echo "  - custom-configs/sway/environment"
+            echo "  - custom-configs/sway/start-sway"
+            exit 1
+          fi
+          
+          # Verify critical Sway files exist
+          for file in sway.desktop environment start-sway; do
+            if [[ ! -f "custom-configs/sway/$file" ]]; then
+              echo "::error::Missing custom-configs/sway/$file"
+              exit 1
+            fi
+          done
+          
+          echo "✓ All required Sway configuration files present"
+          
+          # Verify package lists exist
+          for file in packages.add packages.remove packages.sway; do
+            if [[ ! -f "custom-pkgs/$file" ]]; then
+              echo "::error::Missing custom-pkgs/$file"
+              exit 1
+            fi
+          done
+          
+          echo "✓ All package list files present"
 
       - name: Detect current configuration
         id: detect-config
@@ -183,6 +217,12 @@ jobs:
           echo "BUILD_VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "BUILD_IMAGE_TYPE=$IMAGE_TYPE" >> $GITHUB_OUTPUT
           echo "Building: Fedora $VERSION with $IMAGE_TYPE"
+          
+          # Add to step summary
+          echo "### 🔧 Build Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Fedora Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base Image Type:** $IMAGE_TYPE" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Generate image tags and labels for both registries
         id: meta
@@ -192,7 +232,7 @@ jobs:
             ${{ env.IMAGE_BASE }}
             ${{ env.DOCKERHUB_IMAGE_BASE }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/build-fixes' }}
             type=sha,format=long
             type=ref,event=branch
             type=schedule,pattern=nightly
@@ -376,13 +416,13 @@ jobs:
           echo "- [Base Images](https://docs.fedoraproject.org/en-US/bootc/base-images/)" >> $GITHUB_STEP_SUMMARY
 
       - name: Generate dynamic README
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/build-fixes'
         run: |
           chmod +x ./custom-scripts/generate-readme
           ./custom-scripts/generate-readme
 
       - name: Commit updated README and version file
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/build-fixes'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
