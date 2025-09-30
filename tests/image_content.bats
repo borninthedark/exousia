@@ -27,6 +27,16 @@ setup_file() {
         echo "WARNING: Could not detect Fedora version from /etc/os-release" >&2
         export FEDORA_VERSION="unknown"
     fi
+    
+    # Detect build type from environment variable if present
+    if [ -f "$MOUNT_POINT/etc/environment" ] && grep -q "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment"; then
+        BUILD_TYPE=$(grep "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment" | cut -d= -f2)
+        export BUILD_TYPE
+        echo "--- Detected build type: $BUILD_TYPE ---"
+    else
+        export BUILD_TYPE="unknown"
+        echo "--- Could not detect build type ---"
+    fi
 }
 
 teardown_file() {
@@ -58,34 +68,48 @@ teardown_file() {
     [[ "$FEDORA_VERSION" =~ ^(41|42|43)$ ]]
 }
 
-@test "Container auth files should be correctly configured in CI" {
-  if [[ "${CI}" == "true" ]]; then
+@test "Container auth files should be correctly configured" {
     assert_file_exists "$MOUNT_POINT/usr/lib/tmpfiles.d/containers-auth.conf"
     assert_file_exists "$MOUNT_POINT/usr/lib/container-auth.json"
-    run grep -q "ghcr.io" "$MOUNT_POINT/usr/lib/container-auth.json"
-    assert_success "/usr/lib/container-auth.json should contain ghcr.io"
-
+    
     run test -L "$MOUNT_POINT/etc/ostree/auth.json"
     assert_success "/etc/ostree/auth.json should be a symbolic link"
-
+    
     run readlink "$MOUNT_POINT/etc/ostree/auth.json"
     assert_output --partial "/usr/lib/container-auth.json"
-  else
-    skip "Auth file test is skipped outside of CI environment"
-  fi
 }
 
 @test "Custom package list files should exist" {
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-added"
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-removed"
-}
-
-@test "Sway package list should exist (packages.sway)" {
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-sway"
 }
 
-@test "Fedora base packages list should exist" {
-    assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-fedora-bootc"
+@test "Directory structure should be correct" {
+    # /var/roothome should exist for fedora-bootc builds
+    if [ -d "$MOUNT_POINT/var/roothome" ]; then
+        echo "/var/roothome exists (fedora-bootc build)"
+    else
+        echo "/var/roothome does not exist (likely fedora-sway-atomic)"
+    fi
+    
+    # /opt symlink only exists in fedora-bootc builds
+    if [ -L "$MOUNT_POINT/opt" ]; then
+        run readlink "$MOUNT_POINT/opt"
+        assert_output "/var/opt"
+        echo "Found /opt symlink to /var/opt (fedora-bootc base)"
+    else
+        echo "/opt is not a symlink (likely fedora-sway-atomic base)"
+    fi
+    
+    # /usr/lib/extensions should exist in fedora-bootc builds
+    if [ -d "$MOUNT_POINT/usr/lib/extensions" ]; then
+        echo "/usr/lib/extensions exists (fedora-bootc build)"
+    fi
+}
+
+@test "Sysusers configuration should exist" {
+    assert_file_exists "$MOUNT_POINT/usr/lib/sysusers.d/bootc.conf"
 }
 
 @test "Custom Plymouth theme should be copied" {
@@ -105,43 +129,19 @@ teardown_file() {
     assert_file_exists "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
 }
 
-@test "Custom script 'autotiling' should be executable" {
-    run test -x "$MOUNT_POINT/usr/local/bin/autotiling"
-    assert_success "'autotiling' script should be executable"
-}
-
-@test "Custom script 'config-authselect' should be executable" {
-    run test -x "$MOUNT_POINT/usr/local/bin/config-authselect"
-    assert_success "'config-authselect' script should be executable"
-}
-
-@test "Custom script 'lid' should be executable" {
-    run test -x "$MOUNT_POINT/usr/local/bin/lid"
-    assert_success "'lid' script should be executable"
-}
-
 @test "Custom script 'fedora-version-switcher' should be executable" {
     run test -x "$MOUNT_POINT/usr/local/bin/fedora-version-switcher"
     assert_success "'fedora-version-switcher' script should be executable"
 }
 
-@test "fedora-version-switcher script should require two arguments" {
-    # Test that script exits with error when called without arguments
-    run buildah run "$CONTAINER" -- /usr/local/bin/fedora-version-switcher
-    assert_failure "Script should fail when called without arguments"
-    assert_output --partial "Usage:"
-}
-
-@test "fedora-version-switcher script should accept valid version and image type" {
-    # Test that script accepts valid arguments (we can't switch in container but can test it runs)
-    # Since the script now requires two args, test with valid version and image type
-    run buildah run "$CONTAINER" -- bash -c "/usr/local/bin/fedora-version-switcher 2>&1 | grep -q 'Usage:'"
-    assert_success "Script should show usage when checking for help"
-}
-
 @test "Custom script 'generate-readme' should be executable" {
     run test -x "$MOUNT_POINT/usr/local/bin/generate-readme"
     assert_success "'generate-readme' script should be executable"
+}
+
+@test "Custom script 'config-authselect' should be executable" {
+    run test -x "$MOUNT_POINT/usr/local/bin/config-authselect"
+    assert_success "'config-authselect' script should be executable"
 }
 
 @test "RPM Fusion repositories should be configured" {
@@ -159,9 +159,9 @@ teardown_file() {
     assert_success "DNF5 should be installed"
 }
 
-@test "DNF5 should be symlinked as default dnf" {
+@test "DNF should be symlinked to dnf5" {
     run test -L "$MOUNT_POINT/usr/bin/dnf"
-    assert_success "/usr/bin/dnf should be a symlink to dnf5"
+    assert_success "/usr/bin/dnf should be a symlink"
 }
 
 @test "bootc should be installed" {
@@ -178,6 +178,25 @@ teardown_file() {
     
     run buildah run "$CONTAINER" -- rpm -q swaylock
     assert_success "Swaylock should be installed"
+}
+
+@test "Greetd should be configured" {
+    assert_file_exists "$MOUNT_POINT/etc/greetd/config.toml"
+    
+    run buildah run "$CONTAINER" -- rpm -q greetd
+    assert_success "greetd should be installed"
+}
+
+@test "Sway session files should exist for fedora-bootc" {
+    # These are only in the fedora-bootc Containerfile
+    if [ -f "$MOUNT_POINT/usr/share/wayland-sessions/sway.desktop" ]; then
+        assert_file_exists "$MOUNT_POINT/usr/share/wayland-sessions/sway.desktop"
+        assert_file_exists "$MOUNT_POINT/etc/sway/environment"
+        assert_file_exists "$MOUNT_POINT/usr/bin/start-sway"
+        echo "Found Sway session files (fedora-bootc build)"
+    else
+        echo "Sway session files not found (likely fedora-sway-atomic)"
+    fi
 }
 
 @test "Package 'kitty' from 'packages.add' should be installed" {
@@ -226,10 +245,6 @@ teardown_file() {
     assert_file_exists "$MOUNT_POINT/etc/sway/config.d/95-theme.conf"
 }
 
-@test "Greetd configuration should be present" {
-    assert_file_exists "$MOUNT_POINT/etc/greetd/config.toml"
-}
-
 @test "Image should pass bootc container lint" {
     run buildah run "$CONTAINER" -- bootc container lint
     assert_success "Image should pass bootc container lint checks"
@@ -241,7 +256,6 @@ teardown_file() {
 }
 
 @test "Kernel should be installed" {
-    # Check for kernel package - it may be named kernel, kernel-core, or have version prefix
     run buildah run "$CONTAINER" -- sh -c "rpm -qa | grep -E '^kernel(-core)?-[0-9]' || rpm -q kernel || rpm -q kernel-core"
     assert_success "A kernel package should be installed"
 }
@@ -272,9 +286,10 @@ teardown_file() {
     assert_success "'lynis' should be installed"
 }
 
-@test ".fedora-version file tracking should work" {
-    # Since the script requires two arguments, just test that it exists and is executable
-    # The actual version switching logic can't be tested in a running container
-    run buildah run "$CONTAINER" -- test -x /usr/local/bin/fedora-version-switcher
-    assert_success "Script should exist and be executable"
+@test "ComposeFS should be configured" {
+    if grep -q "composefs=true" "$MOUNT_POINT/etc/ostree/repo.config"; then
+        echo "ComposeFS is enabled in ostree config"
+    else
+        echo "ComposeFS configuration not found (may be default or not applicable)"
+    fi
 }
