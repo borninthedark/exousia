@@ -6,18 +6,25 @@
 
 This repository contains the configuration to build a custom, container-based immutable operating system using [**Fedora bootc**](https://docs.fedoraproject.org/en-US/bootc/). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions.
 
+## 🎯 Philosophy: Exousia
+
+The name and purpose of this project is rooted in the Greek concept of [**Exousia**](https://en.wikipedia.org/wiki/Exousia) (ἐξουσία) - meaning **authority** and **power**. In classical Greek, exousia represents not just the ability to do something, but the *right* and *legitimate authority* to exercise complete control.
+
+This pipeline embodies that principle: creating an **uncompromising authority** on building images *exactly* how I want them. No compromises, no limitations - complete sovereignty over every aspect of my operating system's configuration, packages, and behavior. Every component is intentional, every choice is deliberate, and the result is a system that answers to no one but its creator.
+
+In an age of opinionated distributions and locked-down platforms, Exousia represents the right to command your own computing environment with absolute authority.
+
 ## 📋 Current Configuration
 
 - **Base Image:** `Fedora bootc Base`
 - **Image Type:** `fedora-bootc`
 - **Fedora Version:** 42
-- **Last Updated:** 2025-09-30 18:32:02 UTC
+- **Last Updated:** 2025-09-30 18:48:54 UTC
 - **Build Status:** [![Build Status](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions)
 
 ## 🏗️ CI/CD Workflow: Fedora Bootc DevSec CI
 
 The pipeline is defined in a single, unified GitHub Actions workflow that automates the entire image lifecycle. The workflow is triggered on:
-
 - Pushes and pull requests to the `main` branch
 - Nightly schedule (`20 4 * * *` UTC)
 - Manual workflow dispatch with version/image type selection
@@ -160,11 +167,9 @@ To use the full CI/CD pipeline, configure these secrets in your repository:
 **Settings → Secrets and variables → Actions**
 
 ### For GitHub Container Registry (GHCR):
-
 - `GHCR_PAT`: Personal Access Token with `write:packages` scope
 
 ### For Docker Hub:
-
 - `DOCKERHUB_USERNAME`: Your Docker Hub username
 - `DOCKERHUB_TOKEN`: Access token with Read, Write, Delete permissions
 
@@ -183,26 +188,22 @@ Currently experiencing authentication issues with `bootc switch` and `bootc upgr
 ## 📚 Documentation & Resources
 
 ### Official Documentation
-
 - [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)
 - [bootc Project](https://bootc-dev.github.io/bootc/)
 - [Base Images](https://docs.fedoraproject.org/en-US/bootc/base-images/)
 - [Building Containers](https://docs.fedoraproject.org/en-US/bootc/building-containers/)
 
 ### Community Resources
-
 - [Fedora Discussion - bootc](https://discussion.fedoraproject.org/tag/bootc)
 - [bootc Issue Tracker](https://gitlab.com/fedora/bootc/tracker)
 
 ### Articles & Guides
-
 - [Getting Started With Bootc](https://docs.fedoraproject.org/en-US/bootc/getting-started/)
 - [How to rebase to Fedora Silverblue 43 Beta](https://fedoramagazine.org/how-to-rebase-to-fedora-silverblue-43-beta/)
 - [A Great Journey Towards Fedora CoreOS and Bootc](https://fedoramagazine.org/a-great-journey-towards-fedora-coreos-and-bootc/)
 - [Building Your Own Atomic Bootc Desktop](https://fedoramagazine.org/building-your-own-atomic-bootc-desktop/)
 
 ### Technical References
-
 - [Bootupd RPM dependency workaround](https://github.com/coreos/bootupd/issues/468)
 - [Unification of boot loader updates](https://gitlab.com/fedora/bootc/tracker/-/issues/61)
 - [Add Plymouth to Fedora-Bootc](https://www.reddit.com/r/Fedora/comments/1nq636t/comment/ngbgfkh/)
@@ -227,4 +228,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 **Built with ❤️ using Fedora bootc**
 
-*This README was automatically generated on 2025-09-30 18:32:02 UTC*
+*This README was automatically generated on 2025-09-30 18:48:54 UTC*
