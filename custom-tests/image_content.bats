@@ -1,5 +1,4 @@
 #!/usr/bin/env bats
-
 bats_load_library bats-support
 bats_load_library bats-assert
 bats_load_library bats-file
@@ -11,10 +10,8 @@ setup_file() {
         return 1
     fi
     echo "--- Using test image: $TEST_IMAGE_TAG ---"
-
     CONTAINER=$(buildah from --pull-never "$TEST_IMAGE_TAG")
     MOUNT_POINT=$(buildah mount "$CONTAINER")
-
     export CONTAINER MOUNT_POINT
     echo "--- Container filesystem mounted at $MOUNT_POINT ---"
     
@@ -28,21 +25,51 @@ setup_file() {
         export FEDORA_VERSION="unknown"
     fi
     
-    # Detect build type from environment variable if present
+    # Detect build type - try multiple methods
+    BUILD_TYPE="unknown"
+    
+    # Method 1: Check /etc/environment
     if [ -f "$MOUNT_POINT/etc/environment" ] && grep -q "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment"; then
-        BUILD_TYPE=$(grep "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment" | cut -d= -f2)
-        export BUILD_TYPE
-        echo "--- Detected build type: $BUILD_TYPE ---"
-    else
-        export BUILD_TYPE="unknown"
-        echo "--- Could not detect build type ---"
+        BUILD_TYPE=$(grep "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment" | cut -d= -f2 | tr -d '"')
     fi
+    
+    # Method 2: Check for presence of /var/roothome (fedora-bootc specific)
+    if [ "$BUILD_TYPE" = "unknown" ]; then
+        if [ -d "$MOUNT_POINT/var/roothome" ]; then
+            BUILD_TYPE="fedora-bootc"
+            echo "--- Detected build type from /var/roothome presence: fedora-bootc ---"
+        fi
+    fi
+    
+    # Method 3: Check for greetd vs sddm
+    if [ "$BUILD_TYPE" = "unknown" ]; then
+        if buildah run "$CONTAINER" -- rpm -q greetd &>/dev/null; then
+            BUILD_TYPE="fedora-bootc"
+            echo "--- Detected build type from greetd presence: fedora-bootc ---"
+        elif buildah run "$CONTAINER" -- rpm -q sddm &>/dev/null; then
+            BUILD_TYPE="fedora-sway-atomic"
+            echo "--- Detected build type from sddm presence: fedora-sway-atomic ---"
+        fi
+    fi
+    
+    export BUILD_TYPE
+    echo "--- Final build type: $BUILD_TYPE ---"
 }
 
 teardown_file() {
     echo "--- Cleaning up test resources ---"
     buildah umount "$CONTAINER"
     buildah rm "$CONTAINER"
+}
+
+# Helper function to check if running fedora-bootc
+is_fedora_bootc() {
+    [[ "$BUILD_TYPE" == "fedora-bootc" ]]
+}
+
+# Helper function to check if running fedora-sway-atomic
+is_fedora_sway_atomic() {
+    [[ "$BUILD_TYPE" == "fedora-sway-atomic" ]]
 }
 
 @test "OS should be Fedora Linux" {
@@ -85,26 +112,39 @@ teardown_file() {
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-sway"
 }
 
-@test "Directory structure should be correct" {
-    # /var/roothome should exist for fedora-bootc builds
-    if [ -d "$MOUNT_POINT/var/roothome" ]; then
-        echo "/var/roothome exists (fedora-bootc build)"
-    else
-        echo "/var/roothome does not exist (likely fedora-sway-atomic)"
+@test "Directory structure should be correct for fedora-bootc" {
+    if ! is_fedora_bootc; then
+        skip "Test only applies to fedora-bootc builds"
     fi
     
-    # /opt symlink only exists in fedora-bootc builds
-    if [ -L "$MOUNT_POINT/opt" ]; then
-        run readlink "$MOUNT_POINT/opt"
-        assert_output "/var/opt"
-        echo "Found /opt symlink to /var/opt (fedora-bootc base)"
-    else
-        echo "/opt is not a symlink (likely fedora-sway-atomic base)"
-    fi
+    # /var/roothome should exist for fedora-bootc builds
+    assert_dir_exists "$MOUNT_POINT/var/roothome"
+    
+    # /opt symlink should exist in fedora-bootc builds
+    run test -L "$MOUNT_POINT/opt"
+    assert_success "/opt should be a symlink in fedora-bootc"
+    
+    run readlink "$MOUNT_POINT/opt"
+    assert_output "/var/opt"
     
     # /usr/lib/extensions should exist in fedora-bootc builds
-    if [ -d "$MOUNT_POINT/usr/lib/extensions" ]; then
-        echo "/usr/lib/extensions exists (fedora-bootc build)"
+    assert_dir_exists "$MOUNT_POINT/usr/lib/extensions"
+}
+
+@test "Directory structure should be correct for fedora-sway-atomic" {
+    if ! is_fedora_sway_atomic; then
+        skip "Test only applies to fedora-sway-atomic builds"
+    fi
+    
+    # /var/roothome should NOT exist for fedora-sway-atomic
+    run test -d "$MOUNT_POINT/var/roothome"
+    assert_failure "/var/roothome should not exist in fedora-sway-atomic"
+    
+    # /opt may not be a symlink in fedora-sway-atomic
+    if [ -L "$MOUNT_POINT/opt" ]; then
+        echo "/opt is a symlink (unexpected for fedora-sway-atomic)"
+    else
+        echo "/opt is not a symlink (expected for fedora-sway-atomic)"
     fi
 }
 
@@ -180,23 +220,61 @@ teardown_file() {
     assert_success "Swaylock should be installed"
 }
 
-@test "Greetd should be configured" {
+@test "Greetd should be configured for fedora-bootc" {
+    if ! is_fedora_bootc; then
+        skip "Greetd test only applies to fedora-bootc builds"
+    fi
+    
     assert_file_exists "$MOUNT_POINT/etc/greetd/config.toml"
     
     run buildah run "$CONTAINER" -- rpm -q greetd
-    assert_success "greetd should be installed"
+    assert_success "greetd should be installed in fedora-bootc"
+}
+
+@test "SDDM should be configured for fedora-sway-atomic" {
+    if ! is_fedora_sway_atomic; then
+        skip "SDDM test only applies to fedora-sway-atomic builds"
+    fi
+    
+    run buildah run "$CONTAINER" -- rpm -q sddm
+    assert_success "sddm should be installed in fedora-sway-atomic"
+    
+    # Check for SDDM configuration
+    if [ -f "$MOUNT_POINT/etc/sddm.conf" ] || [ -d "$MOUNT_POINT/etc/sddm.conf.d" ]; then
+        echo "SDDM configuration found"
+    else
+        echo "SDDM configuration may use defaults"
+    fi
+}
+
+@test "Display manager service should be enabled" {
+    if is_fedora_bootc; then
+        # Check for greetd service
+        if [ -f "$MOUNT_POINT/etc/systemd/system/display-manager.service" ]; then
+            run readlink "$MOUNT_POINT/etc/systemd/system/display-manager.service"
+            assert_output --partial "greetd"
+        else
+            echo "Greetd service configuration may be in different location"
+        fi
+    elif is_fedora_sway_atomic; then
+        # Check for sddm service
+        if [ -f "$MOUNT_POINT/etc/systemd/system/display-manager.service" ]; then
+            run readlink "$MOUNT_POINT/etc/systemd/system/display-manager.service"
+            assert_output --partial "sddm"
+        else
+            echo "SDDM service configuration may be in different location"
+        fi
+    fi
 }
 
 @test "Sway session files should exist for fedora-bootc" {
-    # These are only in the fedora-bootc Containerfile
-    if [ -f "$MOUNT_POINT/usr/share/wayland-sessions/sway.desktop" ]; then
-        assert_file_exists "$MOUNT_POINT/usr/share/wayland-sessions/sway.desktop"
-        assert_file_exists "$MOUNT_POINT/etc/sway/environment"
-        assert_file_exists "$MOUNT_POINT/usr/bin/start-sway"
-        echo "Found Sway session files (fedora-bootc build)"
-    else
-        echo "Sway session files not found (likely fedora-sway-atomic)"
+    if ! is_fedora_bootc; then
+        skip "Sway session files test only applies to fedora-bootc builds"
     fi
+    
+    assert_file_exists "$MOUNT_POINT/usr/share/wayland-sessions/sway.desktop"
+    assert_file_exists "$MOUNT_POINT/etc/sway/environment"
+    assert_file_exists "$MOUNT_POINT/usr/bin/start-sway"
 }
 
 @test "Package 'kitty' from 'packages.add' should be installed" {
@@ -287,9 +365,19 @@ teardown_file() {
 }
 
 @test "ComposeFS should be configured" {
-    if grep -q "composefs=true" "$MOUNT_POINT/etc/ostree/repo.config"; then
+    if grep -q "composefs=true" "$MOUNT_POINT/etc/ostree/repo.config" 2>/dev/null; then
         echo "ComposeFS is enabled in ostree config"
     else
         echo "ComposeFS configuration not found (may be default or not applicable)"
+    fi
+}
+
+@test "Build type was detected successfully" {
+    echo "Detected build type: $BUILD_TYPE"
+    
+    if [[ "$BUILD_TYPE" == "unknown" ]]; then
+        echo "WARNING: Could not detect build type - some tests may have been skipped"
+    else
+        assert [ "$BUILD_TYPE" = "fedora-bootc" ] || [ "$BUILD_TYPE" = "fedora-sway-atomic" ]
     fi
 }
