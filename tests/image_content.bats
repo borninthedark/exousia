@@ -192,7 +192,11 @@ teardown_file() {
     run buildah run "$CONTAINER" -- rpm -q dnf5
     assert_success "DNF5 should be installed"
     
-    assert_symlink_to "$MOUNT_POINT/usr/bin/dnf" "/usr/bin/dnf5"
+    run test -L "$MOUNT_POINT/usr/bin/dnf"
+    assert_success "/usr/bin/dnf should be a symlink"
+    
+    run readlink "$MOUNT_POINT/usr/bin/dnf"
+    assert_output "/usr/bin/dnf5"
 }
 
 @test "bootc should be installed" {
