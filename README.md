@@ -22,7 +22,7 @@ Build what you need, how you need it, with confidence.
 - **Base Image:** `Fedora bootc Base`
 - **Image Type:** `fedora-bootc`
 - **Fedora Version:** 42
-- **Last Updated:** 2025-09-30 19:08:18 UTC
+- **Last Updated:** 2025-09-30 19:21:56 UTC
 - **Build Status:** [![Build Status](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions)
 
 ## 🏗️ CI/CD Workflow: Fedora Bootc DevSec CI
@@ -231,4 +231,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 **Built with ❤️ using Fedora bootc**
 
-*This README was automatically generated on 2025-09-30 19:08:18 UTC*
+*This README was automatically generated on 2025-09-30 19:21:56 UTC*
