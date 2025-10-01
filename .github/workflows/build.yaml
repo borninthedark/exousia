@@ -214,7 +214,7 @@ jobs:
         id: setup-bats
         uses: bats-core/bats-action@3.0.0
 
-      - name: Run Bats tests on the bootc image
+      - name: Run Bats tests on the prospective image
         shell: bash
         env:
           BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
@@ -222,7 +222,7 @@ jobs:
           ENABLE_PLYMOUTH: ${{ steps.config.outputs.ENABLE_PLYMOUTH }}
         run: |
           FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          echo "Running tests against bootc image: $FIRST_TAG"
+          echo "Running tests against image: $FIRST_TAG"
 
           TEST_IMAGE_TAG="$FIRST_TAG" \
           buildah unshare -- bats -r custom-tests
