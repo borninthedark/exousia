@@ -2,9 +2,9 @@ name: Fedora Bootc DevSec CI
 
 on:
   push:
-    branches: ["build-fixes"]
+    branches: ["plymouth"]
   pull_request:
-    branches: ["build-fixes"]
+    branches: ["plymouth"]
   workflow_dispatch:
     inputs:
       fedora_version:
