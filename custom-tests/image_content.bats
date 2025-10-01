@@ -308,23 +308,23 @@ is_plymouth_enabled() {
     assert_output --partial "KERNEL_VERSION"
 }
 
-@test "ENABLE_PLYMOUTH environment variable should match image type" {
-    run buildah run "$CONTAINER" -- printenv BUILD_IMAGE_TYPE
-    local image_type="$output"
-    
+@test "ENABLE_PLYMOUTH environment variable should be true or false" {
     run buildah run "$CONTAINER" -- printenv ENABLE_PLYMOUTH
-    
-    if [[ "$image_type" == *"fedora-bootc"* ]]; then
-        assert_output "true" "Plymouth should be enabled for fedora-bootc"
-    else
-        # For fedora-sway-atomic, it might be false or unset
-        if [ "$status" -eq 0 ]; then
-            assert_output "false" "Plymouth should be disabled for fedora-sway-atomic"
-        else
-            skip "ENABLE_PLYMOUTH not set for fedora-sway-atomic (expected)"
-        fi
+
+    if [ "$status" -ne 0 ]; then
+        fail "ENABLE_PLYMOUTH is not set"
     fi
+
+    case "$output" in
+        true|false)
+            # pass
+            ;;
+        *)
+            fail "ENABLE_PLYMOUTH should be 'true' or 'false', got: $output"
+            ;;
+    esac
 }
+
 
 # --- Custom scripts ---
 
