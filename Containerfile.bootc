@@ -2,6 +2,7 @@
 # Build arguments
 # ------------------------------
 ARG FEDORA_VERSION=43
+ARG ENABLE_PLYMOUTH=true
 
 # ------------------------------
 # Base image
@@ -13,6 +14,7 @@ LABEL maintainer="uryu"
 # Environment
 # ------------------------------
 ENV BUILD_IMAGE_TYPE=fedora-bootc
+ENV ENABLE_PLYMOUTH=${ENABLE_PLYMOUTH}
 
 # ------------------------------
 # Sysusers setup
@@ -44,7 +46,7 @@ RUN ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
 RUN mkdir -p /var/roothome /var/opt /usr/lib/extensions && ln -sf /var/opt /opt
 
 # ------------------------------
-# Copy configs
+# Copy configs and scripts
 # ------------------------------
 COPY --chmod=0644 ./custom-pkgs/packages.remove /usr/local/share/sericea-bootc/packages-removed
 COPY --chmod=0644 ./custom-pkgs/packages.add    /usr/local/share/sericea-bootc/packages-added
@@ -82,14 +84,15 @@ RUN set -euxo pipefail; \
 RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # ------------------------------
-# Plymouth
+# Plymouth (conditional)
 # ------------------------------
-RUN rm -rf /var/tmp && ln -sf /tmp /var/tmp
-RUN echo 'add_dracutmodules+=" plymouth "' >> /usr/lib/dracut/dracut.conf.d/plymouth.conf
-RUN plymouth-set-default-theme bgrt-better-luks
-RUN set -x; kver=$(cd /usr/lib/modules && echo *); dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
-RUN mkdir -p /usr/lib/bootc/kargs.d && \
-    printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' > /usr/lib/bootc/kargs.d/plymouth.toml
+RUN if [ "${ENABLE_PLYMOUTH}" = "true" ]; then \
+      echo "==> Configuring Plymouth boot splash..."; \
+      /usr/local/bin/setup-plymouth-theme enable && \
+      /usr/local/bin/dracut-rebuild -f; \
+    else \
+      echo "==> Skipping Plymouth setup (ENABLE_PLYMOUTH=${ENABLE_PLYMOUTH})"; \
+    fi
 
 # ------------------------------
 # Services

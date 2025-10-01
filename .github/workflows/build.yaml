@@ -1,10 +1,10 @@
-name: Fedora Sericea Image CI
+name: Fedora Bootc DevSec CI
 
 on:
   push:
-    branches: ["plymouth"]
+    branches: ["build-fixes"]
   pull_request:
-    branches: ["plymouth"]
+    branches: ["build-fixes"]
   workflow_dispatch:
     inputs:
       fedora_version:
@@ -27,6 +27,11 @@ on:
           - 'fedora-bootc'
           - 'fedora-sway-atomic'
         default: 'current'
+      enable_plymouth:
+        description: 'Enable Plymouth boot splash'
+        required: true
+        type: boolean
+        default: true
   schedule:
     - cron: "20 4 * * *" # Nightly build at 4:20 AM UTC
 
@@ -81,15 +86,26 @@ jobs:
             fi
           done
           echo "✓ All package list files present"
+          
+          # Check for new Plymouth scripts
+          for script in setup-plymouth-theme dracut-rebuild; do
+            if [[ ! -f "custom-scripts/$script" ]]; then
+              echo "::error::Missing custom-scripts/$script"
+              exit 1
+            fi
+          done
+          echo "✓ All Plymouth scripts present"
 
       - name: Detect and resolve Fedora configuration
         id: config
         env:
           INPUT_VERSION: ${{ github.event.inputs.fedora_version || 'current' }}
           INPUT_IMAGE_TYPE: ${{ github.event.inputs.image_type || 'current' }}
+          INPUT_ENABLE_PLYMOUTH: ${{ github.event.inputs.enable_plymouth || 'true' }}
         run: |
           echo "Input version: $INPUT_VERSION"
           echo "Input image type: $INPUT_IMAGE_TYPE"
+          echo "Input Plymouth: $INPUT_ENABLE_PLYMOUTH"
           
           if [[ -f .fedora-version ]] && [[ -s .fedora-version ]]; then
             CURRENT_VERSION=$(cut -d: -f1 .fedora-version)
@@ -112,7 +128,11 @@ jobs:
             TARGET_IMAGE_TYPE="$INPUT_IMAGE_TYPE"
           fi
           
+          # Set Plymouth flag
+          ENABLE_PLYMOUTH="$INPUT_ENABLE_PLYMOUTH"
+          
           echo "Resolved target: Fedora $TARGET_VERSION with $TARGET_IMAGE_TYPE"
+          echo "Plymouth enabled: $ENABLE_PLYMOUTH"
           
           # Determine which Containerfile to use
           if [[ "$TARGET_IMAGE_TYPE" == "fedora-bootc" ]]; then
@@ -136,12 +156,14 @@ jobs:
           echo "BUILD_VERSION=$TARGET_VERSION" >> $GITHUB_OUTPUT
           echo "BUILD_IMAGE_TYPE=$TARGET_IMAGE_TYPE" >> $GITHUB_OUTPUT
           echo "CONTAINERFILE=$CONTAINERFILE_PATH" >> $GITHUB_OUTPUT
+          echo "ENABLE_PLYMOUTH=$ENABLE_PLYMOUTH" >> $GITHUB_OUTPUT
           
           # Add to step summary
           echo "### 🔧 Build Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **Fedora Version:** $TARGET_VERSION" >> $GITHUB_STEP_SUMMARY
           echo "- **Base Image Type:** $TARGET_IMAGE_TYPE" >> $GITHUB_STEP_SUMMARY
           echo "- **Containerfile:** $CONTAINERFILE_PATH" >> $GITHUB_STEP_SUMMARY
+          echo "- **Plymouth:** $ENABLE_PLYMOUTH" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Generate image tags and labels
@@ -183,7 +205,7 @@ jobs:
           build-args: |
             FEDORA_VERSION=${{ steps.config.outputs.BUILD_VERSION }}
             IMAGE_TYPE=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
-            ENABLE_PLYMOUTH=${{ steps.config.outputs.BUILD_IMAGE_TYPE == 'fedora-bootc' && 'true' || 'false' }}
+            ENABLE_PLYMOUTH=${{ steps.config.outputs.ENABLE_PLYMOUTH }}
           oci: false
           tls-verify: true
 
@@ -192,17 +214,18 @@ jobs:
         id: setup-bats
         uses: bats-core/bats-action@3.0.0
 
-      - name: Run Bats plymouth on the bootc image
+      - name: Run Bats tests on the bootc image
         shell: bash
         env:
           BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
           TERM: xterm
+          ENABLE_PLYMOUTH: ${{ steps.config.outputs.ENABLE_PLYMOUTH }}
         run: |
           FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          echo "Running plymouth against bootc image: $FIRST_TAG"
+          echo "Running tests against bootc image: $FIRST_TAG"
 
           TEST_IMAGE_TAG="$FIRST_TAG" \
-          buildah unshare -- bats -r custom-plymouth
+          buildah unshare -- bats -r custom-tests
 
       - name: Run ShellCheck on scripts
         uses: ludeeus/action-shellcheck@master
@@ -319,6 +342,7 @@ jobs:
           echo "**Configuration:**" >> $GITHUB_STEP_SUMMARY
           echo "- Fedora Version: \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
           echo "- Base Image Type: \`$IMAGE_TYPE\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Plymouth: \`${{ steps.config.outputs.ENABLE_PLYMOUTH }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [[ "${{ github.event_name }}" != "pull_request" ]]; then
