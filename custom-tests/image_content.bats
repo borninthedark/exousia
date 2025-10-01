@@ -177,10 +177,10 @@ is_plymouth_enabled() {
     run buildah run "$CONTAINER" -- rpm -q plymouth
     assert_success "Plymouth should be installed when enabled"
     
-    # For fedora-sway-atomic, Plymouth is pre-configured differently
+    # For fedora-sway-atomic, Plymouth comes pre-configured with default theme
     if is_fedora_sway_atomic; then
-        echo "# fedora-sway-atomic has Plymouth pre-configured" >&3
-        # Just verify Plymouth is installed, config may be different
+        echo "# fedora-sway-atomic has Plymouth pre-configured with bgrt theme" >&3
+        # Verify Plymouth is installed - configuration is handled by base image
         return 0
     fi
     
@@ -254,16 +254,12 @@ is_plymouth_enabled() {
         skip "plymouth-set-default-theme command not available"
     fi
     
-    # fedora-sway-atomic may use default "bgrt" theme
+    # fedora-sway-atomic uses default "bgrt" theme (this is correct and expected)
     if is_fedora_sway_atomic; then
-        if [[ "$output" == "bgrt" ]]; then
-            echo "# fedora-sway-atomic using default bgrt theme" >&3
-        else
-            assert_output --partial "bgrt-better-luks"
-        fi
+        assert_output "bgrt" "fedora-sway-atomic should use default bgrt theme"
     else
-        # fedora-bootc should have custom theme
-        assert_output --partial "bgrt-better-luks"
+        # fedora-bootc should have our custom theme
+        assert_output "bgrt-better-luks" "fedora-bootc should use custom bgrt-better-luks theme"
     fi
 }
 
