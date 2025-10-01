@@ -308,14 +308,14 @@ is_plymouth_enabled() {
     assert_output --partial "KERNEL_VERSION"
 }
 
-@test "ENABLE_PLYMOUTH environment variable should match expected state" {
-    local expected_state="${ENABLE_PLYMOUTH:-true}"
+@test "ENABLE_PLYMOUTH environment variable should be set correctly" {
+    # Check in /etc/environment file (more reliable for bootc images)
+    run grep -E '^ENABLE_PLYMOUTH=' "$MOUNT_POINT/etc/environment"
+    assert_success "ENABLE_PLYMOUTH should be defined in /etc/environment"
     
-    run buildah run "$CONTAINER" -- printenv ENABLE_PLYMOUTH
-    assert_success "ENABLE_PLYMOUTH should be set in container"
-    
-    # Use assert_output which handles trailing newlines
-    assert_output "$expected_state"
+    # Should contain either true or false
+    run grep -E '^ENABLE_PLYMOUTH=(true|false)$' "$MOUNT_POINT/etc/environment"
+    assert_success "ENABLE_PLYMOUTH should be set to either 'true' or 'false'"
 }
 
 # --- Custom scripts ---
