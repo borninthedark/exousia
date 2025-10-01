@@ -198,7 +198,7 @@ jobs:
         id: build-image
         uses: redhat-actions/buildah-build@v2
         with:
-          image: ${{ env.IMAGE_BASE }}
+          image: exousia
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           containerfiles: ${{ steps.config.outputs.CONTAINERFILE }}
@@ -206,7 +206,7 @@ jobs:
             FEDORA_VERSION=${{ steps.config.outputs.BUILD_VERSION }}
             IMAGE_TYPE=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
             ENABLE_PLYMOUTH=${{ steps.config.outputs.ENABLE_PLYMOUTH }}
-          oci: false
+          oci: true  
           tls-verify: true
 
       # ======================== TEST STAGE ========================== #
@@ -236,7 +236,11 @@ jobs:
         run: |
           FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
           echo "Verifying bootc container compliance for: $FIRST_TAG"
-          buildah run "$FIRST_TAG" -- bootc container lint || echo "::warning::bootc container lint found issues"
+          ctr=$(buildah from "$FIRST_TAG")
+          buildah run "$ctr" bootc container lint || \
+            echo "::warning::bootc container lint found issues"
+          buildah rm "$ctr"
+
 
       # ======================== SCAN STAGE ========================== #
       - name: Cache Trivy database
