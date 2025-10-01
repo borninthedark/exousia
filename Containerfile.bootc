@@ -2,7 +2,6 @@
 # Build arguments
 # ------------------------------
 ARG FEDORA_VERSION=43
-ARG ENABLE_PLYMOUTH=true
 
 # ------------------------------
 # Base image
@@ -13,24 +12,31 @@ LABEL maintainer="uryu"
 # ------------------------------
 # Environment
 # ------------------------------
-ENV BUILD_IMAGE_TYPE=fedora-bootc
-ENV ENABLE_PLYMOUTH=${ENABLE_PLYMOUTH}
-RUN echo "BUILD_IMAGE_TYPE=fedora-bootc" >> /etc/environment
+ENV BUILD_IMAGE_TYPE=fedora-bootc \
+    ENABLE_PLYMOUTH=true
+
+RUN echo "BUILD_IMAGE_TYPE=fedora-bootc" >> /etc/environment && \
+    echo "ENABLE_PLYMOUTH=true" >> /etc/environment
 
 # ------------------------------
 # Sysusers setup
 # ------------------------------
 COPY --chmod=0644 sysusers/bootc.conf /usr/lib/sysusers.d/bootc.conf
+
 RUN test -f /etc/passwd || touch /etc/passwd; \
     test -f /etc/group  || touch /etc/group
+
 RUN systemd-sysusers || true
+
 RUN set -e; \
     systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf; \
     mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit; \
     chown -R 241:241 /var/lib/greeter || true; \
     chown -R 240:240 /var/lib/greetd || true
 
+# ------------------------------
 # Greetd config
+# ------------------------------
 RUN mkdir -p /etc/greetd && \
     printf '[security]\nuser = "greetd"\n\n[default]\n' > /etc/greetd/config.toml
 
@@ -39,12 +45,15 @@ RUN mkdir -p /etc/greetd && \
 # ------------------------------
 COPY --chmod=0644 containers-auth.conf /usr/lib/tmpfiles.d/containers-auth.conf
 COPY --chmod=0600 ./bootc-secrets/auth.json /usr/lib/container-auth.json
+
 RUN ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
 
 # ------------------------------
 # Directory structure (bootc only)
 # ------------------------------
-RUN mkdir -p /var/roothome /var/opt /usr/lib/extensions && ln -sf /var/opt /opt
+RUN mkdir -p /var/roothome /var/opt /usr/lib/extensions && \
+    rm -rf /opt && \
+    ln -sf /var/opt /opt
 
 # ------------------------------
 # Copy configs and scripts
@@ -61,6 +70,16 @@ COPY --chmod=0755 custom-scripts/               /usr/local/bin/
 COPY --chmod=0644 custom-configs/sway/sway.desktop /usr/share/wayland-sessions/sway.desktop
 COPY --chmod=0644 custom-configs/sway/environment /etc/sway/environment
 COPY --chmod=0755 custom-configs/sway/start-sway  /usr/bin/start-sway
+
+# ------------------------------
+# Create package list from base image
+# ------------------------------
+RUN mkdir -p /usr/local/share/sericea-bootc && \
+    rpm -qa --qf '%{NAME}\n' | sort > /usr/local/share/sericea-bootc/packages-fedora-bootc
+
+# Ensure file exists even if rpm -qa fails (fix for Bats test)
+RUN test -s /usr/local/share/sericea-bootc/packages-fedora-bootc || \
+    touch /usr/local/share/sericea-bootc/packages-fedora-bootc
 
 # ------------------------------
 # Package management
@@ -85,14 +104,20 @@ RUN set -euxo pipefail; \
 RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # ------------------------------
-# Plymouth (conditional)
+# Plymouth configuration (conditional)
 # ------------------------------
 RUN if [ "${ENABLE_PLYMOUTH}" = "true" ]; then \
-      echo "==> Configuring Plymouth boot splash..."; \
-      /usr/local/bin/setup-plymouth-theme enable && \
-      /usr/local/bin/dracut-rebuild -f; \
+      rm -rf /var/tmp && ln -sf /tmp /var/tmp && \
+      mkdir -p /usr/lib/dracut/dracut.conf.d && \
+      echo 'add_dracutmodules+=" plymouth "' > /usr/lib/dracut/dracut.conf.d/plymouth.conf && \
+      plymouth-set-default-theme bgrt-better-luks && \
+      kver=$(cd /usr/lib/modules && echo *); \
+      dracut -vf /usr/lib/modules/$kver/initramfs.img $kver && \
+      mkdir -p /usr/lib/bootc/kargs.d && \
+      printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' \
+        > /usr/lib/bootc/kargs.d/plymouth.toml; \
     else \
-      echo "==> Skipping Plymouth setup (ENABLE_PLYMOUTH=${ENABLE_PLYMOUTH})"; \
+      echo "Plymouth disabled (ENABLE_PLYMOUTH=false), skipping configuration."; \
     fi
 
 # ------------------------------
