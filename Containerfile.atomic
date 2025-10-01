@@ -14,10 +14,10 @@ LABEL maintainer="uryu"
 # Environment
 # ------------------------------
 ENV BUILD_IMAGE_TYPE=fedora-sway-atomic \
-    ENABLE_PLYMOUTH=true
+    ENABLE_PLYMOUTH=false
 
 RUN echo "BUILD_IMAGE_TYPE=fedora-sway-atomic" >> /etc/environment && \
-    echo "ENABLE_PLYMOUTH=true" >> /etc/environment
+    echo "ENABLE_PLYMOUTH=false" >> /etc/environment
 
 # ------------------------------
 # Sysusers setup
