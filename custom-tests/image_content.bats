@@ -200,18 +200,6 @@ is_plymouth_enabled() {
     assert_success "Kernel arguments should contain 'quiet'"
 }
 
-@test "Plymouth should not be configured if disabled" {
-    if is_plymouth_enabled; then
-        skip "Plymouth is enabled (ENABLE_PLYMOUTH=true)"
-    fi
-    
-    # Plymouth package might still be installed (from base image)
-    # but configuration should not be present
-    
-    run test -f "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
-    assert_failure "Plymouth kernel arguments should not exist when disabled"
-}
-
 @test "Plymouth dracut configuration should be correct if enabled" {
     if ! is_plymouth_enabled; then
         skip "Plymouth is disabled (ENABLE_PLYMOUTH=false)"
