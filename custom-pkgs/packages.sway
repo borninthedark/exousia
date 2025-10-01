@@ -70,6 +70,7 @@ swappy
 
 # System Controls
 brightnessctl
+pavucontrol
 nm-connection-editor
 network-manager-applet
 

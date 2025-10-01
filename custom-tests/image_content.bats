@@ -37,11 +37,16 @@ setup_file() {
             export FEDORA_VERSION="unknown"
         fi
         
-        # Try to detect build type from ENV
-        BUILD_TYPE="unknown"
-        if [ -f "$MOUNT_POINT/etc/environment" ] && grep -q "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment"; then
-            BUILD_TYPE=$(grep "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment" | cut -d= -f2 | tr -d '"')
+        # Try to detect build type from container ENV (preferred method)
+        BUILD_TYPE=$(buildah run "$CONTAINER" -- printenv BUILD_IMAGE_TYPE 2>/dev/null || echo "unknown")
+        
+        # Fallback: Try to detect from /etc/environment file
+        if [ "$BUILD_TYPE" = "unknown" ] && [ -f "$MOUNT_POINT/etc/environment" ]; then
+            if grep -q "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment"; then
+                BUILD_TYPE=$(grep "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment" | cut -d= -f2 | tr -d '"')
+            fi
         fi
+        
         export BUILD_TYPE
         echo "--- Build type: $BUILD_TYPE ---"
     fi
