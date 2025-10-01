@@ -311,16 +311,11 @@ is_plymouth_enabled() {
 @test "ENABLE_PLYMOUTH environment variable should match expected state" {
     local expected_state="${ENABLE_PLYMOUTH:-true}"
     
-    # Check if environment variable is set in container
     run buildah run "$CONTAINER" -- printenv ENABLE_PLYMOUTH
+    assert_success "ENABLE_PLYMOUTH should be set in container"
     
-    # If not set in container, use default 'true'
-    local container_state="${output:-true}"
-    
-    echo "Expected Plymouth state: $expected_state" >&3
-    echo "Container Plymouth state: $container_state" >&3
-    
-    [[ "$container_state" == "$expected_state" ]]
+    # Use assert_output which handles trailing newlines
+    assert_output "$expected_state"
 }
 
 # --- Custom scripts ---
