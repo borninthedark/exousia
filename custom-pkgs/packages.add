@@ -38,6 +38,7 @@ libvirt
 pam-u2f
 pamu2fcfg
 lynis
+openssl
 
 # Developer & Power User Tools
 ripgrep
