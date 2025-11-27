@@ -273,6 +273,24 @@ jobs:
           echo "IMAGE_SIZE_MB=${SIZE_MB}" >> $GITHUB_ENV
           echo "::endgroup::"
 
+      - name: Save image as artifact
+        run: |
+          echo "::group::Saving Image Artifact"
+          FIRST_TAG="${{ steps.first-tag.outputs.tag }}"
+          echo "Saving image: $FIRST_TAG"
+          buildah push "$FIRST_TAG" "oci-archive:exousia-image.tar:$FIRST_TAG"
+          echo "Image saved to exousia-image.tar"
+          ls -lh exousia-image.tar
+          echo "::endgroup::"
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: exousia-container-image
+          path: exousia-image.tar
+          retention-days: 1
+          compression-level: 0
+
       - name: Build summary
         if: always()
         run: |
@@ -303,6 +321,21 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: exousia-container-image
+
+      - name: Load image from artifact
+        run: |
+          echo "::group::Loading Image"
+          echo "Loading image from exousia-image.tar"
+          ls -lh exousia-image.tar
+          buildah pull "oci-archive:exousia-image.tar"
+          echo "Image loaded successfully"
+          buildah images
+          echo "::endgroup::"
 
       - name: Setup Bats testing framework
         id: setup-bats
@@ -378,6 +411,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: exousia-container-image
+
+      - name: Load image from artifact
+        run: |
+          echo "::group::Loading Image"
+          echo "Loading image from exousia-image.tar"
+          buildah pull "oci-archive:exousia-image.tar"
+          echo "Image loaded successfully"
+          buildah images
+          echo "::endgroup::"
+
       - name: Cache Trivy database
         uses: actions/cache@v4
         with:
@@ -448,6 +495,20 @@ jobs:
       dockerhub_digest: ${{ steps.push-to-dockerhub.outputs.digest }}
 
     steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: exousia-container-image
+
+      - name: Load image from artifact
+        run: |
+          echo "::group::Loading Image"
+          echo "Loading image from exousia-image.tar"
+          buildah pull "oci-archive:exousia-image.tar"
+          echo "Image loaded successfully"
+          buildah images
+          echo "::endgroup::"
+
       - name: Login to GitHub Container Registry
         uses: redhat-actions/podman-login@v1
         with:
