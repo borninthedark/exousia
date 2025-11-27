@@ -491,8 +491,8 @@ jobs:
     timeout-minutes: 20
     if: github.event_name != 'pull_request'
     outputs:
-      ghcr_digest: ${{ steps.push-to-ghcr.outputs.digest }}
-      dockerhub_digest: ${{ steps.push-to-dockerhub.outputs.digest }}
+      ghcr_digest: ${{ steps.push-images.outputs.ghcr_digest }}
+      dockerhub_digest: ${{ steps.push-images.outputs.dockerhub_digest }}
 
     steps:
       - name: Download image artifact
@@ -510,34 +510,46 @@ jobs:
           echo "::endgroup::"
 
       - name: Login to GitHub Container Registry
-        uses: redhat-actions/podman-login@v1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+        run: |
+          echo "${{ secrets.GHCR_PAT }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
 
       - name: Login to Docker Hub
-        uses: redhat-actions/podman-login@v1
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | buildah login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
 
-      - name: Push bootc image to GHCR
-        id: push-to-ghcr
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          image: ${{ env.IMAGE_BASE }}
-          tags: ${{ needs.build.outputs.image_tags }}
-          registry: ${{ env.REGISTRY }}
+      - name: Tag and push images
+        id: push-images
+        run: |
+          echo "::group::Tagging and Pushing Images"
+          FIRST_TAG="${{ needs.build.outputs.first_tag }}"
 
-      - name: Push bootc image to Docker Hub
-        id: push-to-dockerhub
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          image: ${{ env.DOCKERHUB_IMAGE_BASE }}
-          tags: ${{ needs.build.outputs.image_tags }}
-          registry: docker.io
+          # Parse all tags and push to registries
+          echo "Processing tags from metadata-action..."
+          while IFS= read -r full_tag; do
+            if [[ -n "$full_tag" ]]; then
+              echo "Tagging and pushing: $full_tag"
+              buildah tag "$FIRST_TAG" "$full_tag"
+              DIGEST=$(buildah push --digestfile /tmp/digest.txt "$full_tag" && cat /tmp/digest.txt)
+              echo "Pushed with digest: $DIGEST"
+
+              # Capture digest for the latest tag of each registry
+              if [[ "$full_tag" == "${{ env.IMAGE_BASE }}:latest" ]]; then
+                echo "$DIGEST" > /tmp/ghcr-digest.txt
+              elif [[ "$full_tag" == "${{ env.DOCKERHUB_IMAGE_BASE }}:latest" ]]; then
+                echo "$DIGEST" > /tmp/dockerhub-digest.txt
+              fi
+            fi
+          done <<< "${{ needs.build.outputs.image_tags }}"
+
+          # Output digests
+          if [[ -f /tmp/ghcr-digest.txt ]]; then
+            echo "ghcr_digest=$(cat /tmp/ghcr-digest.txt)" >> $GITHUB_OUTPUT
+          fi
+          if [[ -f /tmp/dockerhub-digest.txt ]]; then
+            echo "dockerhub_digest=$(cat /tmp/dockerhub-digest.txt)" >> $GITHUB_OUTPUT
+          fi
+
+          echo "::endgroup::"
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.5.0
@@ -551,11 +563,11 @@ jobs:
       - name: Sign container images (keyless OIDC)
         run: |
           echo "::group::Image Signing"
-          echo "Signing GHCR image by digest: ${{ steps.push-to-ghcr.outputs.digest }}"
-          cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-ghcr.outputs.digest }}"
+          echo "Signing GHCR image by digest: ${{ steps.push-images.outputs.ghcr_digest }}"
+          cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-images.outputs.ghcr_digest }}"
 
-          echo "Signing Docker Hub image by digest: ${{ steps.push-to-dockerhub.outputs.digest }}"
-          cosign sign --yes "${{ env.DOCKERHUB_IMAGE_BASE }}@${{ steps.push-to-dockerhub.outputs.digest }}"
+          echo "Signing Docker Hub image by digest: ${{ steps.push-images.outputs.dockerhub_digest }}"
+          cosign sign --yes "${{ env.DOCKERHUB_IMAGE_BASE }}@${{ steps.push-images.outputs.dockerhub_digest }}"
           echo "::endgroup::"
         env:
           COSIGN_EXPERIMENTAL: "true"
@@ -567,14 +579,14 @@ jobs:
             echo "## 📦 Published Images"
             echo ""
             echo "### GitHub Container Registry"
-            echo "- **Digest:** \`${{ steps.push-to-ghcr.outputs.digest }}\`"
+            echo "- **Digest:** \`${{ steps.push-images.outputs.ghcr_digest }}\`"
             echo "- **Pull Command:**"
             echo '```bash'
             echo "sudo bootc switch ${{ env.IMAGE_BASE }}:latest"
             echo '```'
             echo ""
             echo "### Docker Hub"
-            echo "- **Digest:** \`${{ steps.push-to-dockerhub.outputs.digest }}\`"
+            echo "- **Digest:** \`${{ steps.push-images.outputs.dockerhub_digest }}\`"
             echo "- **Pull Command:**"
             echo '```bash'
             echo "sudo bootc switch docker.io/${{ env.DOCKERHUB_IMAGE_BASE }}:latest"
