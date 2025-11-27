@@ -145,9 +145,21 @@ validate_image_type() {
 }
 
 backup_containerfile() {
+    local containerfile=""
+    if [[ -f "${PROJECT_ROOT}/Containerfile.atomic" ]]; then
+        containerfile="${PROJECT_ROOT}/Containerfile.atomic"
+    elif [[ -f "${PROJECT_ROOT}/Containerfile.bootc" ]]; then
+        containerfile="${PROJECT_ROOT}/Containerfile.bootc"
+    fi
+
+    if [[ -z "$containerfile" ]]; then
+        print_warning "No Containerfile found to backup"
+        return 0
+    fi
+
     local backup_file
-    backup_file="${CONTAINERFILE}.bak.$(date +%Y%m%d_%H%M%S)"
-    cp "$CONTAINERFILE" "$backup_file"
+    backup_file="${containerfile}.bak.$(date +%Y%m%d_%H%M%S)"
+    cp "$containerfile" "$backup_file"
     print_info "Backup created: $backup_file"
 }
 
