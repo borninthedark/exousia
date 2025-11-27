@@ -17,7 +17,7 @@ Build what you need, how you need it, with confidence.
 
 - Base Image: Fedora Sway Atomic Desktop
 - Image Type: fedora-sway-atomic
-- Fedora Version: 42
+- Fedora Version: 43
 
 ## CI/CD Workflow: Fedora Bootc DevSec CI
 
