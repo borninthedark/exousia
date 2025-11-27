@@ -206,8 +206,21 @@ jobs:
             FEDORA_VERSION=${{ steps.config.outputs.BUILD_VERSION }}
             IMAGE_TYPE=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
             ENABLE_PLYMOUTH=${{ steps.config.outputs.ENABLE_PLYMOUTH }}
-          oci: true  
+          oci: true
           tls-verify: true
+          layers: true
+
+      - name: Check image size
+        run: |
+          FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          SIZE=$(buildah inspect "$FIRST_TAG" | jq -r '.Size')
+          SIZE_MB=$((SIZE / 1024 / 1024))
+          echo "### 📦 Image Size: ${SIZE_MB}MB" >> $GITHUB_STEP_SUMMARY
+
+          # Warn if image is larger than 4GB
+          if [ $SIZE_MB -gt 4096 ]; then
+            echo "::warning::Image size (${SIZE_MB}MB) exceeds 4GB. Consider optimizing."
+          fi
 
       # ======================== TEST STAGE ========================== #
       - name: Setup Bats testing framework
@@ -224,8 +237,18 @@ jobs:
           FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
           echo "Running tests against image: $FIRST_TAG"
 
-          TEST_IMAGE_TAG="$FIRST_TAG" \
-          buildah unshare -- bats -r custom-tests
+          # Run tests with TAP output for better parsing
+          if TEST_IMAGE_TAG="$FIRST_TAG" \
+             buildah unshare -- bats -r custom-tests --formatter tap | tee test-results.tap; then
+            echo "### ✅ Integration Tests Passed" >> $GITHUB_STEP_SUMMARY
+            # Count passed tests
+            PASSED=$(grep -c "^ok" test-results.tap || echo "0")
+            echo "**Tests Passed:** $PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Integration Tests Failed" >> $GITHUB_STEP_SUMMARY
+            grep "^not ok" test-results.tap >> $GITHUB_STEP_SUMMARY || true
+            exit 1
+          fi
 
       - name: Run ShellCheck on scripts
         uses: ludeeus/action-shellcheck@master
@@ -237,8 +260,19 @@ jobs:
           FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
           echo "Verifying bootc container compliance for: $FIRST_TAG"
           ctr=$(buildah from "$FIRST_TAG")
-          buildah run "$ctr" bootc container lint || \
-            echo "::warning::bootc container lint found issues"
+
+          # Run bootc container lint and capture output
+          if buildah run "$ctr" bootc container lint > lint-output.txt 2>&1; then
+            echo "::notice::bootc container lint passed"
+            echo "### ✅ Bootc Container Lint Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "::error::bootc container lint failed"
+            echo "### ❌ Bootc Container Lint Failed" >> $GITHUB_STEP_SUMMARY
+            cat lint-output.txt >> $GITHUB_STEP_SUMMARY
+            buildah rm "$ctr"
+            exit 1
+          fi
+
           buildah rm "$ctr"
 
 

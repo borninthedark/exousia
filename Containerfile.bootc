@@ -7,7 +7,13 @@ ARG FEDORA_VERSION=43
 # Base image
 # ------------------------------
 FROM quay.io/fedora/fedora-bootc:${FEDORA_VERSION}
+
+# OCI Labels for better metadata
 LABEL maintainer="uryu"
+LABEL org.opencontainers.image.title="Exousia Bootc Base"
+LABEL org.opencontainers.image.description="Custom Fedora bootc image with minimal base and custom package selection"
+LABEL org.opencontainers.image.source="https://github.com/borninthedark/exousia"
+LABEL org.opencontainers.image.licenses="MIT"
 
 # ------------------------------
 # Environment
