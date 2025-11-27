@@ -23,10 +23,8 @@ print_info()    { echo -e "${BLUE}ℹ${NC} $1"; }
 
 # Configuration
 PLYMOUTH_THEME="${PLYMOUTH_THEME:-bgrt-better-luks}"
-THEME_PATH="/usr/share/plymouth/themes/${PLYMOUTH_THEME}"
 KARGS_DIR="/usr/lib/bootc/kargs.d"
 KARGS_FILE="${KARGS_DIR}/plymouth.toml"
-PLYMOUTH_CONF="/etc/plymouth/plymouth.conf"
 
 show_usage() {
     cat << EOF

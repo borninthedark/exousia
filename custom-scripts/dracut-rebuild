@@ -90,7 +90,7 @@ get_kernel_version() {
         if [[ ! -d "/usr/lib/modules/$kver" ]]; then
             print_error "Kernel version not found: $kver"
             print_info "Available kernels:"
-            ls -1 /usr/lib/modules/ 2>/dev/null | sed 's/^/  /' || echo "  None found"
+            find /usr/lib/modules/ -maxdepth 1 -mindepth 1 -type d -printf '%f\n' 2>/dev/null | sed 's/^/  /' || echo "  None found"
             return 1
         fi
         echo "$kver"
