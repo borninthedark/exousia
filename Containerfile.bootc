@@ -117,7 +117,7 @@ RUN if [ "${ENABLE_PLYMOUTH}" = "true" ]; then \
       mkdir -p /usr/lib/dracut/dracut.conf.d && \
       echo 'add_dracutmodules+=" plymouth "' > /usr/lib/dracut/dracut.conf.d/plymouth.conf && \
       plymouth-set-default-theme bgrt-better-luks && \
-      kver=$(cd /usr/lib/modules && echo *); \
+      kver=$(basename /usr/lib/modules/*); \
       dracut -vf /usr/lib/modules/$kver/initramfs.img $kver && \
       mkdir -p /usr/lib/bootc/kargs.d && \
       printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' \
