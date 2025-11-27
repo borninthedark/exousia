@@ -17,7 +17,6 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Look for Containerfile in project root (parent of custom-scripts)
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-CONTAINERFILE="${PROJECT_ROOT}/Containerfile"
 VERSION_FILE="${PROJECT_ROOT}/.fedora-version"
 
 # Current supported Fedora versions (as of September 2025)
@@ -75,25 +74,33 @@ detect_current_config() {
             fi
         fi
     fi
-    
-    if [[ ! -f "$CONTAINERFILE" ]]; then
-        print_error "Neither .fedora-version nor Containerfile found"
+
+    # Try to find a Containerfile variant (atomic or bootc)
+    local containerfile=""
+    if [[ -f "${PROJECT_ROOT}/Containerfile.atomic" ]]; then
+        containerfile="${PROJECT_ROOT}/Containerfile.atomic"
+    elif [[ -f "${PROJECT_ROOT}/Containerfile.bootc" ]]; then
+        containerfile="${PROJECT_ROOT}/Containerfile.bootc"
+    fi
+
+    if [[ -z "$containerfile" ]]; then
+        print_error "Neither .fedora-version nor Containerfile.atomic/Containerfile.bootc found"
         exit 1
     fi
-    
+
     local version_arg
-    version_arg=$(grep "^ARG FEDORA_VERSION=" "$CONTAINERFILE" | cut -d= -f2)
+    version_arg=$(grep "^ARG FEDORA_VERSION=" "$containerfile" | cut -d= -f2)
     local type_arg
-    type_arg=$(grep "^ARG IMAGE_TYPE=" "$CONTAINERFILE" | cut -d= -f2)
-    
+    type_arg=$(grep "^ARG IMAGE_TYPE=" "$containerfile" | cut -d= -f2)
+
     if [[ -n "$version_arg" && -n "$type_arg" ]]; then
         CURRENT_VERSION="$version_arg"
         CURRENT_IMAGE_TYPE="$type_arg"
-        print_warning "No .fedora-version file found, using defaults from Containerfile"
+        print_warning "No .fedora-version file found, using defaults from $(basename "$containerfile")"
         print_warning "Creating .fedora-version file..."
         save_version "$CURRENT_VERSION" "$CURRENT_IMAGE_TYPE"
     else
-        print_error "Could not detect configuration from .fedora-version or Containerfile"
+        print_error "Could not detect configuration from .fedora-version or Containerfile variants"
         CURRENT_VERSION="unknown"
         CURRENT_IMAGE_TYPE="unknown"
     fi
