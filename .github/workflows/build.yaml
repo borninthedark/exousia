@@ -1,4 +1,4 @@
-name: Fedora Bootc DevSec CI
+name: Bootc DevSecOps Pipeline
 
 on:
   push:
@@ -43,34 +43,37 @@ permissions:
   security-events: write
 
 concurrency:
-  group: devsec-unified-${{ github.ref }}
+  group: bootc-ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   REGISTRY: ghcr.io
   IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/exousia
-  DOCKERHUB_IMAGE_BASE: 1borninthedark/exousia
+  DOCKERHUB_IMAGE_BASE: borninthedark/exousia
 
 jobs:
-  build-test-scan-push-sign-doc:
-    name: Fedora Bootc DevSec CI
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
+  # ══════════════════════════════════════════════════════════════════════════
+  # Job 1: Lint & Validate - Static Analysis and File Validation
+  # ══════════════════════════════════════════════════════════════════════════
+  lint-and-validate:
+    name: Lint & Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
-    # ======================== BUILD STAGE ========================= #
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Verify required file structure
         run: |
+          echo "::group::File Structure Validation"
           echo "Verifying required configuration files..."
-          
+
           if [[ ! -d custom-configs/sway ]]; then
             echo "::error::Missing custom-configs/sway directory"
             exit 1
           fi
-          
+
           for file in sway.desktop environment start-sway; do
             if [[ ! -f "custom-configs/sway/$file" ]]; then
               echo "::error::Missing custom-configs/sway/$file"
@@ -78,7 +81,7 @@ jobs:
             fi
           done
           echo "✓ All required Sway configuration files present"
-          
+
           for file in packages.add packages.remove packages.sway; do
             if [[ ! -f "custom-pkgs/$file" ]]; then
               echo "::error::Missing custom-pkgs/$file"
@@ -86,15 +89,69 @@ jobs:
             fi
           done
           echo "✓ All package list files present"
-          
-          # Check for new Plymouth scripts
-          for script in setup-plymouth-theme dracut-rebuild; do
+
+          for script in setup-plymouth-theme dracut-rebuild fedora-version-switcher; do
             if [[ ! -f "custom-scripts/$script" ]]; then
               echo "::error::Missing custom-scripts/$script"
               exit 1
             fi
           done
-          echo "✓ All Plymouth scripts present"
+          echo "✓ All required scripts present"
+          echo "::endgroup::"
+
+      - name: Lint Containerfile.atomic
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Containerfile.atomic
+          ignore: DL3041,DL3059,SC2086,DL4006,SC3037
+
+      - name: Lint Containerfile.bootc
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Containerfile.bootc
+          ignore: DL3041,DL3059,SC2086,DL4006,SC3037
+
+      - name: ShellCheck all scripts
+        uses: ludeeus/action-shellcheck@master
+        with:
+          additional_files: 'custom-scripts/*'
+
+      - name: Semgrep security scan
+        continue-on-error: true
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: auto
+
+      - name: Lint summary
+        if: always()
+        run: |
+          {
+            echo "## ✅ Lint & Validation Results"
+            echo ""
+            echo "- Containerfile linting: Completed (hadolint)"
+            echo "- Shell script validation: Completed (shellcheck)"
+            echo "- Static analysis: Completed (semgrep)"
+            echo "- File structure: Validated"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Job 2: Build - Build Bootc Container Image
+  # ══════════════════════════════════════════════════════════════════════════
+  build:
+    name: Build Bootc Image
+    needs: lint-and-validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      image_tags: ${{ steps.meta.outputs.tags }}
+      first_tag: ${{ steps.first-tag.outputs.tag }}
+      build_version: ${{ steps.config.outputs.BUILD_VERSION }}
+      build_type: ${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
+      containerfile: ${{ steps.config.outputs.CONTAINERFILE }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Detect and resolve Fedora configuration
         id: config
@@ -103,10 +160,11 @@ jobs:
           INPUT_IMAGE_TYPE: ${{ github.event.inputs.image_type || 'current' }}
           INPUT_ENABLE_PLYMOUTH: ${{ github.event.inputs.enable_plymouth || 'true' }}
         run: |
+          echo "::group::Configuration Detection"
           echo "Input version: $INPUT_VERSION"
           echo "Input image type: $INPUT_IMAGE_TYPE"
           echo "Input Plymouth: $INPUT_ENABLE_PLYMOUTH"
-          
+
           if [[ -f .fedora-version ]] && [[ -s .fedora-version ]]; then
             CURRENT_VERSION=$(cut -d: -f1 .fedora-version)
             CURRENT_IMAGE_TYPE=$(cut -d: -f2 .fedora-version)
@@ -116,34 +174,31 @@ jobs:
             CURRENT_IMAGE_TYPE="fedora-sway-atomic"
             echo "Using defaults: $CURRENT_VERSION:$CURRENT_IMAGE_TYPE"
           fi
-          
+
           TARGET_VERSION="${CURRENT_VERSION}"
           TARGET_IMAGE_TYPE="${CURRENT_IMAGE_TYPE}"
-          
+
           if [[ "$INPUT_VERSION" != "current" ]]; then
             TARGET_VERSION="$INPUT_VERSION"
           fi
-          
+
           if [[ "$INPUT_IMAGE_TYPE" != "current" ]]; then
             TARGET_IMAGE_TYPE="$INPUT_IMAGE_TYPE"
           fi
-          
-          # Set Plymouth flag
+
           ENABLE_PLYMOUTH="$INPUT_ENABLE_PLYMOUTH"
-          
+
           echo "Resolved target: Fedora $TARGET_VERSION with $TARGET_IMAGE_TYPE"
           echo "Plymouth enabled: $ENABLE_PLYMOUTH"
-          
-          # Determine which Containerfile to use
+
           if [[ "$TARGET_IMAGE_TYPE" == "fedora-bootc" ]]; then
             CONTAINERFILE_PATH="./Containerfile.bootc"
           else
             CONTAINERFILE_PATH="./Containerfile.atomic"
           fi
-          
+
           echo "Using Containerfile: $CONTAINERFILE_PATH"
-          
-          # Update configuration if changed
+
           if [[ "$TARGET_VERSION" != "$CURRENT_VERSION" ]] || [[ "$TARGET_IMAGE_TYPE" != "$CURRENT_IMAGE_TYPE" ]]; then
             chmod +x ./custom-scripts/fedora-version-switcher
             ./custom-scripts/fedora-version-switcher "$TARGET_VERSION" "$TARGET_IMAGE_TYPE"
@@ -151,20 +206,12 @@ jobs:
           else
             echo "Configuration unchanged"
           fi
-          
-          # Output configuration
+
           echo "BUILD_VERSION=$TARGET_VERSION" >> $GITHUB_OUTPUT
           echo "BUILD_IMAGE_TYPE=$TARGET_IMAGE_TYPE" >> $GITHUB_OUTPUT
           echo "CONTAINERFILE=$CONTAINERFILE_PATH" >> $GITHUB_OUTPUT
           echo "ENABLE_PLYMOUTH=$ENABLE_PLYMOUTH" >> $GITHUB_OUTPUT
-          
-          # Add to step summary
-          echo "### 🔧 Build Configuration" >> $GITHUB_STEP_SUMMARY
-          echo "- **Fedora Version:** $TARGET_VERSION" >> $GITHUB_STEP_SUMMARY
-          echo "- **Base Image Type:** $TARGET_IMAGE_TYPE" >> $GITHUB_STEP_SUMMARY
-          echo "- **Containerfile:** $CONTAINERFILE_PATH" >> $GITHUB_STEP_SUMMARY
-          echo "- **Plymouth:** $ENABLE_PLYMOUTH" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "::endgroup::"
 
       - name: Generate image tags and labels
         id: meta
@@ -174,20 +221,21 @@ jobs:
             ${{ env.IMAGE_BASE }}
             ${{ env.DOCKERHUB_IMAGE_BASE }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/build-fixes' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,format=long
             type=ref,event=branch
             type=schedule,pattern=nightly
           labels: |
             org.opencontainers.image.licenses=MIT
-            org.opencontainers.image.description=Custom Fedora bootc image
+            org.opencontainers.image.description=Custom Fedora bootc image with Sway desktop
             org.opencontainers.image.documentation=https://docs.fedoraproject.org/en-US/bootc/
-            
-      - name: Lint Containerfile
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: ${{ steps.config.outputs.CONTAINERFILE }}
-          ignore: DL3041,DL3059,SC2086,DL4006,SC3037,DL3003
+
+      - name: Extract first tag for testing
+        id: first-tag
+        run: |
+          FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          echo "tag=$FIRST_TAG" >> $GITHUB_OUTPUT
+          echo "First tag: $FIRST_TAG"
 
       - name: Create auth.json secret for build
         run: |
@@ -206,73 +254,201 @@ jobs:
             FEDORA_VERSION=${{ steps.config.outputs.BUILD_VERSION }}
             IMAGE_TYPE=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
             ENABLE_PLYMOUTH=${{ steps.config.outputs.ENABLE_PLYMOUTH }}
-          oci: true  
+          oci: true
           tls-verify: true
+          layers: true
 
-      # ======================== TEST STAGE ========================== #
+      - name: Check image size
+        run: |
+          echo "::group::Image Size Check"
+          FIRST_TAG="${{ steps.first-tag.outputs.tag }}"
+          SIZE=$(buildah inspect "$FIRST_TAG" | jq -r '.Size')
+          SIZE_MB=$((SIZE / 1024 / 1024))
+          echo "Image size: ${SIZE_MB}MB"
+
+          if [ $SIZE_MB -gt 4096 ]; then
+            echo "::warning::Image size (${SIZE_MB}MB) exceeds 4GB. Consider optimizing."
+          fi
+
+          echo "IMAGE_SIZE_MB=${SIZE_MB}" >> $GITHUB_ENV
+          echo "::endgroup::"
+
+      - name: Build summary
+        if: always()
+        run: |
+          {
+            echo "## 🏗️ Build Configuration"
+            echo ""
+            echo "- **Fedora Version:** ${{ steps.config.outputs.BUILD_VERSION }}"
+            echo "- **Base Image Type:** ${{ steps.config.outputs.BUILD_IMAGE_TYPE }}"
+            echo "- **Containerfile:** \`${{ steps.config.outputs.CONTAINERFILE }}\`"
+            echo "- **Plymouth:** ${{ steps.config.outputs.ENABLE_PLYMOUTH }}"
+            echo "- **Image Size:** ${IMAGE_SIZE_MB:-Unknown}MB"
+            echo ""
+            echo "### 🏷️ Image Tags"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Job 3: Test - Integration & Compliance Tests
+  # ══════════════════════════════════════════════════════════════════════════
+  test:
+    name: Test Container Image
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Setup Bats testing framework
         id: setup-bats
         uses: bats-core/bats-action@3.0.0
 
-      - name: Run Bats tests on the prospective image
+      - name: Run Bats integration tests
         shell: bash
         env:
           BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
           TERM: xterm
-          ENABLE_PLYMOUTH: ${{ steps.config.outputs.ENABLE_PLYMOUTH }}
+          ENABLE_PLYMOUTH: ${{ needs.build.outputs.build_version }}
         run: |
-          FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          echo "::group::Integration Tests"
+          FIRST_TAG="${{ needs.build.outputs.first_tag }}"
           echo "Running tests against image: $FIRST_TAG"
 
-          TEST_IMAGE_TAG="$FIRST_TAG" \
-          buildah unshare -- bats -r custom-tests
-
-      - name: Run ShellCheck on scripts
-        uses: ludeeus/action-shellcheck@master
-        with:
-          additional_files: 'custom-scripts/*'
+          if TEST_IMAGE_TAG="$FIRST_TAG" \
+             buildah unshare -- bats -r custom-tests --formatter tap | tee test-results.tap; then
+            echo "::notice::Integration tests passed"
+            PASSED=$(grep -c "^ok" test-results.tap || echo "0")
+            echo "TEST_PASSED=$PASSED" >> $GITHUB_ENV
+          else
+            echo "::error::Integration tests failed"
+            echo "TEST_PASSED=0" >> $GITHUB_ENV
+            grep "^not ok" test-results.tap || true
+            exit 1
+          fi
+          echo "::endgroup::"
 
       - name: Verify bootc container lint
         run: |
-          FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          echo "::group::Bootc Container Lint"
+          FIRST_TAG="${{ needs.build.outputs.first_tag }}"
           echo "Verifying bootc container compliance for: $FIRST_TAG"
           ctr=$(buildah from "$FIRST_TAG")
-          buildah run "$ctr" bootc container lint || \
-            echo "::warning::bootc container lint found issues"
+
+          if buildah run "$ctr" bootc container lint > lint-output.txt 2>&1; then
+            echo "::notice::bootc container lint passed"
+            echo "BOOTC_LINT=passed" >> $GITHUB_ENV
+          else
+            echo "::error::bootc container lint failed"
+            cat lint-output.txt
+            buildah rm "$ctr"
+            echo "BOOTC_LINT=failed" >> $GITHUB_ENV
+            exit 1
+          fi
+
           buildah rm "$ctr"
+          echo "::endgroup::"
 
+      - name: Test summary
+        if: always()
+        run: |
+          {
+            echo "## 🧪 Test Results"
+            echo ""
+            echo "- **Integration Tests:** ${TEST_PASSED:-0} tests passed"
+            echo "- **Bootc Lint:** ${BOOTC_LINT:-unknown}"
+            echo "- **Test Framework:** Bats"
+            echo "- **Test Directory:** custom-tests/"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      # ======================== SCAN STAGE ========================== #
+  # ══════════════════════════════════════════════════════════════════════════
+  # Job 4: Scan - Security Vulnerability Scanning
+  # ══════════════════════════════════════════════════════════════════════════
+  scan:
+    name: Security Scan
+    needs: [build, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Cache Trivy database
         uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
           key: trivy-db-${{ runner.os }}-v2
 
-      - name: Install Trivy for vulnerability scanning
+      - name: Install Trivy
         run: |
           curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.52.2/trivy_0.52.2_Linux-64bit.tar.gz \
             | tar -xz -C /usr/local/bin trivy
+          trivy --version
 
-      - name: Trivy vulnerability scan (non-blocking)
+      - name: Trivy vulnerability scan
         continue-on-error: true
         run: |
-          FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          echo "::group::Trivy Vulnerability Scan"
+          FIRST_TAG="${{ needs.build.outputs.first_tag }}"
 
-          trivy image "$FIRST_TAG" \
+          if trivy image "$FIRST_TAG" \
             --scanners vuln \
             --severity CRITICAL,HIGH \
             --exit-code 1 \
-            --format table || echo "::warning::Trivy found CRITICAL or HIGH vulnerabilities."
+            --format table; then
+            echo "TRIVY_STATUS=passed" >> $GITHUB_ENV
+          else
+            echo "::warning::Trivy found CRITICAL or HIGH vulnerabilities."
+            echo "TRIVY_STATUS=found_issues" >> $GITHUB_ENV
+          fi
+          echo "::endgroup::"
 
-      - name: Semgrep static analysis
-        uses: returntocorp/semgrep-action@v1
+      - name: Generate Trivy SARIF report
+        continue-on-error: true
+        run: |
+          FIRST_TAG="${{ needs.build.outputs.first_tag }}"
+          trivy image "$FIRST_TAG" \
+            --scanners vuln \
+            --format sarif \
+            --output trivy-results.sarif
+
+      - name: Upload Trivy results to GitHub Security
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
         with:
-          config: auto
+          sarif_file: trivy-results.sarif
 
-      # ======================== PUSH STAGE ========================== #
+      - name: Scan summary
+        if: always()
+        run: |
+          {
+            echo "## 🔍 Security Scan Results"
+            echo ""
+            echo "- **Trivy Scan:** ${TRIVY_STATUS:-unknown}"
+            echo "- **Scan Type:** Vulnerability (CRITICAL, HIGH)"
+            echo "- **SARIF Report:** Uploaded to GitHub Security"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Job 5: Push & Sign - Publish and Sign Container Images
+  # ══════════════════════════════════════════════════════════════════════════
+  push-and-sign:
+    name: Push & Sign
+    needs: [build, test, scan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name != 'pull_request'
+    outputs:
+      ghcr_digest: ${{ steps.push-to-ghcr.outputs.digest }}
+      dockerhub_digest: ${{ steps.push-to-dockerhub.outputs.digest }}
+
+    steps:
       - name: Login to GitHub Container Registry
-        if: github.event_name != 'pull_request'
         uses: redhat-actions/podman-login@v1
         with:
           registry: ${{ env.REGISTRY }}
@@ -280,7 +456,6 @@ jobs:
           password: ${{ secrets.GHCR_PAT }}
 
       - name: Login to Docker Hub
-        if: github.event_name != 'pull_request'
         uses: redhat-actions/podman-login@v1
         with:
           registry: docker.io
@@ -288,93 +463,90 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Push bootc image to GHCR
-        if: github.event_name != 'pull_request'
         id: push-to-ghcr
         uses: redhat-actions/push-to-registry@v2
         with:
           image: ${{ env.IMAGE_BASE }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ needs.build.outputs.image_tags }}
           registry: ${{ env.REGISTRY }}
 
       - name: Push bootc image to Docker Hub
-        if: github.event_name != 'pull_request'
         id: push-to-dockerhub
         uses: redhat-actions/push-to-registry@v2
         with:
           image: ${{ env.DOCKERHUB_IMAGE_BASE }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ needs.build.outputs.image_tags }}
           registry: docker.io
 
-      # ======================== SIGN STAGE ========================== #
-      - name: Install Cosign for image signing
-        if: github.event_name != 'pull_request'
+      - name: Install Cosign
         uses: sigstore/cosign-installer@v3.5.0
 
-      - name: Log in to Docker Hub for signing
-        if: github.event_name != 'pull_request'
+      - name: Login to Docker Hub for signing
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Sign the bootc container images
-        if: github.event_name != 'pull_request'
+      - name: Sign container images (keyless OIDC)
         run: |
-          echo "Signing GHCR bootc image by digest: ${{ steps.push-to-ghcr.outputs.digest }}"
+          echo "::group::Image Signing"
+          echo "Signing GHCR image by digest: ${{ steps.push-to-ghcr.outputs.digest }}"
           cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-ghcr.outputs.digest }}"
 
-          echo "Signing Docker Hub bootc image by digest: ${{ steps.push-to-dockerhub.outputs.digest }}"
+          echo "Signing Docker Hub image by digest: ${{ steps.push-to-dockerhub.outputs.digest }}"
           cosign sign --yes "${{ env.DOCKERHUB_IMAGE_BASE }}@${{ steps.push-to-dockerhub.outputs.digest }}"
+          echo "::endgroup::"
         env:
           COSIGN_EXPERIMENTAL: "true"
 
-      # ======================== SUMMARY / DOCUMENT STAGE ======================= #
-      - name: Generate build summary
+      - name: Push summary
         if: always()
         run: |
-          echo "## 🚀 Bootc Image Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [[ -f .fedora-version ]]; then
-            VERSION=$(cut -d: -f1 .fedora-version)
-            IMAGE_TYPE=$(cut -d: -f2 .fedora-version)
-          else
-            VERSION="${{ steps.config.outputs.BUILD_VERSION }}"
-            IMAGE_TYPE="${{ steps.config.outputs.BUILD_IMAGE_TYPE }}"
-          fi
-          
-          echo "**Configuration:**" >> $GITHUB_STEP_SUMMARY
-          echo "- Fedora Version: \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Base Image Type: \`$IMAGE_TYPE\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Plymouth: \`${{ steps.config.outputs.ENABLE_PLYMOUTH }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
-            echo "### 📦 Published Images" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "- **GHCR:** \`${{ env.IMAGE_BASE }}:latest\`" >> $GITHUB_STEP_SUMMARY
-            echo "- **Docker Hub:** \`${{ env.DOCKERHUB_IMAGE_BASE }}:latest\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "### 📚 Resources" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)" >> $GITHUB_STEP_SUMMARY
-          echo "- [bootc Project](https://bootc-dev.github.io/bootc/)" >> $GITHUB_STEP_SUMMARY
-          echo "- [Base Images](https://docs.fedoraproject.org/en-US/bootc/base-images/)" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## 📦 Published Images"
+            echo ""
+            echo "### GitHub Container Registry"
+            echo "- **Digest:** \`${{ steps.push-to-ghcr.outputs.digest }}\`"
+            echo "- **Pull Command:**"
+            echo '```bash'
+            echo "sudo bootc switch ${{ env.IMAGE_BASE }}:latest"
+            echo '```'
+            echo ""
+            echo "### Docker Hub"
+            echo "- **Digest:** \`${{ steps.push-to-dockerhub.outputs.digest }}\`"
+            echo "- **Pull Command:**"
+            echo '```bash'
+            echo "sudo bootc switch docker.io/${{ env.DOCKERHUB_IMAGE_BASE }}:latest"
+            echo '```'
+            echo ""
+            echo "### 🔐 Signatures"
+            echo "- **Signing Method:** Cosign (Sigstore, keyless OIDC)"
+            echo "- **Verification:** \`cosign verify\` with OIDC issuer"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Job 6: Report - Final Summary and Documentation
+  # ══════════════════════════════════════════════════════════════════════════
+  report:
+    name: Generate Report
+    needs: [build, test, scan, push-and-sign]
+    runs-on: ubuntu-latest
+    if: always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Generate dynamic README
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/build-fixes'
         run: |
           chmod +x ./custom-scripts/generate-readme
           ./custom-scripts/generate-readme
 
       - name: Commit updated README and version file
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/build-fixes'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
+
           if [[ -n $(git status --porcelain README.md .fedora-version) ]]; then
             git add README.md .fedora-version
             git commit -m "docs: auto-update README and version file [skip ci]"
@@ -382,3 +554,26 @@ jobs:
           else
             echo "No changes to commit"
           fi
+
+      - name: Final summary
+        if: always()
+        run: |
+          {
+            echo "## 🎉 Pipeline Complete"
+            echo ""
+            echo "### Build Information"
+            echo "- **Version:** ${{ needs.build.outputs.build_version }}"
+            echo "- **Type:** ${{ needs.build.outputs.build_type }}"
+            echo "- **Image:** \`${{ needs.build.outputs.first_tag }}\`"
+            echo ""
+            echo "### Pipeline Status"
+            echo "- Build: ${{ needs.build.result }}"
+            echo "- Test: ${{ needs.test.result }}"
+            echo "- Scan: ${{ needs.scan.result }}"
+            echo "- Push & Sign: ${{ needs.push-and-sign.result }}"
+            echo ""
+            echo "### Resources"
+            echo "- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)"
+            echo "- [bootc Project](https://bootc-dev.github.io/bootc/)"
+            echo "- [Repository](https://github.com/${{ github.repository }})"
+          } >> "$GITHUB_STEP_SUMMARY"

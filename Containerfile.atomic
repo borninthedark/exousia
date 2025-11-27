@@ -8,7 +8,13 @@ ARG ENABLE_PLYMOUTH=true
 # Base image
 # ------------------------------
 FROM quay.io/fedora/fedora-sway-atomic:${FEDORA_VERSION}
+
+# OCI Labels for better metadata
 LABEL maintainer="uryu"
+LABEL org.opencontainers.image.title="Exousia Sway Atomic Desktop"
+LABEL org.opencontainers.image.description="Custom Fedora bootc image with Sway desktop and opinionated package selection"
+LABEL org.opencontainers.image.source="https://github.com/borninthedark/exousia"
+LABEL org.opencontainers.image.licenses="MIT"
 
 # ------------------------------
 # Environment

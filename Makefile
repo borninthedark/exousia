@@ -30,6 +30,19 @@ DETECTED_VERSION  := $(FEDORA_VERSION)
 DETECTED_TYPE     := $(IMAGE_TYPE)
 endif
 
+# Determine which Containerfile to use based on image type
+ifeq ($(DETECTED_TYPE),fedora-bootc)
+CONTAINERFILE     := Containerfile.bootc
+else
+CONTAINERFILE     := Containerfile.atomic
+endif
+
+# Detect available container build tool
+CONTAINER_TOOL    := $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null || command -v buildah 2>/dev/null || echo "none")
+ifeq ($(CONTAINER_TOOL),none)
+$(error No container build tool found. Please install podman, docker, or buildah)
+endif
+
 # ============================================================================
 # Color Output (optional, for better UX)
 # ============================================================================
@@ -62,13 +75,15 @@ build:
 	@echo "$(BLUE)==> Building bootc image$(NO_COLOR)"
 	@echo "    Version: $(DETECTED_VERSION)"
 	@echo "    Type: $(DETECTED_TYPE)"
+	@echo "    Containerfile: $(CONTAINERFILE)"
+	@echo "    Build tool: $(CONTAINER_TOOL)"
 	@echo "    Tags: $(GIT_VERSION), $(LATEST_TAG)"
-	podman build \
+	$(CONTAINER_TOOL) build \
 		--build-arg FEDORA_VERSION=$(DETECTED_VERSION) \
 		--build-arg IMAGE_TYPE=$(DETECTED_TYPE) \
 		-t $(IMAGE_GIT) \
 		-t $(IMAGE_LATEST) \
-		-f Containerfile \
+		-f $(CONTAINERFILE) \
 		.
 	@echo "$(GREEN)✓ Build completed successfully$(NO_COLOR)"
 
@@ -77,12 +92,13 @@ build-args:
 	@echo "$(BLUE)==> Building bootc image with custom arguments$(NO_COLOR)"
 	@echo "    Version: $(FEDORA_VERSION)"
 	@echo "    Type: $(IMAGE_TYPE)"
-	podman build \
+	@echo "    Build tool: $(CONTAINER_TOOL)"
+	$(CONTAINER_TOOL) build \
 		--build-arg FEDORA_VERSION=$(FEDORA_VERSION) \
 		--build-arg IMAGE_TYPE=$(IMAGE_TYPE) \
 		-t $(IMAGE_GIT) \
 		-t $(IMAGE_LATEST) \
-		-f Containerfile \
+		-f $(CONTAINERFILE) \
 		.
 	@echo "$(GREEN)✓ Build completed successfully$(NO_COLOR)"
 
@@ -112,7 +128,7 @@ test-setup:
 test-run:
 	@echo "$(BLUE)==> Running test suite$(NO_COLOR)"
 	@export TEST_IMAGE_TAG=$(IMAGE_LATEST); \
-	buildah unshare -- bats -r tests/
+	buildah unshare -- bats -r custom-tests/
 	@echo "$(GREEN)✓ All tests passed$(NO_COLOR)"
 
 ## test-clean: Clean up test resources
@@ -182,8 +198,8 @@ switch-version:
 ## push: Build and push the image to local registry
 push: build
 	@echo "$(BLUE)==> Pushing image to local registry$(NO_COLOR)"
-	podman push $(IMAGE_GIT)
-	podman push $(IMAGE_LATEST)
+	$(CONTAINER_TOOL) push $(IMAGE_GIT)
+	$(CONTAINER_TOOL) push $(IMAGE_LATEST)
 	@echo "$(GREEN)✓ Image pushed successfully$(NO_COLOR)"
 
 ## deploy: Display deployment instructions
@@ -207,13 +223,13 @@ deploy:
 ## clean: Remove built images and temporary files
 clean:
 	@echo "$(BLUE)==> Cleaning up$(NO_COLOR)"
-	@podman rmi -f $(IMAGE_GIT) $(IMAGE_LATEST) 2>/dev/null || true
+	@$(CONTAINER_TOOL) rmi -f $(IMAGE_GIT) $(IMAGE_LATEST) 2>/dev/null || true
 	@echo "$(GREEN)✓ Cleanup completed$(NO_COLOR)"
 
 ## clean-all: Remove all exousia images
 clean-all:
 	@echo "$(BLUE)==> Removing all exousia images$(NO_COLOR)"
-	@podman images | grep $(IMAGE_NAME) | awk '{print $$3}' | xargs -r podman rmi -f
+	@$(CONTAINER_TOOL) images | grep $(IMAGE_NAME) | awk '{print $$3}' | xargs -r $(CONTAINER_TOOL) rmi -f
 	@echo "$(GREEN)✓ All images removed$(NO_COLOR)"
 
 # ============================================================================

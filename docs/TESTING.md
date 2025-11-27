@@ -49,7 +49,7 @@ The Exousia bootc image test suite is a comprehensive, conditionally-aware testi
 ### Test File Structure
 
 ```
-tests/
+custom-tests/
 └── image_content.bats    # Main test suite
     ├── setup_file()      # One-time setup before all tests
     ├── teardown_file()   # Cleanup after all tests
@@ -359,17 +359,18 @@ TEST_IMAGE_TAG=localhost:5000/exousia:custom make test-run
 
 ```bash
 # Build image first
-podman build -t localhost:5000/exousia:test .
+# Note: Uses whatever container tool is available (podman, docker, or buildah)
+make build
 
 # Run tests
 export TEST_IMAGE_TAG=localhost:5000/exousia:test
-buildah unshare -- bats -r tests/
+buildah unshare -- bats -r custom-tests/
 
 # Verbose output
-buildah unshare -- bats -r tests/ --verbose-run
+buildah unshare -- bats -r custom-tests/ --verbose-run
 
 # Tap output format
-buildah unshare -- bats -r tests/ --formatter tap
+buildah unshare -- bats -r custom-tests/ --formatter tap
 ```
 
 ### Test Specific Scenarios
@@ -405,17 +406,17 @@ make build test
 #### Verbose Output
 
 ```bash
-buildah unshare -- bats -r tests/ --verbose-run --show-output-of-passing-tests
+buildah unshare -- bats -r custom-tests/ --verbose-run --show-output-of-passing-tests
 ```
 
 #### Single Test Execution
 
 ```bash
 # Run specific test by line number
-buildah unshare -- bats tests/image_content.bats:42
+buildah unshare -- bats custom-tests/image_content.bats:42
 
 # Run specific test by name (grep)
-buildah unshare -- bats tests/image_content.bats --filter "Plymouth"
+buildah unshare -- bats custom-tests/image_content.bats --filter "Plymouth"
 ```
 
 #### Interactive Debugging
@@ -615,7 +616,7 @@ setup_file() {
 **Solution**:
 ```bash
 export TEST_IMAGE_TAG=localhost:5000/exousia:latest
-buildah unshare -- bats -r tests/
+buildah unshare -- bats -r custom-tests/
 ```
 
 #### Issue: "Permission denied" when running tests
@@ -625,7 +626,7 @@ buildah unshare -- bats -r tests/
 **Solution**:
 ```bash
 # Always use buildah unshare
-buildah unshare -- bats -r tests/
+buildah unshare -- bats -r custom-tests/
 ```
 
 #### Issue: Tests pass locally but fail in CI
@@ -642,7 +643,7 @@ buildah unshare -- bats -r tests/
 **Cause**: Environment variable not set in container
 
 **Solution**:
-- Verify Containerfile sets `ENV BUILD_IMAGE_TYPE=${IMAGE_TYPE}`
+- Verify Containerfile.atomic or Containerfile.bootc sets `ENV BUILD_IMAGE_TYPE=${IMAGE_TYPE}`
 - Check build args passed correctly
 - Rebuild image with proper configuration
 
@@ -666,7 +667,7 @@ buildah run "$CONTAINER" -- printenv BUILD_IMAGE_TYPE
 #### 1. Enable Verbose Output
 
 ```bash
-buildah unshare -- bats -r tests/ --verbose-run --show-output-of-passing-tests
+buildah unshare -- bats -r custom-tests/ --verbose-run --show-output-of-passing-tests
 ```
 
 #### 2. Add Debug Output
@@ -682,7 +683,7 @@ buildah unshare -- bats -r tests/ --verbose-run --show-output-of-passing-tests
 #### 3. Run Single Test
 
 ```bash
-buildah unshare -- bats tests/image_content.bats:100
+buildah unshare -- bats custom-tests/image_content.bats:100
 ```
 
 #### 4. Manual Inspection
@@ -717,7 +718,7 @@ The test suite integrates with GitHub Actions via the workflow:
     TERM: xterm
   run: |
     FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-    TEST_IMAGE_TAG="$FIRST_TAG" buildah unshare -- bats -r tests
+    TEST_IMAGE_TAG="$FIRST_TAG" buildah unshare -- bats -r custom-tests
 ```
 
 ### CI Environment Variables
@@ -743,9 +744,9 @@ Tests have access to:
 
 ```
 ✗ Package 'example' should be installed
-  (in test file tests/image_content.bats, line 234)
+  (in test file custom-tests/image_content.bats, line 234)
   `assert_success "example should be installed"' failed
-  
+
   -- command failed --
   status : 1
   output : package example is not installed

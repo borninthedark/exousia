@@ -1,12 +1,8 @@
 # Fedora Bootc Custom Image
 
-[![CI/CD Pipeline](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions/workflows/build.yaml)
-[![Fedora Version](https://img.shields.io/badge/Fedora-42-51A2DA?logo=fedora)](https://fedoraproject.org)
-[![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
+This repository contains the configuration to build a custom, container-based immutable operating system using Fedora bootc (https://docs.fedoraproject.org/en-US/bootc/). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions.
 
-This repository contains the configuration to build a custom, container-based immutable operating system using [**Fedora bootc**](https://docs.fedoraproject.org/en-US/bootc/). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions.
-
-## 🎯 Philosophy: Exousia
+## Philosophy: Exousia
 
 Exousia (ἐξουσία) is Greek for "authority" and "power." It specifically means the right to exercise complete control.
 
@@ -17,22 +13,20 @@ Comprehensive testing ensures what you build actually works. Over 50 automated t
 Build what you need, how you need it, with confidence.
 
 
-## 📋 Current Configuration
+## Current Configuration
 
-- **Base Image:** `Fedora Sway Atomic Desktop`
-- **Image Type:** `fedora-sway-atomic`
-- **Fedora Version:** 42
+- Base Image: Fedora Sway Atomic Desktop
+- Image Type: fedora-sway-atomic
+- Fedora Version: 43
 
-- **Build Status:** [![Build Status](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions)
-
-## 🏗️ CI/CD Workflow: Fedora Bootc DevSec CI
+## CI/CD Workflow: Fedora Bootc DevSec CI
 
 The pipeline is defined in a single, unified GitHub Actions workflow that automates the entire image lifecycle. The workflow is triggered on:
 - Pushes and pull requests to the `main` branch
 - Nightly schedule (`20 4 * * *` UTC)
 - Manual workflow dispatch with version/image type selection
 
-### 1. Build Stage 🏗️
+### 1. Build Stage
 
 The first stage assembles the container image and prepares it for subsequent stages.
 
@@ -41,7 +35,7 @@ The first stage assembles the container image and prepares it for subsequent sta
 - **Build**: The image is built using **Buildah**, a daemonless container image builder optimized for CI environments
 - **Version Switching**: Supports dynamic Fedora version and base image type switching via workflow dispatch
 
-### 2. Test Stage 🧪
+### 2. Test Stage
 
 After a successful build, the image and repository scripts undergo automated testing.
 
@@ -49,14 +43,14 @@ After a successful build, the image and repository scripts undergo automated tes
 - **Script Analysis**: All shell scripts are linted with **ShellCheck**
 - **Bootc Validation**: Runs `bootc container lint` to verify bootc compliance
 
-### 3. Scan Stage 🛡️
+### 3. Scan Stage
 
 Security scanning ensures the image meets security standards.
 
 - **Vulnerability Scan**: **Trivy** scans for `CRITICAL` and `HIGH` severity CVEs
 - **Static Analysis**: **Semgrep** performs static code analysis
 
-### 4. Push & Sign Stage 🚀
+### 4. Push & Sign Stage
 
 If tests pass and the event is not a pull request, the image is published and cryptographically signed.
 
@@ -65,7 +59,7 @@ If tests pass and the event is not a pull request, the image is published and cr
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -113,7 +107,7 @@ make push
 
 ---
 
-## 🔧 Customization
+## Customization
 
 ### Switching Fedora Versions
 
@@ -163,7 +157,7 @@ Add executable scripts to `custom-scripts/` - they will be copied to `/usr/local
 
 ---
 
-## 🔐 Required Secrets
+## Required Secrets
 
 To use the full CI/CD pipeline, configure these secrets in your repository:
 
@@ -178,7 +172,7 @@ To use the full CI/CD pipeline, configure these secrets in your repository:
 
 ---
 
-## 🐛 Known Issues
+## Known Issues
 
 ### GHCR Authentication
 
@@ -188,7 +182,7 @@ Currently experiencing authentication issues with `bootc switch` and `bootc upgr
 
 ---
 
-## 📚 Documentation & Resources
+## Documentation & Resources
 
 ### Official Documentation
 - [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)
@@ -213,15 +207,15 @@ Currently experiencing authentication issues with `bootc switch` and `bootc upgr
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - The Fedora Project and bootc maintainers
 - The broader container and immutable OS community
@@ -229,7 +223,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Built with ❤️ using Fedora bootc**
+**Built using Fedora bootc**
 
 *This README was automatically generated on 2025-09-30 21:27:37 UTC*
 

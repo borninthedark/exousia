@@ -309,20 +309,20 @@ assert_output --partial "expected text"
 
 ```bash
 # By line number
-buildah unshare -- bats tests/image_content.bats:LINE_NUMBER
+buildah unshare -- bats custom-tests/image_content.bats:LINE_NUMBER
 
 # By filter/pattern
-buildah unshare -- bats tests/image_content.bats --filter "package"
+buildah unshare -- bats custom-tests/image_content.bats --filter "package"
 ```
 
 ### Verbose Output
 
 ```bash
 # Show all output
-buildah unshare -- bats tests/image_content.bats:LINE_NUMBER --verbose-run
+buildah unshare -- bats custom-tests/image_content.bats:LINE_NUMBER --verbose-run
 
 # Show passing test output
-buildah unshare -- bats -r tests/ --show-output-of-passing-tests
+buildah unshare -- bats -r custom-tests/ --show-output-of-passing-tests
 ```
 
 ### Add Debug Output
