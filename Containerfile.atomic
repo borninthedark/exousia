@@ -94,6 +94,19 @@ RUN set -euxo pipefail; \
     dnf clean all
     
 # ------------------------------
+# NVM (Node Version Manager) - System-wide installation
+# ------------------------------
+RUN set -euxo pipefail; \
+    export NVM_VERSION=v0.40.1; \
+    export NVM_DIR=/opt/nvm; \
+    mkdir -p ${NVM_DIR}; \
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh | bash; \
+    echo 'export NVM_DIR="/opt/nvm"' > /etc/profile.d/nvm.sh; \
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /etc/profile.d/nvm.sh; \
+    echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> /etc/profile.d/nvm.sh; \
+    chmod +x /etc/profile.d/nvm.sh
+
+# ------------------------------
 # Flathub
 # ------------------------------
 RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo

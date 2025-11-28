@@ -113,28 +113,29 @@ make push
 
 ### Post-Installation Setup
 
-#### Installing NVM (Node Version Manager)
+#### Using NVM (Node Version Manager)
 
-After switching to the Exousia image, you can install [nvm](https://github.com/nvm-sh/nvm) for managing Node.js versions:
+[NVM](https://github.com/nvm-sh/nvm) is pre-installed system-wide in `/opt/nvm` and automatically loaded for all shell sessions. To start using it:
 
 ```bash
-# Download and install nvm
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-
-# Load nvm into your current shell session
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-
 # Install the latest LTS version of Node.js
 nvm install --lts
+
+# Or install a specific version
+nvm install 20
+
+# List installed versions
+nvm list
+
+# Switch between versions
+nvm use 20
 
 # Verify installation
 node --version
 npm --version
 ```
 
-The nvm installation script automatically adds the necessary configuration to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.). For more information and advanced usage, visit the [nvm repository](https://github.com/nvm-sh/nvm).
+For more information and advanced usage, visit the [nvm repository](https://github.com/nvm-sh/nvm).
 
 ---
 
