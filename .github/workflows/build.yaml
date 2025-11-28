@@ -597,20 +597,37 @@ jobs:
         run: |
           echo "::group::Pushing to GitHub Container Registry"
 
+          DIGEST=""
+          FIRST=true
+
           # Push each tag to GHCR
           while IFS= read -r tag; do
             if [[ -n "$tag" ]]; then
               IMAGE_REF="${{ env.IMAGE_BASE }}:${tag}"
               echo "Pushing: $IMAGE_REF"
-              buildah push "$IMAGE_REF"
+
+              # Capture digest from first push
+              if [[ "$FIRST" == "true" ]]; then
+                PUSH_OUTPUT=$(buildah push --digestfile /tmp/ghcr-digest.txt "$IMAGE_REF" 2>&1)
+                if [[ -f /tmp/ghcr-digest.txt ]]; then
+                  DIGEST=$(cat /tmp/ghcr-digest.txt)
+                  echo "Captured digest from push: $DIGEST"
+                fi
+                FIRST=false
+              else
+                buildah push "$IMAGE_REF"
+              fi
             fi
           done <<< "${{ steps.tag-filters.outputs.ghcr_tags }}"
 
-          # Get digest from the first tag for signing
-          FIRST_TAG=$(echo "${{ steps.tag-filters.outputs.ghcr_tags }}" | head -n1)
-          DIGEST=$(buildah inspect "${{ env.IMAGE_BASE }}:${FIRST_TAG}" | jq -r '.Digest // .ManifestDigest')
-          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
-          echo "GHCR Digest: $DIGEST"
+          # Set output only if we have a valid digest
+          if [[ -n "$DIGEST" && "$DIGEST" != "null" ]]; then
+            echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+            echo "GHCR Digest: $DIGEST"
+          else
+            echo "No valid digest captured"
+            echo "digest=" >> $GITHUB_OUTPUT
+          fi
           echo "::endgroup::"
 
       - name: Push bootc image to Docker Hub
@@ -618,20 +635,37 @@ jobs:
         run: |
           echo "::group::Pushing to Docker Hub"
 
+          DIGEST=""
+          FIRST=true
+
           # Push each tag to Docker Hub
           while IFS= read -r tag; do
             if [[ -n "$tag" ]]; then
               IMAGE_REF="${{ env.DOCKERHUB_IMAGE_BASE }}:${tag}"
               echo "Pushing: $IMAGE_REF"
-              buildah push "$IMAGE_REF"
+
+              # Capture digest from first push
+              if [[ "$FIRST" == "true" ]]; then
+                PUSH_OUTPUT=$(buildah push --digestfile /tmp/dockerhub-digest.txt "$IMAGE_REF" 2>&1)
+                if [[ -f /tmp/dockerhub-digest.txt ]]; then
+                  DIGEST=$(cat /tmp/dockerhub-digest.txt)
+                  echo "Captured digest from push: $DIGEST"
+                fi
+                FIRST=false
+              else
+                buildah push "$IMAGE_REF"
+              fi
             fi
           done <<< "${{ steps.tag-filters.outputs.dockerhub_tags }}"
 
-          # Get digest from the first tag for signing
-          FIRST_TAG=$(echo "${{ steps.tag-filters.outputs.dockerhub_tags }}" | head -n1)
-          DIGEST=$(buildah inspect "${{ env.DOCKERHUB_IMAGE_BASE }}:${FIRST_TAG}" | jq -r '.Digest // .ManifestDigest')
-          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
-          echo "Docker Hub Digest: $DIGEST"
+          # Set output only if we have a valid digest
+          if [[ -n "$DIGEST" && "$DIGEST" != "null" ]]; then
+            echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+            echo "Docker Hub Digest: $DIGEST"
+          else
+            echo "No valid digest captured"
+            echo "digest=" >> $GITHUB_OUTPUT
+          fi
           echo "::endgroup::"
 
       - name: Install Cosign for image signing
@@ -642,16 +676,19 @@ jobs:
         run: |
           echo "::group::Image Signing"
 
-          if [[ -n "${{ steps.push-to-ghcr.outputs.digest }}" ]]; then
-            echo "Signing GHCR bootc image by digest: ${{ steps.push-to-ghcr.outputs.digest }}"
-            cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-to-ghcr.outputs.digest }}"
+          GHCR_DIGEST="${{ steps.push-to-ghcr.outputs.digest }}"
+          DOCKERHUB_DIGEST="${{ steps.push-to-dockerhub.outputs.digest }}"
+
+          if [[ -n "$GHCR_DIGEST" && "$GHCR_DIGEST" != "null" ]]; then
+            echo "Signing GHCR bootc image by digest: $GHCR_DIGEST"
+            cosign sign --yes "${{ env.IMAGE_BASE }}@$GHCR_DIGEST"
           else
             echo "No GHCR digest available; skipping GHCR signing"
           fi
 
-          if [[ -n "${{ steps.push-to-dockerhub.outputs.digest }}" ]]; then
-            echo "Signing Docker Hub bootc image by digest: ${{ steps.push-to-dockerhub.outputs.digest }}"
-            cosign sign --yes "${{ env.DOCKERHUB_IMAGE_BASE }}@${{ steps.push-to-dockerhub.outputs.digest }}"
+          if [[ -n "$DOCKERHUB_DIGEST" && "$DOCKERHUB_DIGEST" != "null" ]]; then
+            echo "Signing Docker Hub bootc image by digest: $DOCKERHUB_DIGEST"
+            cosign sign --yes "${{ env.DOCKERHUB_IMAGE_BASE }}@$DOCKERHUB_DIGEST"
           else
             echo "No Docker Hub digest available; skipping Docker Hub signing"
           fi
