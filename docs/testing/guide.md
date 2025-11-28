@@ -81,7 +81,7 @@ Validates operating system and Fedora version.
 Validates container registry authentication for bootc operations.
 
 **Tests:**
-- auth.json file presence and content
+- auth.json file presence and content (GHCR and Docker Hub credentials for docker.io/1borninthedark/exousia)
 - ostree symlink configuration
 - tmpfiles.d configuration
 
@@ -92,11 +92,11 @@ Validates container registry authentication for bootc operations.
 Verifies custom package management and boot splash configuration.
 
 **Tests:**
-- Package list files (packages.add, packages.remove, packages.sway)
-- Plymouth theme installation
-- Plymouth configuration files
-- Kernel arguments
-- Default theme setting
+- Package list files (packages.add, packages.remove, packages.sway for fedora-bootc)
+- Plymouth theme installation for fedora-bootc builds
+- Plymouth configuration files for fedora-bootc builds
+- Kernel arguments when Plymouth is enabled for fedora-bootc
+- Default theme setting for fedora-bootc builds
 
 ### 4. Custom Scripts
 

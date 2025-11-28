@@ -104,6 +104,9 @@ is_plymouth_enabled() {
         run grep -q "ghcr.io" "$MOUNT_POINT/usr/lib/container-auth.json"
         assert_success "/usr/lib/container-auth.json should contain ghcr.io"
 
+        run grep -Eq "docker\\.io|index\\.docker\\.io" "$MOUNT_POINT/usr/lib/container-auth.json"
+        assert_success "/usr/lib/container-auth.json should contain Docker Hub credentials for docker.io/1borninthedark/exousia"
+
         run test -L "$MOUNT_POINT/etc/ostree/auth.json"
         assert_success "/etc/ostree/auth.json should be a symbolic link"
 
@@ -121,7 +124,11 @@ is_plymouth_enabled() {
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-removed"
 }
 
-@test "Sway package list should exist (packages.sway)" {
+@test "Sway package list should exist for fedora-bootc (packages.sway)" {
+    if ! is_fedora_bootc; then
+        skip "Sway package list only applies to fedora-bootc builds"
+    fi
+
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-sway"
 }
 
@@ -169,7 +176,11 @@ is_plymouth_enabled() {
     assert_file_executable "$MOUNT_POINT/usr/local/bin/dracut-rebuild"
 }
 
-@test "Custom Plymouth theme should be copied" {
+@test "Custom Plymouth theme should be copied for fedora-bootc" {
+    if ! is_fedora_bootc; then
+        skip "Custom Plymouth theme is only bundled in fedora-bootc builds"
+    fi
+
     assert_dir_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/"
     assert_file_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/bgrt-better-luks.plymouth"
 }
@@ -178,17 +189,14 @@ is_plymouth_enabled() {
     if ! is_plymouth_enabled; then
         skip "Plymouth is disabled (ENABLE_PLYMOUTH=false)"
     fi
-    
+
+    if ! is_fedora_bootc; then
+        skip "Plymouth configuration only applies to fedora-bootc builds"
+    fi
+
     run buildah run "$CONTAINER" -- rpm -q plymouth
     assert_success "Plymouth should be installed when enabled"
-    
-    # For fedora-sway-atomic, Plymouth comes pre-configured with default theme
-    if is_fedora_sway_atomic; then
-        echo "# fedora-sway-atomic has Plymouth pre-configured with bgrt theme" >&3
-        # Verify Plymouth is installed - configuration is handled by base image
-        return 0
-    fi
-    
+
     # For fedora-bootc, check our custom configuration
     assert_file_exists "$MOUNT_POINT/usr/lib/dracut/dracut.conf.d/plymouth.conf"
     assert_file_exists "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
@@ -219,6 +227,10 @@ is_plymouth_enabled() {
     if ! is_plymouth_enabled; then
         skip "Plymouth is disabled, initramfs may not have been rebuilt"
     fi
+
+    if ! is_fedora_bootc; then
+        skip "Initramfs rebuild is only validated for fedora-bootc builds"
+    fi
     
     # Find kernel version
     local kver
@@ -240,20 +252,19 @@ is_plymouth_enabled() {
     if ! is_plymouth_enabled; then
         skip "Plymouth is disabled (ENABLE_PLYMOUTH=false)"
     fi
-    
+
+    if ! is_fedora_bootc; then
+        skip "Plymouth theme management is only validated for fedora-bootc builds"
+    fi
+
     run buildah run "$CONTAINER" -- sh -c "plymouth-set-default-theme 2>/dev/null || echo 'not-set'"
-    
+
     if [[ "$output" == "not-set" ]]; then
         skip "plymouth-set-default-theme command not available"
     fi
-    
-    # fedora-sway-atomic uses default "bgrt" theme (this is correct and expected)
-    if is_fedora_sway_atomic; then
-        assert_output "bgrt" "fedora-sway-atomic should use default bgrt theme"
-    else
-        # fedora-bootc should have our custom theme
-        assert_output "bgrt-better-luks" "fedora-bootc should use custom bgrt-better-luks theme"
-    fi
+
+    # fedora-bootc should have our custom theme
+    assert_output "bgrt-better-luks" "fedora-bootc should use custom bgrt-better-luks theme"
 }
 
 @test "/var/tmp should be symlinked to /tmp" {

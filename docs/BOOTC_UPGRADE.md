@@ -47,13 +47,13 @@ sudo systemctl reboot
 
 ```bash
 # Switch to a specific tag
-sudo bootc switch docker.io/borninthedark/exousia:v1.2.0
+sudo bootc switch docker.io/1borninthedark/exousia:v1.2.0
 
 # Switch to nightly builds
-sudo bootc switch docker.io/borninthedark/exousia:nightly
+sudo bootc switch docker.io/1borninthedark/exousia:nightly
 
 # Switch back to latest
-sudo bootc switch docker.io/borninthedark/exousia:latest
+sudo bootc switch docker.io/1borninthedark/exousia:latest
 ```
 
 ## Upgrade Workflow Best Practices
@@ -74,7 +74,7 @@ sudo bootc switch docker.io/borninthedark/exousia:latest
 3. **Verify image availability**
    ```bash
    # Check if newer image exists
-   skopeo inspect docker://docker.io/borninthedark/exousia:latest
+   skopeo inspect docker://docker.io/1borninthedark/exousia:latest
    ```
 
 4. **Review changelog/release notes**
@@ -232,7 +232,7 @@ Create a script to check for updates:
 # check-updates.sh
 
 CURRENT_DIGEST=$(bootc status --json | jq -r '.status.booted.image.imageDigest')
-LATEST_DIGEST=$(skopeo inspect docker://docker.io/borninthedark/exousia:latest | jq -r '.Digest')
+LATEST_DIGEST=$(skopeo inspect docker://docker.io/1borninthedark/exousia:latest | jq -r '.Digest')
 
 if [ "$CURRENT_DIGEST" != "$LATEST_DIGEST" ]; then
     echo "Update available!"

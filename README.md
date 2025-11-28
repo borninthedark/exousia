@@ -79,7 +79,7 @@ If tests pass and the event is not a pull request, the image is published and cr
 
 ```bash
 # Switch to the custom bootc image
-sudo bootc switch docker.io/borninthedark/exousia:latest
+sudo bootc switch docker.io/1borninthedark/exousia:latest
 
 # Apply the update
 sudo bootc upgrade

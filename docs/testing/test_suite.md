@@ -97,6 +97,7 @@ graph TD
 
 **Tests**:
 - Verifies auth.json presence and content
+- Confirms credentials for both GHCR and Docker Hub (docker.io/1borninthedark/exousia)
 - Checks ostree symlink configuration
 - Validates tmpfiles.d configuration
 
@@ -119,10 +120,9 @@ graph TD
 **Purpose**: Verify custom package management and boot splash
 
 **Tests**:
-- Package list files exist (packages.add, packages.remove, packages.sway)
-- Plymouth theme properly installed
-- Plymouth configuration files present
-- Kernel arguments configured
+- Package list files exist (packages.add, packages.remove, packages.sway for fedora-bootc)
+- Plymouth theme and configuration applied for fedora-bootc builds
+- Kernel arguments configured when Plymouth is enabled for fedora-bootc
 
 **Example**:
 ```bash
