@@ -425,6 +425,13 @@ jobs:
         run: |
           echo "${{ secrets.GHCR_PAT }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
 
+      - name: Login to GHCR with Docker (for Trivy)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
       - name: Pull image from GHCR
         run: |
           echo "::group::Pulling Image from Registry"
