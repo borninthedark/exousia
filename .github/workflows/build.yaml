@@ -513,8 +513,9 @@ jobs:
       - name: Load image from artifact
         run: |
           echo "::group::Loading Image"
-          echo "Loading image from exousia-image.tar"
-          buildah pull "oci-archive:exousia-image.tar"
+          FIRST_TAG="${{ needs.build.outputs.first_tag }}"
+          echo "Loading image from exousia-image.tar with tag: $FIRST_TAG"
+          buildah pull "oci-archive:exousia-image.tar:$FIRST_TAG"
           echo "Image loaded successfully"
           buildah images
           echo "::endgroup::"
@@ -533,14 +534,24 @@ jobs:
           echo "::group::Tagging and Pushing Images"
           FIRST_TAG="${{ needs.build.outputs.first_tag }}"
 
+          # Get the image ID to use as source for all tags
+          IMAGE_ID=$(buildah images --format '{{.ID}}' --filter reference="$FIRST_TAG" | head -n1)
+          echo "Image ID: $IMAGE_ID"
+
+          if [[ -z "$IMAGE_ID" ]]; then
+            echo "::error::Failed to get image ID for $FIRST_TAG"
+            exit 1
+          fi
+
           # Parse all tags and push to registries
           echo "Processing tags from metadata-action..."
           while IFS= read -r full_tag; do
             if [[ -n "$full_tag" ]]; then
               echo "Tagging and pushing: $full_tag"
-              buildah tag "$FIRST_TAG" "$full_tag"
+              # Tag using image ID instead of tag name for reliability
+              buildah tag "$IMAGE_ID" "$full_tag"
               DIGEST=$(buildah push --digestfile /tmp/digest.txt "$full_tag" && cat /tmp/digest.txt)
-              echo "Pushed with digest: $DIGEST"
+              echo "Pushed $full_tag with digest: $DIGEST"
 
               # Capture digest for signing (from first push of each registry)
               # This ensures ALL builds get signed, not just those with :latest tag
