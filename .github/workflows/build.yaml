@@ -535,13 +535,16 @@ jobs:
         run: |
           echo "::group::Tagging and Pushing Images"
           TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
+          echo "Using temp image: $TEMP_IMAGE"
 
           # Get the image ID to use as source for all tags
-          IMAGE_ID=$(buildah images --format '{{.ID}}' --filter reference="$FIRST_TAG" | head -n1)
+          IMAGE_ID=$(buildah images --format '{{.ID}}' --filter reference="$TEMP_IMAGE" | head -n1)
           echo "Image ID: $IMAGE_ID"
 
           if [[ -z "$IMAGE_ID" ]]; then
-            echo "::error::Failed to get image ID for $FIRST_TAG"
+            echo "::error::Failed to get image ID for $TEMP_IMAGE"
+            echo "Available images:"
+            buildah images
             exit 1
           fi
 
@@ -550,7 +553,8 @@ jobs:
           while IFS= read -r full_tag; do
             if [[ -n "$full_tag" ]]; then
               echo "Tagging and pushing: $full_tag"
-              buildah tag "$TEMP_IMAGE" "$full_tag"
+              # Use IMAGE_ID instead of TEMP_IMAGE for reliability
+              buildah tag "$IMAGE_ID" "$full_tag"
               DIGEST=$(buildah push --digestfile /tmp/digest.txt "$full_tag" && cat /tmp/digest.txt)
               echo "Pushed $full_tag with digest: $DIGEST"
 
