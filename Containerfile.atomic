@@ -101,11 +101,11 @@ RUN set -euxo pipefail; \
     export NVM_DIR=/opt/nvm; \
     mkdir -p ${NVM_DIR}; \
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh | bash; \
-    cat > /etc/profile.d/nvm.sh <<'EOF'
-export NVM_DIR="/opt/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-EOF
+    printf '%s\n%s\n%s\n' \
+        'export NVM_DIR="/opt/nvm"' \
+        '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' \
+        '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' \
+        > /etc/profile.d/nvm.sh; \
     chmod +x /etc/profile.d/nvm.sh
 
 # ------------------------------
