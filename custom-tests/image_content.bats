@@ -104,6 +104,9 @@ is_plymouth_enabled() {
         run grep -q "ghcr.io" "$MOUNT_POINT/usr/lib/container-auth.json"
         assert_success "/usr/lib/container-auth.json should contain ghcr.io"
 
+        run grep -q "docker.io/1borninthedark/exousia" "$MOUNT_POINT/usr/lib/container-auth.json"
+        assert_success "/usr/lib/container-auth.json should contain Docker Hub credentials for docker.io/1borninthedark/exousia"
+
         run test -L "$MOUNT_POINT/etc/ostree/auth.json"
         assert_success "/etc/ostree/auth.json should be a symbolic link"
 
