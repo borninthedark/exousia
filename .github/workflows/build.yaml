@@ -49,6 +49,7 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/exousia
+  DOCKERHUB_IMAGE_BASE: docker.io/1borninthedark/exousia
 
 jobs:
   # ══════════════════════════════════════════════════════════════════════════
@@ -218,6 +219,7 @@ jobs:
         with:
           images: |
             ${{ env.IMAGE_BASE }}
+            ${{ env.DOCKERHUB_IMAGE_BASE }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,format=long
@@ -238,7 +240,18 @@ jobs:
       - name: Create auth.json secret for build
         run: |
           mkdir -p ./bootc-secrets
-          echo '{"auths":{"ghcr.io":{"auth":""}}}' > ./bootc-secrets/auth.json
+          GHCR_AUTH=$(printf "%s:%s" "${{ github.actor }}" "${{ secrets.GHCR_PAT }}" | base64 -w0)
+          DOCKERHUB_AUTH=$(printf "%s:%s" "${{ secrets.DOCKERHUB_USERNAME }}" "${{ secrets.DOCKERHUB_TOKEN }}" | base64 -w0)
+
+          cat > ./bootc-secrets/auth.json <<EOF
+          {
+            "auths": {
+              "ghcr.io": {"auth": "${GHCR_AUTH}"},
+              "docker.io": {"auth": "${DOCKERHUB_AUTH}"},
+              "docker.io/1borninthedark/exousia": {"auth": "${DOCKERHUB_AUTH}"}
+            }
+          }
+          EOF
 
       - name: Build image with Buildah
         id: build-image
@@ -490,6 +503,7 @@ jobs:
     if: github.event_name != 'pull_request'
     outputs:
       ghcr_digest: ${{ steps.push-images.outputs.ghcr_digest }}
+      dockerhub_digest: ${{ steps.push-images.outputs.dockerhub_digest }}
 
     steps:
       - name: Download image artifact
@@ -510,6 +524,10 @@ jobs:
         run: |
           echo "${{ secrets.GHCR_PAT }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
 
+      - name: Login to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | buildah login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
+
       - name: Tag and push images
         id: push-images
         run: |
@@ -525,16 +543,21 @@ jobs:
               DIGEST=$(buildah push --digestfile /tmp/digest.txt "$full_tag" && cat /tmp/digest.txt)
               echo "Pushed with digest: $DIGEST"
 
-              # Capture digest for the latest tag
+              # Capture digest for the latest tag of each registry
               if [[ "$full_tag" == "${{ env.IMAGE_BASE }}:latest" ]]; then
                 echo "$DIGEST" > /tmp/ghcr-digest.txt
+              elif [[ "$full_tag" == "${{ env.DOCKERHUB_IMAGE_BASE }}:latest" ]]; then
+                echo "$DIGEST" > /tmp/dockerhub-digest.txt
               fi
             fi
           done <<< "${{ needs.build.outputs.image_tags }}"
 
-          # Output digest
+          # Output digests
           if [[ -f /tmp/ghcr-digest.txt ]]; then
             echo "ghcr_digest=$(cat /tmp/ghcr-digest.txt)" >> $GITHUB_OUTPUT
+          fi
+          if [[ -f /tmp/dockerhub-digest.txt ]]; then
+            echo "dockerhub_digest=$(cat /tmp/dockerhub-digest.txt)" >> $GITHUB_OUTPUT
           fi
 
           echo "::endgroup::"
@@ -542,11 +565,20 @@ jobs:
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.5.0
 
+      - name: Login to Docker Hub for signing
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Sign container images (keyless OIDC)
         run: |
           echo "::group::Image Signing"
           echo "Signing GHCR image by digest: ${{ steps.push-images.outputs.ghcr_digest }}"
           cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-images.outputs.ghcr_digest }}"
+
+          echo "Signing Docker Hub image by digest: ${{ steps.push-images.outputs.dockerhub_digest }}"
+          cosign sign --yes "${{ env.DOCKERHUB_IMAGE_BASE }}@${{ steps.push-images.outputs.dockerhub_digest }}"
           echo "::endgroup::"
         env:
           COSIGN_EXPERIMENTAL: "true"
@@ -562,6 +594,13 @@ jobs:
             echo "- **Pull Command:**"
             echo '```bash'
             echo "sudo bootc switch ${{ env.IMAGE_BASE }}:latest"
+            echo '```'
+            echo ""
+            echo "### Docker Hub"
+            echo "- **Digest:** \`${{ steps.push-images.outputs.dockerhub_digest }}\`"
+            echo "- **Pull Command:**"
+            echo '```bash'
+            echo "sudo bootc switch ${{ env.DOCKERHUB_IMAGE_BASE }}:latest"
             echo '```'
             echo ""
             echo "### 🔐 Signatures"
