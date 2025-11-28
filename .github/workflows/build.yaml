@@ -536,13 +536,13 @@ jobs:
       - name: Extract tags by registry
         id: tag-filters
         run: |
-          echo "ghcr_tags<<'EOF'" >> $GITHUB_OUTPUT
-          echo "${{ steps.meta.outputs.tags }}" | sed -n "s|^${{ env.IMAGE_BASE }}:||p" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "ghcr_tags<<EOF" >> "$GITHUB_OUTPUT"
+          echo "${{ steps.meta.outputs.tags }}" | sed -n "s|^${{ env.IMAGE_BASE }}:||p" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
-          echo "dockerhub_tags<<'EOF'" >> $GITHUB_OUTPUT
-          echo "${{ steps.meta.outputs.tags }}" | sed -n "s|^${{ env.DOCKERHUB_IMAGE_BASE }}:||p" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "dockerhub_tags<<EOF" >> "$GITHUB_OUTPUT"
+          echo "${{ steps.meta.outputs.tags }}" | sed -n "s|^${{ env.DOCKERHUB_IMAGE_BASE }}:||p" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Login to GitHub Container Registry
         uses: redhat-actions/podman-login@v1
