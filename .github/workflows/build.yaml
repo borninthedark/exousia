@@ -15,7 +15,7 @@ on:
           - 'current'
           - '42'
           - '43'
-          - '41'
+          - '44'
           - 'rawhide'
         default: 'current'
       image_type:
