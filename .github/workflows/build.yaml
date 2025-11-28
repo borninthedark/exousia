@@ -537,11 +537,11 @@ jobs:
           TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
 
           # Get the image ID to use as source for all tags
-          IMAGE_ID=$(buildah images --format '{{.ID}}' --filter reference="$FIRST_TAG" | head -n1)
+          IMAGE_ID=$(buildah images --format '{{.ID}}' --filter reference="$TEMP_IMAGE" | head -n1)
           echo "Image ID: $IMAGE_ID"
 
           if [[ -z "$IMAGE_ID" ]]; then
-            echo "::error::Failed to get image ID for $FIRST_TAG"
+            echo "::error::Failed to get image ID for $TEMP_IMAGE"
             exit 1
           fi
 
