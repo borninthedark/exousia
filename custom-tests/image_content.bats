@@ -165,69 +165,74 @@ is_plymouth_enabled() {
     assert_failure "/var/roothome should not exist in fedora-sway-atomic"
 }
 
-# --- Plymouth Tests (Conditional) ---
+# --- Plymouth Tests (fedora-bootc only) ---
 
 @test "Plymouth scripts should be present" {
     assert_file_executable "$MOUNT_POINT/usr/local/bin/setup-plymouth-theme"
     assert_file_executable "$MOUNT_POINT/usr/local/bin/dracut-rebuild"
 }
 
-@test "Custom Plymouth theme should be copied" {
+@test "Custom Plymouth theme should be copied for fedora-bootc" {
+    if ! is_fedora_bootc; then
+        skip "Plymouth theme test only applies to fedora-bootc builds"
+    fi
+
     assert_dir_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/"
     assert_file_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/bgrt-better-luks.plymouth"
 }
 
-@test "Plymouth should be configured if enabled" {
+@test "Plymouth should be configured if enabled (fedora-bootc only)" {
+    if ! is_fedora_bootc; then
+        skip "Plymouth configuration test only applies to fedora-bootc builds"
+    fi
+
     if ! is_plymouth_enabled; then
         skip "Plymouth is disabled (ENABLE_PLYMOUTH=false)"
     fi
-    
+
     run buildah run "$CONTAINER" -- rpm -q plymouth
     assert_success "Plymouth should be installed when enabled"
-    
-    # For fedora-sway-atomic, Plymouth comes pre-configured with default theme
-    if is_fedora_sway_atomic; then
-        echo "# fedora-sway-atomic has Plymouth pre-configured with bgrt theme" >&3
-        # Verify Plymouth is installed - configuration is handled by base image
-        return 0
-    fi
-    
+
     # For fedora-bootc, check our custom configuration
     assert_file_exists "$MOUNT_POINT/usr/lib/dracut/dracut.conf.d/plymouth.conf"
     assert_file_exists "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
-    
+
     run grep -q 'splash' "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
     assert_success "Kernel arguments should contain 'splash'"
-    
+
     run grep -q 'quiet' "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
     assert_success "Kernel arguments should contain 'quiet'"
 }
 
-@test "Plymouth dracut configuration should be correct if enabled" {
-    if ! is_plymouth_enabled; then
-        skip "Plymouth is disabled (ENABLE_PLYMOUTH=false)"
-    fi
-    
+@test "Plymouth dracut configuration should be correct if enabled (fedora-bootc only)" {
     if ! is_fedora_bootc; then
         skip "Plymouth dracut configuration test only applies to fedora-bootc builds"
     fi
-    
+
+    if ! is_plymouth_enabled; then
+        skip "Plymouth is disabled (ENABLE_PLYMOUTH=false)"
+    fi
+
     assert_file_exists "$MOUNT_POINT/usr/lib/dracut/dracut.conf.d/plymouth.conf"
-    
+
     run grep -q 'add_dracutmodules.*plymouth' "$MOUNT_POINT/usr/lib/dracut/dracut.conf.d/plymouth.conf"
     assert_success "Dracut config should include Plymouth module"
 }
 
-@test "Initramfs should exist if Plymouth was enabled during build" {
+@test "Initramfs should exist if Plymouth was enabled during build (fedora-bootc only)" {
+    if ! is_fedora_bootc; then
+        skip "Initramfs test only applies to fedora-bootc builds"
+    fi
+
     if ! is_plymouth_enabled; then
         skip "Plymouth is disabled, initramfs may not have been rebuilt"
     fi
-    
+
     # Find kernel version
     local kver
     if [[ -d "$MOUNT_POINT/usr/lib/modules" ]]; then
         kver=$(cd "$MOUNT_POINT/usr/lib/modules" && echo * | awk '{print $1}')
-        
+
         if [[ "$kver" != "*" ]] && [[ -d "$MOUNT_POINT/usr/lib/modules/$kver" ]]; then
             assert_file_exists "$MOUNT_POINT/usr/lib/modules/$kver/initramfs.img" \
                 "Initramfs should exist for kernel $kver"
@@ -239,32 +244,35 @@ is_plymouth_enabled() {
     fi
 }
 
-@test "Plymouth theme should be set correctly if enabled" {
+@test "Plymouth theme should be set correctly if enabled (fedora-bootc only)" {
+    if ! is_fedora_bootc; then
+        skip "Plymouth theme test only applies to fedora-bootc builds"
+    fi
+
     if ! is_plymouth_enabled; then
         skip "Plymouth is disabled (ENABLE_PLYMOUTH=false)"
     fi
-    
+
     run buildah run "$CONTAINER" -- sh -c "plymouth-set-default-theme 2>/dev/null || echo 'not-set'"
-    
+
     if [[ "$output" == "not-set" ]]; then
         skip "plymouth-set-default-theme command not available"
     fi
-    
-    # fedora-sway-atomic uses default "bgrt" theme (this is correct and expected)
-    if is_fedora_sway_atomic; then
-        assert_output "bgrt" "fedora-sway-atomic should use default bgrt theme"
-    else
-        # fedora-bootc should have our custom theme
-        assert_output "bgrt-better-luks" "fedora-bootc should use custom bgrt-better-luks theme"
-    fi
+
+    # fedora-bootc should have our custom theme
+    assert_output "bgrt-better-luks" "fedora-bootc should use custom bgrt-better-luks theme"
 }
 
-@test "/var/tmp should be symlinked to /tmp" {
+@test "/var/tmp should be symlinked to /tmp (fedora-bootc only)" {
+    if ! is_fedora_bootc; then
+        skip "/var/tmp symlink test only applies to fedora-bootc builds"
+    fi
+
     # Check if /var/tmp exists and is a symlink
     if [ ! -e "$MOUNT_POINT/var/tmp" ]; then
         skip "/var/tmp does not exist in container"
     fi
-    
+
     run test -L "$MOUNT_POINT/var/tmp"
     if [ "$status" -ne 0 ]; then
         # Not a symlink - check if it's a directory (some base images have it as dir)
@@ -274,7 +282,7 @@ is_plymouth_enabled() {
         fi
         assert_success "/var/tmp should be a symlink"
     fi
-    
+
     run readlink "$MOUNT_POINT/var/tmp"
     # Accept both absolute and relative paths
     if [[ "$output" != "/tmp" && "$output" != "../tmp" ]]; then
@@ -291,7 +299,7 @@ is_plymouth_enabled() {
     assert_output --partial "set"
     assert_output --partial "enable"
     assert_output --partial "disable"
-    
+
     # Test dracut-rebuild help
     run buildah run "$CONTAINER" -- /usr/local/bin/dracut-rebuild --help
     assert_success
@@ -299,7 +307,11 @@ is_plymouth_enabled() {
     assert_output --partial "KERNEL_VERSION"
 }
 
-@test "ENABLE_PLYMOUTH environment variable should be true or false" {
+@test "ENABLE_PLYMOUTH environment variable should be true or false (fedora-bootc only)" {
+    if ! is_fedora_bootc; then
+        skip "ENABLE_PLYMOUTH env var test only applies to fedora-bootc builds"
+    fi
+
     run buildah run "$CONTAINER" -- printenv ENABLE_PLYMOUTH
 
     if [ "$status" -ne 0 ]; then
@@ -315,7 +327,6 @@ is_plymouth_enabled() {
             ;;
     esac
 }
-
 
 # --- Custom scripts ---
 

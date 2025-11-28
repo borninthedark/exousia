@@ -2,6 +2,7 @@
 # Build arguments
 # ------------------------------
 ARG FEDORA_VERSION=43
+ARG ENABLE_PLYMOUTH=true
 
 # ------------------------------
 # Base image
@@ -110,7 +111,7 @@ RUN set -euxo pipefail; \
 RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # ------------------------------
-# Plymouth configuration (conditional)
+# Plymouth configuration (conditional - only for fedora-bootc)
 # ------------------------------
 RUN if [ "${ENABLE_PLYMOUTH}" = "true" ]; then \
       rm -rf /var/tmp && ln -sf /tmp /var/tmp && \

@@ -15,7 +15,7 @@ on:
           - 'current'
           - '42'
           - '43'
-          - '41'
+          - '44'
           - 'rawhide'
         default: 'current'
       image_type:
@@ -28,7 +28,7 @@ on:
           - 'fedora-sway-atomic'
         default: 'current'
       enable_plymouth:
-        description: 'Enable Plymouth boot splash'
+        description: 'Enable Plymouth boot splash (fedora-bootc only)'
         required: true
         type: boolean
         default: true
@@ -189,7 +189,7 @@ jobs:
           ENABLE_PLYMOUTH="$INPUT_ENABLE_PLYMOUTH"
 
           echo "Resolved target: Fedora $TARGET_VERSION with $TARGET_IMAGE_TYPE"
-          echo "Plymouth enabled: $ENABLE_PLYMOUTH"
+          echo "Plymouth enabled: $ENABLE_PLYMOUTH (applies to fedora-bootc only)"
 
           if [[ "$TARGET_IMAGE_TYPE" == "fedora-bootc" ]]; then
             CONTAINERFILE_PATH="./Containerfile.bootc"
@@ -299,7 +299,6 @@ jobs:
         with:
           name: exousia-container-image
           path: exousia-image.tar
-          retention-days: 1
           compression-level: 0
 
       - name: Build summary
@@ -311,7 +310,7 @@ jobs:
             echo "- **Fedora Version:** ${{ steps.config.outputs.BUILD_VERSION }}"
             echo "- **Base Image Type:** ${{ steps.config.outputs.BUILD_IMAGE_TYPE }}"
             echo "- **Containerfile:** \`${{ steps.config.outputs.CONTAINERFILE }}\`"
-            echo "- **Plymouth:** ${{ steps.config.outputs.ENABLE_PLYMOUTH }}"
+            echo "- **Plymouth:** ${{ steps.config.outputs.ENABLE_PLYMOUTH }} (fedora-bootc only)"
             echo "- **Image Size:** ${IMAGE_SIZE_MB:-Unknown}MB"
             echo ""
             echo "### 🏷️ Image Tags"

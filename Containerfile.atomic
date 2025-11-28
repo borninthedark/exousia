@@ -2,7 +2,6 @@
 # Build arguments
 # ------------------------------
 ARG FEDORA_VERSION=43
-ARG ENABLE_PLYMOUTH=true
 
 # ------------------------------
 # Base image
@@ -19,11 +18,9 @@ LABEL org.opencontainers.image.licenses="MIT"
 # ------------------------------
 # Environment
 # ------------------------------
-ENV BUILD_IMAGE_TYPE=fedora-sway-atomic \
-    ENABLE_PLYMOUTH=false
+ENV BUILD_IMAGE_TYPE=fedora-sway-atomic
 
-RUN echo "BUILD_IMAGE_TYPE=fedora-sway-atomic" >> /etc/environment && \
-    echo "ENABLE_PLYMOUTH=false" >> /etc/environment
+RUN echo "BUILD_IMAGE_TYPE=fedora-sway-atomic" >> /etc/environment
 
 # ------------------------------
 # Sysusers setup
@@ -57,7 +54,6 @@ RUN ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
 COPY --chmod=0644 ./custom-pkgs/packages.remove /usr/local/share/sericea-bootc/packages-removed
 COPY --chmod=0644 ./custom-pkgs/packages.add    /usr/local/share/sericea-bootc/packages-added
 COPY --chmod=0644 ./custom-pkgs/packages.sway   /usr/local/share/sericea-bootc/packages-sway
-COPY --chmod=0644 custom-configs/plymouth/themes/bgrt-better-luks/ /usr/share/plymouth/themes/bgrt-better-luks/
 COPY --chmod=0644 custom-repos/*.repo           /etc/yum.repos.d/
 COPY --chmod=0644 custom-configs/               /etc/
 COPY --chmod=0755 custom-scripts/               /usr/local/bin/
@@ -101,17 +97,6 @@ RUN set -euxo pipefail; \
 # Flathub
 # ------------------------------
 RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
-# ------------------------------
-# Plymouth (conditional)
-# ------------------------------
-RUN if [ "${ENABLE_PLYMOUTH}" = "true" ]; then \
-      echo "==> Configuring Plymouth boot splash..."; \
-      /usr/local/bin/setup-plymouth-theme enable && \
-      /usr/local/bin/dracut-rebuild -f; \
-    else \
-      echo "==> Skipping Plymouth setup (ENABLE_PLYMOUTH=${ENABLE_PLYMOUTH})"; \
-    fi
 
 # ------------------------------
 # Services (skip, sway-atomic handles defaults)

@@ -15,7 +15,7 @@ firefox
 greetd
 tuigreet
 
-# Boot Splash
+# Boot Splash (fedora-bootc only - sway-atomic has it pre-configured)
 plymouth
 plymouth-system-theme
 plymouth-plugin-two-step

@@ -19,8 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 VERSION_FILE="${PROJECT_ROOT}/.fedora-version"
 
-# Current supported Fedora versions (as of September 2025)
-SUPPORTED_VERSIONS=("41" "42" "43" "rawhide")
+# Current supported Fedora versions (as of November 2025)
+SUPPORTED_VERSIONS=("42" "43" "44" "rawhide")
 CURRENT_VERSION=""
 CURRENT_IMAGE_TYPE=""
 
@@ -114,11 +114,11 @@ list_versions() {
     echo "Available Fedora Versions:"
     echo "═══════════════════════════════════════════════════════════"
     echo
-    echo "  ${BLUE}41${NC}  Fedora 41 (Released Oct 2024)"
+    echo "  ${BLUE}42${NC}  Fedora 42 (Released Apr 2025) ${YELLOW}← Supported${NC}"
     echo
-    echo "  ${BLUE}42${NC}  Fedora 42 (Released Apr 2025) ${GREEN}← Current Stable${NC}"
+    echo "  ${BLUE}43${NC}  Fedora 43 (Released Oct 2025) ${GREEN}← Current Stable${NC}"
     echo
-    echo "  ${BLUE}43${NC}  Fedora 43 Beta (Final release Oct 28, 2025)"
+    echo "  ${BLUE}44${NC}  Fedora 44 (Upcoming, expected Apr 2026)"
     echo
     echo "  ${BLUE}rawhide${NC}  Rawhide (Rolling development)"
     echo
@@ -217,7 +217,7 @@ main() {
         current|--current|-c)
             echo "Current: Fedora $CURRENT_VERSION ($CURRENT_IMAGE_TYPE)"
             exit 0 ;;
-        41|42|43|rawhide)
+        42|43|44|rawhide)
             if validate_version "$1"; then
                 local target_version="$1"
                 local target_image_type="${2:-$CURRENT_IMAGE_TYPE}"
