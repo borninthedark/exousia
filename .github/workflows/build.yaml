@@ -562,30 +562,77 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Pull image from GHCR
+      - name: Pull image from GHCR and tag for registries
         run: |
           echo "::group::Pulling image for publication"
           TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
           echo "Pulling image: $TEMP_IMAGE"
           buildah pull "$TEMP_IMAGE"
-          buildah tag "$TEMP_IMAGE" "${{ env.IMAGE_BASE }}"
-          buildah tag "$TEMP_IMAGE" "${{ env.DOCKERHUB_IMAGE_BASE }}"
+
+          # Tag for GHCR
+          echo "Tagging for GHCR..."
+          while IFS= read -r tag; do
+            if [[ -n "$tag" ]]; then
+              buildah tag "$TEMP_IMAGE" "${{ env.IMAGE_BASE }}:${tag}"
+              echo "  Tagged: ${{ env.IMAGE_BASE }}:${tag}"
+            fi
+          done <<< "${{ steps.tag-filters.outputs.ghcr_tags }}"
+
+          # Tag for Docker Hub
+          echo "Tagging for Docker Hub..."
+          while IFS= read -r tag; do
+            if [[ -n "$tag" ]]; then
+              buildah tag "$TEMP_IMAGE" "${{ env.DOCKERHUB_IMAGE_BASE }}:${tag}"
+              echo "  Tagged: ${{ env.DOCKERHUB_IMAGE_BASE }}:${tag}"
+            fi
+          done <<< "${{ steps.tag-filters.outputs.dockerhub_tags }}"
+
+          echo "::group::Local images"
           buildah images
+          echo "::endgroup::"
           echo "::endgroup::"
 
       - name: Push bootc image to GHCR
         id: push-to-ghcr
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          image: ${{ env.IMAGE_BASE }}
-          tags: ${{ steps.tag-filters.outputs.ghcr_tags }}
+        run: |
+          echo "::group::Pushing to GitHub Container Registry"
+
+          # Push each tag to GHCR
+          while IFS= read -r tag; do
+            if [[ -n "$tag" ]]; then
+              IMAGE_REF="${{ env.IMAGE_BASE }}:${tag}"
+              echo "Pushing: $IMAGE_REF"
+              buildah push "$IMAGE_REF"
+            fi
+          done <<< "${{ steps.tag-filters.outputs.ghcr_tags }}"
+
+          # Get digest from the first tag for signing
+          FIRST_TAG=$(echo "${{ steps.tag-filters.outputs.ghcr_tags }}" | head -n1)
+          DIGEST=$(buildah inspect "${{ env.IMAGE_BASE }}:${FIRST_TAG}" | jq -r '.Digest // .ManifestDigest')
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+          echo "GHCR Digest: $DIGEST"
+          echo "::endgroup::"
 
       - name: Push bootc image to Docker Hub
         id: push-to-dockerhub
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          image: ${{ env.DOCKERHUB_IMAGE_BASE }}
-          tags: ${{ steps.tag-filters.outputs.dockerhub_tags }}
+        run: |
+          echo "::group::Pushing to Docker Hub"
+
+          # Push each tag to Docker Hub
+          while IFS= read -r tag; do
+            if [[ -n "$tag" ]]; then
+              IMAGE_REF="${{ env.DOCKERHUB_IMAGE_BASE }}:${tag}"
+              echo "Pushing: $IMAGE_REF"
+              buildah push "$IMAGE_REF"
+            fi
+          done <<< "${{ steps.tag-filters.outputs.dockerhub_tags }}"
+
+          # Get digest from the first tag for signing
+          FIRST_TAG=$(echo "${{ steps.tag-filters.outputs.dockerhub_tags }}" | head -n1)
+          DIGEST=$(buildah inspect "${{ env.DOCKERHUB_IMAGE_BASE }}:${FIRST_TAG}" | jq -r '.Digest // .ManifestDigest')
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+          echo "Docker Hub Digest: $DIGEST"
+          echo "::endgroup::"
 
       - name: Install Cosign for image signing
         uses: sigstore/cosign-installer@v3.5.0
