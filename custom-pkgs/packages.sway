@@ -15,11 +15,6 @@ firefox
 greetd
 tuigreet
 
-# Boot Splash
-plymouth
-plymouth-system-theme
-plymouth-plugin-two-step
-
 # Wayland Core
 wlroots
 xorg-x11-server-Xwayland
