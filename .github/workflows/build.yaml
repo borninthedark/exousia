@@ -572,13 +572,24 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Sign container images (keyless OIDC)
+        if: ${{ steps.push-images.outputs.ghcr_digest != '' || steps.push-images.outputs.dockerhub_digest != '' }}
         run: |
           echo "::group::Image Signing"
-          echo "Signing GHCR image by digest: ${{ steps.push-images.outputs.ghcr_digest }}"
-          cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-images.outputs.ghcr_digest }}"
 
-          echo "Signing Docker Hub image by digest: ${{ steps.push-images.outputs.dockerhub_digest }}"
-          cosign sign --yes "${{ env.DOCKERHUB_IMAGE_BASE }}@${{ steps.push-images.outputs.dockerhub_digest }}"
+          if [[ -n "${{ steps.push-images.outputs.ghcr_digest }}" ]]; then
+            echo "Signing GHCR image by digest: ${{ steps.push-images.outputs.ghcr_digest }}"
+            cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-images.outputs.ghcr_digest }}"
+          else
+            echo "No GHCR digest available; skipping GHCR signing"
+          fi
+
+          if [[ -n "${{ steps.push-images.outputs.dockerhub_digest }}" ]]; then
+            echo "Signing Docker Hub image by digest: ${{ steps.push-images.outputs.dockerhub_digest }}"
+            cosign sign --yes "${{ env.DOCKERHUB_IMAGE_BASE }}@${{ steps.push-images.outputs.dockerhub_digest }}"
+          else
+            echo "No Docker Hub digest available; skipping Docker Hub signing"
+          fi
+
           echo "::endgroup::"
         env:
           COSIGN_EXPERIMENTAL: "true"
