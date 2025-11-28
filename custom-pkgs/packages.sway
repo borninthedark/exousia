@@ -15,6 +15,11 @@ firefox
 greetd
 tuigreet
 
+# Boot Splash (fedora-bootc only - sway-atomic has it pre-configured)
+plymouth
+plymouth-system-theme
+plymouth-plugin-two-step
+
 # Wayland Core
 wlroots
 xorg-x11-server-Xwayland

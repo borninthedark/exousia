@@ -2,6 +2,7 @@
 # Build arguments
 # ------------------------------
 ARG FEDORA_VERSION=43
+ARG ENABLE_PLYMOUTH=true
 
 # ------------------------------
 # Base image
@@ -18,9 +19,11 @@ LABEL org.opencontainers.image.licenses="MIT"
 # ------------------------------
 # Environment
 # ------------------------------
-ENV BUILD_IMAGE_TYPE=fedora-bootc
+ENV BUILD_IMAGE_TYPE=fedora-bootc \
+    ENABLE_PLYMOUTH=true
 
-RUN echo "BUILD_IMAGE_TYPE=fedora-bootc" >> /etc/environment
+RUN echo "BUILD_IMAGE_TYPE=fedora-bootc" >> /etc/environment && \
+    echo "ENABLE_PLYMOUTH=true" >> /etc/environment
 
 # ------------------------------
 # Sysusers setup
@@ -65,6 +68,7 @@ RUN mkdir -p /var/roothome /var/opt /usr/lib/extensions && \
 COPY --chmod=0644 ./custom-pkgs/packages.remove /usr/local/share/sericea-bootc/packages-removed
 COPY --chmod=0644 ./custom-pkgs/packages.add    /usr/local/share/sericea-bootc/packages-added
 COPY --chmod=0644 ./custom-pkgs/packages.sway   /usr/local/share/sericea-bootc/packages-sway
+COPY --chmod=0644 custom-configs/plymouth/themes/bgrt-better-luks/ /usr/share/plymouth/themes/bgrt-better-luks/
 COPY --chmod=0644 custom-repos/*.repo           /etc/yum.repos.d/
 COPY --chmod=0644 custom-configs/               /etc/
 COPY --chmod=0755 custom-scripts/               /usr/local/bin/
@@ -105,6 +109,23 @@ RUN set -euxo pipefail; \
 # Flathub
 # ------------------------------
 RUN flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+# ------------------------------
+# Plymouth configuration (conditional - only for fedora-bootc)
+# ------------------------------
+RUN if [ "${ENABLE_PLYMOUTH}" = "true" ]; then \
+      rm -rf /var/tmp && ln -sf /tmp /var/tmp && \
+      mkdir -p /usr/lib/dracut/dracut.conf.d && \
+      echo 'add_dracutmodules+=" plymouth "' > /usr/lib/dracut/dracut.conf.d/plymouth.conf && \
+      plymouth-set-default-theme bgrt-better-luks && \
+      kver=$(basename /usr/lib/modules/*); \
+      dracut -vf /usr/lib/modules/$kver/initramfs.img $kver && \
+      mkdir -p /usr/lib/bootc/kargs.d && \
+      printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' \
+        > /usr/lib/bootc/kargs.d/plymouth.toml; \
+    else \
+      echo "Plymouth disabled (ENABLE_PLYMOUTH=false), skipping configuration."; \
+    fi
 
 # ------------------------------
 # Services
