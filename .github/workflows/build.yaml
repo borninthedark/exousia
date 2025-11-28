@@ -536,6 +536,15 @@ jobs:
           echo "::group::Tagging and Pushing Images"
           TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
 
+          # Get the image ID to use as source for all tags
+          IMAGE_ID=$(buildah images --format '{{.ID}}' --filter reference="$FIRST_TAG" | head -n1)
+          echo "Image ID: $IMAGE_ID"
+
+          if [[ -z "$IMAGE_ID" ]]; then
+            echo "::error::Failed to get image ID for $FIRST_TAG"
+            exit 1
+          fi
+
           # Parse all tags and push to registries
           echo "Processing tags from metadata-action..."
           while IFS= read -r full_tag; do
@@ -543,13 +552,17 @@ jobs:
               echo "Tagging and pushing: $full_tag"
               buildah tag "$TEMP_IMAGE" "$full_tag"
               DIGEST=$(buildah push --digestfile /tmp/digest.txt "$full_tag" && cat /tmp/digest.txt)
-              echo "Pushed with digest: $DIGEST"
+              echo "Pushed $full_tag with digest: $DIGEST"
 
-              # Capture digest for the latest tag of each registry
-              if [[ "$full_tag" == "${{ env.IMAGE_BASE }}:latest" ]]; then
+              # Capture digest for signing (from first push of each registry)
+              # This ensures ALL builds get signed, not just those with :latest tag
+              if [[ ! -f /tmp/ghcr-digest.txt ]] && [[ "$full_tag" =~ ^${{ env.IMAGE_BASE }}: ]]; then
                 echo "$DIGEST" > /tmp/ghcr-digest.txt
-              elif [[ "$full_tag" == "${{ env.DOCKERHUB_IMAGE_BASE }}:latest" ]]; then
+                echo "Captured GHCR digest for signing: $DIGEST"
+              fi
+              if [[ ! -f /tmp/dockerhub-digest.txt ]] && [[ "$full_tag" =~ ^${{ env.DOCKERHUB_IMAGE_BASE }}: ]]; then
                 echo "$DIGEST" > /tmp/dockerhub-digest.txt
+                echo "Captured Docker Hub digest for signing: $DIGEST"
               fi
             fi
           done <<< "${{ needs.build.outputs.image_tags }}"
