@@ -149,6 +149,7 @@ jobs:
       build_version: ${{ steps.config.outputs.BUILD_VERSION }}
       build_type: ${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
       containerfile: ${{ steps.config.outputs.CONTAINERFILE }}
+      enable_plymouth: ${{ steps.config.outputs.ENABLE_PLYMOUTH }}
 
     steps:
       - name: Checkout repository
@@ -222,7 +223,7 @@ jobs:
             ${{ env.IMAGE_BASE }}
             ${{ env.DOCKERHUB_IMAGE_BASE }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,format=long
             type=ref,event=branch
             type=schedule,pattern=nightly
@@ -508,13 +509,17 @@ jobs:
     timeout-minutes: 20
     if: github.event_name != 'pull_request'
     outputs:
-      ghcr_digest: ${{ steps.push-images.outputs.ghcr_digest }}
-      dockerhub_digest: ${{ steps.push-images.outputs.dockerhub_digest }}
+      ghcr_digest: ${{ steps.push-ghcr.outputs.ghcr_digest }}
+      dockerhub_digest: ${{ steps.push-dockerhub.outputs.dockerhub_digest }}
 
     steps:
       - name: Login to GitHub Container Registry
         run: |
           echo "${{ secrets.GHCR_PAT }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
+
+      - name: Log in to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | buildah login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
 
       - name: Pull image from GHCR
         run: |
@@ -526,14 +531,10 @@ jobs:
           buildah images
           echo "::endgroup::"
 
-      - name: Login to Docker Hub
+      - name: Tag and push GHCR images
+        id: push-ghcr
         run: |
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | buildah login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
-
-      - name: Tag and push images
-        id: push-images
-        run: |
-          echo "::group::Tagging and Pushing Images"
+          echo "::group::Tagging and Pushing GHCR Images"
           TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
           echo "Using temp image: $TEMP_IMAGE"
 
@@ -546,25 +547,19 @@ jobs:
             exit 1
           fi
 
-          # Parse all tags and push to registries
-          echo "Processing tags from metadata-action..."
+          # Parse GHCR tags and push to registry
+          echo "Processing GHCR tags from metadata-action..."
           while IFS= read -r full_tag; do
-            if [[ -n "$full_tag" ]]; then
+            if [[ -n "$full_tag" ]] && [[ "$full_tag" =~ ^${{ env.IMAGE_BASE }}: ]]; then
               echo "Tagging and pushing: $full_tag"
               # Use IMAGE_ID instead of TEMP_IMAGE for reliability
               buildah tag "$IMAGE_ID" "$full_tag"
               DIGEST=$(buildah push --digestfile /tmp/digest.txt "$full_tag" && cat /tmp/digest.txt)
               echo "Pushed $full_tag with digest: $DIGEST"
 
-              # Capture digest for signing (from first push of each registry)
-              # This ensures ALL builds get signed, not just those with :latest tag
-              if [[ ! -f /tmp/ghcr-digest.txt ]] && [[ "$full_tag" =~ ^${{ env.IMAGE_BASE }}: ]]; then
+              if [[ ! -f /tmp/ghcr-digest.txt ]]; then
                 echo "$DIGEST" > /tmp/ghcr-digest.txt
                 echo "Captured GHCR digest for signing: $DIGEST"
-              fi
-              if [[ ! -f /tmp/dockerhub-digest.txt ]] && [[ "$full_tag" =~ ^${{ env.DOCKERHUB_IMAGE_BASE }}: ]]; then
-                echo "$DIGEST" > /tmp/dockerhub-digest.txt
-                echo "Captured Docker Hub digest for signing: $DIGEST"
               fi
             fi
           done <<< "${{ needs.build.outputs.image_tags }}"
@@ -573,8 +568,40 @@ jobs:
           if [[ -f /tmp/ghcr-digest.txt ]]; then
             echo "ghcr_digest=$(cat /tmp/ghcr-digest.txt)" >> $GITHUB_OUTPUT
           fi
-          if [[ -f /tmp/dockerhub-digest.txt ]]; then
-            echo "dockerhub_digest=$(cat /tmp/dockerhub-digest.txt)" >> $GITHUB_OUTPUT
+
+          echo "::endgroup::"
+
+      - name: Tag and push Docker Hub images
+        id: push-dockerhub
+        run: |
+          echo "::group::Tagging and Pushing Docker Hub Images"
+          TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
+          echo "Using temp image: $TEMP_IMAGE"
+
+          IMAGE_ID=$(buildah images --format '{{.ID}}' --filter reference="$TEMP_IMAGE" | head -n1)
+          echo "Image ID: $IMAGE_ID"
+
+          if [[ -z "$IMAGE_ID" ]]; then
+            echo "::error::Failed to get image ID for $TEMP_IMAGE"
+            exit 1
+          fi
+
+          while IFS= read -r full_tag; do
+            if [[ -n "$full_tag" ]] && [[ "$full_tag" =~ ^${{ env.DOCKERHUB_IMAGE_BASE }}: ]]; then
+              echo "Tagging and pushing: $full_tag"
+              buildah tag "$IMAGE_ID" "$full_tag"
+              DIGEST=$(buildah push --digestfile /tmp/dockerhub-digest.txt "$full_tag" && cat /tmp/dockerhub-digest.txt)
+              echo "Pushed $full_tag with digest: $DIGEST"
+
+              if [[ ! -f /tmp/dockerhub-first-digest.txt ]]; then
+                echo "$DIGEST" > /tmp/dockerhub-first-digest.txt
+                echo "Captured Docker Hub digest for signing: $DIGEST"
+              fi
+            fi
+          done <<< "${{ needs.build.outputs.image_tags }}"
+
+          if [[ -f /tmp/dockerhub-first-digest.txt ]]; then
+            echo "dockerhub_digest=$(cat /tmp/dockerhub-first-digest.txt)" >> $GITHUB_OUTPUT
           fi
 
           echo "::endgroup::"
@@ -582,27 +609,21 @@ jobs:
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.5.0
 
-      - name: Login to Docker Hub for signing
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Sign container images (keyless OIDC)
-        if: ${{ steps.push-images.outputs.ghcr_digest != '' || steps.push-images.outputs.dockerhub_digest != '' }}
+        if: ${{ steps.push-ghcr.outputs.ghcr_digest != '' || steps.push-dockerhub.outputs.dockerhub_digest != '' }}
         run: |
           echo "::group::Image Signing"
 
-          if [[ -n "${{ steps.push-images.outputs.ghcr_digest }}" ]]; then
-            echo "Signing GHCR image by digest: ${{ steps.push-images.outputs.ghcr_digest }}"
-            cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-images.outputs.ghcr_digest }}"
+          if [[ -n "${{ steps.push-ghcr.outputs.ghcr_digest }}" ]]; then
+            echo "Signing GHCR image by digest: ${{ steps.push-ghcr.outputs.ghcr_digest }}"
+            cosign sign --yes "${{ env.IMAGE_BASE }}@${{ steps.push-ghcr.outputs.ghcr_digest }}"
           else
             echo "No GHCR digest available; skipping GHCR signing"
           fi
 
-          if [[ -n "${{ steps.push-images.outputs.dockerhub_digest }}" ]]; then
-            echo "Signing Docker Hub image by digest: ${{ steps.push-images.outputs.dockerhub_digest }}"
-            cosign sign --yes "${{ env.DOCKERHUB_IMAGE_BASE }}@${{ steps.push-images.outputs.dockerhub_digest }}"
+          if [[ -n "${{ steps.push-dockerhub.outputs.dockerhub_digest }}" ]]; then
+            echo "Signing Docker Hub image by digest: ${{ steps.push-dockerhub.outputs.dockerhub_digest }}"
+            cosign sign --yes "${{ env.DOCKERHUB_IMAGE_BASE }}@${{ steps.push-dockerhub.outputs.dockerhub_digest }}"
           else
             echo "No Docker Hub digest available; skipping Docker Hub signing"
           fi
@@ -638,17 +659,17 @@ jobs:
             echo "## 📦 Published Images"
             echo ""
             echo "### GitHub Container Registry"
-            echo "- **Digest:** \`${{ steps.push-images.outputs.ghcr_digest }}\`"
+            echo "- **Digest:** \`${{ steps.push-ghcr.outputs.ghcr_digest }}\`"
             echo "- **Pull Command:**"
             echo '```bash'
-            echo "sudo bootc switch ${{ env.IMAGE_BASE }}:latest"
+            echo "sudo bootc switch ${{ env.IMAGE_BASE }}:main"
             echo '```'
             echo ""
             echo "### Docker Hub"
-            echo "- **Digest:** \`${{ steps.push-images.outputs.dockerhub_digest }}\`"
+            echo "- **Digest:** \`${{ steps.push-dockerhub.outputs.dockerhub_digest }}\`"
             echo "- **Pull Command:**"
             echo '```bash'
-            echo "sudo bootc switch ${{ env.DOCKERHUB_IMAGE_BASE }}:latest"
+            echo "sudo bootc switch ${{ env.DOCKERHUB_IMAGE_BASE }}:main"
             echo '```'
             echo ""
             echo "### 🔐 Signatures"
