@@ -145,6 +145,7 @@ jobs:
     outputs:
       image_tags: ${{ steps.meta.outputs.tags }}
       first_tag: ${{ steps.first-tag.outputs.tag }}
+      temp_image: ${{ steps.push-temp.outputs.temp_tag }}
       build_version: ${{ steps.config.outputs.BUILD_VERSION }}
       build_type: ${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
       containerfile: ${{ steps.config.outputs.CONTAINERFILE }}
@@ -284,22 +285,22 @@ jobs:
           echo "IMAGE_SIZE_MB=${SIZE_MB}" >> $GITHUB_ENV
           echo "::endgroup::"
 
-      - name: Save image as artifact
+      - name: Login to GitHub Container Registry
         run: |
-          echo "::group::Saving Image Artifact"
-          FIRST_TAG="${{ steps.first-tag.outputs.tag }}"
-          echo "Saving image: $FIRST_TAG"
-          buildah push "$FIRST_TAG" "oci-archive:exousia-image.tar:$FIRST_TAG"
-          echo "Image saved to exousia-image.tar"
-          ls -lh exousia-image.tar
-          echo "::endgroup::"
+          echo "${{ secrets.GHCR_PAT }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
 
-      - name: Upload image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: exousia-container-image
-          path: exousia-image.tar
-          compression-level: 0
+      - name: Push temporary image to GHCR for pipeline use
+        id: push-temp
+        run: |
+          echo "::group::Pushing Temporary Image"
+          FIRST_TAG="${{ steps.first-tag.outputs.tag }}"
+          TEMP_TAG="${{ env.IMAGE_BASE }}:sha-${{ github.sha }}-temp"
+          echo "Pushing temporary image for pipeline: $TEMP_TAG"
+          buildah tag "$FIRST_TAG" "$TEMP_TAG"
+          buildah push "$TEMP_TAG"
+          echo "temp_tag=$TEMP_TAG" >> $GITHUB_OUTPUT
+          echo "Temporary image pushed successfully"
+          echo "::endgroup::"
 
       - name: Build summary
         if: always()
@@ -332,18 +333,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download image artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: exousia-container-image
-
-      - name: Load image from artifact
+      - name: Login to GitHub Container Registry
         run: |
-          echo "::group::Loading Image"
-          echo "Loading image from exousia-image.tar"
-          ls -lh exousia-image.tar
-          buildah pull "oci-archive:exousia-image.tar"
-          echo "Image loaded successfully"
+          echo "${{ secrets.GHCR_PAT }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
+
+      - name: Pull image from GHCR
+        run: |
+          echo "::group::Pulling Image from Registry"
+          TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
+          echo "Pulling image: $TEMP_IMAGE"
+          buildah pull "$TEMP_IMAGE"
+          echo "Image pulled successfully"
           buildah images
           echo "::endgroup::"
 
@@ -359,10 +359,10 @@ jobs:
           ENABLE_PLYMOUTH: ${{ needs.build.outputs.build_version }}
         run: |
           echo "::group::Integration Tests"
-          FIRST_TAG="${{ needs.build.outputs.first_tag }}"
-          echo "Running tests against image: $FIRST_TAG"
+          TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
+          echo "Running tests against image: $TEMP_IMAGE"
 
-          if TEST_IMAGE_TAG="$FIRST_TAG" \
+          if TEST_IMAGE_TAG="$TEMP_IMAGE" \
              buildah unshare -- bats -r custom-tests --formatter tap | tee test-results.tap; then
             echo "::notice::Integration tests passed"
             PASSED=$(grep -c "^ok" test-results.tap || echo "0")
@@ -378,9 +378,9 @@ jobs:
       - name: Verify bootc container lint
         run: |
           echo "::group::Bootc Container Lint"
-          FIRST_TAG="${{ needs.build.outputs.first_tag }}"
-          echo "Verifying bootc container compliance for: $FIRST_TAG"
-          ctr=$(buildah from "$FIRST_TAG")
+          TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
+          echo "Verifying bootc container compliance for: $TEMP_IMAGE"
+          ctr=$(buildah from "$TEMP_IMAGE")
 
           if buildah run "$ctr" bootc container lint > lint-output.txt 2>&1; then
             echo "::notice::bootc container lint passed"
@@ -421,17 +421,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download image artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: exousia-container-image
-
-      - name: Load image from artifact
+      - name: Login to GitHub Container Registry
         run: |
-          echo "::group::Loading Image"
-          echo "Loading image from exousia-image.tar"
-          buildah pull "oci-archive:exousia-image.tar"
-          echo "Image loaded successfully"
+          echo "${{ secrets.GHCR_PAT }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
+
+      - name: Login to GHCR with Docker (for Trivy)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Pull image from GHCR
+        run: |
+          echo "::group::Pulling Image from Registry"
+          TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
+          echo "Pulling image: $TEMP_IMAGE"
+          buildah pull "$TEMP_IMAGE"
+          echo "Image pulled successfully"
           buildah images
           echo "::endgroup::"
 
@@ -451,9 +458,9 @@ jobs:
         continue-on-error: true
         run: |
           echo "::group::Trivy Vulnerability Scan"
-          FIRST_TAG="${{ needs.build.outputs.first_tag }}"
+          TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
 
-          if trivy image "$FIRST_TAG" \
+          if trivy image "$TEMP_IMAGE" \
             --scanners vuln \
             --severity CRITICAL,HIGH \
             --exit-code 1 \
@@ -468,8 +475,8 @@ jobs:
       - name: Generate Trivy SARIF report
         continue-on-error: true
         run: |
-          FIRST_TAG="${{ needs.build.outputs.first_tag }}"
-          trivy image "$FIRST_TAG" \
+          TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
+          trivy image "$TEMP_IMAGE" \
             --scanners vuln \
             --format sarif \
             --output trivy-results.sarif
@@ -505,24 +512,19 @@ jobs:
       dockerhub_digest: ${{ steps.push-images.outputs.dockerhub_digest }}
 
     steps:
-      - name: Download image artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: exousia-container-image
-
-      - name: Load image from artifact
-        run: |
-          echo "::group::Loading Image"
-          FIRST_TAG="${{ needs.build.outputs.first_tag }}"
-          echo "Loading image from exousia-image.tar with tag: $FIRST_TAG"
-          buildah pull "oci-archive:exousia-image.tar:$FIRST_TAG"
-          echo "Image loaded successfully"
-          buildah images
-          echo "::endgroup::"
-
       - name: Login to GitHub Container Registry
         run: |
           echo "${{ secrets.GHCR_PAT }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
+
+      - name: Pull image from GHCR
+        run: |
+          echo "::group::Pulling Image from Registry"
+          TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
+          echo "Pulling image: $TEMP_IMAGE"
+          buildah pull "$TEMP_IMAGE"
+          echo "Image pulled successfully"
+          buildah images
+          echo "::endgroup::"
 
       - name: Login to Docker Hub
         run: |
@@ -532,7 +534,7 @@ jobs:
         id: push-images
         run: |
           echo "::group::Tagging and Pushing Images"
-          FIRST_TAG="${{ needs.build.outputs.first_tag }}"
+          TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
 
           # Get the image ID to use as source for all tags
           IMAGE_ID=$(buildah images --format '{{.ID}}' --filter reference="$FIRST_TAG" | head -n1)
@@ -548,8 +550,7 @@ jobs:
           while IFS= read -r full_tag; do
             if [[ -n "$full_tag" ]]; then
               echo "Tagging and pushing: $full_tag"
-              # Tag using image ID instead of tag name for reliability
-              buildah tag "$IMAGE_ID" "$full_tag"
+              buildah tag "$TEMP_IMAGE" "$full_tag"
               DIGEST=$(buildah push --digestfile /tmp/digest.txt "$full_tag" && cat /tmp/digest.txt)
               echo "Pushed $full_tag with digest: $DIGEST"
 
@@ -607,6 +608,26 @@ jobs:
           echo "::endgroup::"
         env:
           COSIGN_EXPERIMENTAL: "true"
+
+      - name: Cleanup temporary image from registry
+        if: always()
+        continue-on-error: true
+        run: |
+          echo "::group::Cleaning up temporary image"
+          TEMP_TAG="sha-${{ github.sha }}-temp"
+          echo "Deleting temporary tag: $TEMP_TAG"
+
+          # Use GitHub API to delete the temporary tag
+          if command -v gh &> /dev/null; then
+            gh api --method DELETE \
+              "/orgs/${{ github.repository_owner }}/packages/container/exousia/versions" \
+              -f "tag=$TEMP_TAG" || echo "Failed to delete temp tag, it may not exist or already be deleted"
+          else
+            echo "GitHub CLI not available, skipping cleanup. Temp image will expire naturally."
+          fi
+          echo "::endgroup::"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push summary
         if: always()
