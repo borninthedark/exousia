@@ -543,8 +543,6 @@ jobs:
 
           if [[ -z "$IMAGE_ID" ]]; then
             echo "::error::Failed to get image ID for $TEMP_IMAGE"
-            echo "Available images:"
-            buildah images
             exit 1
           fi
 
