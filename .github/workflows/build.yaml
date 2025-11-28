@@ -542,11 +542,15 @@ jobs:
               DIGEST=$(buildah push --digestfile /tmp/digest.txt "$full_tag" && cat /tmp/digest.txt)
               echo "Pushed with digest: $DIGEST"
 
-              # Capture digest for the latest tag of each registry
-              if [[ "$full_tag" == "${{ env.IMAGE_BASE }}:latest" ]]; then
+              # Capture digest for signing (from first push of each registry)
+              # This ensures ALL builds get signed, not just those with :latest tag
+              if [[ ! -f /tmp/ghcr-digest.txt ]] && [[ "$full_tag" =~ ^${{ env.IMAGE_BASE }}: ]]; then
                 echo "$DIGEST" > /tmp/ghcr-digest.txt
-              elif [[ "$full_tag" == "${{ env.DOCKERHUB_IMAGE_BASE }}:latest" ]]; then
+                echo "Captured GHCR digest for signing: $DIGEST"
+              fi
+              if [[ ! -f /tmp/dockerhub-digest.txt ]] && [[ "$full_tag" =~ ^${{ env.DOCKERHUB_IMAGE_BASE }}: ]]; then
                 echo "$DIGEST" > /tmp/dockerhub-digest.txt
+                echo "Captured Docker Hub digest for signing: $DIGEST"
               fi
             fi
           done <<< "${{ needs.build.outputs.image_tags }}"
