@@ -1,4 +1,4 @@
-# Exousia: Custom Fedora Bootc Images
+# Exousia: Declarative Bootc Builder
 
 [![CI/CD Pipeline](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions/workflows/build.yaml)
 [![Fedora Version](https://img.shields.io/badge/Fedora-43-51A2DA?logo=fedora)](https://fedoraproject.org)
