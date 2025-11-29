@@ -61,11 +61,12 @@ class TranspilerService:
 
         # Use transpiler script for validation if no parse errors
         if not errors:
-            try:
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
-                    f.write(yaml_content)
-                    temp_file = f.name
+            # Use context manager for temp file cleanup
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
+                f.write(yaml_content)
+                temp_file = f.name
 
+            try:
                 process = await asyncio.create_subprocess_exec(
                     "python3",
                     str(self.transpiler_script),
@@ -77,15 +78,15 @@ class TranspilerService:
 
                 _, stderr = await process.communicate()
 
-                # Clean up temp file
-                Path(temp_file).unlink()
-
                 if process.returncode != 0:
                     error_msg = stderr.decode() if stderr else "Validation failed"
                     errors.append(error_msg)
 
             except (OSError, asyncio.TimeoutError) as e:
                 errors.append(f"Validation error: {str(e)}")
+            finally:
+                # Ensure temp file cleanup even on exception
+                Path(temp_file).unlink(missing_ok=True)
 
         return {
             "valid": len(errors) == 0,
@@ -115,7 +116,7 @@ class TranspilerService:
         Raises:
             Exception: If transpilation fails
         """
-        # Create temporary file for YAML
+        # Create temporary file for YAML with context manager
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
             f.write(yaml_content)
             yaml_file = f.name
@@ -151,5 +152,5 @@ class TranspilerService:
             return stdout.decode()
 
         finally:
-            # Clean up temp file
+            # Ensure temp file cleanup even on exception
             Path(yaml_file).unlink(missing_ok=True)
