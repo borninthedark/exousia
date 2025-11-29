@@ -247,3 +247,129 @@ class TestYamlDefinitions:
         response = await client.get("/api/config/definitions/..secret.yml")
 
         assert response.status_code == 400
+
+
+@pytest.mark.integration
+class TestConfigUpsert:
+    """Test configuration upsert (create or update) operations."""
+
+    async def test_upsert_creates_new_config(self, client: AsyncClient, sample_yaml_config: str):
+        """Test upsert creates a new config when it doesn't exist."""
+        response = await client.post(
+            "/api/config/upsert",
+            json={
+                "name": "test-upsert-new",
+                "description": "New config via upsert",
+                "yaml_content": sample_yaml_config,
+                "image_type": "fedora-sway-atomic",
+                "fedora_version": "43",
+                "enable_plymouth": True,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "test-upsert-new"
+        assert data["description"] == "New config via upsert"
+        assert "id" in data
+        assert "created_at" in data
+
+    async def test_upsert_updates_existing_config(self, client: AsyncClient, sample_config):
+        """Test upsert updates an existing config."""
+        # First upsert - should update the existing config
+        response = await client.post(
+            "/api/config/upsert",
+            json={
+                "name": sample_config.name,
+                "description": "Updated description via upsert",
+                "yaml_content": sample_config.yaml_content,
+                "image_type": "fedora-bootc",
+                "fedora_version": "44",
+                "enable_plymouth": False,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == sample_config.id  # Same ID
+        assert data["name"] == sample_config.name
+        assert data["description"] == "Updated description via upsert"
+        assert data["fedora_version"] == "44"
+        assert data["enable_plymouth"] is False
+
+    async def test_upsert_is_idempotent(self, client: AsyncClient, sample_yaml_config: str):
+        """Test that calling upsert multiple times with same data is idempotent."""
+        request_data = {
+            "name": "test-idempotent",
+            "description": "Idempotent test",
+            "yaml_content": sample_yaml_config,
+            "image_type": "fedora-sway-atomic",
+            "fedora_version": "43",
+            "enable_plymouth": True,
+        }
+
+        # First upsert - creates
+        response1 = await client.post("/api/config/upsert", json=request_data)
+        assert response1.status_code == 200
+        data1 = response1.json()
+
+        # Second upsert - updates (same data)
+        response2 = await client.post("/api/config/upsert", json=request_data)
+        assert response2.status_code == 200
+        data2 = response2.json()
+
+        # Third upsert - updates (same data)
+        response3 = await client.post("/api/config/upsert", json=request_data)
+        assert response3.status_code == 200
+        data3 = response3.json()
+
+        # All should have same ID and data
+        assert data1["id"] == data2["id"] == data3["id"]
+        assert data1["name"] == data2["name"] == data3["name"]
+        assert data1["description"] == data2["description"] == data3["description"]
+        assert data1["yaml_content"] == data2["yaml_content"] == data3["yaml_content"]
+
+        # Verify only one config exists with this name
+        list_response = await client.get("/api/config/")
+        configs = list_response.json()["configs"]
+        matching = [c for c in configs if c["name"] == "test-idempotent"]
+        assert len(matching) == 1
+
+    async def test_upsert_validates_yaml(self, client: AsyncClient, invalid_yaml_config: str):
+        """Test that upsert validates YAML before upserting."""
+        response = await client.post(
+            "/api/config/upsert",
+            json={
+                "name": "test-invalid",
+                "description": "Invalid YAML test",
+                "yaml_content": invalid_yaml_config,
+                "image_type": "fedora-sway-atomic",
+                "fedora_version": "43",
+                "enable_plymouth": True,
+            },
+        )
+
+        assert response.status_code == 400
+        assert "Invalid YAML configuration" in response.json()["error"]
+
+    async def test_upsert_preserves_id_on_update(self, client: AsyncClient, sample_config, sample_yaml_config: str):
+        """Test that upsert preserves the config ID when updating."""
+        original_id = sample_config.id
+
+        # Upsert with same name but different data
+        response = await client.post(
+            "/api/config/upsert",
+            json={
+                "name": sample_config.name,
+                "description": "Updated via upsert",
+                "yaml_content": sample_yaml_config,
+                "image_type": "fedora-bootc",
+                "fedora_version": "43",
+                "enable_plymouth": False,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == original_id
+        assert data["description"] == "Updated via upsert"

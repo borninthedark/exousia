@@ -227,6 +227,66 @@ async def delete_config(config_id: int, db: AsyncSession = Depends(get_db)):
     return None
 
 
+@router.post("/upsert", response_model=ConfigResponse)
+async def upsert_config(
+    request: ConfigCreateRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create or update a configuration (idempotent upsert).
+
+    If a configuration with the given name exists, it will be updated.
+    If it doesn't exist, a new configuration will be created.
+
+    This operation is idempotent - calling it multiple times with the
+    same data will result in the same final state.
+    """
+    # Check if config already exists
+    result = await db.execute(
+        select(ConfigModel).where(ConfigModel.name == request.name)
+    )
+    existing = result.scalar_one_or_none()
+
+    # Validate YAML before creating/updating
+    transpiler = TranspilerService()
+    validation = await transpiler.validate(request.yaml_content)
+
+    if not validation["valid"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid YAML configuration: {', '.join(validation.get('errors', []))}"
+        )
+
+    if existing:
+        # Update existing config
+        existing.description = request.description
+        existing.yaml_content = request.yaml_content
+        existing.image_type = request.image_type.value
+        existing.fedora_version = request.fedora_version
+        existing.enable_plymouth = request.enable_plymouth
+
+        await db.commit()
+        await db.refresh(existing)
+
+        return existing
+    else:
+        # Create new config
+        config = ConfigModel(
+            name=request.name,
+            description=request.description,
+            yaml_content=request.yaml_content,
+            image_type=request.image_type.value,
+            fedora_version=request.fedora_version,
+            enable_plymouth=request.enable_plymouth
+        )
+
+        db.add(config)
+        await db.commit()
+        await db.refresh(config)
+
+        return config
+
+
 @router.get("/definitions/list", response_model=YamlDefinitionsListResponse)
 async def list_yaml_definitions():
     """
