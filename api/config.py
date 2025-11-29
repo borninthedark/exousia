@@ -7,12 +7,22 @@ Supports environment variables and .env files.
 """
 
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Optional
 from pathlib import Path
+from enum import Enum
+
+
+class DeploymentMode(str, Enum):
+    """Deployment mode for optimizing architecture."""
+    LAPTOP = "laptop"  # Single-node, lightweight, file-based
+    CLOUD = "cloud"    # Distributed, scalable, cloud-native
 
 
 class Settings(BaseSettings):
     """Application settings with environment variable support."""
+
+    # Deployment Mode
+    DEPLOYMENT_MODE: DeploymentMode = DeploymentMode.LAPTOP
 
     # API Settings
     API_HOST: str = "0.0.0.0"
@@ -29,6 +39,31 @@ class Settings(BaseSettings):
 
     # Database Settings
     DATABASE_URL: str = "sqlite+aiosqlite:///./exousia.db"
+
+    # Database Connection Pool (mode-aware)
+    @property
+    def DB_POOL_SIZE(self) -> int:
+        return 5 if self.DEPLOYMENT_MODE == DeploymentMode.LAPTOP else 20
+
+    @property
+    def DB_MAX_OVERFLOW(self) -> int:
+        return 0 if self.DEPLOYMENT_MODE == DeploymentMode.LAPTOP else 40
+
+    # BlazingMQ Settings
+    BLAZINGMQ_ENABLED: bool = True
+    BLAZINGMQ_BROKER_URI: str = "tcp://localhost:30114"  # Default BlazingMQ broker
+    BLAZINGMQ_DOMAIN: str = "exousia"
+    BLAZINGMQ_QUEUE_BUILD: str = "build.queue"
+    BLAZINGMQ_QUEUE_DLQ: str = "build.dlq"
+
+    # Queue Settings
+    QUEUE_MAX_RETRIES: int = 3
+    QUEUE_RETRY_DELAY: int = 60  # seconds
+    QUEUE_MESSAGE_TTL: int = 86400  # 24 hours
+
+    # Worker Settings
+    WORKER_CONCURRENCY: int = 1 if DEPLOYMENT_MODE == DeploymentMode.LAPTOP else 4
+    WORKER_POLL_INTERVAL: int = 5  # seconds
 
     # GitHub Settings
     GITHUB_TOKEN: str = ""
