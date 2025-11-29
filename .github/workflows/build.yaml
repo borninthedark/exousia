@@ -200,9 +200,10 @@ jobs:
           echo "::endgroup::"
 
       - name: Upload coverage reports
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v4
-        continue-on-error: true
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
           flags: api
           name: api-coverage
