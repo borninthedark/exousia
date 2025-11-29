@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     REPO_ROOT: Path = Path(__file__).parent.parent
     CONFIG_FILE: Path = REPO_ROOT / "exousia.yml"
     TRANSPILER_SCRIPT: Path = REPO_ROOT / "tools" / "yaml-to-containerfile.py"
+    YAML_DEFINITIONS_DIR: Path = REPO_ROOT / "yaml-definitions"
 
     # Security
     SECRET_KEY: str = "your-secret-key-change-in-production"

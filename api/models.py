@@ -97,6 +97,21 @@ class ConfigListResponse(BaseModel):
     page_size: int
 
 
+class YamlDefinitionFile(BaseModel):
+    """Model for a YAML definition file."""
+    filename: str
+    name: str
+    description: Optional[str]
+    image_type: Optional[str]
+    path: str
+
+
+class YamlDefinitionsListResponse(BaseModel):
+    """Response model for listing YAML definition files."""
+    definitions: List[YamlDefinitionFile]
+    total: int
+
+
 # Build Models
 class BuildTriggerRequest(BaseModel):
     """Request model for triggering a build."""

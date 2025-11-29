@@ -1,0 +1,187 @@
+# Exousia Sway Atomic Build Configuration
+# Simplified YAML for testing transpiler with fedora-sway-atomic base
+
+name: exousia-sway-atomic
+description: Custom Fedora Sway Atomic image with opinionated package selection
+image-version: 43
+
+# Base image configuration
+base-image: quay.io/fedora/fedora-sway-atomic:43
+image-type: fedora-sway-atomic
+
+# Container metadata
+labels:
+  org.opencontainers.image.title: "Exousia Sway Atomic Desktop"
+  org.opencontainers.image.description: "Custom Fedora bootc image with Sway desktop and opinionated package selection"
+  org.opencontainers.image.source: "https://github.com/borninthedark/exousia"
+  org.opencontainers.image.licenses: "MIT"
+  maintainer: "uryu"
+
+# Build configuration
+build:
+  enable_plymouth: false  # Not applicable for sway-atomic
+
+# Modules define the build steps
+modules:
+  # System users configuration
+  - type: files
+    files:
+      - src: sysusers/bootc.conf
+        dst: /usr/lib/sysusers.d/bootc.conf
+        mode: "0644"
+
+  # Initialize system users
+  - type: script
+    scripts:
+      - |
+        test -f /etc/passwd || touch /etc/passwd
+        test -f /etc/group  || touch /etc/group
+      - systemd-sysusers || true
+      - |
+        set -e
+        systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf
+        mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit
+
+  # Greetd configuration
+  - type: files
+    files:
+      - src: custom-configs/greetd/config.toml
+        dst: /etc/greetd/config.toml
+        mode: "0644"
+
+  # Container authentication
+  - type: files
+    files:
+      - src: containers-auth.conf
+        dst: /usr/lib/tmpfiles.d/containers-auth.conf
+        mode: "0644"
+      - src: ./bootc-secrets/auth.json
+        dst: /usr/lib/container-auth.json
+        mode: "0600"
+
+  - type: script
+    scripts:
+      - ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
+
+  # Copy package lists and configs
+  - type: files
+    files:
+      - src: ./custom-pkgs/packages.remove
+        dst: /usr/local/share/sericea-bootc/packages-removed
+        mode: "0644"
+      - src: ./custom-pkgs/packages.add
+        dst: /usr/local/share/sericea-bootc/packages-added
+        mode: "0644"
+      - src: ./custom-pkgs/packages.sway
+        dst: /usr/local/share/sericea-bootc/packages-sway
+        mode: "0644"
+
+  # Custom repositories
+  - type: files
+    files:
+      - src: custom-repos/
+        dst: /etc/yum.repos.d/
+        mode: "0644"
+
+  # Custom configurations
+  - type: files
+    files:
+      - src: custom-configs/
+        dst: /etc/
+        mode: "0644"
+
+  # Custom scripts
+  - type: files
+    files:
+      - src: custom-scripts/
+        dst: /usr/local/bin/
+        mode: "0755"
+
+  # Create base package list
+  - type: script
+    scripts:
+      - |
+        if [ -f /usr/share/rpm-ostree/treefile.json ]; then
+          jq -r .packages[] /usr/share/rpm-ostree/treefile.json > /usr/local/share/sericea-bootc/packages-fedora-bootc
+        else
+          touch /usr/local/share/sericea-bootc/packages-fedora-bootc
+        fi
+
+  # Package management
+  - type: rpm-ostree
+    install-dnf5: true
+    repos:
+      - https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm
+      - https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-43.noarch.rpm
+
+    config-manager:
+      - fedora-cisco-openh264
+
+    # Custom packages (sway already included in base)
+    install:
+      # Core Utilities
+      - kitty
+      - neovim
+      - flatpak
+      - wob
+      - rtkit
+      - cargo
+      - git
+      - swaync
+      - fuzzel
+      - htop
+      - nwg-look
+      - btop
+      - etckeeper
+      - fastfetch
+      - glances
+      # Audio & Media
+      - mpd
+      - ranger
+      # Tools
+      - chezmoi
+      - bat
+      - wf-recorder
+      - lsd
+      - fzf
+      - direnv
+      - distrobox
+      - wireguard-tools
+      # Virtualization
+      - virt-manager
+      - qemu-kvm
+      - libvirt
+      # Security
+      - pam-u2f
+      - pamu2fcfg
+      - lynis
+      - openssl
+      # Developer Tools
+      - ripgrep
+      - zoxide
+      # Extra
+      - cava
+      - zsh
+      - zsh-autosuggestions
+      - zsh-syntax-highlighting
+
+    remove:
+      - firefox-langpacks
+
+    upgrade: true
+
+  # Flatpak setup
+  - type: script
+    scripts:
+      - flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+  # Services - skip for sway-atomic (defaults already set)
+  - type: script
+    scripts:
+      - echo "==> Skipping explicit service enablement - sway-atomic provides defaults"
+
+  # Validation and finalization
+  - type: script
+    scripts:
+      - bootc container lint
+      - echo "composefs=true" >> /etc/ostree/repo.config || true

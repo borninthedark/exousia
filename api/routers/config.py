@@ -8,14 +8,18 @@ Endpoints for YAML configuration management and transpilation.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from pathlib import Path
+import yaml
 
 from ..database import get_db, ConfigModel
 from ..models import (
     ConfigValidateRequest, ConfigValidateResponse,
     ConfigTranspileRequest, ConfigTranspileResponse,
-    ConfigCreateRequest, ConfigResponse, ConfigListResponse
+    ConfigCreateRequest, ConfigResponse, ConfigListResponse,
+    YamlDefinitionFile, YamlDefinitionsListResponse
 )
 from ..services.transpiler_service import TranspilerService
+from ..config import settings
 
 router = APIRouter()
 
@@ -221,3 +225,70 @@ async def delete_config(config_id: int, db: AsyncSession = Depends(get_db)):
     await db.commit()
 
     return None
+
+
+@router.get("/definitions/list", response_model=YamlDefinitionsListResponse)
+async def list_yaml_definitions():
+    """
+    List available YAML definition files from the yaml-definitions directory.
+
+    Returns metadata about each YAML file including name, description, and image type.
+    """
+    definitions_dir = settings.YAML_DEFINITIONS_DIR
+
+    if not definitions_dir.exists():
+        return YamlDefinitionsListResponse(definitions=[], total=0)
+
+    definitions = []
+
+    # Find all .yml and .yaml files
+    for yaml_file in definitions_dir.glob("*.y*ml"):
+        try:
+            with open(yaml_file, 'r') as f:
+                content = yaml.safe_load(f)
+
+            definition = YamlDefinitionFile(
+                filename=yaml_file.name,
+                name=content.get('name', yaml_file.stem),
+                description=content.get('description'),
+                image_type=content.get('image-type'),
+                path=str(yaml_file.relative_to(settings.REPO_ROOT))
+            )
+            definitions.append(definition)
+        except Exception as e:
+            # Skip files that can't be parsed
+            continue
+
+    return YamlDefinitionsListResponse(
+        definitions=definitions,
+        total=len(definitions)
+    )
+
+
+@router.get("/definitions/{filename}")
+async def get_yaml_definition(filename: str):
+    """
+    Get the content of a specific YAML definition file.
+
+    Returns the raw YAML content for use in builds or editing.
+    """
+    definitions_dir = settings.YAML_DEFINITIONS_DIR
+
+    # Security: prevent directory traversal
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    yaml_file = definitions_dir / filename
+
+    if not yaml_file.exists():
+        raise HTTPException(status_code=404, detail=f"Definition file '{filename}' not found")
+
+    try:
+        with open(yaml_file, 'r') as f:
+            content = f.read()
+        return {"filename": filename, "content": content}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to read definition file: {str(e)}"
+        ) from e
