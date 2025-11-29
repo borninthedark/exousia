@@ -39,10 +39,14 @@ class ContainerfileGenerator:
     def __init__(self, config: Dict[str, Any], context: BuildContext):
         self.config = config
         self.context = context
-        self.lines: List[str] = []
 
     def generate(self) -> str:
-        """Generate complete Containerfile from config."""
+        """Generate complete Containerfile from config.
+
+        This method is stateless and can be called multiple times.
+        Each call generates a fresh Containerfile.
+        """
+        self.lines: List[str] = []
         self._add_header()
         self._add_build_args()
         self._add_from()

@@ -227,6 +227,48 @@ Delete a configuration.
 **Errors:**
 - `404` - Configuration not found
 
+### POST /api/config/upsert
+
+Create or update a configuration (idempotent upsert).
+
+This endpoint provides idempotent configuration management. If a configuration with the given name exists, it will be updated. If it doesn't exist, a new configuration will be created. Multiple calls with the same data will result in the same final state.
+
+**Request Body:**
+```json
+{
+  "name": "my-config",
+  "description": "My custom configuration",
+  "yaml_content": "...",
+  "image_type": "fedora-bootc",
+  "fedora_version": "43",
+  "enable_plymouth": true
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "id": 1,
+  "name": "my-config",
+  "description": "My custom configuration",
+  "yaml_content": "...",
+  "image_type": "fedora-bootc",
+  "fedora_version": "43",
+  "enable_plymouth": true,
+  "created_at": "2025-11-29T12:00:00",
+  "updated_at": "2025-11-29T12:00:00"
+}
+```
+
+**Errors:**
+- `400` - Invalid YAML configuration
+
+**Notes:**
+- This operation is idempotent - calling it multiple times with the same data produces the same result
+- The configuration name is used as the unique identifier for upsert operations
+- If updating, the original configuration ID is preserved
+- Unlike POST /api/config/, this endpoint will not return a 409 error for duplicate names
+
 ### GET /api/config/definitions/list
 
 List YAML definition files available in the repository.
@@ -484,6 +526,35 @@ curl -X POST http://localhost:8000/api/config/validate \
 curl -X POST http://localhost:8000/api/config/transpile \
   -H "Content-Type: application/json" \
   -d '{
+    "yaml_content": "...",
+    "image_type": "fedora-bootc",
+    "fedora_version": "43",
+    "enable_plymouth": true
+  }'
+```
+
+### Idempotent Configuration Management
+
+```bash
+# Upsert a configuration (create or update)
+# First call creates, subsequent calls update
+curl -X POST http://localhost:8000/api/config/upsert \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "production-config",
+    "description": "Production configuration",
+    "yaml_content": "...",
+    "image_type": "fedora-bootc",
+    "fedora_version": "43",
+    "enable_plymouth": true
+  }'
+
+# Calling again with updated description - updates existing config
+curl -X POST http://localhost:8000/api/config/upsert \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "production-config",
+    "description": "Updated production configuration",
     "yaml_content": "...",
     "image_type": "fedora-bootc",
     "fedora_version": "43",
