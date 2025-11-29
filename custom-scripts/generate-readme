@@ -221,13 +221,11 @@ This repository contains the configuration to build a custom, container-based im
 
 ## Philosophy: Exousia
 
-Exousia (ἐξουσία) is Greek for "authority" and "power." It specifically means the right to exercise complete control.
+Exousia (ἐξουσία) is Greek for "authority" and "power."
 
-This project embodies that principle: a build pipeline for creating container images exactly as you specify them. No imposed defaults, no locked configurations. Full transparency and control over every package, setting, and behavior in your operating system.
+This is a personal project for building my own DevSecOps-hardened laptop OS using Fedora bootc. Still under development, but the goal is full control and transparency over packages, settings, and behaviors.
 
-Comprehensive testing ensures what you build actually works. Over 50 automated tests validate packages, configurations, services, and security across multiple base image types.
-
-Build what you need, how you need it, with confidence.
+The build pipeline supports both bootc and atomic base images, each with their own defaults and configurations. Automated tests help ensure things actually work as development progresses.
 
 
 ## Current Configuration
