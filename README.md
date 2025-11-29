@@ -113,6 +113,91 @@ make push
 
 ---
 
+## YAML-Based Configuration
+
+Exousia uses a **declarative YAML configuration** inspired by [BlueBuild](https://blue-build.org/) to define the entire image build process. This approach provides several advantages over traditional Containerfiles:
+
+- **Declarative** - Define what you want, not how to build it
+- **Validation** - Catch errors before build time
+- **Type Safety** - Structured configuration with clear schemas
+- **Modularity** - Reusable, composable build steps
+- **Readability** - YAML is easier to understand than Dockerfile syntax
+
+### How It Works
+
+```
+exousia.yml → [yaml-to-containerfile.py] → Containerfile.generated → [buildah] → Image
+```
+
+1. **Edit `exousia.yml`** - Define your image configuration
+2. **Transpilation** - Python script converts YAML to Containerfile
+3. **Build** - CI pipeline builds the generated Containerfile
+4. **Publish** - Image is pushed to registries
+
+The transpilation happens automatically in the CI pipeline, so you only need to edit the YAML file.
+
+### Quick Start
+
+#### Adding Packages
+
+Edit `exousia.yml` and add packages to the `rpm-ostree` module:
+
+```yaml
+modules:
+  - type: rpm-ostree
+    install:
+      - your-package
+      - another-package
+```
+
+#### Adding Configuration Files
+
+Add files using the `files` module:
+
+```yaml
+modules:
+  - type: files
+    files:
+      - src: custom-configs/your-config
+        dst: /etc/your-config
+        mode: "0644"
+```
+
+#### Running Custom Scripts
+
+Execute shell commands with the `script` module:
+
+```yaml
+modules:
+  - type: script
+    scripts:
+      - |
+        mkdir -p /var/lib/example
+        systemctl enable example.service
+```
+
+### Local Testing
+
+Validate your YAML configuration before committing:
+
+```bash
+# Validate YAML syntax and structure
+python3 tools/yaml-to-containerfile.py --config exousia.yml --validate
+
+# Generate Containerfile to preview
+python3 tools/yaml-to-containerfile.py \
+  --config exousia.yml \
+  --image-type fedora-sway-atomic \
+  --output Containerfile.test
+
+# Test build locally
+buildah build -f Containerfile.test -t exousia:test .
+```
+
+For detailed documentation on the YAML transpiler, see [`tools/README.md`](tools/README.md).
+
+---
+
 ## Customization
 
 ### Switching Fedora Versions
@@ -247,6 +332,8 @@ This repository includes comprehensive documentation for building, testing, and 
 ### Community Resources
 - [Fedora Discussion - bootc](https://discussion.fedoraproject.org/tag/bootc)
 - [bootc Issue Tracker](https://gitlab.com/fedora/bootc/tracker)
+- [BlueBuild](https://blue-build.org/) - Declarative image builder for bootc
+- [BlueBuild Module Reference](https://blue-build.org/reference/module/)
 
 ### Articles & Guides
 - [Getting Started With Bootc](https://docs.fedoraproject.org/en-US/bootc/getting-started/)
@@ -273,6 +360,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - The Fedora Project and bootc maintainers
 - [Universal Blue](https://universal-blue.org/) for pioneering container-native desktop workflows
+- [BlueBuild](https://blue-build.org/) for the declarative YAML specification that inspired our build system
 - [bootcrew](https://github.com/bootcrew) for community-driven bootc projects and examples
 - The broader container and immutable OS community
 - All contributors to the referenced documentation and guides

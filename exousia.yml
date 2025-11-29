@@ -1,0 +1,323 @@
+# Exousia Build Configuration
+# BlueBuild-compatible YAML specification for declarative bootc image builds
+# https://blue-build.org/reference/module/
+
+name: exousia
+description: DevSecOps-hardened Fedora bootc image with Sway desktop
+image-version: 43
+
+# Base image configuration - can be overridden via build args
+base-image: quay.io/fedora/fedora-sway-atomic:43
+image-type: fedora-sway-atomic  # or fedora-bootc
+
+# Container metadata
+labels:
+  org.opencontainers.image.title: "Exousia"
+  org.opencontainers.image.description: "Custom Fedora bootc image with Sway desktop and opinionated package selection"
+  org.opencontainers.image.source: "https://github.com/borninthedark/exousia"
+  org.opencontainers.image.licenses: "MIT"
+  maintainer: "uryu"
+
+# Build configuration
+build:
+  enable_plymouth: true  # Only applies to fedora-bootc base
+
+# Modules define the build steps
+modules:
+  # System users configuration
+  - type: files
+    files:
+      - src: sysusers/bootc.conf
+        dst: /usr/lib/sysusers.d/bootc.conf
+        mode: "0644"
+
+  # Initialize system users
+  - type: script
+    scripts:
+      - |
+        test -f /etc/passwd || touch /etc/passwd
+        test -f /etc/group  || touch /etc/group
+        systemd-sysusers || true
+        systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf
+        mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit
+        chown -R 241:241 /var/lib/greeter || true
+        chown -R 240:240 /var/lib/greetd || true
+
+  # Greetd configuration
+  - type: script
+    scripts:
+      - |
+        if [ "$IMAGE_TYPE" = "fedora-bootc" ]; then
+          mkdir -p /etc/greetd
+          printf '[security]\nuser = "greetd"\n\n[default]\n' > /etc/greetd/config.toml
+        fi
+
+  # Container authentication
+  - type: files
+    files:
+      - src: containers-auth.conf
+        dst: /usr/lib/tmpfiles.d/containers-auth.conf
+        mode: "0644"
+      - src: ./bootc-secrets/auth.json
+        dst: /usr/lib/container-auth.json
+        mode: "0600"
+
+  - type: script
+    scripts:
+      - ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
+
+  # Directory structure (bootc only)
+  - type: script
+    condition: image-type == "fedora-bootc"
+    scripts:
+      - |
+        mkdir -p /var/roothome /var/opt /usr/lib/extensions
+        rm -rf /opt
+        ln -sf /var/opt /opt
+
+  # Copy package lists for reference
+  - type: files
+    files:
+      - src: custom-pkgs/packages.remove
+        dst: /usr/local/share/sericea-bootc/packages-removed
+        mode: "0644"
+      - src: custom-pkgs/packages.add
+        dst: /usr/local/share/sericea-bootc/packages-added
+        mode: "0644"
+      - src: custom-pkgs/packages.sway
+        dst: /usr/local/share/sericea-bootc/packages-sway
+        mode: "0644"
+
+  # Plymouth theme files (bootc only)
+  - type: files
+    condition: image-type == "fedora-bootc"
+    files:
+      - src: custom-configs/plymouth/themes/bgrt-better-luks/
+        dst: /usr/share/plymouth/themes/bgrt-better-luks/
+        mode: "0644"
+
+  # Custom repositories
+  - type: files
+    files:
+      - src: custom-repos/
+        dst: /etc/yum.repos.d/
+        mode: "0644"
+
+  # Custom configurations
+  - type: files
+    files:
+      - src: custom-configs/
+        dst: /etc/
+        mode: "0644"
+
+  # Custom scripts
+  - type: files
+    files:
+      - src: custom-scripts/
+        dst: /usr/local/bin/
+        mode: "0755"
+
+  # Sway session files
+  - type: files
+    files:
+      - src: custom-configs/sway/sway.desktop
+        dst: /usr/share/wayland-sessions/sway.desktop
+        mode: "0644"
+      - src: custom-configs/sway/environment
+        dst: /etc/sway/environment
+        mode: "0644"
+      - src: custom-configs/sway/start-sway
+        dst: /usr/bin/start-sway
+        mode: "0755"
+
+  # Create base package list
+  - type: script
+    scripts:
+      - |
+        mkdir -p /usr/local/share/sericea-bootc
+        if [ "$IMAGE_TYPE" = "fedora-sway-atomic" ]; then
+          if [ -f /usr/share/rpm-ostree/treefile.json ]; then
+            jq -r .packages[] /usr/share/rpm-ostree/treefile.json > /usr/local/share/sericea-bootc/packages-fedora-bootc
+          else
+            touch /usr/local/share/sericea-bootc/packages-fedora-bootc
+          fi
+        else
+          rpm -qa --qf '%{NAME}\n' | sort > /usr/local/share/sericea-bootc/packages-fedora-bootc
+          test -s /usr/local/share/sericea-bootc/packages-fedora-bootc || touch /usr/local/share/sericea-bootc/packages-fedora-bootc
+        fi
+
+  # Package management - RPM installations and removals
+  - type: rpm-ostree
+    repos:
+      # RPM Fusion repositories
+      - https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm
+      - https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-43.noarch.rpm
+
+    # Sway desktop packages (only for fedora-bootc base)
+    install-conditional:
+      - condition: image-type == "fedora-bootc"
+        packages:
+          # Core Sway Desktop Components
+          - sway
+          - swaylock
+          - swayidle
+          - swaybg
+          - waybar
+          - firefox
+          # Display Manager
+          - greetd
+          - tuigreet
+          # Boot Splash
+          - plymouth
+          - plymouth-system-theme
+          - plymouth-plugin-two-step
+          # Wayland Core
+          - wlroots
+          - xorg-x11-server-Xwayland
+          # Session and Authentication
+          - xfce-polkit
+          - xdg-utils
+          - xdg-user-dirs
+          - xdg-dbus-proxy
+          - flatpak-xdg-utils
+          - xdg-desktop-portal
+          - xdg-desktop-portal-wlr
+          - xdg-desktop-portal-gtk
+          # Audio Stack
+          - pipewire
+          - pipewire-alsa
+          - pipewire-pulseaudio
+          - wireplumber
+          # Graphics Drivers
+          - mesa-dri-drivers
+          - mesa-vulkan-drivers
+          # Essential Fonts
+          - google-noto-sans-fonts
+          - google-noto-serif-fonts
+          - dejavu-sans-fonts
+          - dejavu-sans-mono-fonts
+          # File Manager
+          - thunar
+          - thunar-archive-plugin
+          - thunar-volman
+          - gvfs
+          - gvfs-mtp
+          - gvfs-gphoto2
+          # Media Viewers
+          - imv
+          - zathura
+          - zathura-pdf-mupdf
+          # Screenshot Tools
+          - grim
+          - slurp
+          - swappy
+          # System Controls
+          - brightnessctl
+          - pavucontrol
+          - nm-connection-editor
+          - network-manager-applet
+          # Bluetooth Support
+          - bluez-tools
+          - blueman
+          # Power Management
+          - tlp
+          - powertop
+          # GTK/Theme Support
+          - adwaita-icon-theme
+          - adwaita-gtk2-theme
+          - gnome-themes-extra
+          # Wayland Utilities
+          - wl-clipboard
+          - wev
+          - kanshi
+
+    # Custom packages (always installed)
+    install:
+      # Core Utilities
+      - kitty
+      - neovim
+      - flatpak
+      - wob
+      - rtkit
+      - cargo
+      - git
+      - swaync
+      - fuzzel
+      - htop
+      - nwg-look
+      - btop
+      - etckeeper
+      - fastfetch
+      - glances
+      # Audio & Media
+      - mpd
+      - ranger
+      # Tools
+      - chezmoi
+      - bat
+      - wf-recorder
+      - lsd
+      - fzf
+      - direnv
+      - distrobox
+      - wireguard-tools
+      # Virtualization
+      - virt-manager
+      - qemu-kvm
+      - libvirt
+      # Security
+      - pam-u2f
+      - pamu2fcfg
+      - lynis
+      - openssl
+      # Developer & Power User Tools
+      - ripgrep
+      - zoxide
+      # Extra
+      - cava
+      - zsh
+      - zsh-autosuggestions
+      - zsh-syntax-highlighting
+
+    # Packages to remove (if present)
+    remove:
+      - firefox-langpacks
+
+    # Enable DNF config options
+    config-manager:
+      - fedora-cisco-openh264
+
+  # Flatpak setup
+  - type: script
+    scripts:
+      - flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+  # Plymouth configuration (fedora-bootc only)
+  - type: script
+    condition: image-type == "fedora-bootc" && enable_plymouth == true
+    scripts:
+      - |
+        rm -rf /var/tmp && ln -sf /tmp /var/tmp
+        mkdir -p /usr/lib/dracut/dracut.conf.d
+        echo 'add_dracutmodules+=" plymouth "' > /usr/lib/dracut/dracut.conf.d/plymouth.conf
+        plymouth-set-default-theme bgrt-better-luks
+        kver=$(basename /usr/lib/modules/*)
+        dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
+        mkdir -p /usr/lib/bootc/kargs.d
+        printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' > /usr/lib/bootc/kargs.d/plymouth.toml
+
+  # System services
+  - type: systemd
+    system:
+      enabled:
+        - greetd.service
+        - libvirtd.service
+        - systemd-resolved.service
+        - NetworkManager.service
+    default-target: graphical.target
+
+  # Validation and finalization
+  - type: script
+    scripts:
+      - bootc container lint
+      - echo "composefs=true" >> /etc/ostree/repo.config || true

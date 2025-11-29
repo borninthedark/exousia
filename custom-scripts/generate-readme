@@ -469,6 +469,8 @@ This repository includes comprehensive documentation for building, testing, and 
 ### Community Resources
 - [Fedora Discussion - bootc](https://discussion.fedoraproject.org/tag/bootc)
 - [bootc Issue Tracker](https://gitlab.com/fedora/bootc/tracker)
+- [BlueBuild](https://blue-build.org/) - Declarative image builder for bootc
+- [BlueBuild Module Reference](https://blue-build.org/reference/module/)
 
 ### Articles & Guides
 - [Getting Started With Bootc](https://docs.fedoraproject.org/en-US/bootc/getting-started/)
@@ -495,6 +497,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - The Fedora Project and bootc maintainers
 - [Universal Blue](https://universal-blue.org/) for pioneering container-native desktop workflows
+- [BlueBuild](https://blue-build.org/) for the declarative YAML specification that inspired our build system
 - [bootcrew](https://github.com/bootcrew) for community-driven bootc projects and examples
 - The broader container and immutable OS community
 - All contributors to the referenced documentation and guides
