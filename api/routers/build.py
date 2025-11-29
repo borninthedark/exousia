@@ -19,6 +19,7 @@ from ..models import (
 )
 from ..services.github_service import GitHubService
 from ..services.transpiler_service import TranspilerService
+from ..queue import QueueMessage, MessagePriority, get_queue_backend
 from ..config import settings
 
 router = APIRouter()
@@ -119,47 +120,39 @@ async def trigger_build(
     await db.commit()
     await db.refresh(build)
 
-    # Trigger GitHub Actions workflow
-    if settings.GITHUB_TOKEN:
-        try:
-            github_service = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
+    # Enqueue build trigger message to BlazingMQ
+    try:
+        queue = get_queue_backend()
 
-            # Build workflow inputs
-            workflow_inputs = {
+        # Create build trigger message
+        message = QueueMessage(
+            message_type="build.trigger",
+            payload={
+                "build_id": build.id,
+                "config_id": config_id,
+                "ref": request.ref,
                 "fedora_version": fedora_version,
                 "image_type": image_type,
-                "enable_plymouth": str(enable_plymouth).lower()
-            }
-
-            # Include yaml_config_file if using a definition file
-            if yaml_config_file:
-                workflow_inputs["yaml_config_file"] = yaml_config_file
-
-            workflow_run = await github_service.trigger_workflow(
-                workflow_file=settings.GITHUB_WORKFLOW_FILE,
-                ref=request.ref,
-                inputs=workflow_inputs
-            )
-
-            # Update build with workflow run ID
-            build.workflow_run_id = workflow_run.id
-            build.status = BuildStatus.IN_PROGRESS
-            build.started_at = datetime.utcnow()
-            await db.commit()
-            await db.refresh(build)
-
-        except Exception as e:
-            build.status = BuildStatus.FAILURE
-            await db.commit()
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to trigger GitHub workflow: {str(e)}"
-            ) from e
-    else:
-        raise HTTPException(
-            status_code=503,
-            detail="GitHub integration not configured (GITHUB_TOKEN not set)"
+                "enable_plymouth": enable_plymouth,
+                "yaml_config_file": yaml_config_file
+            },
+            priority=MessagePriority.NORMAL,
+            correlation_id=f"build-{build.id}"
         )
+
+        # Enqueue message
+        await queue.enqueue(
+            queue_name=settings.BLAZINGMQ_QUEUE_BUILD,
+            message=message
+        )
+
+    except Exception as e:
+        build.status = BuildStatus.FAILURE
+        await db.commit()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to enqueue build message: {str(e)}"
+        ) from e
 
     return build
 

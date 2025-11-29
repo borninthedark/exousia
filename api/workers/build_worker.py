@@ -177,13 +177,20 @@ class BuildWorker:
                 # Trigger GitHub workflow
                 logger.info(f"Triggering GitHub workflow for build {build_id}")
 
+                # Build workflow inputs
+                workflow_inputs = {
+                    "fedora_version": payload["fedora_version"],
+                    "image_type": payload["image_type"],
+                    "enable_plymouth": str(payload.get("enable_plymouth", True)).lower()
+                }
+
+                # Include yaml_config_file if using a definition file
+                if payload.get("yaml_config_file"):
+                    workflow_inputs["yaml_config_file"] = payload["yaml_config_file"]
+
                 workflow_run = await self.github.trigger_workflow(
                     ref=payload["ref"],
-                    inputs={
-                        "fedora_version": payload["fedora_version"],
-                        "image_type": payload["image_type"],
-                        "enable_plymouth": str(payload.get("enable_plymouth", True)).lower()
-                    }
+                    inputs=workflow_inputs
                 )
 
                 # Update with workflow run ID

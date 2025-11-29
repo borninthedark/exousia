@@ -7,6 +7,13 @@ Containerfile.*.generated
 Containerfile.generated
 Containerfile.test
 
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
 # OS-generated files
 .DS_Store
 Thumbs.db
