@@ -32,6 +32,7 @@ The Exousia API is a FastAPI-based backend service that provides YAML configurat
 - **Build Orchestration**: Trigger and monitor GitHub Actions builds
 - **Health Monitoring**: Comprehensive health checks for database and external services
 - **Async Operations**: Full async/await support with FastAPI and SQLAlchemy 2.0
+- **Starter Definitions**: Browse built-in BlueBuild YAML definitions directly from the API
 
 ## Technology Stack
 
@@ -93,6 +94,8 @@ pytest api/tests/ -v -m integration
 - `GET /api/config/{id}` - Get specific configuration
 - `PUT /api/config/{id}` - Update configuration
 - `DELETE /api/config/{id}` - Delete configuration
+- `GET /api/config/definitions/list` - List available BlueBuild YAML definitions
+- `GET /api/config/definitions/{filename}` - Fetch raw YAML content for a definition
 
 ### Build Endpoints
 - `POST /api/build/trigger` - Trigger new build
