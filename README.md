@@ -252,13 +252,13 @@ Currently experiencing authentication issues with `bootc switch` and `bootc upgr
 
 Comprehensive documentation organized by use case:
 
-### 📚 Getting Started
+### Getting Started
 
 New to Exousia? Start here:
 - **[BOOTC_UPGRADE.md](docs/BOOTC_UPGRADE.md)** - Complete guide to using, upgrading, and switching bootc images
 - **[BOOTC_IMAGE_BUILDER.md](docs/BOOTC_IMAGE_BUILDER.md)** - Build bootable disk images for local testing
 
-### 🔌 API Documentation
+### API Documentation
 
 Use the REST API to manage configurations programmatically:
 - **[API Overview](docs/api/README.md)** - FastAPI backend architecture and features
@@ -271,12 +271,12 @@ The API enables:
 - GitHub Actions build triggering
 - Build status tracking
 
-### 🔧 Building & Customization
+### Building & Customization
 
 Customize and build your own images:
 - **[TESTING.md](docs/TESTING.md)** - Run the 52+ automated test suite before building
 
-### 🧪 Testing & Quality
+### Testing & Quality
 
 For contributors and developers:
 - **[Testing Guide](docs/testing/guide.md)** - In-depth testing architecture and best practices
@@ -284,7 +284,7 @@ For contributors and developers:
 - **[Test Suite Details](docs/testing/test_suite.md)** - Detailed test documentation
 - **[Writing Tests](docs/reference/writing-tests.md)** - Guide for contributing new tests
 
-### 📖 Reference
+### Reference
 
 Detailed guides and troubleshooting:
 - **[Plymouth Usage](docs/reference/plymouth_usage_doc.md)** - Configure boot splash screens
