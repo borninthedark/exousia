@@ -266,6 +266,23 @@ The Plymouth boot splash configuration depends on your base image type:
 
 **Note:** The `enable_plymouth` workflow input only affects `fedora-bootc` builds. It has no effect on `fedora-sway-atomic` builds, which always use the upstream Plymouth configuration.
 
+### Greetd Display Manager
+
+**⚠️ IMPORTANT: The greetd display manager is only available for `fedora-bootc` base images.**
+
+The greetd display manager availability depends on your base image type:
+
+| Base Image Type | Greetd Support | Details |
+|-----------------|----------------|---------|
+| `fedora-bootc` | ✅ Available | greetd.service enabled, custom config in `custom-configs/greetd/` |
+| `fedora-sway-atomic` | ❌ Not available | Uses SDDM display manager instead |
+
+**Note:** The `fedora-sway-atomic` image uses SDDM (Simple Desktop Display Manager) by default. If you need greetd for a custom login screen, switch to the `fedora-bootc` base image using:
+
+```bash
+./custom-scripts/fedora-version-switcher 43 fedora-bootc
+```
+
 ### Custom Scripts
 
 Add executable scripts to `custom-scripts/` - they will be copied to `/usr/local/bin/`

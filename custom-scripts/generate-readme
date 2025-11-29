@@ -195,6 +195,15 @@ extract_config() {
         PLYMOUTH_NOTE="Custom Plymouth themes from \`custom-configs/plymouth/\` are only applied when using \`fedora-bootc\` as the base image type. The \`fedora-sway-atomic\` base image uses its pre-configured Plymouth setup and ignores custom themes."
     fi
 
+    # Greetd display manager support detection
+    if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
+        GREETD_SUPPORT="✅ Available"
+        GREETD_NOTE="greetd.service is enabled and custom configuration is available in \`custom-configs/greetd/\`."
+    else
+        GREETD_SUPPORT="❌ Not available"
+        GREETD_NOTE="The \`fedora-sway-atomic\` image uses SDDM (Simple Desktop Display Manager) by default. Switch to \`fedora-bootc\` if you need greetd."
+    fi
+
     # Build date
     BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
     
@@ -402,6 +411,28 @@ The Plymouth boot splash configuration depends on your base image type:
 3. Your custom theme in \`custom-configs/plymouth/themes/bgrt-better-luks/\` will be applied
 
 **Note:** The \`enable_plymouth\` workflow input only affects \`fedora-bootc\` builds. It has no effect on \`fedora-sway-atomic\` builds, which always use the upstream Plymouth configuration.
+
+### Greetd Display Manager
+
+**⚠️ IMPORTANT: The greetd display manager is only available for \`fedora-bootc\` base images.**
+
+The greetd display manager availability depends on your base image type:
+
+| Base Image Type | Greetd Support | Details |
+|-----------------|----------------|---------|
+| \`fedora-bootc\` | ✅ Available | greetd.service enabled, custom config in \`custom-configs/greetd/\` |
+| \`fedora-sway-atomic\` | ❌ Not available | Uses SDDM display manager instead |
+
+**Note:** ${GREETD_NOTE}
+
+**To use greetd display manager:**
+
+1. Switch to \`fedora-bootc\` base image:
+   \\\`\\\`\\\`bash
+   ./custom-scripts/fedora-version-switcher 43 fedora-bootc
+   \\\`\\\`\\\`
+
+2. Customize the greetd configuration in \`custom-configs/greetd/config.toml\` as needed
 
 ### Custom Scripts
 

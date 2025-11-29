@@ -306,11 +306,17 @@ modules:
         mkdir -p /usr/lib/bootc/kargs.d
         printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' > /usr/lib/bootc/kargs.d/plymouth.toml
 
-  # System services
+  # System services (bootc-specific: greetd display manager)
   - type: systemd
+    condition: image-type == "fedora-bootc"
     system:
       enabled:
         - greetd.service
+
+  # System services (common to all image types)
+  - type: systemd
+    system:
+      enabled:
         - libvirtd.service
         - systemd-resolved.service
         - NetworkManager.service
