@@ -195,7 +195,9 @@ extract_config() {
     else
         # Try to extract from git remote
         if GITHUB_REPO=$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null | \
-                      sed -E 's|.*github\.com[:/]||' | sed 's|\.git$||'); then
+                      sed -E 's|.*[:/]([^/]+/[^/]+)(\.git)?$|\1|' | sed 's|\.git$||'); then
+            # Clean up any remaining URL artifacts
+            GITHUB_REPO=$(echo "$GITHUB_REPO" | sed -E 's|^.*/git/||')
             print_info "Detected GitHub repository from git remote: $GITHUB_REPO"
         else
             print_warning "Could not detect GitHub repository, using placeholder"
@@ -234,7 +236,6 @@ Build what you need, how you need it, with confidence.
 - **Image Type:** \`${IMAGE_TYPE}\`
 - **Fedora Version:** ${FEDORA_VERSION}
 - **Last Updated:** ${BUILD_DATE}
-- **Build Status:** [![Build Status](https://github.com/${GITHUB_REPO}/actions/workflows/build.yaml/badge.svg)](https://github.com/${GITHUB_REPO}/actions)
 
 ## 🏗️ CI/CD Workflow: Fedora Bootc DevSec CI
 
