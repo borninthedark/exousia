@@ -73,11 +73,11 @@ class TestBuildOperations:
             assert response.status_code in [202, 503]  # 503 if no token
 
     async def test_trigger_build_without_config_or_yaml(self, client: AsyncClient):
-        """Test triggering build without config_id or yaml_content fails."""
+        """Test triggering build without config_id, yaml_content, or definition_filename fails."""
         response = await client.post("/api/build/trigger", json={"ref": "main"})
 
         assert response.status_code == 400
-        assert "config_id or yaml_content must be provided" in response.json()["error"]
+        assert "config_id, yaml_content, or definition_filename must be provided" in response.json()["detail"]
 
     @patch("api.routers.build.GitHubService")
     async def test_cancel_build(self, mock_github_service, client: AsyncClient, sample_build):
