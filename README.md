@@ -331,6 +331,12 @@ This repository includes comprehensive documentation for building, testing, and 
 - **[Testing README](docs/testing/README.md)** - Quick start guide for running the test suite
 - **[Test Suite Details](docs/testing/test_suite.md)** - Detailed test suite information
 
+### API Documentation
+
+- **[API Overview](docs/api/README.md)** - FastAPI backend architecture, features, and quick start
+- **[API Endpoints](docs/api/endpoints.md)** - Complete REST API reference with examples
+- **[API Development](docs/api/development.md)** - Contributing guide for API development
+
 ### Reference Documentation
 
 - **[Plymouth Usage](docs/reference/plymouth_usage_doc.md)** - Configure and customize the boot splash screen
