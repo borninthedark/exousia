@@ -112,6 +112,7 @@ markers = [
 
 [tool.coverage.run]
 source = ["api"]
+branch = true
 omit = [
     "*/tests/*",
     "*/__init__.py",

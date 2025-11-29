@@ -196,7 +196,7 @@ jobs:
       - name: Run pytest with coverage
         run: |
           echo "::group::Running Tests"
-          pytest api/tests/ -v --tb=short --cov=api --cov-report=term --cov-report=xml
+          pytest api/tests/ -v --tb=short --cov=api --cov-branch --cov-report=term --cov-report=xml
           echo "::endgroup::"
 
       - name: Upload coverage reports
