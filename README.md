@@ -22,7 +22,7 @@ Build what you need, how you need it, with confidence.
 - **Base Image:** `Fedora Sway Atomic Desktop`
 - **Image Type:** `fedora-sway-atomic`
 - **Fedora Version:** 43
-- **Last Updated:** 2025-11-29 01:42:45 UTC
+- **Last Updated:** 2025-11-29 02:06:26 UTC
 
 ## CI/CD Workflow: Fedora Bootc DevSec CI
 
@@ -187,7 +187,31 @@ Currently experiencing authentication issues with `bootc switch` and `bootc upgr
 
 ---
 
-## Documentation & Resources
+## Documentation
+
+This repository includes comprehensive documentation for building, testing, and managing your bootc image:
+
+### Core Documentation
+
+- **[BOOTC_IMAGE_BUILDER.md](docs/BOOTC_IMAGE_BUILDER.md)** - Build bootable disk images for local testing with bootc-image-builder
+- **[BOOTC_UPGRADE.md](docs/BOOTC_UPGRADE.md)** - Complete guide to upgrading, switching, and rolling back bootc deployments
+- **[TESTING.md](docs/TESTING.md)** - Comprehensive test suite documentation with 52+ automated tests
+
+### Testing Documentation
+
+- **[Testing Guide](docs/testing/guide.md)** - In-depth testing architecture, test categories, and best practices
+- **[Testing README](docs/testing/README.md)** - Quick start guide for running the test suite
+- **[Test Suite Details](docs/testing/test_suite.md)** - Detailed test suite information
+
+### Reference Documentation
+
+- **[Plymouth Usage](docs/reference/plymouth_usage_doc.md)** - Configure and customize the boot splash screen
+- **[Troubleshooting](docs/reference/troubleshooting.md)** - Common issues and solutions
+- **[Writing Tests](docs/reference/writing-tests.md)** - Guide for contributing new tests
+
+---
+
+## External Resources
 
 ### Official Documentation
 - [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)
@@ -237,4 +261,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with Fedora bootc**
 
-*This README was automatically generated on 2025-11-29 01:42:45 UTC*
+*This README was automatically generated on 2025-11-29 02:06:26 UTC*
