@@ -227,6 +227,47 @@ Delete a configuration.
 **Errors:**
 - `404` - Configuration not found
 
+### GET /api/config/definitions/list
+
+List YAML definition files available in the repository.
+
+**Response:**
+```json
+{
+  "definitions": [
+    {
+      "filename": "bootc.yml",
+      "name": "exousia-bootc",
+      "description": "Custom Fedora bootc image with minimal base...",
+      "image_type": "fedora-bootc",
+      "path": "yaml-definitions/bootc.yml"
+    }
+  ],
+  "total": 2
+}
+```
+
+The available filenames reflect the YAML files present in the `yaml-definitions/` folder.
+
+### GET /api/config/definitions/{filename}
+
+Fetch the raw YAML content for a specific definition file.
+
+**Path Parameters:**
+- `filename` (string) - YAML filename (e.g., `bootc.yml`)
+
+**Response:**
+```json
+{
+  "filename": "bootc.yml",
+  "content": "name: exousia-bootc\n...\nimage-type: fedora-bootc"
+}
+```
+
+**Errors:**
+- `400` - Invalid filename (e.g., path traversal)
+- `404` - Definition file not found
+
 ---
 
 ## Build Endpoints
@@ -239,6 +280,14 @@ Trigger a new build via GitHub Actions.
 ```json
 {
   "config_id": 1,
+  "ref": "main"
+}
+```
+
+**Request Body (with definition):**
+```json
+{
+  "definition_filename": "bootc.yml",
   "ref": "main"
 }
 ```

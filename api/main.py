@@ -78,6 +78,7 @@ async def http_exception_handler(request, exc):
         status_code=exc.status_code,
         content={
             "error": exc.detail,
+            "detail": exc.detail,
             "status": exc.status_code
         }
     )
