@@ -303,6 +303,19 @@ To use the full CI/CD pipeline, configure these secrets in your repository:
 - `DOCKERHUB_USERNAME`: Your Docker Hub username
 - `DOCKERHUB_TOKEN`: Access token with Read, Write, Delete permissions
 
+### For Code Coverage (Codecov):
+- `CODECOV_TOKEN`: Repository upload token from [codecov.io](https://codecov.io)
+  1. Sign up at https://codecov.io with your GitHub account
+  2. Add your repository to Codecov
+  3. Copy the repository upload token
+  4. Add as `CODECOV_TOKEN` secret in GitHub Actions
+
+**Benefits:**
+- Detailed coverage reports with branch coverage tracking
+- PR comments showing coverage changes
+- Coverage trend visualization
+- Integration with GitHub checks
+
 ---
 
 ## Known Issues
