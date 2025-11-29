@@ -236,11 +236,11 @@ List YAML definition files available in the repository.
 {
   "definitions": [
     {
-      "filename": "bootc.yml",
+      "filename": "sway-bootc.yml",
       "name": "exousia-bootc",
       "description": "Custom Fedora bootc image with minimal base...",
       "image_type": "fedora-bootc",
-      "path": "yaml-definitions/bootc.yml"
+      "path": "yaml-definitions/sway-bootc.yml"
     }
   ],
   "total": 2
@@ -254,12 +254,12 @@ The available filenames reflect the YAML files present in the `yaml-definitions/
 Fetch the raw YAML content for a specific definition file.
 
 **Path Parameters:**
-- `filename` (string) - YAML filename (e.g., `bootc.yml`)
+- `filename` (string) - YAML filename (e.g., `sway-bootc.yml`)
 
 **Response:**
 ```json
 {
-  "filename": "bootc.yml",
+  "filename": "sway-bootc.yml",
   "content": "name: exousia-bootc\n...\nimage-type: fedora-bootc"
 }
 ```
@@ -287,7 +287,7 @@ Trigger a new build via GitHub Actions.
 **Request Body (with definition):**
 ```json
 {
-  "definition_filename": "bootc.yml",
+  "definition_filename": "sway-bootc.yml",
   "ref": "main"
 }
 ```
