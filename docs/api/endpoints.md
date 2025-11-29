@@ -284,6 +284,14 @@ Trigger a new build via GitHub Actions.
 }
 ```
 
+**Request Body (with definition):**
+```json
+{
+  "definition_filename": "bootc.yml",
+  "ref": "main"
+}
+```
+
 **Request Body (ad-hoc):**
 ```json
 {
