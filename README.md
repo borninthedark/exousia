@@ -1,4 +1,4 @@
-# Fedora Bootc Custom Image
+# Exousia: Declarative Bootc Builder
 
 [![CI/CD Pipeline](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions/workflows/build.yaml)
 [![Fedora Version](https://img.shields.io/badge/Fedora-43-51A2DA?logo=fedora)](https://fedoraproject.org)
@@ -250,25 +250,45 @@ Currently experiencing authentication issues with `bootc switch` and `bootc upgr
 
 ## Documentation
 
-This repository includes comprehensive documentation for building, testing, and managing your bootc image:
+Comprehensive documentation organized by use case:
 
-### Core Documentation
+### Getting Started
 
-- **[BOOTC_IMAGE_BUILDER.md](docs/BOOTC_IMAGE_BUILDER.md)** - Build bootable disk images for local testing with bootc-image-builder
-- **[BOOTC_UPGRADE.md](docs/BOOTC_UPGRADE.md)** - Complete guide to upgrading, switching, and rolling back bootc deployments
-- **[TESTING.md](docs/TESTING.md)** - Comprehensive test suite documentation with 52+ automated tests
+New to Exousia? Start here:
+- **[BOOTC_UPGRADE.md](docs/BOOTC_UPGRADE.md)** - Complete guide to using, upgrading, and switching bootc images
+- **[BOOTC_IMAGE_BUILDER.md](docs/BOOTC_IMAGE_BUILDER.md)** - Build bootable disk images for local testing
 
-### Testing Documentation
+### API Documentation
 
-- **[Testing Guide](docs/testing/guide.md)** - In-depth testing architecture, test categories, and best practices
-- **[Testing README](docs/testing/README.md)** - Quick start guide for running the test suite
-- **[Test Suite Details](docs/testing/test_suite.md)** - Detailed test suite information
+Use the REST API to manage configurations programmatically:
+- **[API Overview](docs/api/README.md)** - FastAPI backend architecture and features
+- **[API Endpoints](docs/api/endpoints.md)** - Complete endpoint reference with examples
+- **[Development Guide](docs/api/development.md)** - Contributing to the API
 
-### Reference Documentation
+The API enables:
+- YAML configuration validation and storage
+- Dynamic Containerfile transpilation
+- GitHub Actions build triggering
+- Build status tracking
 
-- **[Plymouth Usage](docs/reference/plymouth_usage_doc.md)** - Configure and customize the boot splash screen
-- **[Troubleshooting](docs/reference/troubleshooting.md)** - Common issues and solutions
+### Building & Customization
+
+Customize and build your own images:
+- **[TESTING.md](docs/TESTING.md)** - Run the 52+ automated test suite before building
+
+### Testing & Quality
+
+For contributors and developers:
+- **[Testing Guide](docs/testing/guide.md)** - In-depth testing architecture and best practices
+- **[Testing README](docs/testing/README.md)** - Quick start for running tests
+- **[Test Suite Details](docs/testing/test_suite.md)** - Detailed test documentation
 - **[Writing Tests](docs/reference/writing-tests.md)** - Guide for contributing new tests
+
+### Reference
+
+Detailed guides and troubleshooting:
+- **[Plymouth Usage](docs/reference/plymouth_usage_doc.md)** - Configure boot splash screens
+- **[Troubleshooting](docs/reference/troubleshooting.md)** - Common issues and solutions
 
 ---
 

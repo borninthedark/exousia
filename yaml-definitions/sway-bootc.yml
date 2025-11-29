@@ -1,8 +1,8 @@
-# Exousia Bootc Build Configuration
-# Simplified YAML for testing transpiler with fedora-bootc base
+# Exousia Sway Bootc Build Configuration
+# Fedora bootc image with Sway desktop environment and custom package selection
 
-name: exousia-bootc
-description: Custom Fedora bootc image with minimal base and custom package selection
+name: exousia-sway-bootc
+description: Custom Fedora bootc image with Sway desktop environment and custom package selection
 image-version: 43
 
 # Base image configuration
@@ -11,8 +11,8 @@ image-type: fedora-bootc
 
 # Container metadata
 labels:
-  org.opencontainers.image.title: "Exousia Bootc Base"
-  org.opencontainers.image.description: "Custom Fedora bootc image with minimal base and custom package selection"
+  org.opencontainers.image.title: "Exousia Sway Bootc"
+  org.opencontainers.image.description: "Custom Fedora bootc image with Sway desktop environment and custom package selection"
   org.opencontainers.image.source: "https://github.com/borninthedark/exousia"
   org.opencontainers.image.licenses: "MIT"
   maintainer: "uryu"
