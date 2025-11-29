@@ -20,7 +20,7 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Base Image:** `Fedora Sway Atomic Desktop`
 - **Image Type:** `fedora-sway-atomic`
 - **Fedora Version:** 43
-- **Last Updated:** 2025-11-29 02:06:26 UTC
+- **Last Updated:** 2025-11-29 03:21:28 UTC
 
 ## CI/CD Workflow: Fedora Bootc DevSec CI
 
@@ -259,4 +259,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with Fedora bootc**
 
-*This README was automatically generated on 2025-11-29 02:24:10 UTC*
+*This README was automatically generated on 2025-11-29 03:21:28 UTC*
