@@ -237,8 +237,8 @@ List YAML definition files available in the repository.
   "definitions": [
     {
       "filename": "sway-bootc.yml",
-      "name": "exousia-bootc",
-      "description": "Custom Fedora bootc image with minimal base...",
+      "name": "exousia-sway-bootc",
+      "description": "Custom Fedora bootc image with Sway desktop environment and custom package selection",
       "image_type": "fedora-bootc",
       "path": "yaml-definitions/sway-bootc.yml"
     }
@@ -260,7 +260,7 @@ Fetch the raw YAML content for a specific definition file.
 ```json
 {
   "filename": "sway-bootc.yml",
-  "content": "name: exousia-bootc\n...\nimage-type: fedora-bootc"
+  "content": "name: exousia-sway-bootc\n...\nimage-type: fedora-bootc"
 }
 ```
 
