@@ -46,31 +46,29 @@ class TestBuildOperations:
 
         assert response.status_code == 404
 
-    @patch("api.routers.build.GitHubService")
+    @patch("api.routers.build.get_queue_backend")
     async def test_trigger_build_with_config(
-        self, mock_github_service, client: AsyncClient, sample_config
+        self, mock_get_queue_backend, client: AsyncClient, sample_config
     ):
         """Test triggering build from saved configuration."""
-        # Mock GitHub service
-        mock_workflow_run = AsyncMock()
-        mock_workflow_run.id = 12345
-        mock_github_service.return_value.trigger_workflow = AsyncMock(
-            return_value=mock_workflow_run
-        )
+        # Mock queue backend
+        mock_queue = AsyncMock()
+        mock_queue.enqueue = AsyncMock(return_value=True)
+        mock_get_queue_backend.return_value = mock_queue
 
-        # Set GitHub token in settings (mocked)
+        # Mock settings
         with patch("api.routers.build.settings") as mock_settings:
-            mock_settings.GITHUB_TOKEN = "fake_token"
-            mock_settings.GITHUB_REPO = "test/repo"
-            mock_settings.GITHUB_WORKFLOW_FILE = "build.yaml"
+            mock_settings.BLAZINGMQ_QUEUE_BUILD = "build.queue"
 
             response = await client.post(
                 "/api/build/trigger", json={"config_id": sample_config.id, "ref": "main"}
             )
 
-            # Note: This will fail without GitHub token, which is expected in tests
-            # In real tests, you'd mock the GitHub service
-            assert response.status_code in [202, 503]  # 503 if no token
+            # Should successfully enqueue the build message
+            assert response.status_code == 202
+
+            # Verify the queue enqueue was called
+            mock_queue.enqueue.assert_called_once()
 
     async def test_trigger_build_without_config_or_yaml(self, client: AsyncClient):
         """Test triggering build without config_id, yaml_content, or definition_filename fails."""
