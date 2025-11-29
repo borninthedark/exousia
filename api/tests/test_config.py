@@ -198,3 +198,52 @@ class TestConfigCRUD:
         # Verify it's gone
         get_response = await client.get(f"/api/config/{sample_config.id}")
         assert get_response.status_code == 404
+
+
+@pytest.mark.unit
+class TestYamlDefinitions:
+    """Test YAML definition discovery endpoints."""
+
+    async def test_list_yaml_definitions(self, client: AsyncClient):
+        """List available YAML definition files."""
+        response = await client.get("/api/config/definitions/list")
+
+        assert response.status_code == 200
+        data = response.json()
+        filenames = {definition["filename"] for definition in data["definitions"]}
+
+        assert data["total"] == len(data["definitions"]) >= 1
+        assert all(name.endswith((".yml", ".yaml")) for name in filenames)
+
+        for definition in data["definitions"]:
+            assert "name" in definition
+            assert "description" in definition
+            assert definition["path"].startswith("yaml-definitions/")
+
+    async def test_get_yaml_definition(self, client: AsyncClient):
+        """Retrieve YAML content for a specific definition file."""
+        list_response = await client.get("/api/config/definitions/list")
+        assert list_response.status_code == 200
+        available_definitions = list_response.json()["definitions"]
+        assert available_definitions
+        sample_filename = available_definitions[0]["filename"]
+
+        response = await client.get(f"/api/config/definitions/{sample_filename}")
+
+        assert response.status_code == 200
+        payload = response.json()
+
+        assert payload["filename"] == sample_filename
+        assert payload["content"]
+
+    async def test_get_yaml_definition_not_found(self, client: AsyncClient):
+        """Unknown definition files should return 404."""
+        response = await client.get("/api/config/definitions/does-not-exist.yml")
+
+        assert response.status_code == 404
+
+    async def test_get_yaml_definition_invalid_path(self, client: AsyncClient):
+        """Prevent directory traversal when requesting definition files."""
+        response = await client.get("/api/config/definitions/..secret.yml")
+
+        assert response.status_code == 400

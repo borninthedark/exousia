@@ -10,6 +10,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+import yaml
 
 from ..database import get_db, ConfigModel, BuildModel
 from ..models import (
@@ -36,7 +37,7 @@ async def trigger_build(
     yaml_content = None
     config_id = request.config_id
 
-    # Get YAML content from config or request
+    # Get YAML content from config, definition, or request
     if config_id:
         result = await db.execute(
             select(ConfigModel).where(ConfigModel.id == config_id)
@@ -50,6 +51,33 @@ async def trigger_build(
         image_type = config.image_type
         fedora_version = config.fedora_version
         enable_plymouth = config.enable_plymouth
+    elif request.definition_filename:
+        # Security: prevent directory traversal
+        if '..' in request.definition_filename or '/' in request.definition_filename:
+            raise HTTPException(status_code=400, detail="Invalid filename")
+
+        yaml_path = settings.YAML_DEFINITIONS_DIR / request.definition_filename
+
+        if not yaml_path.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Definition file '{request.definition_filename}' not found"
+            )
+
+        try:
+            content = yaml_path.read_text()
+            parsed_yaml = yaml.safe_load(content) or {}
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to read definition file: {str(exc)}"
+            ) from exc
+
+        yaml_content = content
+        image_type = parsed_yaml.get('image-type', request.image_type.value)
+        fedora_version = parsed_yaml.get('image-version', request.fedora_version)
+        build_config = parsed_yaml.get('build', {}) if isinstance(parsed_yaml, dict) else {}
+        enable_plymouth = build_config.get('enable_plymouth', request.enable_plymouth)
     elif request.yaml_content:
         yaml_content = request.yaml_content
         image_type = request.image_type.value
@@ -58,7 +86,7 @@ async def trigger_build(
     else:
         raise HTTPException(
             status_code=400,
-            detail="Either config_id or yaml_content must be provided"
+            detail="config_id, yaml_content, or definition_filename must be provided",
         )
 
     # Validate YAML

@@ -77,7 +77,36 @@ class TestBuildOperations:
         response = await client.post("/api/build/trigger", json={"ref": "main"})
 
         assert response.status_code == 400
-        assert "config_id or yaml_content must be provided" in response.json()["error"]
+        assert "config_id, yaml_content, or definition_filename must be provided" in response.json()["detail"]
+
+    @patch("api.routers.build.GitHubService")
+    async def test_trigger_build_with_definition(
+        self, mock_github_service, client: AsyncClient
+    ):
+        """Test triggering build from a starter definition file."""
+        from api.config import settings as app_settings
+
+        mock_workflow_run = AsyncMock()
+        mock_workflow_run.id = 12345
+        mock_github_service.return_value.trigger_workflow = AsyncMock(
+            return_value=mock_workflow_run
+        )
+
+        definition_file = next(app_settings.YAML_DEFINITIONS_DIR.glob("*.y*ml")).name
+
+        with patch.multiple(
+            "api.routers.build.settings",
+            GITHUB_TOKEN="fake_token",
+            GITHUB_REPO="test/repo",
+            GITHUB_WORKFLOW_FILE="build.yaml",
+            YAML_DEFINITIONS_DIR=app_settings.YAML_DEFINITIONS_DIR,
+        ):
+            response = await client.post(
+                "/api/build/trigger",
+                json={"definition_filename": definition_file, "ref": "main"},
+            )
+
+            assert response.status_code in [202, 503]
 
     @patch("api.routers.build.GitHubService")
     async def test_cancel_build(self, mock_github_service, client: AsyncClient, sample_build):
