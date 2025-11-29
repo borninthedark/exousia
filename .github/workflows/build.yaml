@@ -32,6 +32,11 @@ on:
         required: true
         type: boolean
         default: true
+      yaml_config_file:
+        description: 'YAML config file to use (default: exousia.yml)'
+        required: false
+        type: string
+        default: 'exousia.yml'
   schedule:
     - cron: "20 4 * * *" # Nightly build at 4:20 AM UTC
 
@@ -261,11 +266,13 @@ jobs:
           INPUT_VERSION: ${{ github.event.inputs.fedora_version || 'current' }}
           INPUT_IMAGE_TYPE: ${{ github.event.inputs.image_type || 'current' }}
           INPUT_ENABLE_PLYMOUTH: ${{ github.event.inputs.enable_plymouth || 'true' }}
+          INPUT_YAML_CONFIG: ${{ github.event.inputs.yaml_config_file || 'exousia.yml' }}
         run: |
           echo "::group::Configuration Detection"
           echo "Input version: $INPUT_VERSION"
           echo "Input image type: $INPUT_IMAGE_TYPE"
           echo "Input Plymouth: $INPUT_ENABLE_PLYMOUTH"
+          echo "Input YAML config: $INPUT_YAML_CONFIG"
 
           if [[ -f .fedora-version ]] && [[ -s .fedora-version ]]; then
             CURRENT_VERSION=$(cut -d: -f1 .fedora-version)
@@ -295,7 +302,12 @@ jobs:
 
           # Generate Containerfile from YAML configuration
           echo "::group::YAML to Containerfile Transpilation"
-          echo "Generating Containerfile from exousia.yml..."
+          echo "Generating Containerfile from $INPUT_YAML_CONFIG..."
+
+          if [[ ! -f "$INPUT_YAML_CONFIG" ]]; then
+            echo "::error::YAML config file not found: $INPUT_YAML_CONFIG"
+            exit 1
+          fi
 
           if [[ "$ENABLE_PLYMOUTH" == "true" ]]; then
             PLYMOUTH_FLAG="--enable-plymouth"
@@ -304,7 +316,7 @@ jobs:
           fi
 
           python3 tools/yaml-to-containerfile.py \
-            --config exousia.yml \
+            --config "$INPUT_YAML_CONFIG" \
             --image-type "$TARGET_IMAGE_TYPE" \
             --fedora-version "$TARGET_VERSION" \
             $PLYMOUTH_FLAG \

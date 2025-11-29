@@ -32,12 +32,16 @@ async def trigger_build(
     """
     Trigger a new build via GitHub Actions.
 
-    Can trigger from a saved configuration or ad-hoc YAML content.
+    Can trigger from:
+    - A saved configuration (config_id)
+    - Ad-hoc YAML content (yaml_content)
+    - A yaml-definition file (definition_filename)
     """
     yaml_content = None
     config_id = request.config_id
+    yaml_config_file = None  # For GitHub workflow input
 
-    # Get YAML content from config, definition, or request
+    # Get YAML content from config, definition file, or request
     if config_id:
         result = await db.execute(
             select(ConfigModel).where(ConfigModel.id == config_id)
@@ -52,32 +56,35 @@ async def trigger_build(
         fedora_version = config.fedora_version
         enable_plymouth = config.enable_plymouth
     elif request.definition_filename:
+        # Load YAML from yaml-definitions directory
+        from pathlib import Path
+
         # Security: prevent directory traversal
         if '..' in request.definition_filename or '/' in request.definition_filename:
-            raise HTTPException(status_code=400, detail="Invalid filename")
+            raise HTTPException(status_code=400, detail="Invalid definition filename")
 
-        yaml_path = settings.YAML_DEFINITIONS_DIR / request.definition_filename
+        definition_path = settings.YAML_DEFINITIONS_DIR / request.definition_filename
 
-        if not yaml_path.exists():
+        if not definition_path.exists():
             raise HTTPException(
                 status_code=404,
                 detail=f"Definition file '{request.definition_filename}' not found"
             )
 
         try:
-            content = yaml_path.read_text()
-            parsed_yaml = yaml.safe_load(content) or {}
-        except Exception as exc:
+            with open(definition_path, 'r') as f:
+                yaml_content = f.read()
+        except Exception as e:
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to read definition file: {str(exc)}"
-            ) from exc
+                detail=f"Failed to read definition file: {str(e)}"
+            ) from e
 
-        yaml_content = content
-        image_type = parsed_yaml.get('image-type', request.image_type.value)
-        fedora_version = parsed_yaml.get('image-version', request.fedora_version)
-        build_config = parsed_yaml.get('build', {}) if isinstance(parsed_yaml, dict) else {}
-        enable_plymouth = build_config.get('enable_plymouth', request.enable_plymouth)
+        # Use the filename for GitHub workflow
+        yaml_config_file = f"yaml-definitions/{request.definition_filename}"
+        image_type = request.image_type.value
+        fedora_version = request.fedora_version
+        enable_plymouth = request.enable_plymouth
     elif request.yaml_content:
         yaml_content = request.yaml_content
         image_type = request.image_type.value
@@ -86,7 +93,7 @@ async def trigger_build(
     else:
         raise HTTPException(
             status_code=400,
-            detail="config_id, yaml_content, or definition_filename must be provided",
+            detail="Either config_id, yaml_content, or definition_filename must be provided"
         )
 
     # Validate YAML
@@ -116,14 +123,22 @@ async def trigger_build(
     if settings.GITHUB_TOKEN:
         try:
             github_service = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
+
+            # Build workflow inputs
+            workflow_inputs = {
+                "fedora_version": fedora_version,
+                "image_type": image_type,
+                "enable_plymouth": str(enable_plymouth).lower()
+            }
+
+            # Include yaml_config_file if using a definition file
+            if yaml_config_file:
+                workflow_inputs["yaml_config_file"] = yaml_config_file
+
             workflow_run = await github_service.trigger_workflow(
                 workflow_file=settings.GITHUB_WORKFLOW_FILE,
                 ref=request.ref,
-                inputs={
-                    "fedora_version": fedora_version,
-                    "image_type": image_type,
-                    "enable_plymouth": str(enable_plymouth).lower()
-                }
+                inputs=workflow_inputs
             )
 
             # Update build with workflow run ID
