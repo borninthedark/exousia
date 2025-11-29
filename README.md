@@ -22,7 +22,7 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Fedora Version:** 43
 - **Plymouth Customization:** ⚠️ Not available (atomic base uses built-in Plymouth config)
 - **Greetd Display Manager:** ❌ Not available
-- **Last Updated:** 2025-11-29 04:48:21 UTC
+- **Last Updated:** 2025-11-29 17:13:28 UTC
 
 > **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are only applied when using `fedora-bootc` as the base image type. The `fedora-sway-atomic` base image uses its pre-configured Plymouth setup and ignores custom themes.
 
@@ -114,91 +114,6 @@ make push
 
 ---
 
-## YAML-Based Configuration
-
-Exousia uses a **declarative YAML configuration** inspired by [BlueBuild](https://blue-build.org/) to define the entire image build process. This approach provides several advantages over traditional Containerfiles:
-
-- **Declarative** - Define what you want, not how to build it
-- **Validation** - Catch errors before build time
-- **Type Safety** - Structured configuration with clear schemas
-- **Modularity** - Reusable, composable build steps
-- **Readability** - YAML is easier to understand than Dockerfile syntax
-
-### How It Works
-
-```
-exousia.yml → [yaml-to-containerfile.py] → Containerfile.generated → [buildah] → Image
-```
-
-1. **Edit `exousia.yml`** - Define your image configuration
-2. **Transpilation** - Python script converts YAML to Containerfile
-3. **Build** - CI pipeline builds the generated Containerfile
-4. **Publish** - Image is pushed to registries
-
-The transpilation happens automatically in the CI pipeline, so you only need to edit the YAML file.
-
-### Quick Start
-
-#### Adding Packages
-
-Edit `exousia.yml` and add packages to the `rpm-ostree` module:
-
-```yaml
-modules:
-  - type: rpm-ostree
-    install:
-      - your-package
-      - another-package
-```
-
-#### Adding Configuration Files
-
-Add files using the `files` module:
-
-```yaml
-modules:
-  - type: files
-    files:
-      - src: custom-configs/your-config
-        dst: /etc/your-config
-        mode: "0644"
-```
-
-#### Running Custom Scripts
-
-Execute shell commands with the `script` module:
-
-```yaml
-modules:
-  - type: script
-    scripts:
-      - |
-        mkdir -p /var/lib/example
-        systemctl enable example.service
-```
-
-### Local Testing
-
-Validate your YAML configuration before committing:
-
-```bash
-# Validate YAML syntax and structure
-python3 tools/yaml-to-containerfile.py --config exousia.yml --validate
-
-# Generate Containerfile to preview
-python3 tools/yaml-to-containerfile.py \
-  --config exousia.yml \
-  --image-type fedora-sway-atomic \
-  --output Containerfile.test
-
-# Test build locally
-buildah build -f Containerfile.test -t exousia:test .
-```
-
-For detailed documentation on the YAML transpiler, see [`tools/README.md`](tools/README.md).
-
----
-
 ## Customization
 
 ### Switching Fedora Versions
@@ -257,9 +172,9 @@ The Plymouth boot splash configuration depends on your base image type:
 **To use custom Plymouth themes:**
 
 1. Switch to `fedora-bootc` base image:
-   ```bash
+   \`\`\`bash
    ./custom-scripts/fedora-version-switcher 43 fedora-bootc
-   ```
+   \`\`\`
 
 2. Ensure Plymouth is enabled in workflow dispatch (enabled by default for fedora-bootc)
 
@@ -278,11 +193,16 @@ The greetd display manager availability depends on your base image type:
 | `fedora-bootc` | ✅ Available | greetd.service enabled, custom config in `custom-configs/greetd/` |
 | `fedora-sway-atomic` | ❌ Not available | Uses SDDM display manager instead |
 
-**Note:** The `fedora-sway-atomic` image uses SDDM (Simple Desktop Display Manager) by default. If you need greetd for a custom login screen, switch to the `fedora-bootc` base image using:
+**Note:** The `fedora-sway-atomic` image uses SDDM (Simple Desktop Display Manager) by default. Switch to `fedora-bootc` if you need greetd.
 
-```bash
-./custom-scripts/fedora-version-switcher 43 fedora-bootc
-```
+**To use greetd display manager:**
+
+1. Switch to `fedora-bootc` base image:
+   \`\`\`bash
+   ./custom-scripts/fedora-version-switcher 43 fedora-bootc
+   \`\`\`
+
+2. Customize the greetd configuration in `custom-configs/greetd/config.toml` as needed
 
 ### Custom Scripts
 
@@ -343,12 +263,6 @@ This repository includes comprehensive documentation for building, testing, and 
 - **[Testing Guide](docs/testing/guide.md)** - In-depth testing architecture, test categories, and best practices
 - **[Testing README](docs/testing/README.md)** - Quick start guide for running the test suite
 - **[Test Suite Details](docs/testing/test_suite.md)** - Detailed test suite information
-
-### API Documentation
-
-- **[API Overview](docs/api/README.md)** - FastAPI backend architecture, features, and quick start
-- **[API Endpoints](docs/api/endpoints.md)** - Complete REST API reference with examples
-- **[API Development](docs/api/development.md)** - Contributing guide for API development
 
 ### Reference Documentation
 
@@ -411,4 +325,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with Fedora bootc**
 
-*This README was automatically generated on 2025-11-29 04:48:21 UTC*
+*This README was automatically generated on 2025-11-29 17:13:28 UTC*
