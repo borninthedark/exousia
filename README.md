@@ -115,7 +115,7 @@ make push
 
 #### Using NVM (Node Version Manager)
 
-[NVM](https://github.com/nvm-sh/nvm) is pre-installed system-wide in `/opt/nvm` and automatically loaded for all shell sessions. To start using it:
+[NVM](https://github.com/nvm-sh/nvm) is pre-installed system-wide in `/usr/local/nvm` and automatically loaded for all shell sessions. To start using it:
 
 ```bash
 # Install the latest LTS version of Node.js
