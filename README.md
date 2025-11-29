@@ -20,7 +20,10 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Base Image:** `Fedora Sway Atomic Desktop`
 - **Image Type:** `fedora-sway-atomic`
 - **Fedora Version:** 43
+- **Plymouth Customization:** ⚠️ Not available (atomic base uses built-in Plymouth config)
 - **Last Updated:** 2025-11-29 03:21:28 UTC
+
+> **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are only applied when using `fedora-bootc` as the base image type. The `fedora-sway-atomic` base image uses its pre-configured Plymouth setup and ignores custom themes.
 
 ## CI/CD Workflow: Fedora Bootc DevSec CI
 
@@ -152,7 +155,31 @@ Place configuration files in the appropriate `custom-configs/` subdirectories:
 
 - `custom-configs/sway/` - Sway window manager configuration
 - `custom-configs/greetd/` - Display manager configuration
-- `custom-configs/plymouth/` - Boot splash configuration
+- `custom-configs/plymouth/` - Boot splash configuration (**fedora-bootc only**)
+
+### Plymouth Boot Splash Configuration
+
+**⚠️ IMPORTANT: Custom Plymouth themes only work with `fedora-bootc` base images.**
+
+The Plymouth boot splash configuration depends on your base image type:
+
+| Base Image Type | Plymouth Support | Details |
+|-----------------|------------------|---------|
+| `fedora-bootc` | ✅ Custom themes supported | Uses `custom-configs/plymouth/themes/bgrt-better-luks/` |
+| `fedora-sway-atomic` | ⚠️ Built-in only | Uses pre-configured Plymouth from upstream, custom themes ignored |
+
+**To use custom Plymouth themes:**
+
+1. Switch to `fedora-bootc` base image:
+   ```bash
+   ./custom-scripts/fedora-version-switcher 43 fedora-bootc
+   ```
+
+2. Ensure Plymouth is enabled in workflow dispatch (enabled by default for fedora-bootc)
+
+3. Your custom theme in `custom-configs/plymouth/themes/bgrt-better-luks/` will be applied
+
+**Note:** The `enable_plymouth` workflow input only affects `fedora-bootc` builds. It has no effect on `fedora-sway-atomic` builds, which always use the upstream Plymouth configuration.
 
 ### Custom Scripts
 
