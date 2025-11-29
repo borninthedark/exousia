@@ -22,8 +22,7 @@ Build what you need, how you need it, with confidence.
 - **Base Image:** `Fedora Sway Atomic Desktop`
 - **Image Type:** `fedora-sway-atomic`
 - **Fedora Version:** 43
-- **Last Updated:** 2025-11-29 01:21:27 UTC
-- **Build Status:** [![Build Status](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions)
+- **Last Updated:** 2025-11-29 01:42:45 UTC
 
 ## CI/CD Workflow: Fedora Bootc DevSec CI
 
@@ -238,4 +237,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with Fedora bootc**
 
-*This README was automatically generated on 2025-11-29 01:21:27 UTC*
+*This README was automatically generated on 2025-11-29 01:42:45 UTC*
