@@ -229,7 +229,7 @@ extract_config() {
 # Generate the README content
 generate_readme() {
     cat > "$README_FILE" << EOF
-# Fedora Bootc Custom Image
+# Exousia: Custom Fedora Bootc Images
 
 [![CI/CD Pipeline](https://github.com/${GITHUB_REPO}/actions/workflows/build.yaml/badge.svg)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yaml)
 [![Fedora Version](https://img.shields.io/badge/Fedora-${FEDORA_VERSION}-51A2DA?logo=fedora)](https://fedoraproject.org)
