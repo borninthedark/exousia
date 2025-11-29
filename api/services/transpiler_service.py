@@ -75,7 +75,7 @@ class TranspilerService:
                     stderr=asyncio.subprocess.PIPE
                 )
 
-                stdout, stderr = await process.communicate()
+                _, stderr = await process.communicate()
 
                 # Clean up temp file
                 Path(temp_file).unlink()
@@ -84,7 +84,7 @@ class TranspilerService:
                     error_msg = stderr.decode() if stderr else "Validation failed"
                     errors.append(error_msg)
 
-            except Exception as e:
+            except (OSError, asyncio.TimeoutError) as e:
                 errors.append(f"Validation error: {str(e)}")
 
         return {
@@ -146,7 +146,7 @@ class TranspilerService:
 
             if process.returncode != 0:
                 error_msg = stderr.decode() if stderr else "Transpilation failed"
-                raise Exception(error_msg)
+                raise RuntimeError(error_msg)
 
             return stdout.decode()
 

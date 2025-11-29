@@ -5,10 +5,11 @@ GitHub Service
 Service for interacting with GitHub API for workflow management.
 """
 
-from github import Github, GithubException
-from typing import Dict, Any, Optional
 import asyncio
 from functools import wraps
+from typing import Dict, Optional
+
+from github import Github, GithubException
 
 
 def async_github_call(func):

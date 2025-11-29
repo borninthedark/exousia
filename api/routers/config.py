@@ -6,9 +6,8 @@ Endpoints for YAML configuration management and transpilation.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from typing import List
 
 from ..database import get_db, ConfigModel
 from ..models import (
@@ -62,7 +61,10 @@ async def transpile_config(request: ConfigTranspileRequest):
             enable_plymouth=request.enable_plymouth
         )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Transpilation failed: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Transpilation failed: {str(e)}"
+        ) from e
 
 
 @router.post("/", response_model=ConfigResponse, status_code=201)
@@ -82,7 +84,10 @@ async def create_config(
     existing = result.scalar_one_or_none()
 
     if existing:
-        raise HTTPException(status_code=409, detail=f"Configuration '{request.name}' already exists")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Configuration '{request.name}' already exists"
+        )
 
     # Validate YAML before saving
     transpiler = TranspilerService()

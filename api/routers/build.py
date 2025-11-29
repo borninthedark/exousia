@@ -5,10 +5,11 @@ Build Router
 Endpoints for triggering builds and tracking build status.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db, ConfigModel, BuildModel
 from ..models import (
@@ -110,7 +111,7 @@ async def trigger_build(
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to trigger GitHub workflow: {str(e)}"
-            )
+            ) from e
     else:
         raise HTTPException(
             status_code=503,
@@ -160,7 +161,7 @@ async def get_build_status(build_id: int, db: AsyncSession = Depends(get_db)):
             await db.commit()
             await db.refresh(build)
 
-        except Exception as e:
+        except Exception:
             # Log error but don't fail the request
             pass
 
@@ -249,7 +250,7 @@ async def cancel_build(build_id: int, db: AsyncSession = Depends(get_db)):
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to cancel GitHub workflow: {str(e)}"
-            )
+            ) from e
 
     # Update build status
     build.status = BuildStatus.CANCELLED

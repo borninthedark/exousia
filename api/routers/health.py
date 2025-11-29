@@ -5,9 +5,11 @@ Health Check Router
 Endpoints for API health and status monitoring.
 """
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
+
+from fastapi import APIRouter, Depends
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..models import HealthResponse
@@ -27,9 +29,9 @@ async def health_check(db: AsyncSession = Depends(get_db)):
     # Check database
     db_status = "healthy"
     try:
-        await db.execute("SELECT 1")
-    except Exception as e:
-        db_status = f"unhealthy: {str(e)}"
+        await db.execute(text("SELECT 1"))
+    except Exception:
+        db_status = "unhealthy"
 
     # Check GitHub API
     github_status = "healthy"
@@ -38,8 +40,8 @@ async def health_check(db: AsyncSession = Depends(get_db)):
             github_service = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
             # Simple check - try to get repo info
             await github_service.get_repo()
-        except Exception as e:
-            github_status = f"unhealthy: {str(e)}"
+        except Exception:
+            github_status = "unhealthy"
     else:
         github_status = "not configured"
 

@@ -13,10 +13,9 @@ Usage:
 
 import argparse
 import sys
-import re
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List
 
 try:
     import yaml
@@ -108,13 +107,22 @@ class ContainerfileGenerator:
         ])
 
         if self.context.image_type == "fedora-bootc":
-            self.lines.append(f"    ENABLE_PLYMOUTH={str(self.context.enable_plymouth).lower()}")
+            plymouth_val = str(self.context.enable_plymouth).lower()
+            self.lines.append(f"    ENABLE_PLYMOUTH={plymouth_val}")
             self.lines.append("")
-            self.lines.append(f'RUN echo "BUILD_IMAGE_TYPE={self.context.image_type}" >> /etc/environment && \\')
-            self.lines.append(f'    echo "ENABLE_PLYMOUTH={str(self.context.enable_plymouth).lower()}" >> /etc/environment')
+            self.lines.append(
+                f'RUN echo "BUILD_IMAGE_TYPE={self.context.image_type}" '
+                f'>> /etc/environment && \\'
+            )
+            self.lines.append(
+                f'    echo "ENABLE_PLYMOUTH={plymouth_val}" >> /etc/environment'
+            )
         else:
             self.lines.append("")
-            self.lines.append(f'RUN echo "BUILD_IMAGE_TYPE={self.context.image_type}" >> /etc/environment')
+            self.lines.append(
+                f'RUN echo "BUILD_IMAGE_TYPE={self.context.image_type}" '
+                f'>> /etc/environment'
+            )
 
         self.lines.append("")
 
@@ -239,19 +247,33 @@ class ContainerfileGenerator:
                 if packages:
                     # Read from packages.sway file
                     self.lines.append('    echo "==> Installing Sway desktop packages..."; \\')
-                    self.lines.append('    grep -vE \'^#|^$\' /usr/local/share/sericea-bootc/packages-sway | xargs -r dnf install -y --skip-unavailable; \\')
+                    self.lines.append(
+                        '    grep -vE \'^#|^$\' '
+                        '/usr/local/share/sericea-bootc/packages-sway | '
+                        'xargs -r dnf install -y --skip-unavailable; \\'
+                    )
 
         # Regular package installation
         install_packages = module.get("install", [])
         if install_packages:
-            self.lines.append('    echo "==> Installing custom packages from packages.add..."; \\')
-            self.lines.append('    grep -vE \'^#|^$\' /usr/local/share/sericea-bootc/packages-added | xargs -r dnf install -y; \\')
+            self.lines.append(
+                '    echo "==> Installing custom packages from packages.add..."; \\'
+            )
+            self.lines.append(
+                '    grep -vE \'^#|^$\' '
+                '/usr/local/share/sericea-bootc/packages-added | '
+                'xargs -r dnf install -y; \\'
+            )
 
         # Package removal
         remove_packages = module.get("remove", [])
         if remove_packages:
             self.lines.append('    echo "==> Removing packages from packages.remove..."; \\')
-            self.lines.append('    grep -vE \'^#|^$\' /usr/local/share/sericea-bootc/packages-removed | xargs -r dnf remove -y; \\')
+            self.lines.append(
+                '    grep -vE \'^#|^$\' '
+                '/usr/local/share/sericea-bootc/packages-removed | '
+                'xargs -r dnf remove -y; \\'
+            )
 
         # Upgrade and cleanup
         self.lines.append("    dnf upgrade -y; \\")
@@ -298,7 +320,7 @@ class ContainerfileGenerator:
 
             if left == "image-type":
                 return self.context.image_type == right
-            elif left == "enable_plymouth":
+            if left == "enable_plymouth":
                 return self.context.enable_plymouth == (right.lower() == "true")
 
         return False
@@ -307,7 +329,7 @@ class ContainerfileGenerator:
 def load_yaml_config(config_path: Path) -> Dict[str, Any]:
     """Load and validate YAML configuration."""
     try:
-        with open(config_path, 'r') as f:
+        with open(config_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
         return config
     except FileNotFoundError:
@@ -322,11 +344,10 @@ def determine_base_image(config: Dict[str, Any], image_type: str, version: str) 
     """Determine the base image URL based on configuration."""
     if image_type == "fedora-bootc":
         return f"quay.io/fedora/fedora-bootc:{version}"
-    elif image_type == "fedora-sway-atomic":
+    if image_type == "fedora-sway-atomic":
         return f"quay.io/fedora/fedora-sway-atomic:{version}"
-    else:
-        # Use config default
-        return config.get("base-image", f"quay.io/fedora/fedora-bootc:{version}")
+    # Use config default
+    return config.get("base-image", f"quay.io/fedora/fedora-bootc:{version}")
 
 
 def validate_config(config: Dict[str, Any]) -> bool:
@@ -398,7 +419,7 @@ Examples:
     base_image = determine_base_image(config, image_type, fedora_version)
 
     if args.verbose:
-        print(f"Build context:")
+        print("Build context:")
         print(f"  Image type: {image_type}")
         print(f"  Fedora version: {fedora_version}")
         print(f"  Plymouth: {enable_plymouth}")
