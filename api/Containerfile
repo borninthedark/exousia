@@ -1,0 +1,68 @@
+# Exousia API Containerfile
+# Multi-stage build for FastAPI backend
+
+# ============================================================================
+# Stage 1: Builder
+# ============================================================================
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install dependencies
+COPY api/requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# ============================================================================
+# Stage 2: Runtime
+# ============================================================================
+FROM python:3.12-slim
+
+# Metadata
+LABEL org.opencontainers.image.title="Exousia API"
+LABEL org.opencontainers.image.description="FastAPI backend for bootc config management"
+LABEL org.opencontainers.image.source="https://github.com/borninthedark/exousia"
+LABEL org.opencontainers.image.licenses="MIT"
+
+# Create non-root user
+RUN useradd -m -u 1000 -s /bin/bash exousia
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python packages from builder
+COPY --from=builder /root/.local /home/exousia/.local
+
+# Copy application code
+COPY api/ /app/api/
+COPY tools/ /app/tools/
+COPY exousia.yml /app/
+
+# Set ownership
+RUN chown -R exousia:exousia /app
+
+# Switch to non-root user
+USER exousia
+
+# Add local bin to PATH
+ENV PATH=/home/exousia/.local/bin:$PATH
+ENV PYTHONPATH=/app
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD python3 -c "import requests; requests.get('http://localhost:8000/api/health').raise_for_status()"
+
+# Expose port
+EXPOSE 8000
+
+# Run application
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

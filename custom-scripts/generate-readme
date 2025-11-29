@@ -186,6 +186,24 @@ extract_config() {
         fi
     fi
     
+    # Plymouth support detection
+    if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
+        PLYMOUTH_SUPPORT="✅ Available (custom themes supported)"
+        PLYMOUTH_NOTE="Custom Plymouth themes from \`custom-configs/plymouth/\` are applied during build with \`ENABLE_PLYMOUTH=true\`."
+    else
+        PLYMOUTH_SUPPORT="⚠️ Not available (atomic base uses built-in Plymouth config)"
+        PLYMOUTH_NOTE="Custom Plymouth themes from \`custom-configs/plymouth/\` are only applied when using \`fedora-bootc\` as the base image type. The \`fedora-sway-atomic\` base image uses its pre-configured Plymouth setup and ignores custom themes."
+    fi
+
+    # Greetd display manager support detection
+    if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
+        GREETD_SUPPORT="✅ Available"
+        GREETD_NOTE="greetd.service is enabled and custom configuration is available in \`custom-configs/greetd/\`."
+    else
+        GREETD_SUPPORT="❌ Not available"
+        GREETD_NOTE="The \`fedora-sway-atomic\` image uses SDDM (Simple Desktop Display Manager) by default. Switch to \`fedora-bootc\` if you need greetd."
+    fi
+
     # Build date
     BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
     
@@ -233,7 +251,11 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Base Image:** \`${IMAGE_TYPE_DISPLAY}\`
 - **Image Type:** \`${IMAGE_TYPE}\`
 - **Fedora Version:** ${FEDORA_VERSION}
+- **Plymouth Customization:** ${PLYMOUTH_SUPPORT}
+- **Greetd Display Manager:** ${GREETD_SUPPORT}
 - **Last Updated:** ${BUILD_DATE}
+
+> **Note:** ${PLYMOUTH_NOTE}
 
 ## CI/CD Workflow: Fedora Bootc DevSec CI
 
@@ -365,7 +387,53 @@ Place configuration files in the appropriate \`custom-configs/\` subdirectories:
 
 - \`custom-configs/sway/\` - Sway window manager configuration
 - \`custom-configs/greetd/\` - Display manager configuration
-- \`custom-configs/plymouth/\` - Boot splash configuration
+- \`custom-configs/plymouth/\` - Boot splash configuration (**fedora-bootc only**)
+
+### Plymouth Boot Splash Configuration
+
+**⚠️ IMPORTANT: Custom Plymouth themes only work with \`fedora-bootc\` base images.**
+
+The Plymouth boot splash configuration depends on your base image type:
+
+| Base Image Type | Plymouth Support | Details |
+|-----------------|------------------|---------|
+| \`fedora-bootc\` | ✅ Custom themes supported | Uses \`custom-configs/plymouth/themes/bgrt-better-luks/\` |
+| \`fedora-sway-atomic\` | ⚠️ Built-in only | Uses pre-configured Plymouth from upstream, custom themes ignored |
+
+**To use custom Plymouth themes:**
+
+1. Switch to \`fedora-bootc\` base image:
+   \\\`\\\`\\\`bash
+   ./custom-scripts/fedora-version-switcher 43 fedora-bootc
+   \\\`\\\`\\\`
+
+2. Ensure Plymouth is enabled in workflow dispatch (enabled by default for fedora-bootc)
+
+3. Your custom theme in \`custom-configs/plymouth/themes/bgrt-better-luks/\` will be applied
+
+**Note:** The \`enable_plymouth\` workflow input only affects \`fedora-bootc\` builds. It has no effect on \`fedora-sway-atomic\` builds, which always use the upstream Plymouth configuration.
+
+### Greetd Display Manager
+
+**⚠️ IMPORTANT: The greetd display manager is only available for \`fedora-bootc\` base images.**
+
+The greetd display manager availability depends on your base image type:
+
+| Base Image Type | Greetd Support | Details |
+|-----------------|----------------|---------|
+| \`fedora-bootc\` | ✅ Available | greetd.service enabled, custom config in \`custom-configs/greetd/\` |
+| \`fedora-sway-atomic\` | ❌ Not available | Uses SDDM display manager instead |
+
+**Note:** ${GREETD_NOTE}
+
+**To use greetd display manager:**
+
+1. Switch to \`fedora-bootc\` base image:
+   \\\`\\\`\\\`bash
+   ./custom-scripts/fedora-version-switcher 43 fedora-bootc
+   \\\`\\\`\\\`
+
+2. Customize the greetd configuration in \`custom-configs/greetd/config.toml\` as needed
 
 ### Custom Scripts
 
@@ -385,6 +453,19 @@ To use the full CI/CD pipeline, configure these secrets in your repository:
 ### For Docker Hub:
 - \`DOCKERHUB_USERNAME\`: Your Docker Hub username
 - \`DOCKERHUB_TOKEN\`: Access token with Read, Write, Delete permissions
+
+### For Code Coverage (Codecov):
+- \`CODECOV_TOKEN\`: Repository upload token from [codecov.io](https://codecov.io)
+  1. Sign up at https://codecov.io with your GitHub account
+  2. Add your repository to Codecov
+  3. Copy the repository upload token
+  4. Add as \`CODECOV_TOKEN\` secret in GitHub Actions
+
+**Benefits:**
+- Detailed coverage reports with branch coverage tracking
+- PR comments showing coverage changes
+- Coverage trend visualization
+- Integration with GitHub checks
 
 ---
 
@@ -433,6 +514,8 @@ This repository includes comprehensive documentation for building, testing, and 
 ### Community Resources
 - [Fedora Discussion - bootc](https://discussion.fedoraproject.org/tag/bootc)
 - [bootc Issue Tracker](https://gitlab.com/fedora/bootc/tracker)
+- [BlueBuild](https://blue-build.org/) - Declarative image builder for bootc
+- [BlueBuild Module Reference](https://blue-build.org/reference/module/)
 
 ### Articles & Guides
 - [Getting Started With Bootc](https://docs.fedoraproject.org/en-US/bootc/getting-started/)
@@ -459,6 +542,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - The Fedora Project and bootc maintainers
 - [Universal Blue](https://universal-blue.org/) for pioneering container-native desktop workflows
+- [BlueBuild](https://blue-build.org/) for the declarative YAML specification that inspired our build system
 - [bootcrew](https://github.com/bootcrew) for community-driven bootc projects and examples
 - The broader container and immutable OS community
 - All contributors to the referenced documentation and guides

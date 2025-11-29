@@ -20,7 +20,11 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Base Image:** `Fedora Sway Atomic Desktop`
 - **Image Type:** `fedora-sway-atomic`
 - **Fedora Version:** 43
+- **Plymouth Customization:** ⚠️ Not available (atomic base uses built-in Plymouth config)
+- **Greetd Display Manager:** ❌ Not available
 - **Last Updated:** 2025-11-29 04:48:21 UTC
+
+> **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are only applied when using `fedora-bootc` as the base image type. The `fedora-sway-atomic` base image uses its pre-configured Plymouth setup and ignores custom themes.
 
 ## CI/CD Workflow: Fedora Bootc DevSec CI
 
@@ -110,6 +114,91 @@ make push
 
 ---
 
+## YAML-Based Configuration
+
+Exousia uses a **declarative YAML configuration** inspired by [BlueBuild](https://blue-build.org/) to define the entire image build process. This approach provides several advantages over traditional Containerfiles:
+
+- **Declarative** - Define what you want, not how to build it
+- **Validation** - Catch errors before build time
+- **Type Safety** - Structured configuration with clear schemas
+- **Modularity** - Reusable, composable build steps
+- **Readability** - YAML is easier to understand than Dockerfile syntax
+
+### How It Works
+
+```
+exousia.yml → [yaml-to-containerfile.py] → Containerfile.generated → [buildah] → Image
+```
+
+1. **Edit `exousia.yml`** - Define your image configuration
+2. **Transpilation** - Python script converts YAML to Containerfile
+3. **Build** - CI pipeline builds the generated Containerfile
+4. **Publish** - Image is pushed to registries
+
+The transpilation happens automatically in the CI pipeline, so you only need to edit the YAML file.
+
+### Quick Start
+
+#### Adding Packages
+
+Edit `exousia.yml` and add packages to the `rpm-ostree` module:
+
+```yaml
+modules:
+  - type: rpm-ostree
+    install:
+      - your-package
+      - another-package
+```
+
+#### Adding Configuration Files
+
+Add files using the `files` module:
+
+```yaml
+modules:
+  - type: files
+    files:
+      - src: custom-configs/your-config
+        dst: /etc/your-config
+        mode: "0644"
+```
+
+#### Running Custom Scripts
+
+Execute shell commands with the `script` module:
+
+```yaml
+modules:
+  - type: script
+    scripts:
+      - |
+        mkdir -p /var/lib/example
+        systemctl enable example.service
+```
+
+### Local Testing
+
+Validate your YAML configuration before committing:
+
+```bash
+# Validate YAML syntax and structure
+python3 tools/yaml-to-containerfile.py --config exousia.yml --validate
+
+# Generate Containerfile to preview
+python3 tools/yaml-to-containerfile.py \
+  --config exousia.yml \
+  --image-type fedora-sway-atomic \
+  --output Containerfile.test
+
+# Test build locally
+buildah build -f Containerfile.test -t exousia:test .
+```
+
+For detailed documentation on the YAML transpiler, see [`tools/README.md`](tools/README.md).
+
+---
+
 ## Customization
 
 ### Switching Fedora Versions
@@ -152,7 +241,48 @@ Place configuration files in the appropriate `custom-configs/` subdirectories:
 
 - `custom-configs/sway/` - Sway window manager configuration
 - `custom-configs/greetd/` - Display manager configuration
-- `custom-configs/plymouth/` - Boot splash configuration
+- `custom-configs/plymouth/` - Boot splash configuration (**fedora-bootc only**)
+
+### Plymouth Boot Splash Configuration
+
+**⚠️ IMPORTANT: Custom Plymouth themes only work with `fedora-bootc` base images.**
+
+The Plymouth boot splash configuration depends on your base image type:
+
+| Base Image Type | Plymouth Support | Details |
+|-----------------|------------------|---------|
+| `fedora-bootc` | ✅ Custom themes supported | Uses `custom-configs/plymouth/themes/bgrt-better-luks/` |
+| `fedora-sway-atomic` | ⚠️ Built-in only | Uses pre-configured Plymouth from upstream, custom themes ignored |
+
+**To use custom Plymouth themes:**
+
+1. Switch to `fedora-bootc` base image:
+   ```bash
+   ./custom-scripts/fedora-version-switcher 43 fedora-bootc
+   ```
+
+2. Ensure Plymouth is enabled in workflow dispatch (enabled by default for fedora-bootc)
+
+3. Your custom theme in `custom-configs/plymouth/themes/bgrt-better-luks/` will be applied
+
+**Note:** The `enable_plymouth` workflow input only affects `fedora-bootc` builds. It has no effect on `fedora-sway-atomic` builds, which always use the upstream Plymouth configuration.
+
+### Greetd Display Manager
+
+**⚠️ IMPORTANT: The greetd display manager is only available for `fedora-bootc` base images.**
+
+The greetd display manager availability depends on your base image type:
+
+| Base Image Type | Greetd Support | Details |
+|-----------------|----------------|---------|
+| `fedora-bootc` | ✅ Available | greetd.service enabled, custom config in `custom-configs/greetd/` |
+| `fedora-sway-atomic` | ❌ Not available | Uses SDDM display manager instead |
+
+**Note:** The `fedora-sway-atomic` image uses SDDM (Simple Desktop Display Manager) by default. If you need greetd for a custom login screen, switch to the `fedora-bootc` base image using:
+
+```bash
+./custom-scripts/fedora-version-switcher 43 fedora-bootc
+```
 
 ### Custom Scripts
 
@@ -172,6 +302,19 @@ To use the full CI/CD pipeline, configure these secrets in your repository:
 ### For Docker Hub:
 - `DOCKERHUB_USERNAME`: Your Docker Hub username
 - `DOCKERHUB_TOKEN`: Access token with Read, Write, Delete permissions
+
+### For Code Coverage (Codecov):
+- `CODECOV_TOKEN`: Repository upload token from [codecov.io](https://codecov.io)
+  1. Sign up at https://codecov.io with your GitHub account
+  2. Add your repository to Codecov
+  3. Copy the repository upload token
+  4. Add as `CODECOV_TOKEN` secret in GitHub Actions
+
+**Benefits:**
+- Detailed coverage reports with branch coverage tracking
+- PR comments showing coverage changes
+- Coverage trend visualization
+- Integration with GitHub checks
 
 ---
 
@@ -201,6 +344,12 @@ This repository includes comprehensive documentation for building, testing, and 
 - **[Testing README](docs/testing/README.md)** - Quick start guide for running the test suite
 - **[Test Suite Details](docs/testing/test_suite.md)** - Detailed test suite information
 
+### API Documentation
+
+- **[API Overview](docs/api/README.md)** - FastAPI backend architecture, features, and quick start
+- **[API Endpoints](docs/api/endpoints.md)** - Complete REST API reference with examples
+- **[API Development](docs/api/development.md)** - Contributing guide for API development
+
 ### Reference Documentation
 
 - **[Plymouth Usage](docs/reference/plymouth_usage_doc.md)** - Configure and customize the boot splash screen
@@ -220,6 +369,8 @@ This repository includes comprehensive documentation for building, testing, and 
 ### Community Resources
 - [Fedora Discussion - bootc](https://discussion.fedoraproject.org/tag/bootc)
 - [bootc Issue Tracker](https://gitlab.com/fedora/bootc/tracker)
+- [BlueBuild](https://blue-build.org/) - Declarative image builder for bootc
+- [BlueBuild Module Reference](https://blue-build.org/reference/module/)
 
 ### Articles & Guides
 - [Getting Started With Bootc](https://docs.fedoraproject.org/en-US/bootc/getting-started/)
@@ -246,6 +397,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - The Fedora Project and bootc maintainers
 - [Universal Blue](https://universal-blue.org/) for pioneering container-native desktop workflows
+- [BlueBuild](https://blue-build.org/) for the declarative YAML specification that inspired our build system
 - [bootcrew](https://github.com/bootcrew) for community-driven bootc projects and examples
 - The broader container and immutable OS community
 - All contributors to the referenced documentation and guides

@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: docker.io/library/postgres:16-alpine
+    container_name: exousia-db
+    environment:
+      POSTGRES_USER: exousia
+      POSTGRES_PASSWORD: exousia_dev_password
+      POSTGRES_DB: exousia
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U exousia"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - exousia-network
+
+  # FastAPI Backend
+  api:
+    build:
+      context: .
+      dockerfile: api/Containerfile
+    container_name: exousia-api
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://exousia:exousia_dev_password@postgres:5432/exousia
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GITHUB_REPO=borninthedark/exousia
+      - API_RELOAD=true
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./api:/app/api:z
+      - ./tools:/app/tools:z
+      - ./exousia.yml:/app/exousia.yml:z
+      - ./api_data:/app/data:z
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - exousia-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  exousia-network:
+    driver: bridge
