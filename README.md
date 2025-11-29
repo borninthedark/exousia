@@ -22,7 +22,7 @@ Build what you need, how you need it, with confidence.
 - **Base Image:** `Fedora Sway Atomic Desktop`
 - **Image Type:** `fedora-sway-atomic`
 - **Fedora Version:** 43
-- **Last Updated:** 2025-11-29 01:14:44 UTC
+- **Last Updated:** 2025-11-29 01:16:21 UTC
 
 ## 🏗️ CI/CD Workflow: Fedora Bootc DevSec CI
 
@@ -225,9 +225,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - The Fedora Project and bootc maintainers
 - The broader container and immutable OS community
 - All contributors to the referenced documentation and guides
+- **Claude** (Anthropic) and **GPT Codex** (OpenAI) for AI-assisted development
+
+### Development Notes
+
+This project leverages AI-assisted development practices. The build pipeline, testing framework, and automation scripts were developed in collaboration with Claude and GPT Codex, demonstrating modern DevOps workflows enhanced by AI capabilities.
 
 ---
 
 **Built with ❤️ using Fedora bootc**
 
-*This README was automatically generated on 2025-11-29 01:14:44 UTC*
+*This README was automatically generated on 2025-11-29 01:16:21 UTC*
