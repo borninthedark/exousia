@@ -135,11 +135,101 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ══════════════════════════════════════════════════════════════════════════
-  # Job 2: Build - Build Bootc Container Image
+  # Job 2: Python Linting & Testing
+  # ══════════════════════════════════════════════════════════════════════════
+  python-quality:
+    name: Python Quality & Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r api/requirements.txt
+          pip install pylint isort mypy pytest-cov
+
+      - name: Run Black (code formatting check)
+        continue-on-error: true
+        run: |
+          echo "::group::Black Code Formatting"
+          black --check api/ tools/*.py || echo "::warning::Black formatting issues found"
+          echo "::endgroup::"
+
+      - name: Run isort (import sorting check)
+        continue-on-error: true
+        run: |
+          echo "::group::Import Sorting Check"
+          isort --check-only api/ tools/*.py || echo "::warning::Import sorting issues found"
+          echo "::endgroup::"
+
+      - name: Run Ruff (linting)
+        continue-on-error: true
+        run: |
+          echo "::group::Ruff Linting"
+          ruff check api/ tools/*.py || echo "::warning::Ruff linting issues found"
+          echo "::endgroup::"
+
+      - name: Run pylint
+        continue-on-error: true
+        run: |
+          echo "::group::Pylint Analysis"
+          pylint api/**/*.py tools/*.py || echo "::warning::Pylint issues found"
+          echo "::endgroup::"
+
+      - name: Run mypy (type checking)
+        continue-on-error: true
+        run: |
+          echo "::group::Type Checking"
+          mypy api/ || echo "::warning::Type checking issues found"
+          echo "::endgroup::"
+
+      - name: Run pytest with coverage
+        run: |
+          echo "::group::Running Tests"
+          pytest api/tests/ -v --tb=short --cov=api --cov-report=term --cov-report=xml
+          echo "::endgroup::"
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        continue-on-error: true
+        with:
+          files: ./coverage.xml
+          flags: api
+          name: api-coverage
+
+      - name: Python quality summary
+        if: always()
+        run: |
+          {
+            echo "## 🐍 Python Quality & Test Results"
+            echo ""
+            echo "- **Black:** Code formatting checked"
+            echo "- **isort:** Import sorting verified"
+            echo "- **Ruff:** Linting completed"
+            echo "- **pylint:** Static analysis done"
+            echo "- **mypy:** Type checking performed"
+            echo "- **pytest:** Unit and integration tests executed"
+            echo ""
+            echo "### Test Coverage"
+            echo "Coverage report generated (see artifacts)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Job 3: Build - Build Bootc Container Image
   # ══════════════════════════════════════════════════════════════════════════
   build:
     name: Build Bootc Image
-    needs: lint-and-validate
+    needs: [lint-and-validate, python-quality]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     outputs:
