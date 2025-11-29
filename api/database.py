@@ -74,7 +74,7 @@ class BuildEventModel(Base):
     event_type = Column(String(50), nullable=False)  # e.g., "status_changed", "workflow_triggered"
     from_status = Column(String(50), nullable=True)
     to_status = Column(String(50), nullable=True)
-    metadata = Column(JSON, nullable=True)  # Additional event data
+    event_data = Column(JSON, nullable=True)  # Additional event data (renamed from 'metadata' to avoid SQLAlchemy reserved name conflict)
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationship

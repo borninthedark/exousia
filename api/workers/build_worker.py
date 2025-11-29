@@ -350,7 +350,7 @@ class BuildWorker:
             event_type=event_type,
             from_status=from_status.value,
             to_status=to_status.value,
-            metadata=metadata,
+            event_data=metadata,  # Renamed from 'metadata' to 'event_data' to avoid SQLAlchemy reserved name conflict
             timestamp=datetime.utcnow()
         )
         db.add(event)

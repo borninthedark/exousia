@@ -81,7 +81,7 @@ DEPLOYMENT_MODE=cloud WORKER_CONCURRENCY=4
   "event_type": "build_started",
   "from_status": "queued",
   "to_status": "in_progress",
-  "metadata": {"message_id": "abc123"},
+  "event_data": {"message_id": "abc123"},
   "timestamp": "2025-11-29T10:00:10Z"
 }
 ```

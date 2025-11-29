@@ -373,13 +373,13 @@ curl http://localhost:8000/builds/123/events
     "event_type": "build_started",
     "from_status": "queued",
     "to_status": "in_progress",
-    "metadata": {"message_id": "abc123"},
+    "event_data": {"message_id": "abc123"},
     "timestamp": "2025-11-29T10:00:10Z"
   },
   {
     "id": 3,
     "event_type": "workflow_triggered",
-    "metadata": {"workflow_run_id": 456},
+    "event_data": {"workflow_run_id": 456},
     "timestamp": "2025-11-29T10:00:15Z"
   },
   {
