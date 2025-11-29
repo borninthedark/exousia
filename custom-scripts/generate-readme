@@ -252,6 +252,7 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Image Type:** \`${IMAGE_TYPE}\`
 - **Fedora Version:** ${FEDORA_VERSION}
 - **Plymouth Customization:** ${PLYMOUTH_SUPPORT}
+- **Greetd Display Manager:** ${GREETD_SUPPORT}
 - **Last Updated:** ${BUILD_DATE}
 
 > **Note:** ${PLYMOUTH_NOTE}

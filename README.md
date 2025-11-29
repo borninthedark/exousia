@@ -20,6 +20,8 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Base Image:** `Fedora Sway Atomic Desktop`
 - **Image Type:** `fedora-sway-atomic`
 - **Fedora Version:** 43
+- **Plymouth Customization:** ⚠️ Not available (atomic base uses built-in Plymouth config)
+- **Greetd Display Manager:** ❌ Not available
 - **Last Updated:** 2025-11-29 04:48:21 UTC
 
 > **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are only applied when using `fedora-bootc` as the base image type. The `fedora-sway-atomic` base image uses its pre-configured Plymouth setup and ignores custom themes.
