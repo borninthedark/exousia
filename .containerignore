@@ -19,4 +19,7 @@ image.tar
 .vscode/
 .idea/
 
+# Ignore API directory (runs separately, not part of bootc/atomic image)
+api/
+
 
