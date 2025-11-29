@@ -9,8 +9,8 @@ Makefile
 README.md
 LICENSE
 
-# Ignore test files and directories
-tests/
+# Ignore bootc test files (but allow api/tests/ for API container)
+custom-tests/
 
 # Ignore local build artifacts
 image.tar
