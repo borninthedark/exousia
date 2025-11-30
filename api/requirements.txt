@@ -6,6 +6,7 @@ fastapi==0.109.0
 uvicorn[standard]==0.27.0
 pydantic==2.5.3
 pydantic-settings==2.1.0
+fastapi-users[sqlalchemy]==12.1.2
 
 # YAML Processing
 pyyaml==6.0.1
@@ -18,11 +19,16 @@ aiohttp==3.9.1
 sqlalchemy==2.0.25
 aiosqlite==0.19.0
 asyncpg==0.29.0
+alembic==1.13.1
 
 # Authentication & Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
+prometheus-fastapi-instrumentator==6.1.0
+opentelemetry-sdk==1.24.0
+opentelemetry-exporter-otlp==1.24.0
+opentelemetry-instrumentation-fastapi==0.45b0
 
 # Middleware & Utilities
 python-dotenv==1.0.0

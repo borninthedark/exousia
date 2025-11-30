@@ -27,19 +27,23 @@ The Exousia API is a FastAPI-based backend service that provides YAML configurat
 
 ## Key Features
 
+- **Authentication & Users**: JWT auth and user management powered by fastapi-users
 - **YAML Configuration Management**: Store, validate, and manage BlueBuild-compatible YAML configurations
 - **Containerfile Transpilation**: Convert YAML configs to Containerfiles dynamically
 - **Build Orchestration**: Trigger and monitor GitHub Actions builds
 - **Health Monitoring**: Comprehensive health checks for database and external services
+- **Observability**: Prometheus metrics endpoint and optional OpenTelemetry tracing
 - **Async Operations**: Full async/await support with FastAPI and SQLAlchemy 2.0
 - **Starter Definitions**: Browse built-in BlueBuild YAML definitions directly from the API
 
 ## Technology Stack
 
-- **Framework**: FastAPI 0.109.0
+- **Framework**: FastAPI 0.109.0 + fastapi-users for auth
 - **Database ORM**: SQLAlchemy 2.0 (async)
 - **Database**: PostgreSQL (prod) / SQLite (dev)
+- **Migrations**: Alembic
 - **Testing**: pytest + pytest-asyncio + pytest-cov
+- **Observability**: Prometheus instrumentator + OpenTelemetry (optional)
 - **Code Quality**: black, ruff, isort, mypy, pylint
 - **Documentation**: OpenAPI/Swagger (auto-generated)
 
@@ -54,6 +58,10 @@ pip install -r api/requirements.txt
 # Run with uvicorn
 cd api
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# Apply database migrations
+cd ..
+alembic -c api/alembic.ini upgrade head
 ```
 
 ### Using Podman Compose
@@ -86,6 +94,13 @@ pytest api/tests/ -v -m integration
 - `GET /api/health` - Comprehensive health check with service status
 - `GET /api/ping` - Simple uptime check
 
+### Authentication Endpoints
+- `POST /api/auth/register` - Register a new user
+- `POST /api/auth/jwt/login` - Obtain JWT access token
+- `GET /api/users/me` - Get the authenticated user's profile
+- `PATCH /api/users/me` - Update profile details
+- `GET /api/users/` - List users (privileged)
+
 ### Configuration Endpoints
 - `POST /api/config/validate` - Validate YAML configuration
 - `POST /api/config/transpile` - Transpile YAML to Containerfile
@@ -102,6 +117,10 @@ pytest api/tests/ -v -m integration
 - `GET /api/build/` - List builds (paginated, filterable)
 - `GET /api/build/{id}/status` - Get build status with GitHub workflow info
 - `POST /api/build/{id}/cancel` - Cancel running build
+
+### Observability
+- `GET /metrics` - Prometheus metrics (not included in OpenAPI docs)
+- OpenTelemetry tracing can be enabled with `ENABLE_TRACING=true` and OTLP exporter variables
 
 ## Configuration
 
@@ -124,18 +143,21 @@ GITHUB_WORKFLOW_FILE=build.yaml
 
 # Transpiler
 TRANSPILER_SCRIPT=tools/yaml-to-containerfile.py
+
+# Authentication
+SECRET_KEY=change-me
+
+# Observability
+ENABLE_TRACING=false
+OTEL_EXPORTER_OTLP_ENDPOINT=
+OTEL_EXPORTER_OTLP_HEADERS=
 ```
 
-## Middleware Stack
+## Middleware & Observability
 
-The API includes the following middleware (applied in order):
-
-1. **GZip Compression** - Response compression for bandwidth optimization
-2. **Security Headers** - X-Content-Type-Options, X-Frame-Options, etc.
-3. **Correlation ID** - Request tracing across distributed systems
-4. **Request Logging** - Structured JSON logs with correlation IDs
-5. **Rate Limiting** - Protect against abuse (100 req/min per IP)
-6. **CORS** - Cross-origin resource sharing configuration
+- **CORS** - Cross-origin resource sharing configuration
+- **Prometheus metrics** - `/metrics` endpoint for scraping
+- **OpenTelemetry tracing** - Optional OTLP exporter controlled via environment variables
 
 ## Database Models
 
@@ -168,6 +190,26 @@ Tracks build jobs and GitHub Actions workflow runs.
 - `completed_at` - Build completion timestamp
 - `created_at` - Record creation timestamp
 
+### BuildEventModel
+Immutable event log for build state transitions.
+
+**Fields:**
+- `id` - Primary key
+- `build_id` - Foreign key to BuildModel
+- `event_type` - Event type (status changes, workflow triggers)
+- `from_status` / `to_status` - Previous and new statuses
+- `event_data` - JSON metadata for the event
+- `timestamp` - Event timestamp
+
+### User
+Authentication model managed by fastapi-users.
+
+**Fields:**
+- `id` - UUID primary key
+- `email` - Unique user email
+- `hashed_password` - Password hash
+- `is_active`, `is_superuser`, `is_verified` - User flags
+
 ## Error Handling
 
 The API uses standard HTTP status codes:
@@ -191,12 +233,11 @@ All error responses follow this format:
 
 ## Security Considerations
 
-1. **Authentication**: Currently not implemented - add OAuth2/JWT for production
-2. **Rate Limiting**: Basic IP-based rate limiting included
-3. **Input Validation**: Pydantic models validate all inputs
-4. **SQL Injection**: Protected by SQLAlchemy ORM
-5. **CORS**: Configure allowed origins in production
-6. **Secrets**: Never commit tokens - use environment variables
+1. **Authentication**: JWT auth via fastapi-users protects configuration and build routes
+2. **Input Validation**: Pydantic models validate all inputs
+3. **SQL Injection**: Protected by SQLAlchemy ORM
+4. **CORS**: Configure allowed origins in production
+5. **Secrets**: Never commit tokens - use environment variables (e.g., `SECRET_KEY`, `GITHUB_TOKEN`)
 
 ## Further Documentation
 

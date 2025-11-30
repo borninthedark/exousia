@@ -19,11 +19,26 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
-from pathlib import Path
+
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from .routers import config, build, health
 from .database import init_db, close_db
 from .config import settings
+from .auth import (
+    auth_backend,
+    current_active_user,
+    fastapi_users,
+    UserCreate,
+    UserRead,
+    UserUpdate,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -31,6 +46,38 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+instrumentator = Instrumentator()
+
+
+def _parse_otlp_headers(header_string: str | None) -> dict[str, str]:
+    if not header_string:
+        return {}
+    header_pairs = [pair.strip() for pair in header_string.split(",") if pair.strip()]
+    headers: dict[str, str] = {}
+    for pair in header_pairs:
+        if "=" in pair:
+            key, value = pair.split("=", 1)
+            headers[key.strip()] = value.strip()
+    return headers
+
+
+def setup_tracing(app: FastAPI) -> None:
+    if not settings.ENABLE_TRACING:
+        logger.info("Tracing is disabled.")
+        return
+
+    resource = Resource.create({"service.name": settings.OTEL_SERVICE_NAME})
+    tracer_provider = TracerProvider(resource=resource)
+
+    if settings.OTEL_EXPORTER_OTLP_ENDPOINT:
+        exporter = OTLPSpanExporter(
+            endpoint=settings.OTEL_EXPORTER_OTLP_ENDPOINT,
+            headers=_parse_otlp_headers(settings.OTEL_EXPORTER_OTLP_HEADERS),
+        )
+        tracer_provider.add_span_processor(BatchSpanProcessor(exporter))
+
+    trace.set_tracer_provider(tracer_provider)
+    FastAPIInstrumentor.instrument_app(app)
 
 
 @asynccontextmanager
@@ -41,6 +88,9 @@ async def lifespan(app: FastAPI):
     # Initialize database
     await init_db()
     logger.info("Database initialized")
+
+    setup_tracing(app)
+    instrumentator.instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
     yield
 
@@ -101,6 +151,19 @@ async def general_exception_handler(request, exc):
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(config.router, prefix="/api/config", tags=["config"])
 app.include_router(build.router, prefix="/api/build", tags=["build"])
+app.include_router(
+    fastapi_users.get_auth_router(auth_backend), prefix="/api/auth/jwt", tags=["auth"]
+)
+app.include_router(
+    fastapi_users.get_register_router(UserRead, UserCreate),
+    prefix="/api/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_users_router(UserRead, UserUpdate),
+    prefix="/api/users",
+    tags=["users"],
+)
 
 
 @app.get("/")
