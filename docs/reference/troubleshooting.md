@@ -623,6 +623,6 @@ podman build . 2>&1 | less
 
 - [Test Suite Guide](./guide.md)
 - [Writing Tests](./writing-tests.md)
-- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)
+- [bootc Project](https://github.com/bootc-dev/bootc)
 - [bats-core Documentation](https://bats-core.readthedocs.io/)
 - [Buildah Troubleshooting](https://github.com/containers/buildah/blob/main/troubleshooting.md)

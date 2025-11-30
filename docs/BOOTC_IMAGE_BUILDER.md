@@ -217,7 +217,7 @@ The bootc-image-builder can be integrated into your CI/CD pipeline:
 ## References
 
 - [bootc-image-builder GitHub](https://github.com/osbuild/bootc-image-builder)
-- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)
+- [bootc Project](https://github.com/bootc-dev/bootc)
 - [Podman Desktop bootc Extension](https://github.com/podman-desktop/extension-bootc)
 
 ## See Also

@@ -315,7 +315,7 @@ sudo bootc upgrade --apply
 - [README.md](../README.md) - Using pre-built images
 - [BOOTC_IMAGE_BUILDER.md](BOOTC_IMAGE_BUILDER.md) - Testing disk images locally
 - [TESTING.md](TESTING.md) - Container image testing
-- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)
+- [bootc Project](https://github.com/bootc-dev/bootc)
 
 ## Community Resources
 

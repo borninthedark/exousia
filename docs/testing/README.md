@@ -223,7 +223,7 @@ Tests recognize these environment variables:
 - [Troubleshooting](./troubleshooting.md) - Debug help
 
 ### External Resources
-- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)
+- [bootc Project](https://github.com/bootc-dev/bootc)
 - [bats-core Testing Framework](https://bats-core.readthedocs.io/)
 - [Buildah Documentation](https://buildah.io/)
 - [GitHub Actions Workflows](https://docs.github.com/en/actions)

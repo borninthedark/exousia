@@ -377,4 +377,4 @@ Potential improvements for the transpiler:
 
 - [BlueBuild Documentation](https://blue-build.org/)
 - [BlueBuild Module Reference](https://blue-build.org/reference/module/)
-- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)
+- [bootc Project](https://github.com/bootc-dev/bootc)
