@@ -16,6 +16,7 @@ spec.loader.exec_module(yaml_to_containerfile)
 
 ContainerfileGenerator = yaml_to_containerfile.ContainerfileGenerator
 BuildContext = yaml_to_containerfile.BuildContext
+determine_base_image = yaml_to_containerfile.determine_base_image
 
 
 def test_generator_is_stateless():
@@ -106,6 +107,29 @@ def test_generator_with_different_contexts():
     assert "ENABLE_PLYMOUTH" not in output1
 
     print("✓ Generator handles context changes correctly")
+
+
+def test_custom_base_image_sources_are_respected():
+    """Ensure custom base images from supported registries are preserved."""
+    config = {
+        "name": "custom-base",
+        "description": "Custom base image test",
+        "base-image": "ghcr.io/bootcrew/sericea-atomic:43",
+    }
+
+    base = determine_base_image(config, "bootcrew", "43")
+    assert base == "ghcr.io/bootcrew/sericea-atomic:43"
+
+    desktop_config = {
+        "name": "fedora-desktop",
+        "description": "Fedora atomic desktop test",
+        "base-image": "quay.io/fedora-ostree-desktops/kinoite-atomic:43",
+    }
+
+    desktop_base = determine_base_image(desktop_config, "fedora-atomic-desktop", "43")
+    assert desktop_base == "quay.io/fedora-ostree-desktops/kinoite-atomic:43"
+
+    print("✓ Supported custom base image registries are passed through")
 
 
 if __name__ == "__main__":

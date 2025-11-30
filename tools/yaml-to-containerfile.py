@@ -346,12 +346,28 @@ def load_yaml_config(config_path: Path) -> Dict[str, Any]:
 
 def determine_base_image(config: Dict[str, Any], image_type: str, version: str) -> str:
     """Determine the base image URL based on configuration."""
+    preferred_base = config.get("base-image")
+    allowed_prefixes = [
+        "quay.io/fedora/fedora-bootc",
+        "quay.io/fedora/fedora-sway-atomic",
+        "quay.io/fedora-ostree-desktops/",
+        "ghcr.io/bootcrew/",
+    ]
+
+    if preferred_base and any(preferred_base.startswith(prefix) for prefix in allowed_prefixes):
+        return preferred_base
+
     if image_type == "fedora-bootc":
         return f"quay.io/fedora/fedora-bootc:{version}"
     if image_type == "fedora-sway-atomic":
         return f"quay.io/fedora/fedora-sway-atomic:{version}"
+    if image_type == "fedora-atomic-desktop":
+        return f"quay.io/fedora-ostree-desktops/sway-atomic:{version}"
+    if image_type == "bootcrew":
+        return f"ghcr.io/bootcrew/bootc:{version}"
+
     # Use config default
-    return config.get("base-image", f"quay.io/fedora/fedora-bootc:{version}")
+    return preferred_base or f"quay.io/fedora/fedora-bootc:{version}"
 
 
 def validate_config(config: Dict[str, Any]) -> bool:
@@ -388,7 +404,12 @@ Examples:
                         help="Path to YAML configuration file")
     parser.add_argument("-o", "--output", type=Path,
                         help="Output Containerfile path (default: stdout)")
-    parser.add_argument("--image-type", choices=["fedora-bootc", "fedora-sway-atomic"],
+    parser.add_argument("--image-type", choices=[
+                        "fedora-bootc",
+                        "fedora-sway-atomic",
+                        "fedora-atomic-desktop",
+                        "bootcrew",
+                        ],
                         help="Base image type (default: from config)")
     parser.add_argument("--fedora-version", default="43",
                         help="Fedora version (default: 43)")
