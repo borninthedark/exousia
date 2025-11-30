@@ -99,19 +99,38 @@ sudo bootc upgrade
 sudo systemctl reboot
 ```
 
-### Building Locally
+  ### Building Locally
 
-```bash
-# Clone the repository
-git clone https://github.com/borninthedark/exousia.git
-cd $(basename borninthedark/exousia)
+  > **Note:** Containerfiles are no longer maintained by hand in the repository
+  > root. Generate them from the declarative YAML instead so the build inputs stay
+  > in sync. Examples:
+  >
+  > ```bash
+  > # fedora-sway-atomic Containerfile (default)
+  > python3 tools/yaml-to-containerfile.py \
+  >   --config exousia.yml \
+  >   --image-type fedora-sway-atomic \
+  >   --output Containerfile.atomic
+  >
+  > # fedora-bootc Containerfile with plymouth enabled
+  > python3 tools/yaml-to-containerfile.py \
+  >   --config exousia.yml \
+  >   --image-type fedora-bootc \
+  >   --enable-plymouth \
+  >   --output Containerfile.bootc
+  > ```
 
-# Build the image
-make build
+  ```bash
+  # Clone the repository
+  git clone https://github.com/borninthedark/exousia.git
+  cd $(basename borninthedark/exousia)
 
-# Push to local registry (optional)
-make push
-```
+  # Build the image
+  make build
+
+  # Push to local registry (optional)
+  make push
+  ```
 
 ---
 
