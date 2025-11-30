@@ -88,9 +88,9 @@ modules:
         dst: /usr/local/share/sericea-bootc/packages-sway
         mode: "0644"
 
-  # Plymouth theme files (bootc only)
+  # Plymouth theme files (toggleable per image type)
   - type: files
-    condition: image-type == "fedora-bootc"
+    condition: enable_plymouth == true
     files:
       - src: custom-configs/plymouth/themes/bgrt-better-luks/
         dst: /usr/share/plymouth/themes/bgrt-better-luks/
@@ -150,81 +150,84 @@ modules:
 
     # Sway desktop packages (bootc needs these)
     install-conditional:
-      - condition: image-type == "fedora-bootc"
-        packages:
-          # Core Sway Desktop Components
-          - sway
-          - swaylock
-          - swayidle
-          - swaybg
-          - waybar
-          - firefox
-          # Display Manager
-          - greetd
-          - tuigreet
-          # Boot Splash
-          - plymouth
-          - plymouth-system-theme
-          - plymouth-plugin-two-step
-          # Wayland Core
-          - wlroots
-          - xorg-x11-server-Xwayland
-          # Session and Authentication
-          - xfce-polkit
-          - xdg-utils
-          - xdg-user-dirs
-          - xdg-dbus-proxy
-          - flatpak-xdg-utils
-          - xdg-desktop-portal
-          - xdg-desktop-portal-wlr
-          - xdg-desktop-portal-gtk
-          # Audio Stack
-          - pipewire
-          - pipewire-alsa
-          - pipewire-pulseaudio
-          - wireplumber
-          # Graphics Drivers
-          - mesa-dri-drivers
-          - mesa-vulkan-drivers
-          # Essential Fonts
-          - google-noto-sans-fonts
-          - google-noto-serif-fonts
-          - dejavu-sans-fonts
-          - dejavu-sans-mono-fonts
-          # File Manager
-          - thunar
-          - thunar-archive-plugin
-          - thunar-volman
-          - gvfs
-          - gvfs-mtp
-          - gvfs-gphoto2
-          # Media Viewers
-          - imv
-          - zathura
-          - zathura-pdf-mupdf
-          # Screenshot Tools
-          - grim
-          - slurp
-          - swappy
-          # System Controls
-          - brightnessctl
-          - pavucontrol
-          - nm-connection-editor
-          - network-manager-applet
-          # Bluetooth Support
-          - bluez-tools
-          - blueman
-          # Power Management
-          - tlp
-          - powertop
-          # GTK/Theme Support
-          - adwaita-icon-theme
-          - adwaita-gtk2-theme
-          - gnome-themes-extra
-          # Wayland Utilities
-          - wl-clipboard
-          - wev
-          - kanshi
+        - condition: image-type == "fedora-bootc"
+          packages:
+            # Core Sway Desktop Components
+            - sway
+            - swaylock
+            - swayidle
+            - swaybg
+            - waybar
+            - firefox
+            # Display Manager
+            - greetd
+            - tuigreet
+            # Wayland Core
+            - wlroots
+            - xorg-x11-server-Xwayland
+            # Session and Authentication
+            - xfce-polkit
+            - xdg-utils
+            - xdg-user-dirs
+            - xdg-dbus-proxy
+            - flatpak-xdg-utils
+            - xdg-desktop-portal
+            - xdg-desktop-portal-wlr
+            - xdg-desktop-portal-gtk
+            # Audio Stack
+            - pipewire
+            - pipewire-alsa
+            - pipewire-pulseaudio
+            - wireplumber
+            # Graphics Drivers
+            - mesa-dri-drivers
+            - mesa-vulkan-drivers
+            # Essential Fonts
+            - google-noto-sans-fonts
+            - google-noto-serif-fonts
+            - dejavu-sans-fonts
+            - dejavu-sans-mono-fonts
+            # File Manager
+            - thunar
+            - thunar-archive-plugin
+            - thunar-volman
+            - gvfs
+            - gvfs-mtp
+            - gvfs-gphoto2
+            # Media Viewers
+            - imv
+            - zathura
+            - zathura-pdf-mupdf
+            # Screenshot Tools
+            - grim
+            - slurp
+            - swappy
+            # System Controls
+            - brightnessctl
+            - pavucontrol
+            - nm-connection-editor
+            - network-manager-applet
+            # Bluetooth Support
+            - bluez-tools
+            - blueman
+            # Power Management
+            - tlp
+            - powertop
+            # GTK/Theme Support
+            - adwaita-icon-theme
+            - adwaita-gtk2-theme
+            - gnome-themes-extra
+            # Wayland Utilities
+            - wl-clipboard
+            - wev
+            - kanshi
+
+        - condition: enable_plymouth == true
+          packages:
+            # Boot Splash
+            - plymouth
+            - plymouth-system-theme
+            - plymouth-plugin-two-step
 
     # Custom packages (always installed)
     install:
@@ -284,9 +287,9 @@ modules:
     scripts:
       - flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-  # Plymouth configuration (fedora-bootc only, enabled by default)
+  # Plymouth configuration (all images when enabled)
   - type: script
-    condition: image-type == "fedora-bootc" && enable_plymouth == true
+    condition: enable_plymouth == true
     scripts:
       - |
         rm -rf /var/tmp && ln -sf /tmp /var/tmp
@@ -295,6 +298,12 @@ modules:
         plymouth-set-default-theme bgrt-better-luks
         kver=$(basename /usr/lib/modules/*)
         dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
+
+  # Bootc-specific Plymouth kargs
+  - type: script
+    condition: image-type == "fedora-bootc" && enable_plymouth == true
+    scripts:
+      - |
         mkdir -p /usr/lib/bootc/kargs.d
         printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' > /usr/lib/bootc/kargs.d/plymouth.toml
 
