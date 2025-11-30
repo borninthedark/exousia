@@ -9,7 +9,14 @@ swaylock
 swayidle
 swaybg
 waybar
-firefox
+
+# Terminals
+foot
+alacritty
+
+# Application Launchers & Notifications
+wofi
+mako
 
 # Display Manager
 greetd
@@ -23,11 +30,12 @@ plymouth-plugin-two-step
 # Wayland Core
 wlroots
 xorg-x11-server-Xwayland
+seatd
 
 # Session and Authentication
 xfce-polkit
-xdg-utils 
-xdg-user-dirs 
+xdg-utils
+xdg-user-dirs
 xdg-dbus-proxy
 flatpak-xdg-utils
 xdg-desktop-portal
@@ -73,6 +81,7 @@ brightnessctl
 pavucontrol
 nm-connection-editor
 network-manager-applet
+wlogout
 
 # Bluetooth Support
 bluez-tools
@@ -91,3 +100,4 @@ gnome-themes-extra
 wl-clipboard
 wev
 kanshi
+wlsunset
