@@ -9,8 +9,11 @@ The `yaml-to-containerfile.py` script converts a BlueBuild-compatible YAML confi
 ### Features
 
 - **BlueBuild-inspired specification** - Compatible with BlueBuild module syntax
-- **Multi-variant support** - Generate Containerfiles for `fedora-bootc`, `fedora-sway-atomic`, and Bootcrew community bases
-- **Conditional logic** - Support for image-type specific configurations
+- **Multi-distro support** - Generate Containerfiles for:
+  - **Fedora Atomic variants**: fedora-bootc, fedora-silverblue, fedora-kinoite, fedora-sway-atomic, and 7 community variants
+  - **Bootcrew distros**: Arch Linux, Gentoo, Debian, Ubuntu, OpenSUSE, and Proxmox
+- **Bootcrew-setup module** - Automated bootc source builds for non-Fedora distros with distro-specific optimizations
+- **Conditional logic** - Support for image-type and distro-specific configurations
 - **Plymouth integration** - Handle Plymouth configuration for all supported base images
 - **Validation** - Built-in YAML schema validation
 
@@ -49,6 +52,18 @@ python3 tools/yaml-to-containerfile.py \
   --image-type fedora-bootc \
   --enable-plymouth \
   --output Containerfile.bootc.generated
+
+# For Arch Linux bootc
+python3 tools/yaml-to-containerfile.py \
+  --config yaml-definitions/arch-bootc.yml \
+  --image-type arch \
+  --output Containerfile.arch
+
+# For Debian bootc
+python3 tools/yaml-to-containerfile.py \
+  --config yaml-definitions/debian-bootc.yml \
+  --image-type debian \
+  --output Containerfile.debian
 ```
 
 #### Validate Configuration
@@ -78,12 +93,29 @@ python3 tools/yaml-to-containerfile.py \
 |--------|-------------|---------|
 | `-c, --config PATH` | Path to YAML configuration file | *Required* |
 | `-o, --output PATH` | Output Containerfile path | stdout |
-| `--image-type TYPE` | Base image type (`fedora-bootc`, `fedora-sway-atomic`, or `bootcrew`) | From config |
-| `--fedora-version VER` | Fedora version number | `43` |
+| `--image-type TYPE` | Base image type (see Supported Image Types below) | From config |
+| `--fedora-version VER` | Fedora version number (ignored for bootcrew distros) | `43` |
 | `--enable-plymouth` | Enable Plymouth boot splash | `true` |
 | `--disable-plymouth` | Disable Plymouth boot splash | - |
 | `--validate` | Validate config only, don't generate | - |
 | `-v, --verbose` | Verbose output | - |
+
+### Supported Image Types
+
+**Fedora Atomic variants:**
+- `fedora-bootc` - Minimal Fedora bootc base
+- `fedora-silverblue` - GNOME desktop
+- `fedora-kinoite` - KDE Plasma desktop
+- `fedora-sway-atomic` - Sway (Wayland) desktop
+- `fedora-onyx`, `fedora-budgie`, `fedora-cinnamon`, `fedora-cosmic`, `fedora-deepin`, `fedora-lxqt`, `fedora-mate`, `fedora-xfce` - Community variants
+
+**Bootcrew distros:**
+- `arch` - Arch Linux
+- `gentoo` - Gentoo
+- `debian` - Debian unstable
+- `ubuntu` - Ubuntu Mantic
+- `opensuse` - OpenSUSE Tumbleweed
+- `proxmox` - Proxmox (Debian-based)
 
 ## YAML Configuration Structure
 
@@ -162,6 +194,36 @@ The transpiler supports the following module types:
   default-target: graphical.target
 ```
 
+#### `bootcrew-setup` - Build bootc from source (bootcrew distros only)
+
+For Arch, Gentoo, Debian, Ubuntu, OpenSUSE, and Proxmox, this module builds bootc from source and configures the filesystem for bootc compatibility:
+
+```yaml
+- type: bootcrew-setup
+  system-deps:
+    - base
+    - linux
+    - ostree
+    - dracut
+    - btrfs-progs
+```
+
+**What it does:**
+- Installs system dependencies using the distro's package manager
+- Builds bootc from source (GitHub)
+- Generates dracut initramfs with composefs support
+- Restructures filesystem for ostree/bootc (symlinks `/home` → `/var/home`, etc.)
+- Configures composefs and readonly sysroot
+- Adds `containers.bootc 1` label
+
+**Distro-specific behavior:**
+- **Arch**: Relocates `/var` to `/usr/lib/sysimage` for pacman compatibility
+- **Debian/Ubuntu**: Uses Rustup installer, applies dracut regression fix
+- **Gentoo**: Syncs portage, selects systemd profile, builds custom ostree
+- **OpenSUSE**: Uses ENV DEV_DEPS pattern, applies erofs driver flags
+
+See `DISTROS.md` for detailed examples and distro-specific requirements.
+
 ### Conditional Modules
 
 Modules can include conditions to control when they run:
@@ -180,12 +242,32 @@ Modules can include conditions to control when they run:
 
 ### Supported Conditions
 
-- `image-type == "fedora-bootc"` - Check image type
-- `image-type == "fedora-sway-atomic"` - Check image type
-- `enable_plymouth == true` - Check Plymouth enablement
-- `enable_plymouth == false` - Check Plymouth disabled
+**Image type conditions:**
+- `image-type == "fedora-bootc"` - Minimal Fedora bootc
+- `image-type == "fedora-sway-atomic"` - Fedora Sway Atomic
+- `image-type == "arch"` - Arch Linux
+- `image-type == "debian"` - Debian
+
+**Distro family conditions:**
+- `distro == "fedora"` - Any Fedora-based image
+- `distro == "arch"` - Arch Linux
+- `distro == "gentoo"` - Gentoo
+- `distro == "debian"` - Debian-based (Debian, Ubuntu, Proxmox)
+- `distro == "opensuse"` - OpenSUSE
+
+**Feature conditions:**
+- `enable_plymouth == true` - Plymouth enabled
+- `enable_plymouth == false` - Plymouth disabled
 
 Conditions can be combined with `&&` (AND) and `||` (OR) operators.
+
+**Example:**
+```yaml
+- type: script
+  condition: distro == "arch"
+  scripts:
+    - pacman -Syu --noconfirm
+```
 
 ## CI/CD Integration
 
