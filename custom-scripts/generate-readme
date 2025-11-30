@@ -47,7 +47,6 @@ print_error() {
 }
 
 # Containerfile detection is intentionally skipped; builds already validate definitions via pipelines
-CONTAINERFILE=""
 
 # Extract configuration from repository metadata
 extract_config() {
