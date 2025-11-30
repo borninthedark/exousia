@@ -120,14 +120,14 @@ def test_custom_base_image_sources_are_respected():
     base = determine_base_image(config, "bootcrew", "43")
     assert base == "ghcr.io/bootcrew/sericea-atomic:43"
 
-    desktop_config = {
-        "name": "fedora-desktop",
-        "description": "Fedora atomic desktop test",
-        "base-image": "quay.io/fedora-ostree-desktops/kinoite-atomic:43",
+    sway_config = {
+        "name": "fedora-sway",
+        "description": "Fedora sway atomic test",
+        "base-image": "quay.io/fedora/fedora-sway-atomic:43",
     }
 
-    desktop_base = determine_base_image(desktop_config, "fedora-atomic-desktop", "43")
-    assert desktop_base == "quay.io/fedora-ostree-desktops/kinoite-atomic:43"
+    sway_base = determine_base_image(sway_config, "fedora-sway-atomic", "43")
+    assert sway_base == "quay.io/fedora/fedora-sway-atomic:43"
 
     print("✓ Supported custom base image registries are passed through")
 
@@ -144,14 +144,14 @@ def test_custom_bases_without_tags_are_versioned():
     base = determine_base_image(untagged_bootcrew, "bootcrew", "43")
     assert base == "ghcr.io/bootcrew/sericea-atomic:43"
 
-    untagged_desktop = {
-        "name": "fedora-desktop-no-tag",
-        "description": "Atomic desktop images also require explicit tags",
-        "base-image": "quay.io/fedora-ostree-desktops/kinoite-atomic",
+    untagged_sway = {
+        "name": "fedora-sway-no-tag",
+        "description": "Sway atomic images also require explicit tags",
+        "base-image": "quay.io/fedora/fedora-sway-atomic",
     }
 
-    desktop_base = determine_base_image(untagged_desktop, "fedora-atomic-desktop", "43")
-    assert desktop_base == "quay.io/fedora-ostree-desktops/kinoite-atomic:43"
+    sway_base = determine_base_image(untagged_sway, "fedora-sway-atomic", "43")
+    assert sway_base == "quay.io/fedora/fedora-sway-atomic:43"
 
     print("✓ Untagged custom bases are pinned to the requested version")
 

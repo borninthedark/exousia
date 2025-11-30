@@ -350,7 +350,6 @@ def determine_base_image(config: Dict[str, Any], image_type: str, version: str) 
     allowed_prefixes = [
         "quay.io/fedora/fedora-bootc",
         "quay.io/fedora/fedora-sway-atomic",
-        "quay.io/fedora-ostree-desktops/",
         "ghcr.io/bootcrew/",
     ]
 
@@ -378,8 +377,6 @@ def determine_base_image(config: Dict[str, Any], image_type: str, version: str) 
         return f"quay.io/fedora/fedora-bootc:{version}"
     if image_type == "fedora-sway-atomic":
         return f"quay.io/fedora/fedora-sway-atomic:{version}"
-    if image_type == "fedora-atomic-desktop":
-        return f"quay.io/fedora-ostree-desktops/sway-atomic:{version}"
     if image_type == "bootcrew":
         return f"ghcr.io/bootcrew/bootc:{version}"
 
@@ -424,7 +421,6 @@ Examples:
     parser.add_argument("--image-type", choices=[
                         "fedora-bootc",
                         "fedora-sway-atomic",
-                        "fedora-atomic-desktop",
                         "bootcrew",
                         ],
                         help="Base image type (default: from config)")
