@@ -142,5 +142,3 @@ async def get_db() -> AsyncSession:
             await session.close()
 
 
-# Import User model to ensure it is registered with SQLAlchemy metadata
-from .auth import User  # noqa: E402,F401

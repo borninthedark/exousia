@@ -9,6 +9,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from api.database import Base
+from api.auth import User  # noqa: F401 - ensure user model is registered
 from api.config import settings
 
 # this is the Alembic Config object, which provides
