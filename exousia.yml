@@ -39,18 +39,6 @@ modules:
         test -f /etc/group  || touch /etc/group
         systemd-sysusers || true
         systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf
-        mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit
-        chown -R 241:241 /var/lib/greeter || true
-        chown -R 240:240 /var/lib/greetd || true
-
-  # Greetd configuration
-  - type: script
-    scripts:
-      - |
-        if [ "$IMAGE_TYPE" = "fedora-bootc" ]; then
-          mkdir -p /etc/greetd
-          printf '[security]\nuser = "greetd"\n\n[default]\n' > /etc/greetd/config.toml
-        fi
 
   # Container authentication
   - type: files
@@ -66,15 +54,6 @@ modules:
     scripts:
       - ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
 
-  # Directory structure (bootc only)
-  - type: script
-    condition: image-type == "fedora-bootc"
-    scripts:
-      - |
-        mkdir -p /var/roothome /var/opt /usr/lib/extensions
-        rm -rf /opt
-        ln -sf /var/opt /opt
-
   # Copy package lists for reference
   - type: files
     files:
@@ -83,9 +62,6 @@ modules:
         mode: "0644"
       - src: custom-pkgs/packages.add
         dst: /usr/local/share/sericea-bootc/packages-added
-        mode: "0644"
-      - src: custom-pkgs/packages.sway
-        dst: /usr/local/share/sericea-bootc/packages-sway
         mode: "0644"
 
   # Plymouth theme files (toggleable per image type)
@@ -153,87 +129,6 @@ modules:
       - https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm
       - https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-43.noarch.rpm
 
-    # Sway desktop packages (only for fedora-bootc base)
-    install-conditional:
-        - condition: image-type == "fedora-bootc"
-          packages:
-            # Core Sway Desktop Components
-            - sway
-            - swaylock
-            - swayidle
-            - swaybg
-            - waybar
-            - firefox
-            # Display Manager
-            - greetd
-            - tuigreet
-            # Wayland Core
-            - wlroots
-            - xorg-x11-server-Xwayland
-            # Session and Authentication
-            - xfce-polkit
-            - xdg-utils
-            - xdg-user-dirs
-            - xdg-dbus-proxy
-            - flatpak-xdg-utils
-            - xdg-desktop-portal
-            - xdg-desktop-portal-wlr
-            - xdg-desktop-portal-gtk
-            # Audio Stack
-            - pipewire
-            - pipewire-alsa
-            - pipewire-pulseaudio
-            - wireplumber
-            # Graphics Drivers
-            - mesa-dri-drivers
-            - mesa-vulkan-drivers
-            # Essential Fonts
-            - google-noto-sans-fonts
-            - google-noto-serif-fonts
-            - dejavu-sans-fonts
-            - dejavu-sans-mono-fonts
-            # File Manager
-            - thunar
-            - thunar-archive-plugin
-            - thunar-volman
-            - gvfs
-            - gvfs-mtp
-            - gvfs-gphoto2
-            # Media Viewers
-            - imv
-            - zathura
-            - zathura-pdf-mupdf
-            # Screenshot Tools
-            - grim
-            - slurp
-            - swappy
-            # System Controls
-            - brightnessctl
-            - pavucontrol
-            - nm-connection-editor
-            - network-manager-applet
-            # Bluetooth Support
-            - bluez-tools
-            - blueman
-            # Power Management
-            - tlp
-            - powertop
-            # GTK/Theme Support
-            - adwaita-icon-theme
-            - adwaita-gtk2-theme
-            - gnome-themes-extra
-            # Wayland Utilities
-            - wl-clipboard
-            - wev
-            - kanshi
-
-        - condition: enable_plymouth == true
-          packages:
-            # Boot Splash
-            - plymouth
-            - plymouth-system-theme
-            - plymouth-plugin-two-step
-
     # Custom packages (always installed)
     install:
       # Core Utilities
@@ -290,6 +185,15 @@ modules:
     config-manager:
       - fedora-cisco-openh264
 
+  # Boot splash packages when Plymouth is enabled
+  - type: rpm-ostree
+    condition: enable_plymouth == true
+    install:
+      # Boot Splash
+      - plymouth
+      - plymouth-system-theme
+      - plymouth-plugin-two-step
+
   # Flatpak setup
   - type: script
     scripts:
@@ -306,21 +210,6 @@ modules:
         plymouth-set-default-theme bgrt-better-luks
         kver=$(basename /usr/lib/modules/*)
         dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
-
-  # Bootc-specific Plymouth kargs
-  - type: script
-    condition: image-type == "fedora-bootc" && enable_plymouth == true
-    scripts:
-      - |
-        mkdir -p /usr/lib/bootc/kargs.d
-        printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' > /usr/lib/bootc/kargs.d/plymouth.toml
-
-  # System services (bootc-specific: greetd display manager)
-  - type: systemd
-    condition: image-type == "fedora-bootc"
-    system:
-      enabled:
-        - greetd.service
 
   # System services (common to all image types)
   - type: systemd
