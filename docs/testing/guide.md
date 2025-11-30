@@ -387,6 +387,6 @@ buildah unshare -- bats tests/image_content.bats --filter "Plymouth"
 
 - [bats-core Documentation](https://bats-core.readthedocs.io/)
 - [Buildah Documentation](https://buildah.io/)
-- [Fedora bootc Guide](https://docs.fedoraproject.org/en-US/bootc/)
+- [bootc Documentation](https://bootc-dev.github.io/bootc/)
 - [Writing Tests](./writing-tests.md)
 - [Troubleshooting](./troubleshooting.md)

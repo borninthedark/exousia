@@ -832,5 +832,5 @@ Tests have access to:
 
 - [bats-core Documentation](https://bats-core.readthedocs.io/)
 - [Buildah Documentation](https://buildah.io/)
-- [Fedora bootc Guide](https://docs.fedoraproject.org/en-US/bootc/)
+- [bootc Documentation](https://bootc-dev.github.io/bootc/)
 - [GitHub Repository](https://github.com/borninthedark/exousia)

@@ -1,16 +1,18 @@
 # Exousia: Declarative Bootc Builder
 
 [![CI/CD Pipeline](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions/workflows/build.yaml)
+[![GHCR Image](https://img.shields.io/badge/GHCR-ghcr.io/borninthedark/exousia-blue?logo=github)](https://ghcr.io/borninthedark/exousia)
+[![Docker Hub Image](https://img.shields.io/docker/pulls/borninthedark/exousia?logo=docker)](https://hub.docker.com/r/borninthedark/exousia)
 [![Fedora Version](https://img.shields.io/badge/Fedora-43-51A2DA?logo=fedora)](https://fedoraproject.org)
 [![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
 
-This repository contains the configuration to build a custom, container-based immutable operating system using [**Fedora bootc**](https://docs.fedoraproject.org/en-US/bootc/). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions.
+This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs.
 
 ## Philosophy: Exousia
 
 Exousia (ἐξουσία) is Greek for "authority" and "power."
 
-This is a personal project for building my own DevSecOps-hardened laptop OS using Fedora bootc. Still under development, but the goal is full control and transparency over packages, settings, and behaviors.
+This is a personal project for building my own DevSecOps-hardened laptop OS using the bootc project. Still under development, but the goal is full control and transparency over packages, settings, and behaviors.
 
 The build pipeline supports both bootc and atomic base images, each with their own defaults and configurations. Automated tests help ensure things actually work as development progresses.
 
@@ -22,7 +24,7 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Fedora Version:** 43
 - **Plymouth Customization:** ✅ Available (custom themes supported on all base images)
 - **Greetd Display Manager:** ❌ Not available
-- **Last Updated:** 2025-11-30 19:01:56 UTC
+- **Last Updated:** 2025-11-30 23:39:41 UTC
 
 > **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are applied for both `fedora-bootc` and `fedora-sway-atomic` base image types.
 
@@ -38,7 +40,7 @@ The pipeline is defined in a single, unified GitHub Actions workflow that automa
 
 The first stage assembles the container image and prepares it for subsequent stages.
 
-- **Lint**: The `Containerfile` is linted using **Hadolint** to ensure best practices
+- **Lint**: Generated container definitions are linted using **Hadolint** to ensure best practices
 - **Tagging**: Image tags are dynamically generated based on event triggers (`latest`, `nightly`, branch name, commit SHA)
 - **Build**: The image is built using **Buildah**, a daemonless container image builder optimized for CI environments
 - **Version Switching**: Supports dynamic Fedora version and base image type switching via workflow dispatch
@@ -99,38 +101,19 @@ sudo bootc upgrade
 sudo systemctl reboot
 ```
 
-  ### Building Locally
+### Building Locally
 
-  > **Note:** Containerfiles are no longer maintained by hand in the repository
-  > root. Generate them from the declarative YAML instead so the build inputs stay
-  > in sync. Examples:
-  >
-  > ```bash
-  > # fedora-sway-atomic Containerfile (default)
-  > python3 tools/yaml-to-containerfile.py \
-  >   --config exousia.yml \
-  >   --image-type fedora-sway-atomic \
-  >   --output Containerfile.atomic
-  >
-  > # fedora-bootc Containerfile with plymouth enabled
-  > python3 tools/yaml-to-containerfile.py \
-  >   --config exousia.yml \
-  >   --image-type fedora-bootc \
-  >   --enable-plymouth \
-  >   --output Containerfile.bootc
-  > ```
+```bash
+# Clone the repository
+git clone https://github.com/borninthedark/exousia.git
+cd $(basename borninthedark/exousia)
 
-  ```bash
-  # Clone the repository
-  git clone https://github.com/borninthedark/exousia.git
-  cd $(basename borninthedark/exousia)
+# Build the image
+make build
 
-  # Build the image
-  make build
-
-  # Push to local registry (optional)
-  make push
-  ```
+# Push to local registry (optional)
+make push
+```
 
 ---
 
@@ -306,8 +289,9 @@ Detailed guides and troubleshooting:
 ## External Resources
 
 ### Official Documentation
-- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)
-- [bootc Project](https://bootc-dev.github.io/bootc/)
+- [bootc Project](https://github.com/bootc-dev/bootc)
+- [bootc Documentation](https://bootc-dev.github.io/bootc/)
+- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/) _(secondary Fedora-focused guidance)_
 - [Base Images](https://docs.fedoraproject.org/en-US/bootc/base-images/)
 - [Building Containers](https://docs.fedoraproject.org/en-US/bootc/building-containers/)
 
@@ -340,7 +324,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- The Fedora Project and bootc maintainers
+- The bootc project maintainers and the Fedora community
 - [Universal Blue](https://universal-blue.org/) for pioneering container-native desktop workflows
 - [BlueBuild](https://blue-build.org/) for the declarative YAML specification that inspired my build system
 - [bootcrew](https://github.com/bootcrew) for community-driven bootc projects and examples
@@ -356,6 +340,6 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 ---
 
-**Built with Fedora bootc**
+**Built with bootc**
 
-*This README was automatically generated on 2025-11-30 19:01:56 UTC*
+*This README was automatically generated on 2025-11-30 23:39:41 UTC*
