@@ -151,6 +151,7 @@ class ContainerfileGenerator:
         self._add_header()
         self._add_build_args()
         self._add_from()
+        self._add_shell()
         self._add_labels()
         self._add_environment()
         self._process_modules()
@@ -188,6 +189,14 @@ class ContainerfileGenerator:
             "# Base image",
             "# " + "-" * 30,
             f"FROM {self.context.base_image}",
+            "",
+        ])
+
+    def _add_shell(self):
+        """Ensure RUN commands use bash so pipefail is available."""
+        self.lines.extend([
+            "# Use bash for RUN instructions",
+            'SHELL ["/bin/bash", "-o", "pipefail", "-c"]',
             "",
         ])
 
