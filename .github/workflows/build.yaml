@@ -75,6 +75,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/exousia
   DOCKERHUB_IMAGE_BASE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/exousia
+  BUILDAH_FORMAT: ${{ vars.BUILDAH_FORMAT }}
 
 jobs:
   # ══════════════════════════════════════════════════════════════════════════
