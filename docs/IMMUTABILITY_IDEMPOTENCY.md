@@ -94,8 +94,8 @@ DEPLOYMENT_MODE=cloud WORKER_CONCURRENCY=4
 
 #### `QueueMessage` (Immutable Dataclass)
 - Frozen dataclass (cannot be modified after creation)
-- Deterministic ID based on content (SHA256 hash)
-- Same payload = same ID = automatic deduplication
+- Deterministic ID based on content (SHA256 hash) for local deduplication cache
+- Same payload = same ID within the 5-minute broker deduplication window
 
 ```python
 @dataclass(frozen=True)
@@ -114,17 +114,16 @@ class QueueMessage:
 
 #### `BlazingMQBackend`
 - Connects to BlazingMQ broker
-- Implements idempotent enqueue (deduplication via message GUID)
+- Relies on BlazingMQ-generated GUIDs (no manual overrides)
 - Automatic retry with exponential backoff
 - Dead letter queue for failed messages
-- Local dedup cache for fast path optimization
+- Local dedup cache aligned to the broker's 5-minute deduplication window
 
 **Key Methods:**
 
 ```python
 async def enqueue(queue_name, message) -> bool:
-    # Returns False if duplicate (idempotent!)
-    # BlazingMQ deduplicates via message GUID
+    # Returns False if duplicate detected in the local cache
 
 async def dequeue(queue_name, timeout) -> Optional[QueueMessage]:
     # Blocking dequeue with timeout
@@ -137,11 +136,16 @@ async def nack(queue_name, message, requeue=True):
 ```
 
 **Benefits:**
-- **Idempotency**: Same message enqueued twice = no duplicates
+- **Idempotency**: Prevents re-enqueue within the broker's deduplication window
 - **Reliability**: At-least-once delivery guarantees
 - **Visibility**: All messages logged and traceable
 - **Auto-retry**: Failed messages automatically retried
 - **DLQ**: Failed messages after max retries go to dead letter queue
+
+**References:**
+- BlazingMQ Python SDK Repository
+- BlazingMQ: Hands On (October 2024)
+- BlazingMQ Documentation
 
 ---
 

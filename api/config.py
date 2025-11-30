@@ -59,7 +59,9 @@ class Settings(BaseSettings):
     # Queue Settings
     QUEUE_MAX_RETRIES: int = 3
     QUEUE_RETRY_DELAY: int = 60  # seconds
-    QUEUE_MESSAGE_TTL: int = 86400  # 24 hours
+    # Align with BlazingMQ's documented 5-minute deduplication window
+    # (deduplicationTimeMs = 300000)
+    QUEUE_MESSAGE_TTL: int = 300
 
     # Worker Settings
     WORKER_CONCURRENCY: int = 1 if DEPLOYMENT_MODE == DeploymentMode.LAPTOP else 4

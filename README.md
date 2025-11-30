@@ -334,6 +334,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [BlueBuild](https://blue-build.org/) for the declarative YAML specification that inspired my build system
 - [bootcrew](https://github.com/bootcrew) for community-driven bootc projects and examples
 - The broader container and immutable OS community
+- BlazingMQ team and community (BlazingMQ Python SDK Repository, BlazingMQ: Hands On (October 2024), and official BlazingMQ Documentation)
 - All contributors to the referenced documentation and guides
 - **Claude** (Anthropic) and **GPT Codex** (OpenAI) for AI-assisted development
 
