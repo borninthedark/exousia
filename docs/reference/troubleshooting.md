@@ -402,6 +402,19 @@ ls -la "$MOUNT_POINT/path/to/link"
 
 ## Service-Related Issues
 
+### Waybar does not start or shows an empty bar (fedora-bootc Sway)
+
+**What ships in the image:** The bootc Sway manifest installs Waybar along with its supporting session components (wlroots/Xwayland, seatd, polkit, XDG portal stack, PipeWire, fonts, NetworkManager applet, etc.). It also only installs the Sway session launcher files (`sway.desktop`, `/etc/sway/environment`, `start-sway`) and does not bundle a Waybar configuration.
+
+**Common runtime blockers:**
+
+- **No config to start Waybar:** The image leaves Waybar configuration to the user; add `exec waybar` to your Sway config and provide `~/.config/waybar/{config,style.css}`.
+- **Seat/session not active:** `seatd` is present but needs a running seatd/logind session; ensure the seat manager is active before launching Sway/Waybar.
+- **Missing user D-Bus/portals:** Waybar modules that rely on portals need a user session bus; verify `dbus-daemon --session` is running and the XDG portal services start cleanly (the packages are included).
+- **Network/volume modules:** Waybar’s network or audio widgets expect NetworkManager and PipeWire services to be up; start `NetworkManager.service` and ensure the PipeWire/WirePlumber session is running.
+
+If Waybar still fails, check the journal (`journalctl --user -u sway-session.target` or `journalctl --user -xe`) for module-specific errors and verify your configuration loads without syntax errors.
+
 ### Service Not Enabled
 
 **Error:**
