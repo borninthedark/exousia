@@ -98,23 +98,24 @@ Built images are tagged with the following patterns:
 **Docker Hub (Primary - Public Access):**
 ```bash
 # Fedora Kinoite 43
-docker.io/1borninthedark/exousia:fedora-43
-docker.io/1borninthedark/exousia:fedora-kinoite
+docker.io/<username>/exousia:fedora-43
+docker.io/<username>/exousia:fedora-kinoite
 
 # Arch Linux bootc
-docker.io/1borninthedark/exousia:arch-latest
-docker.io/1borninthedark/exousia:arch
+docker.io/<username>/exousia:arch-latest
+docker.io/<username>/exousia:arch
 
 # Ubuntu bootc
-docker.io/1borninthedark/exousia:ubuntu-mantic
-docker.io/1borninthedark/exousia:ubuntu
+docker.io/<username>/exousia:ubuntu-mantic
+docker.io/<username>/exousia:ubuntu
 ```
 
-**GHCR (Secondary - Pipeline/Personal Use):**
+**GHCR (Secondary - Pipeline/CI Use Only):**
 ```bash
-# Same tags available on GHCR for CI/CD and personal testing
-ghcr.io/borninthedark/exousia:fedora-kinoite
-ghcr.io/borninthedark/exousia:arch-latest
+# GHCR images are built for CI/CD pipeline use only
+# Cannot be used with `bootc switch` for deployment
+# For deployment, use Docker Hub images above
+ghcr.io/<org>/exousia:fedora-kinoite
 ```
 
 ## Creating Custom Configs
@@ -244,22 +245,26 @@ Tests will automatically skip non-applicable checks (e.g., RPM tests on Debian-b
 
 ## Deployment
 
-Deploy any built image using bootc (use Docker Hub for public deployment):
+Deploy any built image using bootc with Docker Hub:
 
 ```bash
-# Arch Linux bootc (Docker Hub - recommended)
-sudo bootc switch docker.io/1borninthedark/exousia:arch-latest
+# Arch Linux bootc
+sudo bootc switch docker.io/<username>/exousia:arch-latest
 sudo bootc upgrade && sudo systemctl reboot
 
-# Fedora Kinoite (Docker Hub - recommended)
-sudo bootc switch docker.io/1borninthedark/exousia:fedora-kinoite
+# Fedora Kinoite
+sudo bootc switch docker.io/<username>/exousia:fedora-kinoite
 sudo bootc upgrade && sudo systemctl reboot
 
-# Alternative: GHCR (for personal/pipeline use only)
-sudo bootc switch ghcr.io/borninthedark/exousia:fedora-kinoite
+# Ubuntu bootc
+sudo bootc switch docker.io/<username>/exousia:ubuntu-mantic
+sudo bootc upgrade && sudo systemctl reboot
 ```
 
-**Note:** Docker Hub is the primary public registry. GHCR is used for CI/CD pipelines and personal testing but may have access restrictions for public deployment.
+**Important Notes:**
+- **Docker Hub Only**: The `bootc switch` command only works with Docker Hub images
+- **GHCR Not Supported**: GHCR images cannot be used for bootc deployment (CI/CD use only)
+- Replace `<username>` with your Docker Hub username
 
 ## Contributing
 

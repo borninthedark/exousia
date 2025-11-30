@@ -74,7 +74,7 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/exousia
-  DOCKERHUB_IMAGE_BASE: docker.io/1borninthedark/exousia
+  DOCKERHUB_IMAGE_BASE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/exousia
 
 jobs:
   # ══════════════════════════════════════════════════════════════════════════
@@ -902,25 +902,24 @@ jobs:
           {
             echo "## 📦 Published Images"
             echo ""
-            echo "### Docker Hub (Primary - Public Access)"
+            echo "### Docker Hub (Primary - Bootc Deployment)"
             echo "- **Digest:** \`${{ steps.push-to-dockerhub.outputs.digest }}\`"
-            echo "- **Pull Command:**"
+            echo "- **Deploy Command:**"
             echo '```bash'
             echo "sudo bootc switch ${{ env.DOCKERHUB_IMAGE_BASE }}:main"
+            echo "sudo bootc upgrade && sudo systemctl reboot"
             echo '```'
             echo ""
-            echo "### GitHub Container Registry (Secondary - Pipeline Use)"
+            echo "### GitHub Container Registry (CI/CD Pipeline Only)"
             echo "- **Digest:** \`${{ steps.push-to-ghcr.outputs.digest }}\`"
-            echo "- **Pull Command (for testing/pipeline):**"
-            echo '```bash'
-            echo "sudo bootc switch ${{ env.IMAGE_BASE }}:main"
-            echo '```'
+            echo "- **Image:** \`${{ env.IMAGE_BASE }}:main\`"
+            echo "- ⚠️ **Cannot be used with \`bootc switch\` (GHCR not supported for bootc deployment)**"
             echo ""
             echo "### 🔐 Signatures"
             echo "- **Signing Method:** Cosign (Sigstore, keyless OIDC)"
             echo "- **Verification:** \`cosign verify\` with OIDC issuer"
             echo ""
-            echo "> **Note:** Use Docker Hub for public deployment. GHCR is for CI/CD and personal testing."
+            echo "> **Important:** Only Docker Hub images work with \`bootc switch\`. GHCR is for CI/CD pipeline use only."
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ══════════════════════════════════════════════════════════════════════════
