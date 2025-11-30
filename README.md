@@ -22,7 +22,7 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Fedora Version:** 43
 - **Plymouth Customization:** ⚠️ Not available (atomic base uses built-in Plymouth config)
 - **Greetd Display Manager:** ❌ Not available
-- **Last Updated:** 2025-11-30 00:41:03 UTC
+- **Last Updated:** 2025-11-30 01:17:31 UTC
 
 > **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are only applied when using `fedora-bootc` as the base image type. The `fedora-sway-atomic` base image uses its pre-configured Plymouth setup and ignores custom themes.
 
@@ -111,13 +111,6 @@ make build
 # Push to local registry (optional)
 make push
 ```
-
-### API Service Authentication & Observability
-
-- **Authentication**: The FastAPI backend now uses fastapi-users with JWT tokens. Register via `POST /api/auth/register`, obtain a token from `POST /api/auth/jwt/login`, and include `Authorization: Bearer <token>` when calling `/api/config` and `/api/build` routes.
-- **Database Migrations**: Apply the bundled Alembic migrations before running the API: `alembic -c api/alembic.ini upgrade head` (set `DATABASE_URL` first).
-- **Metrics**: Prometheus metrics are exposed at `/metrics`.
-- **Tracing**: Enable OpenTelemetry tracing by setting `ENABLE_TRACING=true` and providing `OTEL_EXPORTER_OTLP_ENDPOINT` (and optional headers) in the environment.
 
 ---
 
@@ -354,4 +347,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with Fedora bootc**
 
-*This README was automatically generated on 2025-11-30 00:41:03 UTC*
+*This README was automatically generated on 2025-11-30 01:17:31 UTC*
