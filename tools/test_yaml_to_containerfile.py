@@ -132,6 +132,30 @@ def test_custom_base_image_sources_are_respected():
     print("✓ Supported custom base image registries are passed through")
 
 
+def test_custom_bases_without_tags_are_versioned():
+    """Custom bases should pick up the requested version when untagged."""
+
+    untagged_bootcrew = {
+        "name": "bootcrew-no-tag",
+        "description": "Missing tag should be appended",
+        "base-image": "ghcr.io/bootcrew/sericea-atomic",
+    }
+
+    base = determine_base_image(untagged_bootcrew, "bootcrew", "43")
+    assert base == "ghcr.io/bootcrew/sericea-atomic:43"
+
+    untagged_desktop = {
+        "name": "fedora-desktop-no-tag",
+        "description": "Atomic desktop images also require explicit tags",
+        "base-image": "quay.io/fedora-ostree-desktops/kinoite-atomic",
+    }
+
+    desktop_base = determine_base_image(untagged_desktop, "fedora-atomic-desktop", "43")
+    assert desktop_base == "quay.io/fedora-ostree-desktops/kinoite-atomic:43"
+
+    print("✓ Untagged custom bases are pinned to the requested version")
+
+
 if __name__ == "__main__":
     test_generator_is_stateless()
     test_generator_with_different_contexts()

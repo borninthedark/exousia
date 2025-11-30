@@ -107,6 +107,9 @@ modules:
       - firefox-langpacks
 ```
 
+If a supported custom base image omits a tag, the transpiler automatically
+applies the requested OS/DE version to keep images explicitly versioned.
+
 ### Full Configuration
 
 See `exousia.yml` in the repository root for a complete example.

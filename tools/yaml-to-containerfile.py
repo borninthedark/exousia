@@ -354,8 +354,25 @@ def determine_base_image(config: Dict[str, Any], image_type: str, version: str) 
         "ghcr.io/bootcrew/",
     ]
 
+    def ensure_version_tag(image: str) -> str:
+        """Ensure the image reference is tagged with the provided version.
+
+        Images may omit an explicit tag (defaulting to "latest"), which is
+        undesirable for OS/DE builds where version pinning is expected. This
+        helper appends the requested version tag when the reference lacks a
+        tag or digest.
+        """
+
+        tail = image.split("/")[-1]
+
+        # If the image already includes a tag or digest, keep it as-is
+        if ":" in tail or "@" in tail:
+            return image
+
+        return f"{image}:{version}"
+
     if preferred_base and any(preferred_base.startswith(prefix) for prefix in allowed_prefixes):
-        return preferred_base
+        return ensure_version_tag(preferred_base)
 
     if image_type == "fedora-bootc":
         return f"quay.io/fedora/fedora-bootc:{version}"
