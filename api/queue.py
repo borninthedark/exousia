@@ -246,8 +246,9 @@ class BlazingMQBackend(QueueBackend):
         """
         Enqueue message with deduplication.
 
-        Uses message ID as BlazingMQ GUID for deduplication.
-        If same message is enqueued twice, BlazingMQ will deduplicate it.
+        Relies on BlazingMQ to generate the message GUID.
+        A short-lived local cache prevents accidental re-enqueue within
+        the broker's deduplication window.
         """
         await self.connect()
 
@@ -267,15 +268,14 @@ class BlazingMQBackend(QueueBackend):
             # Serialize message
             message_bytes = json.dumps(message.to_dict()).encode('utf-8')
 
-            # Create BlazingMQ message with GUID for deduplication
+            # Create BlazingMQ message (SDK will generate GUID)
             bmq_message = blazingmq.Message(
                 payload=message_bytes,
                 properties={
                     'message_type': message.message_type,
                     'correlation_id': message.correlation_id or '',
                     'retry_count': str(message.retry_count)
-                },
-                message_guid=msg_id  # Deterministic GUID for idempotency
+                }
             )
 
             # Set priority
