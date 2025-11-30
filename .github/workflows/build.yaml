@@ -35,7 +35,7 @@ on:
           - 'ubuntu'
           - 'opensuse'
           - 'proxmox'
-        default: 'current'
+        default: 'fedora-sway-atomic'
       distro_version:
         description: 'Distro version (Fedora 42-44/rawhide, ignored for bootcrew)'
         required: true
@@ -46,7 +46,7 @@ on:
           - '43'
           - '44'
           - 'rawhide'
-        default: 'current'
+        default: '43'
       enable_plymouth:
         description: 'Enable Plymouth boot splash (Fedora only)'
         required: true
