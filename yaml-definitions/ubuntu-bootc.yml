@@ -33,7 +33,6 @@ modules:
       - ostree
       - skopeo
       - systemd
-      - systemd-boot
       - xfsprogs
       - zstd
 

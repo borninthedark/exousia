@@ -36,7 +36,6 @@ modules:
       - kernel-firmware-all
       - skopeo
       - systemd
-      - systemd-boot
       - udev
       - xfsprogs
       - zstd
