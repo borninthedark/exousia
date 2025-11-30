@@ -89,6 +89,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Python for Containerfile generation
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pyyaml
+
       - name: Verify required file structure
         run: |
           echo "::group::File Structure Validation"
@@ -124,16 +135,20 @@ jobs:
           echo "✓ All required scripts present"
           echo "::endgroup::"
 
-      - name: Lint Containerfile.atomic
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: Containerfile.atomic
-          ignore: DL3041,DL3059,SC2086,DL4006,SC3037
+      - name: Generate Containerfile from YAML
+        run: |
+          echo "::group::Generating Containerfile"
+          python3 tools/yaml-to-containerfile.py \
+            --config exousia.yml \
+            --output Containerfile.generated \
+            --verbose
+          echo "Generated Containerfile.generated from exousia.yml"
+          echo "::endgroup::"
 
-      - name: Lint Containerfile.bootc
+      - name: Lint generated Containerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: Containerfile.bootc
+          dockerfile: Containerfile.generated
           ignore: DL3041,DL3059,SC2086,DL4006,SC3037
 
       - name: ShellCheck all scripts
