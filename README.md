@@ -20,11 +20,11 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Base Image:** `Fedora Sway Atomic Desktop`
 - **Image Type:** `fedora-sway-atomic`
 - **Fedora Version:** 43
-- **Plymouth Customization:** ⚠️ Not available (atomic base uses built-in Plymouth config)
+- **Plymouth Customization:** ✅ Available (custom themes supported on all base images)
 - **Greetd Display Manager:** ❌ Not available
 - **Last Updated:** 2025-11-30 02:00:50 UTC
 
-> **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are only applied when using `fedora-bootc` as the base image type. The `fedora-sway-atomic` base image uses its pre-configured Plymouth setup and ignores custom themes.
+> **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are applied for both `fedora-bootc` and `fedora-sway-atomic` base image types.
 
 ## CI/CD Workflow: Fedora Bootc DevSec CI
 
@@ -156,7 +156,7 @@ Place configuration files in the appropriate `custom-configs/` subdirectories:
 
 - `custom-configs/sway/` - Sway window manager configuration
 - `custom-configs/greetd/` - Display manager configuration
-- `custom-configs/plymouth/` - Boot splash configuration (**fedora-bootc only**)
+- `custom-configs/plymouth/` - Boot splash configuration
 
 ### Plymouth Boot Splash Configuration
 

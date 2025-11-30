@@ -393,7 +393,7 @@ Examples:
     parser.add_argument("--fedora-version", default="43",
                         help="Fedora version (default: 43)")
     parser.add_argument("--enable-plymouth", action="store_true", default=True,
-                        help="Enable Plymouth (fedora-bootc only)")
+                        help="Enable Plymouth")
     parser.add_argument("--disable-plymouth", action="store_true",
                         help="Disable Plymouth")
     parser.add_argument("--validate", action="store_true",
