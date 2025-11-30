@@ -85,6 +85,14 @@ modules:
         dst: /usr/local/share/sericea-bootc/packages-added
         mode: "0644"
 
+  # Bootc-only Sway package list (not needed for fedora-sway-atomic)
+  - type: files
+    condition: image-type == "fedora-bootc"
+    files:
+      - src: custom-pkgs/packages.sway
+        dst: /usr/local/share/sericea-bootc/packages-sway
+        mode: "0644"
+
   # Plymouth theme files (toggleable per image type)
   - type: files
     condition: enable_plymouth == true
