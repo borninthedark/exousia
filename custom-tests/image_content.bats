@@ -179,9 +179,9 @@ get_package_manager() {
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-removed"
 }
 
-@test "Sway package list should exist (packages.sway) (Fedora only)" {
-    if ! is_fedora; then
-        skip "Test only applies to Fedora-based images"
+@test "Sway package list should exist (packages.sway) (fedora-bootc only)" {
+    if ! is_fedora_bootc; then
+        skip "Sway package list is only expected on fedora-bootc builds"
     fi
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-sway"
 }
@@ -604,11 +604,17 @@ get_package_manager() {
 # --- User configuration ---
 
 @test "System user greeter should exist" {
+    if ! is_fedora_bootc; then
+        skip "Greeter user is only expected on fedora-bootc builds"
+    fi
     run chroot "$MOUNT_POINT" getent passwd greeter
     assert_success
 }
 
 @test "System users greetd and rtkit should exist" {
+    if ! is_fedora_bootc; then
+        skip "Greetd user is only expected on fedora-bootc builds"
+    fi
     run chroot "$MOUNT_POINT" getent passwd greetd
     assert_success
     run chroot "$MOUNT_POINT" getent passwd rtkit
@@ -616,6 +622,9 @@ get_package_manager() {
 }
 
 @test "Greeter user should have correct UID and shell" {
+    if ! is_fedora_bootc; then
+        skip "Greeter user is only expected on fedora-bootc builds"
+    fi
     run chroot "$MOUNT_POINT" getent passwd greeter
     assert_success
     echo "$output" | grep -Eq '^greeter:x:241:241:Greeter Login User:/var/lib/greeter:/sbin/nologin$'
@@ -623,6 +632,9 @@ get_package_manager() {
 }
 
 @test "Greetd user should have correct shell" {
+    if ! is_fedora_bootc; then
+        skip "Greetd user is only expected on fedora-bootc builds"
+    fi
     run chroot "$MOUNT_POINT" getent passwd greetd
     assert_success
     echo "$output" | grep -Eq '^greetd:x:[0-9]+:[0-9]+:.*:/var/lib/greetd:/sbin/nologin$'
