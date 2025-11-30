@@ -902,23 +902,25 @@ jobs:
           {
             echo "## 📦 Published Images"
             echo ""
-            echo "### GitHub Container Registry"
-            echo "- **Digest:** \`${{ steps.push-to-ghcr.outputs.digest }}\`"
-            echo "- **Pull Command:**"
-            echo '```bash'
-            echo "sudo bootc switch ${{ env.IMAGE_BASE }}:main"
-            echo '```'
-            echo ""
-            echo "### Docker Hub"
+            echo "### Docker Hub (Primary - Public Access)"
             echo "- **Digest:** \`${{ steps.push-to-dockerhub.outputs.digest }}\`"
             echo "- **Pull Command:**"
             echo '```bash'
             echo "sudo bootc switch ${{ env.DOCKERHUB_IMAGE_BASE }}:main"
             echo '```'
             echo ""
+            echo "### GitHub Container Registry (Secondary - Pipeline Use)"
+            echo "- **Digest:** \`${{ steps.push-to-ghcr.outputs.digest }}\`"
+            echo "- **Pull Command (for testing/pipeline):**"
+            echo '```bash'
+            echo "sudo bootc switch ${{ env.IMAGE_BASE }}:main"
+            echo '```'
+            echo ""
             echo "### 🔐 Signatures"
             echo "- **Signing Method:** Cosign (Sigstore, keyless OIDC)"
             echo "- **Verification:** \`cosign verify\` with OIDC issuer"
+            echo ""
+            echo "> **Note:** Use Docker Hub for public deployment. GHCR is for CI/CD and personal testing."
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ══════════════════════════════════════════════════════════════════════════

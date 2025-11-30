@@ -95,18 +95,26 @@ Built images are tagged with the following patterns:
 
 ### Examples
 
+**Docker Hub (Primary - Public Access):**
 ```bash
 # Fedora Kinoite 43
-ghcr.io/borninthedark/exousia:fedora-43
-ghcr.io/borninthedark/exousia:fedora-kinoite
+docker.io/1borninthedark/exousia:fedora-43
+docker.io/1borninthedark/exousia:fedora-kinoite
 
 # Arch Linux bootc
-ghcr.io/borninthedark/exousia:arch-latest
-ghcr.io/borninthedark/exousia:arch
+docker.io/1borninthedark/exousia:arch-latest
+docker.io/1borninthedark/exousia:arch
 
 # Ubuntu bootc
-ghcr.io/borninthedark/exousia:ubuntu-mantic
-ghcr.io/borninthedark/exousia:ubuntu
+docker.io/1borninthedark/exousia:ubuntu-mantic
+docker.io/1borninthedark/exousia:ubuntu
+```
+
+**GHCR (Secondary - Pipeline/Personal Use):**
+```bash
+# Same tags available on GHCR for CI/CD and personal testing
+ghcr.io/borninthedark/exousia:fedora-kinoite
+ghcr.io/borninthedark/exousia:arch-latest
 ```
 
 ## Creating Custom Configs
@@ -236,17 +244,22 @@ Tests will automatically skip non-applicable checks (e.g., RPM tests on Debian-b
 
 ## Deployment
 
-Deploy any built image using bootc:
+Deploy any built image using bootc (use Docker Hub for public deployment):
 
 ```bash
-# Arch Linux bootc
-sudo bootc switch ghcr.io/borninthedark/exousia:arch-latest
+# Arch Linux bootc (Docker Hub - recommended)
+sudo bootc switch docker.io/1borninthedark/exousia:arch-latest
 sudo bootc upgrade && sudo systemctl reboot
 
-# Fedora Kinoite
-sudo bootc switch ghcr.io/borninthedark/exousia:fedora-kinoite
+# Fedora Kinoite (Docker Hub - recommended)
+sudo bootc switch docker.io/1borninthedark/exousia:fedora-kinoite
 sudo bootc upgrade && sudo systemctl reboot
+
+# Alternative: GHCR (for personal/pipeline use only)
+sudo bootc switch ghcr.io/borninthedark/exousia:fedora-kinoite
 ```
+
+**Note:** Docker Hub is the primary public registry. GHCR is used for CI/CD pipelines and personal testing but may have access restrictions for public deployment.
 
 ## Contributing
 
