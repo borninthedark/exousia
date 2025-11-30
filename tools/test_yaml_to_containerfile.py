@@ -16,6 +16,7 @@ spec.loader.exec_module(yaml_to_containerfile)
 
 ContainerfileGenerator = yaml_to_containerfile.ContainerfileGenerator
 BuildContext = yaml_to_containerfile.BuildContext
+determine_base_image = yaml_to_containerfile.determine_base_image
 
 
 def test_generator_is_stateless():
@@ -106,6 +107,53 @@ def test_generator_with_different_contexts():
     assert "ENABLE_PLYMOUTH" not in output1
 
     print("✓ Generator handles context changes correctly")
+
+
+def test_custom_base_image_sources_are_respected():
+    """Ensure custom base images from supported registries are preserved."""
+    config = {
+        "name": "custom-base",
+        "description": "Custom base image test",
+        "base-image": "ghcr.io/bootcrew/sericea-atomic:43",
+    }
+
+    base = determine_base_image(config, "bootcrew", "43")
+    assert base == "ghcr.io/bootcrew/sericea-atomic:43"
+
+    sway_config = {
+        "name": "fedora-sway",
+        "description": "Fedora sway atomic test",
+        "base-image": "quay.io/fedora/fedora-sway-atomic:43",
+    }
+
+    sway_base = determine_base_image(sway_config, "fedora-sway-atomic", "43")
+    assert sway_base == "quay.io/fedora/fedora-sway-atomic:43"
+
+    print("✓ Supported custom base image registries are passed through")
+
+
+def test_custom_bases_without_tags_are_versioned():
+    """Custom bases should pick up the requested version when untagged."""
+
+    untagged_bootcrew = {
+        "name": "bootcrew-no-tag",
+        "description": "Missing tag should be appended",
+        "base-image": "ghcr.io/bootcrew/sericea-atomic",
+    }
+
+    base = determine_base_image(untagged_bootcrew, "bootcrew", "43")
+    assert base == "ghcr.io/bootcrew/sericea-atomic:43"
+
+    untagged_sway = {
+        "name": "fedora-sway-no-tag",
+        "description": "Sway atomic images also require explicit tags",
+        "base-image": "quay.io/fedora/fedora-sway-atomic",
+    }
+
+    sway_base = determine_base_image(untagged_sway, "fedora-sway-atomic", "43")
+    assert sway_base == "quay.io/fedora/fedora-sway-atomic:43"
+
+    print("✓ Untagged custom bases are pinned to the requested version")
 
 
 if __name__ == "__main__":

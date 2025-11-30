@@ -284,6 +284,12 @@ sudo cp ~/.config/containers/auth.json /etc/ostree/auth.json
 **Solution**: Only use images built with bootc-compatible base images:
 - `quay.io/fedora/fedora-bootc`
 - `quay.io/fedora/fedora-sway-atomic`
+- `quay.io/fedora-ostree-desktops/*-atomic`
+- `ghcr.io/bootcrew/*`
+
+Always pin these bases to a specific OS or desktop environment version. When a
+supported image reference is untagged, the tooling will automatically append
+the requested version tag to avoid pulling a moving `latest` build.
 
 ### Issue: Disk space full after multiple upgrades
 
