@@ -18,8 +18,21 @@ setup_file() {
 
     export CONTAINER MOUNT_POINT
     echo "--- Container filesystem mounted at $MOUNT_POINT ---"
-    
-    # Detect Fedora version and build type from .fedora-version file
+
+    # Detect OS family from os-release
+    if [ -f "$MOUNT_POINT/etc/os-release" ]; then
+        OS_ID=$(grep -oP '^ID=\K.*' "$MOUNT_POINT/etc/os-release" | tr -d '"' || echo "unknown")
+        OS_VERSION_ID=$(grep -oP '^VERSION_ID=\K.*' "$MOUNT_POINT/etc/os-release" | tr -d '"' || echo "unknown")
+        export OS_ID OS_VERSION_ID
+        echo "--- Detected OS: $OS_ID $OS_VERSION_ID ---"
+    else
+        OS_ID="unknown"
+        OS_VERSION_ID="unknown"
+        export OS_ID OS_VERSION_ID
+        echo "WARNING: Could not detect OS from os-release" >&2
+    fi
+
+    # Detect Fedora version and build type from .fedora-version file (legacy)
     if [ -f "$MOUNT_POINT/.fedora-version" ]; then
         FEDORA_VERSION_LINE=$(cat "$MOUNT_POINT/.fedora-version")
         FEDORA_VERSION=$(echo "$FEDORA_VERSION_LINE" | cut -d: -f1)
@@ -27,26 +40,19 @@ setup_file() {
         export FEDORA_VERSION BUILD_TYPE
         echo "--- Detected from .fedora-version: Fedora $FEDORA_VERSION, Build type: $BUILD_TYPE ---"
     else
-        # Fallback to os-release
-        if [ -f "$MOUNT_POINT/etc/os-release" ]; then
-            FEDORA_VERSION=$(grep -oP 'VERSION_ID=\K\d+' "$MOUNT_POINT/etc/os-release" || echo "unknown")
-            export FEDORA_VERSION
-            echo "--- Detected Fedora version from os-release: $FEDORA_VERSION ---"
-        else
-            echo "WARNING: Could not detect Fedora version" >&2
-            export FEDORA_VERSION="unknown"
-        fi
-        
+        FEDORA_VERSION="$OS_VERSION_ID"
+        export FEDORA_VERSION
+
         # Try to detect build type from container ENV (preferred method)
         BUILD_TYPE=$(buildah run "$CONTAINER" -- printenv BUILD_IMAGE_TYPE 2>/dev/null || echo "unknown")
-        
+
         # Fallback: Try to detect from /etc/environment file
         if [ "$BUILD_TYPE" = "unknown" ] && [ -f "$MOUNT_POINT/etc/environment" ]; then
             if grep -q "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment"; then
                 BUILD_TYPE=$(grep "BUILD_IMAGE_TYPE" "$MOUNT_POINT/etc/environment" | cut -d= -f2 | tr -d '"')
             fi
         fi
-        
+
         export BUILD_TYPE
         echo "--- Build type: $BUILD_TYPE ---"
     fi
@@ -68,19 +74,58 @@ is_fedora_sway_atomic() {
     [[ "$BUILD_TYPE" == "fedora-sway-atomic" ]]
 }
 
+# Helper function to check if running any Fedora variant
+is_fedora() {
+    [[ "$OS_ID" == "fedora" ]] || [[ "$BUILD_TYPE" =~ ^fedora- ]]
+}
+
+# Helper function to check if running bootcrew distro
+is_bootcrew() {
+    [[ "$BUILD_TYPE" =~ ^(arch|gentoo|debian|ubuntu|opensuse|proxmox)$ ]]
+}
+
 # Helper function to check if Plymouth is enabled
 is_plymouth_enabled() {
     [[ "${ENABLE_PLYMOUTH:-true}" == "true" ]]
 }
 
-# --- OS / Fedora version checks ---
+# Helper function to get package manager
+get_package_manager() {
+    if is_fedora; then
+        echo "rpm"
+    elif [[ "$OS_ID" == "arch" ]]; then
+        echo "pacman"
+    elif [[ "$OS_ID" =~ ^(debian|ubuntu)$ ]]; then
+        echo "dpkg"
+    elif [[ "$OS_ID" =~ ^(opensuse|suse)$ ]]; then
+        echo "rpm"
+    elif [[ "$OS_ID" == "gentoo" ]]; then
+        echo "portage"
+    else
+        echo "unknown"
+    fi
+}
 
-@test "OS should be Fedora Linux" {
+# --- OS / Distro version checks ---
+
+@test "OS should have valid os-release file" {
+    assert_file_exists "$MOUNT_POINT/etc/os-release"
+    run grep 'ID=' "$MOUNT_POINT/etc/os-release"
+    assert_success "os-release should contain OS ID"
+}
+
+@test "OS should be Fedora Linux (Fedora-specific)" {
+    if ! is_fedora; then
+        skip "Test only applies to Fedora-based images"
+    fi
     run grep 'ID=fedora' "$MOUNT_POINT/etc/os-release"
     assert_success "Should be running Fedora Linux"
 }
 
 @test "OS version should match expected Fedora versions (41–44 or rawhide)" {
+    if ! is_fedora; then
+        skip "Test only applies to Fedora-based images"
+    fi
     run grep -E 'VERSION_ID=(41|42|43|44)' "$MOUNT_POINT/etc/os-release"
     if [ "$status" -ne 0 ]; then
         run grep 'VARIANT_ID=rawhide' "$MOUNT_POINT/etc/os-release"
@@ -88,11 +133,18 @@ is_plymouth_enabled() {
     fi
 }
 
-@test "Detected Fedora version is valid" {
-    if [[ "$FEDORA_VERSION" == "unknown" ]]; then
-        skip "Could not detect Fedora version"
+@test "Detected OS version is valid" {
+    if [[ "$OS_VERSION_ID" == "unknown" ]]; then
+        skip "Could not detect OS version"
     fi
-    [[ "$FEDORA_VERSION" =~ ^(41|42|43|44|rawhide)$ ]]
+
+    # OS-specific version validation
+    if is_fedora; then
+        [[ "$OS_VERSION_ID" =~ ^(41|42|43|44|rawhide)$ ]]
+    else
+        # For bootcrew distros, just check it's not empty
+        [[ -n "$OS_VERSION_ID" ]]
+    fi
 }
 
 # --- CI container auth config checks ---
@@ -119,12 +171,18 @@ is_plymouth_enabled() {
 
 # --- Custom package list and Plymouth ---
 
-@test "Custom package list files should exist" {
+@test "Custom package list files should exist (Fedora only)" {
+    if ! is_fedora; then
+        skip "Test only applies to Fedora-based images"
+    fi
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-added"
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-removed"
 }
 
-@test "Sway package list should exist (packages.sway)" {
+@test "Sway package list should exist (packages.sway) (Fedora only)" {
+    if ! is_fedora; then
+        skip "Test only applies to Fedora-based images"
+    fi
     assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-sway"
 }
 
@@ -368,19 +426,28 @@ is_plymouth_enabled() {
 
 # --- Repositories and package config ---
 
-@test "RPM Fusion repositories should be configured" {
+@test "RPM Fusion repositories should be configured (Fedora only)" {
+    if ! is_fedora; then
+        skip "Test only applies to Fedora-based images"
+    fi
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-free.repo"
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-nonfree.repo"
 }
 
-@test "Custom repositories should be configured" {
+@test "Custom repositories should be configured (Fedora only)" {
+    if ! is_fedora; then
+        skip "Test only applies to Fedora-based images"
+    fi
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/nwg-shell.repo"
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/swaylock-effects.repo"
 }
 
 # --- Key packages ---
 
-@test "DNF5 should be installed and symlinked as default dnf" {
+@test "DNF5 should be installed and symlinked as default dnf (Fedora only)" {
+    if ! is_fedora; then
+        skip "Test only applies to Fedora-based images"
+    fi
     run buildah run "$CONTAINER" -- rpm -q dnf5
     assert_success
     run test -L "$MOUNT_POINT/usr/bin/dnf"
@@ -388,8 +455,20 @@ is_plymouth_enabled() {
 }
 
 @test "bootc should be installed" {
-    run buildah run "$CONTAINER" -- rpm -q bootc
-    assert_success
+    # Check for bootc binary regardless of package manager
+    if [[ -x "$MOUNT_POINT/usr/bin/bootc" ]]; then
+        # Found the binary
+        run test -x "$MOUNT_POINT/usr/bin/bootc"
+        assert_success
+    else
+        # Try package manager query as fallback
+        if is_fedora || [[ "$OS_ID" =~ ^(opensuse|suse)$ ]]; then
+            run buildah run "$CONTAINER" -- rpm -q bootc
+            assert_success
+        else
+            skip "Cannot verify bootc installation on this distro (bootc may be built from source)"
+        fi
+    fi
 }
 
 @test "Sway desktop components should be installed" {

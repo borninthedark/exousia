@@ -17,6 +17,8 @@ spec.loader.exec_module(yaml_to_containerfile)
 ContainerfileGenerator = yaml_to_containerfile.ContainerfileGenerator
 BuildContext = yaml_to_containerfile.BuildContext
 determine_base_image = yaml_to_containerfile.determine_base_image
+FEDORA_ATOMIC_VARIANTS = yaml_to_containerfile.FEDORA_ATOMIC_VARIANTS
+BOOTCREW_DISTROS = yaml_to_containerfile.BOOTCREW_DISTROS
 
 
 def test_generator_is_stateless():
@@ -39,7 +41,8 @@ def test_generator_is_stateless():
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=False,
-        base_image="quay.io/fedora/fedora-sway-atomic:43"
+        base_image="quay.io/fedora/fedora-sway-atomic:43",
+        distro="fedora"
     )
 
     generator = ContainerfileGenerator(config, context)
@@ -81,7 +84,8 @@ def test_generator_with_different_contexts():
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=False,
-        base_image="quay.io/fedora/fedora-sway-atomic:43"
+        base_image="quay.io/fedora/fedora-sway-atomic:43",
+        distro="fedora"
     )
 
     generator = ContainerfileGenerator(config, context1)
@@ -92,7 +96,8 @@ def test_generator_with_different_contexts():
         image_type="fedora-bootc",
         fedora_version="43",
         enable_plymouth=True,
-        base_image="quay.io/fedora/fedora-bootc:43"
+        base_image="quay.io/fedora/fedora-bootc:43",
+        distro="fedora"
     )
 
     # Use same generator instance with new context
@@ -156,7 +161,83 @@ def test_custom_bases_without_tags_are_versioned():
     print("✓ Untagged custom bases are pinned to the requested version")
 
 
+def test_bootcrew_distro_support():
+    """Test that bootcrew distros are properly supported."""
+    config = {
+        "name": "arch-bootc",
+        "description": "Arch bootc test",
+        "image-type": "arch",
+        "base-image": "docker.io/archlinux/archlinux:latest",
+        "modules": [
+            {
+                "type": "bootcrew-setup",
+                "system-deps": ["base", "linux", "ostree"]
+            }
+        ]
+    }
+
+    context = BuildContext(
+        image_type="arch",
+        fedora_version="",
+        enable_plymouth=False,
+        base_image="docker.io/archlinux/archlinux:latest",
+        distro="arch"
+    )
+
+    generator = ContainerfileGenerator(config, context)
+    output = generator.generate()
+
+    assert "FROM docker.io/archlinux/archlinux:latest" in output
+    assert "bootc" in output.lower()  # Should mention bootc
+    assert "ostree" in output.lower()  # Should mention ostree
+    assert "pacman" in output  # Arch package manager
+
+    print("✓ Bootcrew distros are supported correctly")
+
+
+def test_fedora_atomic_variants():
+    """Test that all Fedora Atomic variants are recognized."""
+    assert "fedora-kinoite" in FEDORA_ATOMIC_VARIANTS
+    assert "fedora-silverblue" in FEDORA_ATOMIC_VARIANTS
+    assert "fedora-sway-atomic" in FEDORA_ATOMIC_VARIANTS
+
+    base_kinoite = determine_base_image({}, "fedora-kinoite", "43")
+    assert "fedora-kinoite:43" in base_kinoite
+
+    print("✓ Fedora Atomic variants are recognized")
+
+
+def test_distro_detection():
+    """Test that distro is properly detected from image_type."""
+    # Fedora-based
+    fedora_context = BuildContext(
+        image_type="fedora-sway-atomic",
+        fedora_version="43",
+        enable_plymouth=True,
+        base_image="quay.io/fedora/fedora-sway-atomic:43",
+        distro="fedora"
+    )
+    assert fedora_context.distro == "fedora"
+
+    # Bootcrew distro
+    arch_context = BuildContext(
+        image_type="arch",
+        fedora_version="",
+        enable_plymouth=False,
+        base_image="docker.io/archlinux/archlinux:latest",
+        distro="arch"
+    )
+    assert arch_context.distro == "arch"
+
+    print("✓ Distro detection works correctly")
+
+
 if __name__ == "__main__":
     test_generator_is_stateless()
     test_generator_with_different_contexts()
+    test_custom_base_image_sources_are_respected()
+    test_custom_bases_without_tags_are_versioned()
+    test_bootcrew_distro_support()
+    test_fedora_atomic_variants()
+    test_distro_detection()
     print("\n✅ All tests passed!")

@@ -1,0 +1,46 @@
+# OpenSUSE Bootc Configuration
+# Based on bootcrew/opensuse-bootc
+
+name: opensuse-bootc
+description: OpenSUSE Tumbleweed with bootc composefs-native backend
+image-type: opensuse
+
+# Base image configuration
+base-image: registry.opensuse.org/opensuse/tumbleweed:latest
+
+# Container metadata
+labels:
+  org.opencontainers.image.title: "OpenSUSE Bootc"
+  org.opencontainers.image.description: "OpenSUSE Tumbleweed with bootc composefs support"
+  org.opencontainers.image.source: "https://github.com/borninthedark/exousia"
+  org.opencontainers.image.licenses: "MIT"
+  maintainer: "uryu"
+
+# Build configuration
+build:
+  enable_plymouth: false
+
+# Modules define the build steps
+modules:
+  # Bootcrew setup: build bootc from source and configure filesystem
+  - type: bootcrew-setup
+    system-deps:
+      - binutils
+      - btrfs-progs
+      - cpio
+      - dosfstools
+      - dracut
+      - e2fsprogs
+      - glib2
+      - kernel-default
+      - kernel-firmware-all
+      - skopeo
+      - systemd
+      - udev
+      - xfsprogs
+      - zstd
+
+  # Validation and finalization
+  - type: script
+    scripts:
+      - bootc container lint
