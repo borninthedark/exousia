@@ -22,7 +22,7 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Fedora Version:** 43
 - **Plymouth Customization:** ⚠️ Not available (atomic base uses built-in Plymouth config)
 - **Greetd Display Manager:** ❌ Not available
-- **Last Updated:** 2025-11-29 23:45:28 UTC
+- **Last Updated:** 2025-11-30 00:21:23 UTC
 
 > **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are only applied when using `fedora-bootc` as the base image type. The `fedora-sway-atomic` base image uses its pre-configured Plymouth setup and ignores custom themes.
 
@@ -334,7 +334,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [BlueBuild](https://blue-build.org/) for the declarative YAML specification that inspired my build system
 - [bootcrew](https://github.com/bootcrew) for community-driven bootc projects and examples
 - The broader container and immutable OS community
-- BlazingMQ team and community (BlazingMQ Python SDK Repository, BlazingMQ: Hands On (October 2024), and official BlazingMQ Documentation)
 - All contributors to the referenced documentation and guides
 - **Claude** (Anthropic) and **GPT Codex** (OpenAI) for AI-assisted development
 
@@ -346,4 +345,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with Fedora bootc**
 
-*This README was automatically generated on 2025-11-29 23:45:28 UTC*
+*This README was automatically generated on 2025-11-30 00:21:23 UTC*
