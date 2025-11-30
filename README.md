@@ -32,6 +32,7 @@ The pipeline is defined in a single, unified GitHub Actions workflow that automa
 - Pushes and pull requests to the `main` branch
 - Nightly schedule (`20 4 * * *` UTC)
 - Manual workflow dispatch with version/image type selection
+- Webhook-triggered `repository_dispatch` events of type `api`
 
 ### 1. Build Stage
 
