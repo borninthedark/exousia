@@ -169,7 +169,7 @@ Stores YAML configurations for container images.
 - `name` - Unique configuration name
 - `description` - Optional description
 - `yaml_content` - BlueBuild YAML configuration
-- `image_type` - Base image type (fedora-bootc, fedora-sway-atomic, fedora-atomic-desktop, bootcrew)
+- `image_type` - Base image type (fedora-bootc, fedora-sway-atomic, bootcrew)
 - `fedora_version` - Fedora version number
 - `enable_plymouth` - Plymouth boot splash enablement
 - `created_at` - Timestamp

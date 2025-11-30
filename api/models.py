@@ -15,7 +15,6 @@ class ImageType(str, Enum):
     """Supported base image types."""
     FEDORA_BOOTC = "fedora-bootc"
     FEDORA_SWAY_ATOMIC = "fedora-sway-atomic"
-    FEDORA_ATOMIC_DESKTOP = "fedora-atomic-desktop"
     BOOTCREW = "bootcrew"
 
 
