@@ -40,15 +40,6 @@ modules:
         systemd-sysusers || true
         systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf
 
-  # Greetd configuration
-  - type: script
-    scripts:
-      - |
-        if [ "$IMAGE_TYPE" = "fedora-bootc" ]; then
-          mkdir -p /etc/greetd
-          printf '[security]\nuser = "greetd"\n\n[default]\n' > /etc/greetd/config.toml
-        fi
-
   # Container authentication
   - type: files
     files:
@@ -62,15 +53,6 @@ modules:
   - type: script
     scripts:
       - ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
-
-  # Directory structure (bootc only)
-  - type: script
-    condition: image-type == "fedora-bootc"
-    scripts:
-      - |
-        mkdir -p /var/roothome /var/opt /usr/lib/extensions
-        rm -rf /opt
-        ln -sf /var/opt /opt
 
   # Copy package lists for reference
   - type: files
