@@ -6,6 +6,7 @@ Shared fixtures for API testing.
 """
 
 import asyncio
+import uuid
 from typing import AsyncGenerator, Generator
 
 import pytest
@@ -13,6 +14,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from api.auth import User, current_active_user
 from api.database import Base, get_db
 from api.main import app
 
@@ -67,7 +69,18 @@ async def client(test_db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     async def override_get_db():
         yield test_db
 
+    async def override_current_active_user():
+        return User(
+            id=uuid.uuid4(),
+            email="test@example.com",
+            hashed_password="not-used",
+            is_active=True,
+            is_superuser=False,
+            is_verified=True,
+        )
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[current_active_user] = override_current_active_user
 
     async with AsyncClient(app=app, base_url="http://test") as ac:
         yield ac

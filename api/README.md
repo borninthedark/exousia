@@ -4,23 +4,28 @@ FastAPI backend for declarative bootc image configuration management with GitHub
 
 ## Features
 
+- **Authentication & Users** - JWT auth via fastapi-users with registration and user management routes
 - **YAML Configuration Management** - Validate, transpile, and manage bootc configurations
 - **GitHub Actions Integration** - Trigger and monitor image builds
 - **Build Tracking** - Track build status and history
 - **REST API** - Clean, well-documented RESTful endpoints
 - **Async/Await** - High-performance async operations throughout
-- **PostgreSQL Storage** - Robust data persistence with SQLAlchemy
-- **Security** - Rate limiting, CORS, security headers, correlation IDs
-- **Observability** - Structured logging, health checks, metrics-ready
+- **PostgreSQL Storage** - Robust data persistence with SQLAlchemy and Alembic migrations
+- **Security** - Protected build/config routes with JWT, CORS support
+- **Observability** - Prometheus `/metrics` endpoint plus optional OpenTelemetry tracing
 
 ## Tech Stack
 
 - **FastAPI** 0.109.0 - Modern async web framework
+- **fastapi-users** 12.1 - Authentication and user management
 - **Python** 3.12+ - Latest Python with async/await
 - **SQLAlchemy** 2.0 - Async ORM with type safety
+- **Alembic** 1.13 - Database migrations
 - **PostgreSQL** 16 - Primary database (SQLite fallback)
 - **Pydantic** 2.5 - Data validation and settings
 - **PyGithub** - GitHub API integration
+- **Prometheus FastAPI Instrumentator** - Metrics endpoint
+- **OpenTelemetry** - Optional OTLP tracing export
 - **Podman** - Containerization (rootless, daemonless)
 
 ## Quick Start
@@ -70,6 +75,7 @@ FastAPI backend for declarative bootc image configuration management with GitHub
    export DATABASE_URL="sqlite+aiosqlite:///./exousia.db"
    export GITHUB_TOKEN="your_github_pat"
    export GITHUB_REPO="borninthedark/exousia"
+   export SECRET_KEY="change-me"  # Used for JWT signing
    ```
 
 4. **Run API:**
@@ -77,6 +83,18 @@ FastAPI backend for declarative bootc image configuration management with GitHub
    python3 -m api.main
    # or
    uvicorn api.main:app --reload
+   ```
+
+5. **Run database migrations:**
+   ```bash
+   alembic -c api/alembic.ini upgrade head
+   ```
+
+6. **Create a user:**
+   ```bash
+   curl -X POST http://localhost:8000/api/auth/register \
+     -H "Content-Type: application/json" \
+     -d '{"email": "you@example.com", "password": "ChangeMe123"}'
    ```
 
 ## API Endpoints
@@ -107,6 +125,14 @@ Simple ping for uptime monitoring.
   "timestamp": "2025-11-29T12:00:00"
 }
 ```
+
+### Authentication & Users
+
+- `POST /api/auth/register` — Register a new user
+- `POST /api/auth/jwt/login` — Obtain a JWT access token
+- `GET /api/users/me` — Retrieve the authenticated user profile
+- `PATCH /api/users/me` — Update the authenticated user profile
+- `GET /api/users/` — List users (requires appropriate privileges)
 
 ### Configuration Management
 
@@ -274,6 +300,11 @@ List builds with filtering.
 #### `POST /api/build/{build_id}/cancel`
 Cancel a running build.
 
+### Observability
+
+- `GET /metrics` - Prometheus metrics endpoint (not included in OpenAPI schema)
+- OpenTelemetry tracing can be enabled by setting `ENABLE_TRACING=true` and configuring `OTEL_EXPORTER_OTLP_ENDPOINT`
+
 ## Environment Variables
 
 | Variable | Description | Default | Required |
@@ -287,10 +318,12 @@ Cancel a running build.
 | `API_RELOAD` | Auto-reload on changes | `true` | No |
 | `LOG_LEVEL` | Logging level | `INFO` | No |
 | `CORS_ORIGINS` | Allowed CORS origins | `[...]` | No |
-| `SECRET_KEY` | JWT secret key | - | No** |
+| `SECRET_KEY` | JWT signing key | - | Yes (for auth) |
+| `ENABLE_TRACING` | Toggle OpenTelemetry tracing | `False` | No |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP exporter endpoint | `None` | When tracing enabled |
+| `OTEL_EXPORTER_OTLP_HEADERS` | OTLP headers (comma-separated `key=value`) | `None` | When tracing enabled |
 
 \* Required for GitHub integration
-\** Required for authentication features (future)
 
 ## Project Structure
 
@@ -298,6 +331,7 @@ Cancel a running build.
 api/
 ├── __init__.py           # Package init
 ├── main.py               # FastAPI application
+├── auth.py               # fastapi-users setup and dependencies
 ├── config.py             # Settings & configuration
 ├── models.py             # Pydantic models
 ├── database.py           # SQLAlchemy models & DB setup
@@ -311,6 +345,7 @@ api/
 │   ├── __init__.py
 │   ├── transpiler_service.py  # YAML transpilation
 │   └── github_service.py      # GitHub API client
+├── migrations/           # Alembic migrations and env.py
 ├── requirements.txt      # Python dependencies
 ├── Containerfile         # Podman/Docker image
 └── README.md            # This file
@@ -318,14 +353,11 @@ api/
 
 ## Architecture
 
-### Middleware Stack (Outer → Inner)
+### Middleware & Observability
 
-1. **GZipMiddleware** - Response compression
-2. **SecurityHeadersMiddleware** - Security headers (CSP, X-Frame-Options, etc.)
-3. **CorrelationIDMiddleware** - Request correlation IDs for tracing
-4. **RequestLoggingMiddleware** - Structured request/response logging
-5. **Rate Limiting** - Per-IP rate limits (200/minute default)
-6. **CORS** - Cross-origin resource sharing
+- **CORS** - Configured via `settings.CORS_ORIGINS`
+- **Prometheus metrics** - `/metrics` endpoint via `prometheus-fastapi-instrumentator`
+- **OpenTelemetry** - Optional tracing when `ENABLE_TRACING=true` with OTLP exporter
 
 ### Service Layer
 
@@ -335,8 +367,8 @@ api/
 ### Database Layer
 
 - **Async SQLAlchemy** - Fully async database operations
-- **Models**: ConfigModel, BuildModel
-- **Migrations**: Alembic (planned)
+- **Models**: ConfigModel, BuildModel, BuildEventModel, User
+- **Migrations**: Alembic with runtime `upgrade head` during startup
 
 ## Development
 
@@ -397,7 +429,8 @@ See `deploy/kubernetes/` for manifests (planned).
 
 ## Security
 
-- **Rate Limiting** - 200 requests/minute per IP
+- **JWT Authentication** - Protected routes require a valid bearer token from `/api/auth/jwt/login`
+- **CORS Configuration** - Allowed origins defined in `settings.CORS_ORIGINS`
 - **CORS** - Configured allowed origins
 - **Security Headers** - CSP, X-Frame-Options, X-Content-Type-Options
 - **Input Validation** - Pydantic models validate all inputs

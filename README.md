@@ -112,6 +112,13 @@ make build
 make push
 ```
 
+### API Service Authentication & Observability
+
+- **Authentication**: The FastAPI backend now uses fastapi-users with JWT tokens. Register via `POST /api/auth/register`, obtain a token from `POST /api/auth/jwt/login`, and include `Authorization: Bearer <token>` when calling `/api/config` and `/api/build` routes.
+- **Database Migrations**: Apply the bundled Alembic migrations before running the API: `alembic -c api/alembic.ini upgrade head` (set `DATABASE_URL` first).
+- **Metrics**: Prometheus metrics are exposed at `/metrics`.
+- **Tracing**: Enable OpenTelemetry tracing by setting `ENABLE_TRACING=true` and providing `OTEL_EXPORTER_OTLP_ENDPOINT` (and optional headers) in the environment.
+
 ---
 
 ## Customization

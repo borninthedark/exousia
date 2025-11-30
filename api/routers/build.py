@@ -21,8 +21,9 @@ from ..services.github_service import GitHubService
 from ..services.transpiler_service import TranspilerService
 from ..queue import QueueMessage, MessagePriority, get_queue_backend
 from ..config import settings
+from ..auth import current_active_user
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(current_active_user)])
 
 
 @router.post("/trigger", response_model=BuildResponse, status_code=202)

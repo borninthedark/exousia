@@ -5,6 +5,11 @@ Database Models and Configuration
 SQLAlchemy models for configuration and build tracking.
 """
 
+import asyncio
+from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Enum as SQLEnum, JSON, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
@@ -92,6 +97,15 @@ engine = None
 async_session_maker = None
 
 
+def get_alembic_config() -> Config:
+    """Load Alembic configuration with the runtime database URL."""
+    config_path = Path(__file__).parent / "alembic.ini"
+    alembic_config = Config(str(config_path))
+    alembic_config.set_main_option("script_location", str(Path(__file__).parent / "migrations"))
+    alembic_config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+    return alembic_config
+
+
 async def init_db():
     """Initialize database engine and create tables."""
     global engine, async_session_maker
@@ -108,9 +122,8 @@ async def init_db():
         expire_on_commit=False
     )
 
-    # Create tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Run migrations
+    await asyncio.to_thread(command.upgrade, get_alembic_config(), "head")
 
 
 async def close_db():
@@ -127,3 +140,7 @@ async def get_db() -> AsyncSession:
             yield session
         finally:
             await session.close()
+
+
+# Import User model to ensure it is registered with SQLAlchemy metadata
+from .auth import User  # noqa: E402,F401

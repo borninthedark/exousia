@@ -86,6 +86,12 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
 
+    # Observability
+    OTEL_EXPORTER_OTLP_ENDPOINT: Optional[str] = None
+    OTEL_EXPORTER_OTLP_HEADERS: Optional[str] = None
+    OTEL_SERVICE_NAME: str = "exousia-api"
+    ENABLE_TRACING: bool = False
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

@@ -20,8 +20,9 @@ from ..models import (
 )
 from ..services.transpiler_service import TranspilerService
 from ..config import settings
+from ..auth import current_active_user
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(current_active_user)])
 
 
 @router.post("/validate", response_model=ConfigValidateResponse)
