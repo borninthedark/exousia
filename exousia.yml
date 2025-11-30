@@ -147,13 +147,6 @@ modules:
       - https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm
       - https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-43.noarch.rpm
 
-        - condition: enable_plymouth == true
-          packages:
-            # Boot Splash
-            - plymouth
-            - plymouth-system-theme
-            - plymouth-plugin-two-step
-
     # Custom packages (always installed)
     install:
       # Core Utilities
@@ -209,6 +202,15 @@ modules:
     # Enable DNF config options
     config-manager:
       - fedora-cisco-openh264
+
+  # Boot splash packages when Plymouth is enabled
+  - type: rpm-ostree
+    condition: enable_plymouth == true
+    install:
+      # Boot Splash
+      - plymouth
+      - plymouth-system-theme
+      - plymouth-plugin-two-step
 
   # Flatpak setup
   - type: script
