@@ -84,9 +84,6 @@ modules:
       - src: custom-pkgs/packages.add
         dst: /usr/local/share/sericea-bootc/packages-added
         mode: "0644"
-      - src: custom-pkgs/packages.sway
-        dst: /usr/local/share/sericea-bootc/packages-sway
-        mode: "0644"
 
   # Plymouth theme files (toggleable per image type)
   - type: files
