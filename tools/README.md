@@ -11,7 +11,7 @@ The `yaml-to-containerfile.py` script converts a BlueBuild-compatible YAML confi
 - **BlueBuild-inspired specification** - Compatible with BlueBuild module syntax
 - **Multi-variant support** - Generate Containerfiles for both `fedora-bootc` and `fedora-sway-atomic` bases
 - **Conditional logic** - Support for image-type specific configurations
-- **Plymouth integration** - Handle Plymouth configuration for bootc-only builds
+- **Plymouth integration** - Handle Plymouth configuration for all supported base images
 - **Validation** - Built-in YAML schema validation
 
 ### Requirements
@@ -80,7 +80,7 @@ python3 tools/yaml-to-containerfile.py \
 | `-o, --output PATH` | Output Containerfile path | stdout |
 | `--image-type TYPE` | Base image type (`fedora-bootc` or `fedora-sway-atomic`) | From config |
 | `--fedora-version VER` | Fedora version number | `43` |
-| `--enable-plymouth` | Enable Plymouth boot splash (bootc only) | `true` |
+| `--enable-plymouth` | Enable Plymouth boot splash | `true` |
 | `--disable-plymouth` | Disable Plymouth boot splash | - |
 | `--validate` | Validate config only, don't generate | - |
 | `-v, --verbose` | Verbose output | - |

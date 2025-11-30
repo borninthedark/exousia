@@ -187,13 +187,8 @@ extract_config() {
     fi
     
     # Plymouth support detection
-    if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
-        PLYMOUTH_SUPPORT="✅ Available (custom themes supported)"
-        PLYMOUTH_NOTE="Custom Plymouth themes from \`custom-configs/plymouth/\` are applied during build with \`ENABLE_PLYMOUTH=true\`."
-    else
-        PLYMOUTH_SUPPORT="⚠️ Not available (atomic base uses built-in Plymouth config)"
-        PLYMOUTH_NOTE="Custom Plymouth themes from \`custom-configs/plymouth/\` are only applied when using \`fedora-bootc\` as the base image type. The \`fedora-sway-atomic\` base image uses its pre-configured Plymouth setup and ignores custom themes."
-    fi
+    PLYMOUTH_SUPPORT="✅ Available (custom themes supported on all base images)"
+    PLYMOUTH_NOTE="Custom Plymouth themes from \`custom-configs/plymouth/\` are applied for both \`fedora-bootc\` and \`fedora-sway-atomic\` base image types."
 
     # Greetd display manager support detection
     if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
@@ -263,6 +258,7 @@ The pipeline is defined in a single, unified GitHub Actions workflow that automa
 - Pushes and pull requests to the \`main\` branch
 - Nightly schedule (\`20 4 * * *\` UTC)
 - Manual workflow dispatch with version/image type selection
+- Webhook-triggered \`repository_dispatch\` events of type \`api\`
 
 ### 1. Build Stage
 
@@ -387,7 +383,7 @@ Place configuration files in the appropriate \`custom-configs/\` subdirectories:
 
 - \`custom-configs/sway/\` - Sway window manager configuration
 - \`custom-configs/greetd/\` - Display manager configuration
-- \`custom-configs/plymouth/\` - Boot splash configuration (**fedora-bootc only**)
+- \`custom-configs/plymouth/\` - Boot splash configuration
 
 ### Plymouth Boot Splash Configuration
 

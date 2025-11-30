@@ -198,7 +198,7 @@ modules:
       - |
         rm -rf /var/tmp && ln -sf /tmp /var/tmp
         mkdir -p /usr/lib/dracut/dracut.conf.d
-        echo 'add_dracutmodules+=" plymouth "' > /usr/lib/dracut/dracut.conf.d/plymouth.conf
+        echo 'add_dracutmodules+=" plymouth ostree "' > /usr/lib/dracut/dracut.conf.d/plymouth.conf
         plymouth-set-default-theme bgrt-better-luks
         kver=$(basename /usr/lib/modules/*)
         dracut -vf /usr/lib/modules/$kver/initramfs.img $kver

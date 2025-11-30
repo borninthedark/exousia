@@ -60,7 +60,7 @@ ensure_dracut_config() {
 # Plymouth configuration for dracut
 # Automatically includes Plymouth modules in initramfs
 
-add_dracutmodules+=" plymouth "
+add_dracutmodules+=" plymouth ostree "
 EOF
         print_success "Created: $PLYMOUTH_CONF"
     else
