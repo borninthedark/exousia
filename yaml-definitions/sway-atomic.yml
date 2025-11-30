@@ -19,7 +19,7 @@ labels:
 
 # Build configuration
 build:
-  enable_plymouth: false  # Not applicable for sway-atomic
+  enable_plymouth: true
 
 # Modules define the build steps
 modules:
@@ -76,6 +76,14 @@ modules:
         dst: /usr/local/share/sericea-bootc/packages-sway
         mode: "0644"
 
+  # Plymouth theme files (toggleable)
+  - type: files
+    condition: enable_plymouth == true
+    files:
+      - src: custom-configs/plymouth/themes/bgrt-better-luks/
+        dst: /usr/share/plymouth/themes/bgrt-better-luks/
+        mode: "0644"
+
   # Custom repositories
   - type: files
     files:
@@ -116,6 +124,14 @@ modules:
 
     config-manager:
       - fedora-cisco-openh264
+
+    install-conditional:
+        - condition: enable_plymouth == true
+          packages:
+            # Boot Splash
+            - plymouth
+            - plymouth-system-theme
+            - plymouth-plugin-two-step
 
     # Custom packages (sway already included in base)
     install:
@@ -174,6 +190,18 @@ modules:
   - type: script
     scripts:
       - flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+  # Plymouth configuration (all images when enabled)
+  - type: script
+    condition: enable_plymouth == true
+    scripts:
+      - |
+        rm -rf /var/tmp && ln -sf /tmp /var/tmp
+        mkdir -p /usr/lib/dracut/dracut.conf.d
+        echo 'add_dracutmodules+=" plymouth "' > /usr/lib/dracut/dracut.conf.d/plymouth.conf
+        plymouth-set-default-theme bgrt-better-luks
+        kver=$(basename /usr/lib/modules/*)
+        dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
 
   # Services - skip for sway-atomic (defaults already set)
   - type: script
