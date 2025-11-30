@@ -25,12 +25,113 @@ except ImportError:
 
 
 @dataclass
+class DistroConfig:
+    """Configuration for a specific distro."""
+    name: str
+    base_image_template: str
+    package_manager: str
+    update_command: str
+    install_command: str
+    clean_command: str
+    build_deps_install: str
+    build_deps_remove: str
+    bootc_build_deps: List[str]
+
+
+# Fedora Atomic Desktop variants
+FEDORA_ATOMIC_VARIANTS = {
+    "fedora-silverblue": "quay.io/fedora/fedora-silverblue",
+    "fedora-kinoite": "quay.io/fedora/fedora-kinoite",
+    "fedora-sway-atomic": "quay.io/fedora/fedora-sway-atomic",
+    "fedora-onyx": "quay.io/fedora-ostree-desktops/onyx",
+    "fedora-budgie": "quay.io/fedora-ostree-desktops/budgie",
+    "fedora-cinnamon": "quay.io/fedora-ostree-desktops/cinnamon",
+    "fedora-cosmic": "quay.io/fedora-ostree-desktops/cosmic",
+    "fedora-deepin": "quay.io/fedora-ostree-desktops/deepin",
+    "fedora-lxqt": "quay.io/fedora-ostree-desktops/lxqt",
+    "fedora-mate": "quay.io/fedora-ostree-desktops/mate",
+    "fedora-xfce": "quay.io/fedora-ostree-desktops/xfce",
+}
+
+# Distro configurations for bootcrew images
+BOOTCREW_DISTROS = {
+    "arch": DistroConfig(
+        name="arch",
+        base_image_template="docker.io/archlinux/archlinux:latest",
+        package_manager="pacman",
+        update_command="pacman -Sy",
+        install_command="pacman -S --noconfirm",
+        clean_command="pacman -S --clean --noconfirm",
+        build_deps_install="pacman -S --noconfirm",
+        build_deps_remove="pacman -Rns --noconfirm",
+        bootc_build_deps=["make", "git", "rust"],
+    ),
+    "gentoo": DistroConfig(
+        name="gentoo",
+        base_image_template="ghcr.io/gentoo/stage3:systemd",
+        package_manager="emerge",
+        update_command="emerge --sync",
+        install_command="emerge --ask=n",
+        clean_command="emerge --depclean",
+        build_deps_install="emerge --ask=n",
+        build_deps_remove="emerge --ask=n --depclean",
+        bootc_build_deps=["dev-vcs/git", "dev-lang/rust", "sys-devel/make"],
+    ),
+    "debian": DistroConfig(
+        name="debian",
+        base_image_template="debian:unstable",
+        package_manager="apt",
+        update_command="apt-get update",
+        install_command="apt-get install -y --no-install-recommends",
+        clean_command="apt-get clean && rm -rf /var/lib/apt/lists/*",
+        build_deps_install="apt-get install -y --no-install-recommends",
+        build_deps_remove="apt-get purge -y",
+        bootc_build_deps=["git", "cargo", "rustc", "make", "gcc", "pkg-config", "libssl-dev"],
+    ),
+    "ubuntu": DistroConfig(
+        name="ubuntu",
+        base_image_template="ubuntu:mantic",
+        package_manager="apt",
+        update_command="apt-get update",
+        install_command="apt-get install -y --no-install-recommends",
+        clean_command="apt-get clean && rm -rf /var/lib/apt/lists/*",
+        build_deps_install="apt-get install -y --no-install-recommends",
+        build_deps_remove="apt-get purge -y",
+        bootc_build_deps=["git", "cargo", "rustc", "make", "gcc", "pkg-config", "libssl-dev"],
+    ),
+    "opensuse": DistroConfig(
+        name="opensuse",
+        base_image_template="registry.opensuse.org/opensuse/tumbleweed:latest",
+        package_manager="zypper",
+        update_command="zypper refresh",
+        install_command="zypper install -y",
+        clean_command="zypper clean -a",
+        build_deps_install="zypper install -y",
+        build_deps_remove="zypper remove -y",
+        bootc_build_deps=["git", "rust", "make", "cargo", "gcc-devel", "glib2-devel", "libzstd-devel", "openssl-devel", "ostree-devel"],
+    ),
+    "proxmox": DistroConfig(
+        name="proxmox",
+        base_image_template="debian:unstable",
+        package_manager="apt",
+        update_command="apt-get update",
+        install_command="apt-get install -y --no-install-recommends",
+        clean_command="apt-get clean && rm -rf /var/lib/apt/lists/*",
+        build_deps_install="apt-get install -y --no-install-recommends",
+        build_deps_remove="apt-get purge -y",
+        bootc_build_deps=["git", "cargo", "rustc", "make", "gcc", "pkg-config", "libssl-dev"],
+    ),
+}
+
+
+@dataclass
 class BuildContext:
     """Build context for evaluating conditions and generating Containerfile."""
     image_type: str
-    fedora_version: str
+    fedora_version: str  # For Fedora-based images; can be empty for bootcrew
     enable_plymouth: bool
     base_image: str
+    distro: str = "fedora"  # fedora, arch, gentoo, debian, ubuntu, opensuse, proxmox
 
 
 class ContainerfileGenerator:
@@ -158,6 +259,8 @@ class ContainerfileGenerator:
                 self._process_rpm_module(module)
             elif module_type == "systemd":
                 self._process_systemd_module(module)
+            elif module_type == "bootcrew-setup":
+                self._process_bootcrew_setup_module(module)
             else:
                 self.lines.append(f"# WARNING: Unknown module type: {module_type}")
 
@@ -300,10 +403,107 @@ class ContainerfileGenerator:
         if commands:
             self.lines.append("RUN " + " && \\\n    ".join(commands))
 
+    def _process_bootcrew_setup_module(self, module: Dict[str, Any]):
+        """Process bootcrew-setup module (build bootc from source and configure for bootcrew distros)."""
+        if self.context.distro not in BOOTCREW_DISTROS:
+            self.lines.append(f"# WARNING: bootcrew-setup not applicable for {self.context.distro}")
+            return
+
+        distro_config = BOOTCREW_DISTROS[self.context.distro]
+
+        # Arch-specific: Move /var to /usr/lib/sysimage
+        if self.context.distro == "arch":
+            self.lines.append("# Arch-specific: Relocate /var to /usr/lib/sysimage")
+            self.lines.append("RUN set -e; \\")
+            self.lines.append('    grep "= */var" /etc/pacman.conf | sed "/= *\\/var/s/.*=// ; s/ //" | \\')
+            self.lines.append('    xargs -n1 sh -c \'mkdir -p "/usr/lib/sysimage/$(dirname $(echo $1 | sed "s@/var/@@"))" && mv -v "$1" "/usr/lib/sysimage/$(echo "$1" | sed "s@/var/@@")"\' \'\' && \\')
+            self.lines.append('    sed -i -e "/= *\\/var/ s/^#//" -e "s@= */var@= /usr/lib/sysimage@g" -e "/DownloadUser/d" /etc/pacman.conf')
+            self.lines.append("")
+
+        # Install system dependencies
+        self.lines.append("# Install system dependencies for bootc")
+        deps = module.get("system-deps", [])
+        if deps:
+            deps_str = " ".join(deps)
+            self.lines.append(f"RUN {distro_config.install_command} {deps_str} && \\")
+            self.lines.append(f"    {distro_config.clean_command}")
+            self.lines.append("")
+
+        # Build bootc from source
+        self.lines.append("# Build bootc from source")
+        self.lines.append("RUN --mount=type=tmpfs,dst=/tmp --mount=type=tmpfs,dst=/root \\")
+
+        # Install build dependencies
+        build_deps_str = " ".join(distro_config.bootc_build_deps)
+        self.lines.append(f"    {distro_config.build_deps_install} {build_deps_str} && \\")
+
+        # Clone and build bootc
+        self.lines.append('    git clone "https://github.com/bootc-dev/bootc.git" /tmp/bootc && \\')
+
+        # Distro-specific build commands
+        if self.context.distro == "arch":
+            self.lines.append('    make -C /tmp/bootc bin install-all && \\')
+            self.lines.append('    printf "systemdsystemconfdir=/etc/systemd/system\\nsystemdsystemunitdir=/usr/lib/systemd/system\\n" | tee /usr/lib/dracut/dracut.conf.d/30-bootcrew-fix-bootc-module.conf && \\')
+        elif self.context.distro in ["opensuse"]:
+            self.lines.append('    make -C /tmp/bootc bin install-all install-initramfs-dracut && \\')
+        else:
+            self.lines.append('    make -C /tmp/bootc bin install && \\')
+
+        # Generate initramfs with dracut
+        self.lines.append('    printf \'reproducible=yes\\nhostonly=no\\ncompress=zstd\\nadd_dracutmodules+=" ostree bootc "\\n\' | tee "/usr/lib/dracut/dracut.conf.d/30-bootcrew-bootc-container-build.conf" && \\')
+
+        if self.context.distro in ["opensuse"]:
+            self.lines.append('    sh -c \'export KERNEL_VERSION="$(basename "$(find /usr/lib/modules -maxdepth 1 -type d | grep -v -E "*.img" | tail -n 1)")" && \\')
+            self.lines.append('    dracut --force --no-hostonly --force-drivers erofs --reproducible --zstd --verbose --kver "$KERNEL_VERSION" "/usr/lib/modules/$KERNEL_VERSION/initramfs.img"\' && \\')
+        else:
+            self.lines.append('    dracut --force "$(find /usr/lib/modules -maxdepth 1 -type d | grep -v -E "*.img" | tail -n 1)/initramfs.img" && \\')
+
+        # Remove build dependencies
+        self.lines.append(f"    {distro_config.build_deps_remove} {build_deps_str} && \\")
+        self.lines.append(f"    {distro_config.clean_command}")
+        self.lines.append("")
+
+        # Restructure filesystem for ostree/bootc
+        self.lines.append("# Restructure filesystem for ostree/bootc compatibility")
+        self.lines.append("RUN set -e; \\")
+
+        if self.context.distro == "arch":
+            self.lines.append('    sed -i \'s|^HOME=.*|HOME=/var/home|\' "/etc/default/useradd" && \\')
+        elif self.context.distro in ["debian", "ubuntu", "proxmox", "opensuse"]:
+            self.lines.append('    echo "HOME=/var/home" | tee "/etc/default/useradd" && \\')
+
+        # Remove and restructure directories
+        remove_dirs = ["/boot", "/home", "/root", "/usr/local", "/srv"]
+        if self.context.distro != "arch":
+            remove_dirs.append("/var")
+
+        self.lines.append(f"    rm -rf {' '.join(remove_dirs)} && \\")
+        self.lines.append("    mkdir -p /var /sysroot /boot /usr/lib/ostree && \\")
+
+        # Create symlinks
+        self.lines.append("    ln -s sysroot/ostree /ostree && \\")
+        self.lines.append("    ln -s var/roothome /root && \\")
+        self.lines.append("    ln -s var/srv /srv && \\")
+        self.lines.append("    ln -s var/opt /opt && \\")
+        self.lines.append("    ln -s var/mnt /mnt && \\")
+        self.lines.append("    ln -s var/home /home && \\")
+
+        # Create tmpfiles.d configuration
+        self.lines.append('    echo "$(for dir in opt home srv mnt usrlocal ; do echo "d /var/$dir 0755 root root -" ; done)" | tee -a "/usr/lib/tmpfiles.d/bootc-base-dirs.conf" && \\')
+        self.lines.append('    printf "d /var/roothome 0700 root root -\\nd /run/media 0755 root root -\\n" | tee -a "/usr/lib/tmpfiles.d/bootc-base-dirs.conf" && \\')
+
+        # Configure ostree for composefs and readonly sysroot
+        self.lines.append('    printf \'[composefs]\\nenabled = yes\\n[sysroot]\\nreadonly = true\\n\' | tee "/usr/lib/ostree/prepare-root.conf"')
+        self.lines.append("")
+
+        # Add bootc container label
+        self.lines.append("# Mark as bootc container")
+        self.lines.append("LABEL containers.bootc 1")
+
     def _evaluate_condition(self, condition: str) -> bool:
         """Evaluate a condition string against current context."""
         # Simple condition evaluation
-        # Supports: image-type == "value", enable_plymouth == true/false
+        # Supports: image-type == "value", enable_plymouth == true/false, distro == "value"
 
         condition = condition.strip()
 
@@ -324,6 +524,8 @@ class ContainerfileGenerator:
 
             if left == "image-type":
                 return self.context.image_type == right
+            if left == "distro":
+                return self.context.distro == right
             if left == "enable_plymouth":
                 return self.context.enable_plymouth == (right.lower() == "true")
 
@@ -351,6 +553,11 @@ def determine_base_image(config: Dict[str, Any], image_type: str, version: str) 
         "quay.io/fedora/fedora-bootc",
         "quay.io/fedora/fedora-sway-atomic",
         "ghcr.io/bootcrew/",
+        "docker.io/archlinux/",
+        "ghcr.io/gentoo/",
+        "debian:",
+        "ubuntu:",
+        "registry.opensuse.org/",
     ]
 
     def ensure_version_tag(image: str) -> str:
@@ -373,10 +580,19 @@ def determine_base_image(config: Dict[str, Any], image_type: str, version: str) 
     if preferred_base and any(preferred_base.startswith(prefix) for prefix in allowed_prefixes):
         return ensure_version_tag(preferred_base)
 
+    # Fedora-based images
     if image_type == "fedora-bootc":
         return f"quay.io/fedora/fedora-bootc:{version}"
-    if image_type == "fedora-sway-atomic":
-        return f"quay.io/fedora/fedora-sway-atomic:{version}"
+
+    # Fedora Atomic variants
+    if image_type in FEDORA_ATOMIC_VARIANTS:
+        return f"{FEDORA_ATOMIC_VARIANTS[image_type]}:{version}"
+
+    # Bootcrew distros - use distro configs
+    if image_type in BOOTCREW_DISTROS:
+        return BOOTCREW_DISTROS[image_type].base_image_template
+
+    # Legacy bootcrew alias
     if image_type == "bootcrew":
         return f"ghcr.io/bootcrew/bootc:{version}"
 
@@ -418,14 +634,17 @@ Examples:
                         help="Path to YAML configuration file")
     parser.add_argument("-o", "--output", type=Path,
                         help="Output Containerfile path (default: stdout)")
-    parser.add_argument("--image-type", choices=[
-                        "fedora-bootc",
-                        "fedora-sway-atomic",
-                        "bootcrew",
-                        ],
+    # Build the list of all supported image types dynamically
+    all_image_types = (
+        ["fedora-bootc", "bootcrew"] +
+        list(FEDORA_ATOMIC_VARIANTS.keys()) +
+        list(BOOTCREW_DISTROS.keys())
+    )
+
+    parser.add_argument("--image-type", choices=all_image_types,
                         help="Base image type (default: from config)")
     parser.add_argument("--fedora-version", default="43",
-                        help="Fedora version (default: 43)")
+                        help="Fedora version (default: 43, ignored for bootcrew distros)")
     parser.add_argument("--enable-plymouth", action="store_true", default=True,
                         help="Enable Plymouth")
     parser.add_argument("--disable-plymouth", action="store_true",
@@ -456,9 +675,18 @@ Examples:
     enable_plymouth = args.enable_plymouth and not args.disable_plymouth
     base_image = determine_base_image(config, image_type, fedora_version)
 
+    # Determine distro based on image_type
+    if image_type in BOOTCREW_DISTROS:
+        distro = image_type
+    elif image_type == "fedora-bootc" or image_type in FEDORA_ATOMIC_VARIANTS:
+        distro = "fedora"
+    else:
+        distro = config.get("distro", "fedora")
+
     if args.verbose:
         print("Build context:")
         print(f"  Image type: {image_type}")
+        print(f"  Distro: {distro}")
         print(f"  Fedora version: {fedora_version}")
         print(f"  Plymouth: {enable_plymouth}")
         print(f"  Base image: {base_image}")
@@ -467,7 +695,8 @@ Examples:
         image_type=image_type,
         fedora_version=fedora_version,
         enable_plymouth=enable_plymouth,
-        base_image=base_image
+        base_image=base_image,
+        distro=distro
     )
 
     # Generate Containerfile
