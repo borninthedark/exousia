@@ -333,6 +333,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Universal Blue](https://universal-blue.org/) for pioneering container-native desktop workflows
 - [BlueBuild](https://blue-build.org/) for the declarative YAML specification that inspired my build system
 - [bootcrew](https://github.com/bootcrew) for community-driven bootc projects and examples
+- [Buildah](https://buildah.io/), [Skopeo](https://github.com/containers/skopeo), and [Podman](https://podman.io/) communities
+  for advancing daemonless container tooling
 - The broader container and immutable OS community
 - All contributors to the referenced documentation and guides
 - **Claude** (Anthropic) and **GPT Codex** (OpenAI) for AI-assisted development

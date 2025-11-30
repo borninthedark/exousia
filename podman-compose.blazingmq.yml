@@ -9,10 +9,10 @@ version: '3.8'
 # - Persistent storage for durability
 #
 # Usage:
-#   Start:        podman-compose -f docker-compose.blazingmq.yml up -d
-#   Logs:         podman-compose -f docker-compose.blazingmq.yml logs -f
-#   Stop:         podman-compose -f docker-compose.blazingmq.yml down
-#   Clean data:   podman-compose -f docker-compose.blazingmq.yml down -v
+#   Start:        podman-compose -f podman-compose.blazingmq.yml up -d
+#   Logs:         podman-compose -f podman-compose.blazingmq.yml logs -f
+#   Stop:         podman-compose -f podman-compose.blazingmq.yml down
+#   Clean data:   podman-compose -f podman-compose.blazingmq.yml down -v
 
 services:
   # BlazingMQ Broker
@@ -49,7 +49,7 @@ services:
   exousia:
     build:
       context: .
-      dockerfile: Dockerfile.pod
+      dockerfile: Containerfile.pod
     container_name: exousia-pod
     ports:
       - "8000:8000"  # API HTTP port

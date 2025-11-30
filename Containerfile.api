@@ -1,4 +1,4 @@
-# Dockerfile for Exousia FastAPI Service
+# Containerfile for Exousia FastAPI Service
 # Supports both laptop and cloud deployment modes
 
 FROM python:3.11-slim

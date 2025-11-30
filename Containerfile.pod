@@ -1,4 +1,4 @@
-# Dockerfile for Exousia Sidecar Pod
+# Containerfile for Exousia Sidecar Pod
 # Runs both FastAPI and Worker in single container (simulates K8s pod)
 
 FROM python:3.11-slim

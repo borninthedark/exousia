@@ -165,10 +165,10 @@ BLAZINGMQ_ENABLED=true
 EOF
 
 # 3. Start BlazingMQ + API + Worker (sidecar mode)
-podman-compose -f docker-compose.blazingmq.yml up -d
+podman-compose -f podman-compose.blazingmq.yml up -d
 
 # 4. Check logs
-podman-compose -f docker-compose.blazingmq.yml logs -f
+podman-compose -f podman-compose.blazingmq.yml logs -f
 
 # 5. Access API
 curl http://localhost:8000/health
@@ -186,10 +186,10 @@ curl http://localhost:8000/builds/1
 
 ```bash
 # Stop services
-podman-compose -f docker-compose.blazingmq.yml down
+podman-compose -f podman-compose.blazingmq.yml down
 
 # Clean up data (WARNING: deletes database and queues)
-podman-compose -f docker-compose.blazingmq.yml down -v
+podman-compose -f podman-compose.blazingmq.yml down -v
 ```
 
 ### Cloud Mode (Kubernetes)

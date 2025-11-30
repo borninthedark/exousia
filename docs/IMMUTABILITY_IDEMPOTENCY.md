@@ -219,7 +219,7 @@ else:
 - Shared temp directory for file operations
 - Localhost communication (no network overhead)
 
-**Dockerfile.pod:**
+**Containerfile.pod:**
 ```dockerfile
 [program:api]
 command=uvicorn api.main:app --host 0.0.0.0 --port 8000
@@ -246,7 +246,7 @@ autorestart=true
 
 ### 6. Deployment Configurations
 
-#### Podman Compose (`docker-compose.blazingmq.yml`)
+#### Podman Compose (`podman-compose.blazingmq.yml`)
 
 **Services:**
 1. `blazingmq`: Single broker for message queue
@@ -260,7 +260,7 @@ autorestart=true
 **Usage:**
 ```bash
 # Start
-podman-compose -f docker-compose.blazingmq.yml up -d
+podman-compose -f podman-compose.blazingmq.yml up -d
 
 # Check health
 curl http://localhost:8000/health

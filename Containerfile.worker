@@ -1,4 +1,4 @@
-# Dockerfile for Exousia Build Worker
+# Containerfile for Exousia Build Worker
 # Processes build messages from BlazingMQ
 
 FROM python:3.11-slim
