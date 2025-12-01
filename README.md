@@ -24,7 +24,7 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Fedora Version:** 43
 - **Plymouth Customization:** ✅ Available (custom themes supported on all base images)
 - **Greetd Display Manager:** ❌ Not available
-- **Last Updated:** 2025-12-01 01:58:16 UTC
+- **Last Updated:** 2025-12-01 03:43:35 UTC
 
 > **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are applied for both `fedora-bootc` and `fedora-sway-atomic` base image types.
 
@@ -437,4 +437,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with bootc**
 
-*This README was automatically generated on 2025-12-01 01:58:16 UTC*
+*This README was automatically generated on 2025-12-01 03:43:35 UTC*
