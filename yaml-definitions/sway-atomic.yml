@@ -63,7 +63,7 @@ modules:
     scripts:
       - ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
 
-  # Copy package lists and configs
+  # Copy package lists (Sway already included in base image)
   - type: files
     files:
       - src: ./custom-pkgs/packages.remove
@@ -71,9 +71,6 @@ modules:
         mode: "0644"
       - src: ./custom-pkgs/packages.add
         dst: /usr/local/share/fedora-sway-atomic/packages-added
-        mode: "0644"
-      - src: ./custom-pkgs/packages.sway
-        dst: /usr/local/share/fedora-sway-atomic/packages-sway
         mode: "0644"
 
   # Plymouth theme files (toggleable)
