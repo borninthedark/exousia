@@ -6,6 +6,10 @@
 [![Fedora Version](https://img.shields.io/badge/Fedora-43-51A2DA?logo=fedora)](https://fedoraproject.org)
 [![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
 
+[![Spiritual Pressure](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Spiritual%20Pressure&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
+[![Licht Regen](https://img.shields.io/badge/Licht_Regen-⚡_Ready-4A9EFF?style=for-the-badge&labelColor=003366)](https://github.com/borninthedark/exousia)
+[![Exousia](https://img.shields.io/badge/⭐_Exousia-Vollständig-0088CC?style=for-the-badge&labelColor=001F3F)](https://github.com/borninthedark/exousia)
+
 This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs.
 
 ## Philosophy: Exousia
