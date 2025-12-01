@@ -254,15 +254,17 @@ New to Exousia? Start here:
 
 ### API Documentation
 
-Use the REST API to manage configurations programmatically:
+Use the REST API and webhooks to manage configurations programmatically:
+- **[Webhook API](docs/WEBHOOK_API.md)** - Trigger builds remotely via GitHub webhooks
 - **[API Overview](docs/api/README.md)** - FastAPI backend architecture and features
 - **[API Endpoints](docs/api/endpoints.md)** - Complete endpoint reference with examples
 - **[Development Guide](docs/api/development.md)** - Contributing to the API
 
-The API enables:
+The API and webhook system enable:
 - YAML configuration validation and storage
 - Dynamic Containerfile transpilation
-- GitHub Actions build triggering
+- GitHub Actions build triggering via webhooks
+- Remote build automation and integration
 - Build status tracking
 
 ### Building & Customization
