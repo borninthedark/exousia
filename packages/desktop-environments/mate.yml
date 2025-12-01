@@ -7,7 +7,13 @@ metadata:
   description: Traditional desktop environment forked from GNOME 2
   homepage: https://mate-desktop.org/
 
+# Package groups (for Fedora/DNF-based distros)
+# These are installed via `dnf install @group-name`
+groups:
+  - mate-desktop
+
 # Core MATE components
+# These are additional packages beyond the group install
 core:
   - mate-desktop
   - mate-session-manager

@@ -444,8 +444,9 @@ class ContainerfileGenerator:
             self.lines.append("    dnf install -y https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \\")
             self.lines.append("    dnf config-manager setopt fedora-cisco-openh264.enabled=1; \\")
 
-        # Install package groups (for fedora-bootc only)
-        if groups and self.context.image_type == "fedora-bootc":
+        # Install package groups (for Fedora-based distros)
+        # Groups are only supported on Fedora/DNF-based systems
+        if groups and self.context.distro == "fedora":
             for group in groups:
                 self.lines.append(f"    dnf install -y @{group}; \\")
 

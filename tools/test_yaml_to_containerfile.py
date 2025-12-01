@@ -329,6 +329,78 @@ def test_plymouth_not_generated_for_sway_atomic():
     print("✓ ENABLE_PLYMOUTH not generated for non-bootc images")
 
 
+def test_group_install_on_fedora_distros():
+    """Test that package groups are installed on all Fedora distros, not just bootc."""
+    config = {
+        "name": "kde-sway-atomic-test",
+        "description": "Test KDE group install on sway-atomic",
+        "modules": [
+            {
+                "type": "package-loader",
+                "desktop_environment": "kde",
+                "include_common": False
+            }
+        ]
+    }
+
+    # Test with fedora-sway-atomic (should support groups)
+    context = BuildContext(
+        image_type="fedora-sway-atomic",
+        fedora_version="43",
+        enable_plymouth=False,
+        base_image="quay.io/fedora/fedora-sway-atomic:43",
+        distro="fedora"
+    )
+
+    generator = ContainerfileGenerator(config, context)
+    output = generator.generate()
+
+    # Should install KDE group on any Fedora distro
+    assert "@kde-desktop-environment" in output, \
+        "KDE group should be installed on fedora-sway-atomic"
+    assert "dnf install -y @kde-desktop-environment" in output, \
+        "Should generate group install command"
+
+    print("✓ Group installs work on all Fedora distros")
+
+
+def test_group_install_not_on_non_fedora():
+    """Test that package groups are NOT used on non-Fedora distros."""
+    config = {
+        "name": "kde-arch-test",
+        "description": "Test KDE on Arch (no groups)",
+        "modules": [
+            {
+                "type": "package-loader",
+                "desktop_environment": "kde",
+                "include_common": False
+            }
+        ]
+    }
+
+    # Test with Arch (should not use groups)
+    context = BuildContext(
+        image_type="arch",
+        fedora_version="",
+        enable_plymouth=False,
+        base_image="docker.io/archlinux/archlinux:latest",
+        distro="arch"
+    )
+
+    generator = ContainerfileGenerator(config, context)
+    output = generator.generate()
+
+    # Should NOT have group install syntax
+    assert "@kde-desktop-environment" not in output, \
+        "Group syntax should not be used on non-Fedora distros"
+
+    # Should still install individual packages
+    assert "pacman" in output.lower() or "install" in output.lower(), \
+        "Should still install packages individually"
+
+    print("✓ Groups not used on non-Fedora distros")
+
+
 if __name__ == "__main__":
     test_generator_is_stateless()
     test_generator_with_different_contexts()
@@ -340,4 +412,6 @@ if __name__ == "__main__":
     test_enable_plymouth_generates_env()
     test_package_loader_module()
     test_plymouth_not_generated_for_sway_atomic()
+    test_group_install_on_fedora_distros()
+    test_group_install_not_on_non_fedora()
     print("\n✅ All tests passed!")

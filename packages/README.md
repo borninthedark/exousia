@@ -10,7 +10,8 @@ packages/
 │   ├── sway.yml       # Sway WM packages
 │   └── hyprland.yml   # Hyprland WM packages
 ├── desktop-environments/  # Full desktop environments
-│   └── gnome.yml      # GNOME DE packages
+│   ├── kde.yml        # KDE Plasma DE packages
+│   └── mate.yml       # MATE DE packages
 └── common/            # Shared package sets
     ├── base.yml       # Base packages for all builds
     └── remove.yml     # Packages to remove
@@ -27,7 +28,12 @@ metadata:
   type: window-manager | desktop-environment | common
   description: Description of the package set
 
-# Package groups (organized by category)
+# Package groups (for Fedora-based distros - optional)
+# These are installed via `dnf install @group-name`
+groups:
+  - package-group-name
+
+# Package categories (organized by purpose)
 category_name:
   - package1
   - package2
@@ -37,6 +43,20 @@ another_category:
   - package4
   - package5
 ```
+
+### Package Groups
+
+Package groups provide a convenient way to install sets of related packages on Fedora-based systems:
+
+- **Fedora distros**: Groups are installed via `dnf install -y @group-name`
+- **Other distros**: Groups are ignored, only individual packages are installed
+- **Supported on**: fedora-bootc, fedora-sway-atomic, fedora-kinoite, and all Fedora Atomic variants
+- **Not supported on**: Arch, Debian, Ubuntu, openSUSE, Gentoo
+
+Example groups:
+- `@kde-desktop-environment` - Full KDE Plasma desktop
+- `@mate-desktop` - MATE desktop environment
+- Custom groups defined in your distro's repositories
 
 ## Using Package Definitions
 
@@ -49,15 +69,17 @@ To use a window manager or desktop environment in your build configuration:
 desktop:
   window_manager: sway  # Options: sway, hyprland
   # OR
-  # desktop_environment: gnome  # Options: gnome
+  # desktop_environment: kde  # Options: kde, mate
   include_common: true  # Include common base packages
 
 # Then use the package-loader module
 modules:
   - type: package-loader
-    window_manager: sway
+    window_manager: sway  # or use desktop_environment: kde
     include_common: true
 ```
+
+**Note**: On Fedora-based distros, desktop environments with groups (like KDE and MATE) will use efficient group installs (`@kde-desktop-environment`, `@mate-desktop`), automatically including all necessary packages. Individual packages are still installed for fine-tuning beyond the group.
 
 ### Command Line Tool
 
