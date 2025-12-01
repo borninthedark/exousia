@@ -1,16 +1,9 @@
 # Exousia: Declarative Bootc Builder
 
-[![CI/CD Pipeline](https://github.com/borninthedark/exousia/actions/workflows/build.yml/badge.svg)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
-[![GHCR Image](https://img.shields.io/badge/GHCR-ghcr.io/borninthedark/exousia-blue?logo=github)](https://ghcr.io/borninthedark/exousia)
-[![Docker Hub Image](https://img.shields.io/docker/pulls/1borninthedark/exousia?logo=docker)](https://hub.docker.com/r/1borninthedark/exousia)
-[![Fedora Version](https://img.shields.io/badge/Fedora-43-51A2DA?logo=fedora)](https://fedoraproject.org)
-[![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
-
 [![Spiritual Pressure](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Spiritual%20Pressure&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
-[![Licht Regen](https://img.shields.io/badge/Licht_Regen-⚡_Ready-4A9EFF?style=for-the-badge&labelColor=003366)](https://github.com/borninthedark/exousia)
-[![Exousia](https://img.shields.io/badge/⭐_Exousia-Vollständig-0088CC?style=for-the-badge&labelColor=001F3F)](https://github.com/borninthedark/exousia)
+<img src=".github/quincy-pentacle.svg" alt="Custom Quincy Pentacle" width="28" />
 
-This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs.
+This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs. Bleach and its concept of Spiritual Pressure are the creations of Tite Kubo; this project uses the motif solely as a playful status indicator.
 
 ## Philosophy: Exousia
 
@@ -28,7 +21,7 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Fedora Version:** 43
 - **Plymouth Customization:** ✅ Available (custom themes supported on all base images)
 - **Greetd Display Manager:** ❌ Not available
-- **Last Updated:** 2025-12-01 05:00:42 UTC
+- **Last Updated:** 2025-12-01 16:56:42 UTC
 
 > **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are applied for both `fedora-bootc` and `fedora-sway-atomic` base image types.
 
@@ -441,4 +434,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with bootc**
 
-*This README was automatically generated on 2025-12-01 05:00:42 UTC*
+*This README was automatically generated on 2025-12-01 16:56:42 UTC*
