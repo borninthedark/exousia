@@ -641,8 +641,12 @@ get_package_manager() {
 }
 
 @test "Sysusers configuration files for greetd and rtkit should exist" {
+    if ! is_fedora_bootc; then
+        skip "Greetd sysusers definitions are only expected on fedora-bootc builds"
+    fi
+
     assert_file_exists "$MOUNT_POINT/usr/lib/sysusers.d/bootc.conf"
-    
+
     # Verify the file contains configurations for greetd and rtkit
     run grep -E '(greetd|rtkit)' "$MOUNT_POINT/usr/lib/sysusers.d/bootc.conf"
     assert_success "bootc.conf should contain greetd and rtkit definitions"
