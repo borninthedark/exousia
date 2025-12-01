@@ -14,6 +14,20 @@ FastAPI backend for declarative bootc image configuration management with GitHub
 - **Security** - Protected build/config routes with JWT, CORS support
 - **Observability** - Prometheus `/metrics` endpoint plus optional OpenTelemetry tracing
 
+## Architecture
+
+**Direct GitHub Integration** - The API uses direct GitHub API calls for triggering builds, eliminating the need for message queue infrastructure. When you trigger a build via `/api/build/trigger`, the API:
+
+1. Validates YAML configuration
+2. Creates a build record in the database
+3. Triggers GitHub Actions workflow directly via GitHub API
+4. Launches a background task to poll workflow status every 30 seconds
+5. Automatically updates build status when workflow completes
+
+This simple, efficient approach is ideal for bootc image builds (low-frequency operations) and leverages GitHub's built-in rate limiting, retry semantics, and job queuing.
+
+**Note:** The codebase includes BlazingMQ queue infrastructure (`api/queue.py`, `api/workers/`) for future scalability, but it's **not required** and **not used** by default. The direct integration works out-of-the-box with just a GitHub token.
+
 ## Tech Stack
 
 - **FastAPI** 0.109.0 - Modern async web framework
