@@ -119,13 +119,26 @@ jobs:
           done
           echo "✓ All required Sway configuration files present"
 
-          for file in packages.add packages.remove packages.sway; do
-            if [[ ! -f "custom-pkgs/$file" ]]; then
-              echo "::error::Missing custom-pkgs/$file"
+          # Verify new YAML-based package management structure
+          if [[ ! -d packages ]]; then
+            echo "::error::Missing packages/ directory"
+            exit 1
+          fi
+
+          for dir in window-managers desktop-environments common; do
+            if [[ ! -d "packages/$dir" ]]; then
+              echo "::error::Missing packages/$dir directory"
               exit 1
             fi
           done
-          echo "✓ All package list files present"
+
+          # Verify package loader tool exists
+          if [[ ! -f "tools/package_loader.py" ]]; then
+            echo "::error::Missing tools/package_loader.py"
+            exit 1
+          fi
+
+          echo "✓ All package YAML definitions present"
 
           for script in setup-plymouth-theme dracut-rebuild; do
             if [[ ! -f "custom-scripts/$script" ]]; then
