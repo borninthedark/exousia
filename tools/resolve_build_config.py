@@ -36,12 +36,12 @@ def resolve_yaml_config(input_yaml_config: str, target_image_type: str) -> Path:
         candidate = Path(f"yaml-definitions/{target_image_type}.yml")
         if candidate.exists():
             print(f"Auto-detected config: {candidate}")
-            return candidate
+            return candidate.resolve()
 
         default_config = Path("exousia.yml")
         if default_config.exists():
             print(f"Using default config: {default_config}")
-            return default_config
+            return default_config.resolve()
 
         print(f"::error::No config file found for {target_image_type}")
         sys.exit(1)
@@ -51,7 +51,7 @@ def resolve_yaml_config(input_yaml_config: str, target_image_type: str) -> Path:
         print(f"::error::YAML config file not found: {yaml_config}")
         sys.exit(1)
 
-    return yaml_config
+    return yaml_config.resolve()
 
 
 def apply_fedora_overrides(
