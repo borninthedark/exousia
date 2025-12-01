@@ -85,6 +85,25 @@ class TestBuildOperations:
         assert response.status_code == 400
         assert "config_id, yaml_content, or definition_filename must be provided" in response.json()["detail"]
 
+    async def test_trigger_build_rejects_conflicting_desktop_overrides(self, client: AsyncClient):
+        """Ensure window_manager and desktop_environment cannot be provided together."""
+
+        response = await client.post(
+            "/api/build/trigger",
+            json={
+                "yaml_content": "name: test\ndescription: test\nmodules: []\n",
+                "image_type": "fedora-bootc",
+                "fedora_version": "43",
+                "enable_plymouth": True,
+                "window_manager": "river",
+                "desktop_environment": "sway",
+                "ref": "main",
+            },
+        )
+
+        assert response.status_code == 422
+        assert "window_manager" in response.text
+
     @patch("api.routers.build.GitHubService")
     async def test_cancel_build(self, mock_github_service, client: AsyncClient, sample_build):
         """Test cancelling a running build."""

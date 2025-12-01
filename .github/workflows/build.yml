@@ -52,6 +52,16 @@ on:
         required: true
         type: boolean
         default: true
+      window_manager:
+        description: 'Optional window manager override for Fedora bootc'
+        required: false
+        type: string
+        default: ''
+      desktop_environment:
+        description: 'Optional desktop environment override for Fedora bootc'
+        required: false
+        type: string
+        default: ''
       yaml_config_file:
         description: 'YAML config file to use (default: auto-detect from image type)'
         required: false
@@ -93,13 +103,13 @@ jobs:
       - name: Set up Python for Containerfile generation
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version-file: '.python-version'
           cache: 'pip'
 
       - name: Install Python dependencies
         run: |
-          pip install --upgrade pip
-          pip install pyyaml
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml
 
       - name: Verify required file structure
         run: |
@@ -203,14 +213,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version-file: '.python-version'
           cache: 'pip'
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install -r api/requirements.txt
-          pip install pylint isort mypy pytest-cov
+          python -m pip install --upgrade pip
+          python -m pip install -r api/requirements.txt
+          python -m pip install pylint isort mypy pytest-cov
 
       - name: Run Black (code formatting check)
         continue-on-error: true
@@ -306,12 +316,13 @@ jobs:
       - name: Set up Python for YAML transpiler
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version-file: '.python-version'
           cache: 'pip'
 
       - name: Install Python dependencies
         run: |
-          pip install pyyaml
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml
 
       - name: Validate webhook inputs
         if: github.event_name == 'repository_dispatch'
@@ -381,131 +392,11 @@ jobs:
           INPUT_IMAGE_TYPE: ${{ github.event.inputs.image_type || github.event.client_payload.image_type || 'current' }}
           INPUT_DISTRO_VERSION: ${{ github.event.inputs.distro_version || github.event.client_payload.distro_version || 'current' }}
           INPUT_ENABLE_PLYMOUTH: ${{ github.event.inputs.enable_plymouth || github.event.client_payload.enable_plymouth || 'true' }}
+          INPUT_WINDOW_MANAGER: ${{ github.event.inputs.window_manager || github.event.client_payload.window_manager || '' }}
+          INPUT_DESKTOP_ENVIRONMENT: ${{ github.event.inputs.desktop_environment || github.event.client_payload.desktop_environment || '' }}
           INPUT_YAML_CONFIG: ${{ github.event.inputs.yaml_config_file || github.event.client_payload.yaml_config || 'auto' }}
         run: |
-          echo "::group::Configuration Detection"
-          echo "Input image type: $INPUT_IMAGE_TYPE"
-          echo "Input distro version: $INPUT_DISTRO_VERSION"
-          echo "Input Plymouth: $INPUT_ENABLE_PLYMOUTH"
-          echo "Input YAML config: $INPUT_YAML_CONFIG"
-
-          # Determine current config from .fedora-version (legacy support)
-          if [[ -f .fedora-version ]] && [[ -s .fedora-version ]]; then
-            CURRENT_VERSION=$(cut -d: -f1 .fedora-version)
-            CURRENT_IMAGE_TYPE=$(cut -d: -f2 .fedora-version)
-            echo "Detected from .fedora-version: $CURRENT_VERSION:$CURRENT_IMAGE_TYPE"
-          else
-            CURRENT_VERSION="43"
-            CURRENT_IMAGE_TYPE="fedora-sway-atomic"
-            echo "Using defaults: $CURRENT_VERSION:$CURRENT_IMAGE_TYPE"
-          fi
-
-          # Resolve target configuration
-          TARGET_VERSION="${CURRENT_VERSION}"
-          TARGET_IMAGE_TYPE="${CURRENT_IMAGE_TYPE}"
-
-          if [[ "$INPUT_DISTRO_VERSION" != "current" ]]; then
-            TARGET_VERSION="$INPUT_DISTRO_VERSION"
-          fi
-
-          if [[ "$INPUT_IMAGE_TYPE" != "current" ]]; then
-            TARGET_IMAGE_TYPE="$INPUT_IMAGE_TYPE"
-          fi
-
-          ENABLE_PLYMOUTH="$INPUT_ENABLE_PLYMOUTH"
-
-          echo "Resolved target: $TARGET_IMAGE_TYPE version $TARGET_VERSION"
-          echo "Plymouth enabled: $ENABLE_PLYMOUTH"
-
-          # Auto-detect YAML config file if set to "auto"
-          if [[ "$INPUT_YAML_CONFIG" == "auto" ]]; then
-            # Try to find matching YAML in yaml-definitions
-            if [[ -f "yaml-definitions/${TARGET_IMAGE_TYPE}.yml" ]]; then
-              YAML_CONFIG="yaml-definitions/${TARGET_IMAGE_TYPE}.yml"
-              echo "Auto-detected config: $YAML_CONFIG"
-            elif [[ -f "exousia.yml" ]]; then
-              YAML_CONFIG="exousia.yml"
-              echo "Using default config: $YAML_CONFIG"
-            else
-              echo "::error::No config file found for $TARGET_IMAGE_TYPE"
-              exit 1
-            fi
-          else
-            YAML_CONFIG="$INPUT_YAML_CONFIG"
-          fi
-
-          # Generate Containerfile from YAML configuration
-          echo "::group::YAML to Containerfile Transpilation"
-          echo "Generating Containerfile from $YAML_CONFIG..."
-
-          if [[ ! -f "$YAML_CONFIG" ]]; then
-            echo "::error::YAML config file not found: $YAML_CONFIG"
-            exit 1
-          fi
-
-          if [[ "$ENABLE_PLYMOUTH" == "true" ]]; then
-            PLYMOUTH_FLAG="--enable-plymouth"
-          else
-            PLYMOUTH_FLAG="--disable-plymouth"
-          fi
-
-          python3 tools/yaml-to-containerfile.py \
-            --config "$YAML_CONFIG" \
-            --image-type "$TARGET_IMAGE_TYPE" \
-            --fedora-version "$TARGET_VERSION" \
-            $PLYMOUTH_FLAG \
-            --output "Containerfile.generated" \
-            --verbose
-
-          CONTAINERFILE_PATH="./Containerfile.generated"
-
-          echo "Generated Containerfile: $CONTAINERFILE_PATH"
-          echo "::endgroup::"
-
-          # Update .fedora-version if changed (for Fedora-based images)
-          if [[ "$TARGET_IMAGE_TYPE" =~ ^fedora- ]]; then
-            if [[ "$TARGET_VERSION" != "$CURRENT_VERSION" ]] || [[ "$TARGET_IMAGE_TYPE" != "$CURRENT_IMAGE_TYPE" ]]; then
-              echo "${TARGET_VERSION}:${TARGET_IMAGE_TYPE}" > .fedora-version
-              echo "Configuration updated to: $TARGET_VERSION:$TARGET_IMAGE_TYPE"
-            else
-              echo "Configuration unchanged"
-            fi
-          fi
-
-          # Determine OS family for tagging
-          if [[ "$TARGET_IMAGE_TYPE" =~ ^fedora- ]]; then
-            OS_FAMILY="fedora"
-            OS_VERSION="$TARGET_VERSION"
-          elif [[ "$TARGET_IMAGE_TYPE" == "arch" ]]; then
-            OS_FAMILY="arch"
-            OS_VERSION="latest"
-          elif [[ "$TARGET_IMAGE_TYPE" == "gentoo" ]]; then
-            OS_FAMILY="gentoo"
-            OS_VERSION="latest"
-          elif [[ "$TARGET_IMAGE_TYPE" == "debian" ]]; then
-            OS_FAMILY="debian"
-            OS_VERSION="unstable"
-          elif [[ "$TARGET_IMAGE_TYPE" == "ubuntu" ]]; then
-            OS_FAMILY="ubuntu"
-            OS_VERSION="mantic"
-          elif [[ "$TARGET_IMAGE_TYPE" == "opensuse" ]]; then
-            OS_FAMILY="opensuse"
-            OS_VERSION="tumbleweed"
-          elif [[ "$TARGET_IMAGE_TYPE" == "proxmox" ]]; then
-            OS_FAMILY="proxmox"
-            OS_VERSION="unstable"
-          else
-            OS_FAMILY="unknown"
-            OS_VERSION="latest"
-          fi
-
-          echo "BUILD_VERSION=$TARGET_VERSION" >> $GITHUB_OUTPUT
-          echo "BUILD_IMAGE_TYPE=$TARGET_IMAGE_TYPE" >> $GITHUB_OUTPUT
-          echo "OS_FAMILY=$OS_FAMILY" >> $GITHUB_OUTPUT
-          echo "OS_VERSION=$OS_VERSION" >> $GITHUB_OUTPUT
-          echo "CONTAINERFILE=$CONTAINERFILE_PATH" >> $GITHUB_OUTPUT
-          echo "ENABLE_PLYMOUTH=$ENABLE_PLYMOUTH" >> $GITHUB_OUTPUT
-          echo "::endgroup::"
+          python3 tools/resolve_build_config.py
 
       - name: Generate image tags and labels
         id: meta

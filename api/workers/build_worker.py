@@ -179,10 +179,15 @@ class BuildWorker:
 
                 # Build workflow inputs
                 workflow_inputs = {
-                    "fedora_version": payload["fedora_version"],
+                    "distro_version": payload["fedora_version"],
                     "image_type": payload["image_type"],
-                    "enable_plymouth": str(payload.get("enable_plymouth", True)).lower()
+                    "enable_plymouth": str(payload.get("enable_plymouth", True)).lower(),
                 }
+
+                if payload.get("window_manager"):
+                    workflow_inputs["window_manager"] = payload["window_manager"]
+                if payload.get("desktop_environment"):
+                    workflow_inputs["desktop_environment"] = payload["desktop_environment"]
 
                 # Include yaml_config_file if using a definition file
                 if payload.get("yaml_config_file"):
