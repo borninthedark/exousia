@@ -403,22 +403,6 @@ get_package_manager() {
     assert_success
 }
 
-@test "Custom script 'fedora-version-switcher' should be executable" {
-    run test -x "$MOUNT_POINT/usr/local/bin/fedora-version-switcher"
-    assert_success
-}
-
-@test "fedora-version-switcher script should require two arguments" {
-    run buildah run "$CONTAINER" -- /usr/local/bin/fedora-version-switcher
-    assert_failure
-    assert_output --partial "Usage:"
-}
-
-@test "fedora-version-switcher script should accept valid version and image type" {
-    run buildah run "$CONTAINER" -- bash -c "/usr/local/bin/fedora-version-switcher 2>&1 | grep -q 'Usage:'"
-    assert_success
-}
-
 @test "Custom script 'generate-readme' should be executable" {
     run test -x "$MOUNT_POINT/usr/local/bin/generate-readme"
     assert_success

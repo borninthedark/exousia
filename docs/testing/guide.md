@@ -106,7 +106,6 @@ Ensures custom scripts are executable and functional.
 - autotiling - Automatic tiling for Sway
 - config-authselect - U2F authentication setup
 - lid - Laptop lid state handler
-- fedora-version-switcher - Version/type switching
 - generate-readme - Dynamic documentation
 
 ### 5. Repository Configuration

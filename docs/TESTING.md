@@ -140,7 +140,6 @@ graph TD
 - autotiling script
 - config-authselect script
 - lid script
-- fedora-version-switcher script
 - generate-readme script
 
 **Example**:
