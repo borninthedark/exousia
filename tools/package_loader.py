@@ -45,7 +45,7 @@ class PackageLoader:
         """Flatten a package configuration into a list of package names.
 
         Recursively extracts all package names from nested dictionaries and lists,
-        skipping the 'metadata' key.
+        skipping the 'metadata' and 'groups' keys.
 
         Args:
             config: Package configuration dictionary
@@ -56,7 +56,7 @@ class PackageLoader:
         packages = []
 
         for key, value in config.items():
-            if key == "metadata":
+            if key in ("metadata", "groups"):
                 continue
 
             if isinstance(value, list):
@@ -65,6 +65,17 @@ class PackageLoader:
                 packages.extend(self.flatten_packages(value))
 
         return packages
+
+    def get_groups(self, config: Dict) -> List[str]:
+        """Extract package groups from configuration.
+
+        Args:
+            config: Package configuration dictionary
+
+        Returns:
+            List of package group names
+        """
+        return config.get("groups", [])
 
     def load_wm(self, wm_name: str) -> List[str]:
         """Load packages for a window manager.
@@ -129,19 +140,26 @@ class PackageLoader:
             include_common: Whether to include common packages (default: True)
 
         Returns:
-            Dictionary with 'install' and 'remove' keys containing package lists
+            Dictionary with 'install', 'remove', and 'groups' keys containing package lists
         """
         install_packages: Set[str] = set()
+        groups: List[str] = []
 
         # Load common packages
         if include_common:
             install_packages.update(self.load_common("base"))
 
-        # Load WM or DE packages
+        # Load WM or DE packages and groups
         if wm:
-            install_packages.update(self.load_wm(wm))
+            wm_file = self.wm_dir / f"{wm}.yml"
+            wm_config = self.load_yaml(wm_file)
+            install_packages.update(self.flatten_packages(wm_config))
+            groups.extend(self.get_groups(wm_config))
         elif de:
-            install_packages.update(self.load_de(de))
+            de_file = self.de_dir / f"{de}.yml"
+            de_config = self.load_yaml(de_file)
+            install_packages.update(self.flatten_packages(de_config))
+            groups.extend(self.get_groups(de_config))
 
         # Load packages to remove
         remove_packages = self.load_remove()
@@ -152,7 +170,8 @@ class PackageLoader:
 
         return {
             "install": sorted(list(install_packages)),
-            "remove": remove_packages
+            "remove": remove_packages,
+            "groups": groups
         }
 
     def list_available_wms(self) -> List[str]:
@@ -175,6 +194,10 @@ class PackageLoader:
     ):
         """Export package lists to text files (legacy format).
 
+        **DEPRECATED**: This method exports to the legacy text-based format.
+        The recommended approach is to use YAML package definitions directly
+        in the build configuration with the package-loader module.
+
         Creates packages.add and packages.remove files in the specified directory.
 
         Args:
@@ -182,6 +205,14 @@ class PackageLoader:
             de: Desktop environment name (optional)
             output_dir: Directory to write files to (default: custom-pkgs/)
         """
+        import warnings
+        warnings.warn(
+            "export_to_text_files() is deprecated. Use YAML package definitions "
+            "with package-loader module in build configurations instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+
         if output_dir is None:
             output_dir = Path(__file__).parent.parent / "custom-pkgs"
 
@@ -193,17 +224,19 @@ class PackageLoader:
         # Write install packages
         add_file = output_dir / "packages.add"
         with open(add_file, 'w', encoding='utf-8') as f:
-            f.write("# Auto-generated package list\n")
+            f.write("# Auto-generated package list (LEGACY FORMAT - DEPRECATED)\n")
             f.write(f"# Generated for: {wm or de or 'base'}\n")
-            f.write("# DO NOT EDIT MANUALLY - Changes will be overwritten\n\n")
+            f.write("# DO NOT EDIT MANUALLY - Changes will be overwritten\n")
+            f.write("# NOTE: Use packages/ YAML definitions with package-loader module instead\n\n")
             for pkg in packages["install"]:
                 f.write(f"{pkg}\n")
 
         # Write remove packages
         remove_file = output_dir / "packages.remove"
         with open(remove_file, 'w', encoding='utf-8') as f:
-            f.write("# Auto-generated package removal list\n")
-            f.write("# DO NOT EDIT MANUALLY - Changes will be overwritten\n\n")
+            f.write("# Auto-generated package removal list (LEGACY FORMAT - DEPRECATED)\n")
+            f.write("# DO NOT EDIT MANUALLY - Changes will be overwritten\n")
+            f.write("# NOTE: Use packages/ YAML definitions with package-loader module instead\n\n")
             for pkg in packages["remove"]:
                 f.write(f"{pkg}\n")
 

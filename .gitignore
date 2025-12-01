@@ -7,6 +7,10 @@ Containerfile.*.generated
 Containerfile.generated
 Containerfile.test
 
+# Deprecated documentation (auto-generated)
+yaml-definitions/DEPRECATED-README.md
+custom-pkgs/README.md
+
 # Python cache and bytecode
 __pycache__/
 *.py[cod]

@@ -427,6 +427,7 @@ class ContainerfileGenerator:
 
         install_packages = packages["install"]
         remove_packages = packages["remove"]
+        groups = packages.get("groups", [])
 
         # Generate installation instructions
         self.lines.append("# hadolint ignore=DL3041,SC2086")
@@ -443,7 +444,12 @@ class ContainerfileGenerator:
             self.lines.append("    dnf install -y https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \\")
             self.lines.append("    dnf config-manager setopt fedora-cisco-openh264.enabled=1; \\")
 
-        # Install packages
+        # Install package groups (for fedora-bootc only)
+        if groups and self.context.image_type == "fedora-bootc":
+            for group in groups:
+                self.lines.append(f"    dnf install -y @{group}; \\")
+
+        # Install individual packages
         if install_packages:
             # Split packages into chunks to avoid command line length issues
             chunk_size = 50

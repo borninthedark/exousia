@@ -1,0 +1,117 @@
+# KDE Plasma Desktop Environment Package Definition
+# Based on: https://github.com/sigulete/kde-bootc
+# Reference: https://fedoramagazine.org/building-your-own-atomic-bootc-desktop/
+
+metadata:
+  name: kde
+  type: desktop-environment
+  description: Modern and feature-rich desktop environment with KDE Plasma
+  homepage: https://kde.org/plasma-desktop/
+
+# Package groups (for Fedora/DNF-based distros)
+# These are installed via `dnf install @group-name`
+groups:
+  - kde-desktop-environment
+
+# Core KDE Plasma components
+# These are additional packages beyond the group install
+core:
+  - plasma-desktop
+  - plasma-workspace
+  - plasma-systemsettings
+  - kwin
+  - kscreen
+  - powerdevil
+
+# KDE Applications
+applications:
+  - konsole
+  - dolphin
+  - kate
+  - gwenview
+  - okular
+  - spectacle
+  - ark
+  - kcalc
+  - plasma-systemmonitor
+
+# Display manager
+display_manager:
+  - sddm
+  - sddm-kcm
+
+# Session and authentication
+session:
+  - xdg-utils
+  - xdg-user-dirs
+  - xdg-desktop-portal
+  - xdg-desktop-portal-kde
+
+# Audio stack (PipeWire)
+audio:
+  - pipewire
+  - pipewire-alsa
+  - pipewire-pulseaudio
+  - wireplumber
+  - plasma-pa
+
+# Graphics drivers
+graphics:
+  - mesa-dri-drivers
+  - mesa-vulkan-drivers
+
+# Essential fonts
+fonts:
+  - google-noto-sans-fonts
+  - google-noto-serif-fonts
+  - dejavu-sans-fonts
+  - dejavu-sans-mono-fonts
+
+# Network management
+network:
+  - NetworkManager
+  - plasma-nm
+
+# Power management
+power:
+  - plasma-workspace-wayland
+
+# KDE Frameworks (essential)
+frameworks:
+  - kf6-baloo
+  - kf6-kio
+  - kf6-kded
+
+# System utilities
+utilities:
+  - kwalletmanager
+  - kinfocenter
+  - ksystemstats
+
+# Wayland support
+wayland:
+  - plasma-wayland-protocols
+  - kwayland-integration
+
+# Additional KDE tools
+tools:
+  - kdeplasma-addons
+  - kwrite
+  - kfind
+
+# Boot splash (optional, for bootc images)
+boot_splash:
+  - plymouth
+  - plymouth-system-theme
+  - plymouth-plugin-two-step
+
+# KDE PIM (optional, minimal set)
+pim:
+  - kmail
+  - korganizer
+  - kontact
+
+# Multimedia
+multimedia:
+  - elisa
+  - dragon
