@@ -232,6 +232,103 @@ def test_distro_detection():
     print("✓ Distro detection works correctly")
 
 
+def test_enable_plymouth_generates_env():
+    """Test that ENABLE_PLYMOUTH is generated as ENV, not a standalone instruction."""
+    config = {
+        "name": "plymouth-test",
+        "description": "Test ENABLE_PLYMOUTH generation",
+        "modules": []
+    }
+
+    context = BuildContext(
+        image_type="fedora-bootc",
+        fedora_version="43",
+        enable_plymouth=True,
+        base_image="quay.io/fedora/fedora-bootc:43",
+        distro="fedora"
+    )
+
+    generator = ContainerfileGenerator(config, context)
+    output = generator.generate()
+
+    # Should have ENV instruction for ENABLE_PLYMOUTH
+    assert "ENV ENABLE_PLYMOUTH=true" in output, \
+        "ENABLE_PLYMOUTH should be generated as ENV instruction"
+
+    # Should NOT have standalone ENABLE_PLYMOUTH
+    lines = output.split('\n')
+    for line in lines:
+        stripped = line.strip()
+        # Check for standalone instruction (not part of ENV or RUN)
+        if stripped.startswith("ENABLE_PLYMOUTH") and not stripped.startswith("ENV ENABLE_PLYMOUTH"):
+            assert False, f"Found standalone ENABLE_PLYMOUTH instruction: {stripped}"
+
+    print("✓ ENABLE_PLYMOUTH generates correct ENV instruction")
+
+
+def test_package_loader_module():
+    """Test that package-loader module type is supported."""
+    config = {
+        "name": "package-loader-test",
+        "description": "Test package-loader module",
+        "modules": [
+            {
+                "type": "package-loader",
+                "window_manager": "sway",
+                "include_common": True
+            }
+        ]
+    }
+
+    context = BuildContext(
+        image_type="fedora-bootc",
+        fedora_version="43",
+        enable_plymouth=True,
+        base_image="quay.io/fedora/fedora-bootc:43",
+        distro="fedora"
+    )
+
+    generator = ContainerfileGenerator(config, context)
+    output = generator.generate()
+
+    # Should contain package installation
+    assert "dnf install" in output, "Should generate dnf install commands"
+
+    # Should install sway packages
+    assert "sway" in output.lower(), "Should install sway packages"
+
+    # Should have RPMFusion repos for Fedora
+    assert "rpmfusion" in output.lower(), "Should add RPMFusion repos for Fedora"
+
+    print("✓ package-loader module type works correctly")
+
+
+def test_plymouth_not_generated_for_sway_atomic():
+    """Test that ENABLE_PLYMOUTH is not generated for non-bootc images."""
+    config = {
+        "name": "sway-atomic-test",
+        "description": "Test Sway Atomic without Plymouth ENV",
+        "modules": []
+    }
+
+    context = BuildContext(
+        image_type="fedora-sway-atomic",
+        fedora_version="43",
+        enable_plymouth=True,  # Even if enabled
+        base_image="quay.io/fedora/fedora-sway-atomic:43",
+        distro="fedora"
+    )
+
+    generator = ContainerfileGenerator(config, context)
+    output = generator.generate()
+
+    # Should NOT have ENV ENABLE_PLYMOUTH for non-bootc images
+    assert "ENV ENABLE_PLYMOUTH" not in output, \
+        "ENABLE_PLYMOUTH ENV should only be for fedora-bootc images"
+
+    print("✓ ENABLE_PLYMOUTH not generated for non-bootc images")
+
+
 if __name__ == "__main__":
     test_generator_is_stateless()
     test_generator_with_different_contexts()
@@ -240,4 +337,7 @@ if __name__ == "__main__":
     test_bootcrew_distro_support()
     test_fedora_atomic_variants()
     test_distro_detection()
+    test_enable_plymouth_generates_env()
+    test_package_loader_module()
+    test_plymouth_not_generated_for_sway_atomic()
     print("\n✅ All tests passed!")

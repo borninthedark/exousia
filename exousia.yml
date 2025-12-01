@@ -10,6 +10,13 @@ image-version: 43
 base-image: quay.io/fedora/fedora-sway-atomic:43
 image-type: fedora-sway-atomic  # or fedora-bootc
 
+# Desktop environment selection
+# Use either 'window_manager' or 'desktop_environment', not both
+desktop:
+  window_manager: sway  # Options: sway, hyprland
+  # desktop_environment: gnome  # Options: gnome
+  include_common: true  # Include common base packages
+
 # Container metadata
 labels:
   org.opencontainers.image.title: "Exousia"
@@ -54,16 +61,6 @@ modules:
     scripts:
       - ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
 
-  # Copy package lists for reference
-  - type: files
-    files:
-      - src: custom-pkgs/packages.remove
-        dst: /usr/local/share/fedora-sway-atomic/packages-removed
-        mode: "0644"
-      - src: custom-pkgs/packages.add
-        dst: /usr/local/share/fedora-sway-atomic/packages-added
-        mode: "0644"
-
   # Plymouth theme files (toggleable per image type)
   - type: files
     condition: enable_plymouth == true
@@ -106,93 +103,11 @@ modules:
         dst: /usr/bin/start-sway
         mode: "0755"
 
-  # Create base package list
-  - type: script
-    scripts:
-      - |
-        mkdir -p /usr/local/share/fedora-sway-atomic
-        if [ "$IMAGE_TYPE" = "fedora-sway-atomic" ]; then
-          if [ -f /usr/share/rpm-ostree/treefile.json ]; then
-            jq -r .packages[] /usr/share/rpm-ostree/treefile.json > /usr/local/share/fedora-sway-atomic/packages-base
-          else
-            touch /usr/local/share/fedora-sway-atomic/packages-base
-          fi
-        else
-          rpm -qa --qf '%{NAME}\n' | sort > /usr/local/share/fedora-sway-atomic/packages-base
-          test -s /usr/local/share/fedora-sway-atomic/packages-base || touch /usr/local/share/fedora-sway-atomic/packages-base
-        fi
-
-  # Package management - RPM installations and removals
-  - type: rpm-ostree
-    repos:
-      # RPM Fusion repositories
-      - https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm
-      - https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-43.noarch.rpm
-
-    # Custom packages (always installed)
-    install:
-      # Core Utilities
-      - kitty
-      - neovim
-      - flatpak
-      - wob
-      - rtkit
-      - cargo
-      - git
-      - swaync
-      - fuzzel
-      - htop
-      - nwg-look
-      - btop
-      - etckeeper
-      - fastfetch
-      - glances
-      # Audio & Media
-      - mpd
-      - ranger
-      # Tools
-      - chezmoi
-      - bat
-      - wf-recorder
-      - lsd
-      - fzf
-      - direnv
-      - distrobox
-      - wireguard-tools
-      # Virtualization
-      - virt-manager
-      - qemu-kvm
-      - libvirt
-      # Security
-      - pam-u2f
-      - pamu2fcfg
-      - lynis
-      - openssl
-      # Developer & Power User Tools
-      - ripgrep
-      - zoxide
-      # Extra
-      - cava
-      - zsh
-      - zsh-autosuggestions
-      - zsh-syntax-highlighting
-
-    # Packages to remove (if present)
-    remove:
-      - firefox-langpacks
-
-    # Enable DNF config options
-    config-manager:
-      - fedora-cisco-openh264
-
-  # Boot splash packages when Plymouth is enabled
-  - type: rpm-ostree
-    condition: enable_plymouth == true
-    install:
-      # Boot Splash
-      - plymouth
-      - plymouth-system-theme
-      - plymouth-plugin-two-step
+  # Package management using new YAML-based loader
+  # Automatically loads packages based on desktop.window_manager or desktop.desktop_environment
+  - type: package-loader
+    window_manager: sway  # Loaded from packages/window-managers/sway.yml
+    include_common: true  # Also loads packages/common/base.yml
 
   # Flatpak setup
   - type: script

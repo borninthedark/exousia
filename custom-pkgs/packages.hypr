@@ -1,9 +1,10 @@
 # Auto-generated package list
-# Generated for: sway
+# Generated for: hyprland
 # DO NOT EDIT MANUALLY - Changes will be overwritten
 
 adwaita-gtk2-theme
 adwaita-icon-theme
+alacritty
 bat
 blueman
 bluez-tools
@@ -33,6 +34,10 @@ gvfs
 gvfs-gphoto2
 gvfs-mtp
 htop
+hypridle
+hyprland
+hyprlock
+hyprpaper
 imv
 kanshi
 kitty
@@ -62,13 +67,8 @@ qemu-kvm
 ranger
 ripgrep
 rtkit
-seatd
 slurp
 swappy
-sway
-swaybg
-swayidle
-swaylock
 swaync
 thunar
 thunar-archive-plugin
@@ -82,7 +82,6 @@ wf-recorder
 wireguard-tools
 wireplumber
 wl-clipboard
-wlogout
 wlroots
 wlsunset
 wob
@@ -90,7 +89,7 @@ wofi
 xdg-dbus-proxy
 xdg-desktop-portal
 xdg-desktop-portal-gtk
-xdg-desktop-portal-wlr
+xdg-desktop-portal-hyprland
 xdg-user-dirs
 xdg-utils
 xfce-polkit
