@@ -2,7 +2,7 @@
 
 [![CI/CD Pipeline](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions/workflows/build.yaml)
 [![GHCR Image](https://img.shields.io/badge/GHCR-ghcr.io/borninthedark/exousia-blue?logo=github)](https://ghcr.io/borninthedark/exousia)
-[![Docker Hub Image](https://img.shields.io/docker/pulls/borninthedark/exousia?logo=docker)](https://hub.docker.com/r/borninthedark/exousia)
+[![Docker Hub Image](https://img.shields.io/docker/pulls/1borninthedark/exousia?logo=docker)](https://hub.docker.com/r/borninthedark/exousia)
 [![Fedora Version](https://img.shields.io/badge/Fedora-43-51A2DA?logo=fedora)](https://fedoraproject.org)
 [![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
 
@@ -24,7 +24,7 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Fedora Version:** 43
 - **Plymouth Customization:** ✅ Available (custom themes supported on all base images)
 - **Greetd Display Manager:** ❌ Not available
-- **Last Updated:** 2025-12-01 00:40:55 UTC
+- **Last Updated:** 2025-12-01 00:57:47 UTC
 
 > **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are applied for both `fedora-bootc` and `fedora-sway-atomic` base image types.
 
@@ -342,4 +342,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with bootc**
 
-*This README was automatically generated on 2025-12-01 00:40:55 UTC*
+*This README was automatically generated on 2025-12-01 00:57:47 UTC*
