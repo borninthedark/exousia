@@ -1015,55 +1015,14 @@ jobs:
           chmod +x ./custom-scripts/generate-readme
           ./custom-scripts/generate-readme
 
-      - name: Commit updated README and version file
+      - name: Report README and version status
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-
           if [[ -n $(git status --porcelain README.md .fedora-version) ]]; then
-            git add README.md .fedora-version
-            git commit -m "docs: auto-update README and version file [skip ci]"
-
-            # Pull with rebase to avoid conflicts
-            echo "Fetching latest changes from remote..."
-            git fetch origin main
-            git rebase origin/main || {
-              echo "::error::Rebase failed. Manual intervention required."
-              git rebase --abort
-              exit 1
-            }
-
-            # Push with retry logic (up to 4 retries with exponential backoff)
-            MAX_RETRIES=4
-            RETRY_COUNT=0
-            DELAY=2
-
-            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              if git push origin HEAD:main; then
-                echo "✓ Successfully pushed README updates"
-                break
-              else
-                RETRY_COUNT=$((RETRY_COUNT + 1))
-                if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                  echo "Push failed. Retrying in ${DELAY}s... (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
-                  sleep $DELAY
-                  DELAY=$((DELAY * 2))
-
-                  # Fetch and rebase again before retry
-                  git fetch origin main
-                  git rebase origin/main || {
-                    echo "::error::Rebase failed on retry. Manual intervention required."
-                    git rebase --abort
-                    exit 1
-                  }
-                else
-                  echo "::error::Failed to push after $MAX_RETRIES attempts"
-                  exit 1
-                fi
-              fi
-            done
+            echo "README.md or .fedora-version were regenerated."
+            echo "Diff summary:" && git diff --stat README.md .fedora-version
+            echo "No automated commit or push is performed."
           else
-            echo "No changes to commit"
+            echo "No README or version changes detected."
           fi
 
       - name: Final summary
