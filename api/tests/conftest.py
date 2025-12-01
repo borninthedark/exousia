@@ -5,7 +5,6 @@ Pytest Configuration and Fixtures
 Shared fixtures for API testing.
 """
 
-import asyncio
 import uuid
 from typing import AsyncGenerator, Generator
 
@@ -20,14 +19,6 @@ from api.main import app
 
 # Test database URL
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
-
-
-@pytest.fixture(scope="session")
-def event_loop() -> Generator:
-    """Create event loop for async tests."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
 
 
 @pytest.fixture(scope="function")
