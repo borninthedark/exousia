@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     def DB_MAX_OVERFLOW(self) -> int:
         return 0 if self.DEPLOYMENT_MODE == DeploymentMode.LAPTOP else 40
 
+    # Build Status Polling
+    BUILD_STATUS_POLLING_ENABLED: bool = False
+    BUILD_STATUS_POLL_INTERVAL: int = 30
+
     # BlazingMQ Settings
     BLAZINGMQ_ENABLED: bool = True
     BLAZINGMQ_BROKER_URI: str = "tcp://localhost:30114"  # Default BlazingMQ broker

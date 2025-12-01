@@ -37,6 +37,14 @@ async def poll_build_status(build_id: int, workflow_run_id: int, max_polls: int 
         workflow_run_id: GitHub workflow run ID
         max_polls: Maximum number of polling attempts (default: 120 = 1 hour at 30s intervals)
     """
+    if not settings.BUILD_STATUS_POLLING_ENABLED:
+        logger.info(
+            "Build status polling disabled; skipping poll for build %s (workflow %s)",
+            build_id,
+            workflow_run_id,
+        )
+        return
+
     logger.info(f"Starting status polling for build {build_id}, workflow {workflow_run_id}")
 
     github = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
@@ -45,7 +53,7 @@ async def poll_build_status(build_id: int, workflow_run_id: int, max_polls: int 
     while poll_count < max_polls:
         try:
             # Sleep first to give workflow time to start
-            await asyncio.sleep(30)  # Poll every 30 seconds
+            await asyncio.sleep(max(settings.BUILD_STATUS_POLL_INTERVAL, 0))
             poll_count += 1
 
             # Get workflow status
@@ -251,7 +259,10 @@ async def trigger_build(
         )
 
         # Start background task to poll for status
-        background_tasks.add_task(poll_build_status, build.id, workflow_run.id)
+        if settings.BUILD_STATUS_POLLING_ENABLED:
+            background_tasks.add_task(poll_build_status, build.id, workflow_run.id)
+        else:
+            logger.info("Build status polling is disabled; skipping background polling task")
 
     except HTTPException:
         # Re-raise HTTP exceptions
