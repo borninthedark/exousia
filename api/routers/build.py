@@ -5,39 +5,118 @@ Build Router
 Endpoints for triggering builds and tracking build status.
 """
 
+import asyncio
+import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 import yaml
 
-from ..database import get_db, ConfigModel, BuildModel
+from ..database import get_db, ConfigModel, BuildModel, async_session_maker
 from ..models import (
     BuildTriggerRequest, BuildResponse, BuildStatusResponse,
     BuildListResponse, BuildStatus
 )
 from ..services.github_service import GitHubService
 from ..services.transpiler_service import TranspilerService
-from ..queue import QueueMessage, MessagePriority, get_queue_backend
 from ..config import settings
 from ..auth import current_active_user
 
+logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(current_active_user)])
+
+
+async def poll_build_status(build_id: int, workflow_run_id: int, max_polls: int = 120):
+    """
+    Background task to poll GitHub workflow status and update build.
+
+    Args:
+        build_id: Build ID to update
+        workflow_run_id: GitHub workflow run ID
+        max_polls: Maximum number of polling attempts (default: 120 = 1 hour at 30s intervals)
+    """
+    logger.info(f"Starting status polling for build {build_id}, workflow {workflow_run_id}")
+
+    github = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
+    poll_count = 0
+
+    while poll_count < max_polls:
+        try:
+            # Sleep first to give workflow time to start
+            await asyncio.sleep(30)  # Poll every 30 seconds
+            poll_count += 1
+
+            # Get workflow status
+            workflow_run = await github.get_workflow_run(workflow_run_id)
+
+            logger.info(
+                f"Build {build_id} poll {poll_count}/{max_polls}: "
+                f"status={workflow_run.status}, conclusion={workflow_run.conclusion}"
+            )
+
+            # Update build status in database
+            async with async_session_maker() as db:
+                result = await db.execute(
+                    select(BuildModel).where(BuildModel.id == build_id)
+                )
+                build = result.scalar_one_or_none()
+
+                if not build:
+                    logger.error(f"Build {build_id} not found during polling")
+                    return
+
+                # Check if workflow completed
+                if workflow_run.status == "completed":
+                    if workflow_run.conclusion == "success":
+                        build.status = BuildStatus.SUCCESS
+                    elif workflow_run.conclusion in ["failure", "cancelled", "timed_out"]:
+                        build.status = BuildStatus.FAILURE
+                    elif workflow_run.conclusion == "cancelled":
+                        build.status = BuildStatus.CANCELLED
+                    else:
+                        build.status = BuildStatus.FAILURE
+
+                    build.completed_at = datetime.utcnow()
+                    await db.commit()
+
+                    logger.info(
+                        f"Build {build_id} completed: {build.status.value} "
+                        f"(conclusion: {workflow_run.conclusion})"
+                    )
+                    return  # Stop polling
+
+                # Still in progress, continue polling
+                if build.status != BuildStatus.IN_PROGRESS:
+                    build.status = BuildStatus.IN_PROGRESS
+                    await db.commit()
+
+        except Exception as e:
+            logger.error(f"Error polling build {build_id}: {e}", exc_info=True)
+            # Continue polling despite errors
+            continue
+
+    # Max polls reached
+    logger.warning(f"Build {build_id} reached max polling attempts ({max_polls})")
 
 
 @router.post("/trigger", response_model=BuildResponse, status_code=202)
 async def trigger_build(
     request: BuildTriggerRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Trigger a new build via GitHub Actions.
+    Trigger a new build via GitHub Actions (direct integration).
 
     Can trigger from:
     - A saved configuration (config_id)
     - Ad-hoc YAML content (yaml_content)
     - A yaml-definition file (definition_filename)
+
+    The build is triggered directly via GitHub API and a background task
+    polls for status updates.
     """
     yaml_content = None
     config_id = request.config_id
@@ -121,38 +200,69 @@ async def trigger_build(
     await db.commit()
     await db.refresh(build)
 
-    # Enqueue build trigger message to BlazingMQ
+    # Trigger GitHub workflow directly
     try:
-        queue = get_queue_backend()
+        if not settings.GITHUB_TOKEN:
+            raise HTTPException(
+                status_code=503,
+                detail="GitHub token not configured. Set GITHUB_TOKEN environment variable."
+            )
 
-        # Create build trigger message
-        message = QueueMessage(
-            message_type="build.trigger",
-            payload={
-                "build_id": build.id,
-                "config_id": config_id,
-                "ref": request.ref,
-                "fedora_version": fedora_version,
-                "image_type": image_type,
-                "enable_plymouth": enable_plymouth,
-                "yaml_config_file": yaml_config_file
-            },
-            priority=MessagePriority.NORMAL,
-            correlation_id=f"build-{build.id}"
+        github = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
+
+        # Build workflow inputs
+        workflow_inputs = {
+            "image_type": image_type,
+            "distro_version": fedora_version,
+            "enable_plymouth": str(enable_plymouth).lower()
+        }
+
+        # Include yaml_config_file if using a definition file
+        if yaml_config_file:
+            workflow_inputs["yaml_config_file"] = yaml_config_file
+
+        logger.info(
+            f"Triggering GitHub workflow for build {build.id}: "
+            f"image_type={image_type}, version={fedora_version}, ref={request.ref}"
         )
 
-        # Enqueue message
-        await queue.enqueue(
-            queue_name=settings.BLAZINGMQ_QUEUE_BUILD,
-            message=message
+        # Trigger workflow
+        workflow_run = await github.trigger_workflow(
+            workflow_file=settings.GITHUB_WORKFLOW_FILE,
+            ref=request.ref,
+            inputs=workflow_inputs
         )
 
+        if not workflow_run:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to get workflow run information after triggering"
+            )
+
+        # Update build with workflow run ID
+        build.workflow_run_id = workflow_run.id
+        build.status = BuildStatus.IN_PROGRESS
+        build.started_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(build)
+
+        logger.info(
+            f"Build {build.id} triggered successfully: workflow_run_id={workflow_run.id}"
+        )
+
+        # Start background task to poll for status
+        background_tasks.add_task(poll_build_status, build.id, workflow_run.id)
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
+        logger.error(f"Failed to trigger build {build.id}: {e}", exc_info=True)
         build.status = BuildStatus.FAILURE
         await db.commit()
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to enqueue build message: {str(e)}"
+            detail=f"Failed to trigger GitHub workflow: {str(e)}"
         ) from e
 
     return build

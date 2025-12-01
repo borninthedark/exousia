@@ -175,22 +175,22 @@ get_package_manager() {
     if ! is_fedora; then
         skip "Test only applies to Fedora-based images"
     fi
-    assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-added"
-    assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-removed"
+    assert_file_exists "$MOUNT_POINT/usr/local/share/fedora-sway-atomic/packages-added"
+    assert_file_exists "$MOUNT_POINT/usr/local/share/fedora-sway-atomic/packages-removed"
 }
 
 @test "Sway package list should exist (packages.sway) (fedora-bootc only)" {
     if ! is_fedora_bootc; then
         skip "Sway package list is only expected on fedora-bootc builds"
     fi
-    assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-sway"
+    assert_file_exists "$MOUNT_POINT/usr/local/share/fedora-sway-atomic/packages-sway"
 }
 
 @test "Fedora base packages list should exist for fedora-bootc" {
     if ! is_fedora_bootc; then
         skip "Test only applies to fedora-bootc builds"
     fi
-    assert_file_exists "$MOUNT_POINT/usr/local/share/sericea-bootc/packages-fedora-bootc"
+    assert_file_exists "$MOUNT_POINT/usr/local/share/fedora-sway-atomic/packages-base"
 }
 
 @test "Directory structure should be correct for fedora-bootc" {

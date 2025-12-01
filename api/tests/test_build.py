@@ -46,29 +46,36 @@ class TestBuildOperations:
 
         assert response.status_code == 404
 
-    @patch("api.routers.build.get_queue_backend")
+    @patch("api.routers.build.GitHubService")
     async def test_trigger_build_with_config(
-        self, mock_get_queue_backend, client: AsyncClient, sample_config
+        self, mock_github_service, client: AsyncClient, sample_config
     ):
         """Test triggering build from saved configuration."""
-        # Mock queue backend
-        mock_queue = AsyncMock()
-        mock_queue.enqueue = AsyncMock(return_value=True)
-        mock_get_queue_backend.return_value = mock_queue
+        # Mock GitHub workflow run
+        mock_workflow_run = AsyncMock()
+        mock_workflow_run.id = 12345
+        mock_workflow_run.html_url = "https://github.com/test/repo/actions/runs/12345"
+
+        # Mock GitHub service
+        mock_github = AsyncMock()
+        mock_github.trigger_workflow = AsyncMock(return_value=mock_workflow_run)
+        mock_github_service.return_value = mock_github
 
         # Mock settings
         with patch("api.routers.build.settings") as mock_settings:
-            mock_settings.BLAZINGMQ_QUEUE_BUILD = "build.queue"
+            mock_settings.GITHUB_TOKEN = "fake_token"
+            mock_settings.GITHUB_REPO = "test/repo"
+            mock_settings.GITHUB_WORKFLOW_FILE = "build.yaml"
 
             response = await client.post(
                 "/api/build/trigger", json={"config_id": sample_config.id, "ref": "main"}
             )
 
-            # Should successfully enqueue the build message
+            # Should successfully trigger the build
             assert response.status_code == 202
 
-            # Verify the queue enqueue was called
-            mock_queue.enqueue.assert_called_once()
+            # Verify GitHub workflow was triggered
+            mock_github.trigger_workflow.assert_called_once()
 
     async def test_trigger_build_without_config_or_yaml(self, client: AsyncClient):
         """Test triggering build without config_id, yaml_content, or definition_filename fails."""
