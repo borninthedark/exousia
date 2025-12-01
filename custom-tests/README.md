@@ -52,3 +52,14 @@ sudo ./install.sh /usr/local
 
 # Always use buildah unshare
 buildah unshare -- bats -r tests/
+
+## Why Bats instead of pytest?
+
+The integration suite mounts the produced container image with `buildah` and
+asserts on its filesystem contents. Using Bats keeps the runner dependency
+footprint minimal (only shell, buildah, and the bats libraries are required)
+and avoids having to vendor Python tooling into the host or the image under
+test. Converting these checks to pytest would require shipping Python and its
+dependencies into the same environment that performs the mount operations,
+which adds overhead and complicates portability across the different distros
+the project supports.
