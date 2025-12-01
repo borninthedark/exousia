@@ -13,8 +13,15 @@ setup_file() {
     fi
     echo "--- Using test image: $TEST_IMAGE_TAG ---"
 
-    CONTAINER=$(buildah from --pull-never "$TEST_IMAGE_TAG")
-    MOUNT_POINT=$(buildah mount "$CONTAINER")
+    # Allow buildah to pull the image tag if it's not already available locally.
+    if ! CONTAINER=$(buildah from "$TEST_IMAGE_TAG"); then
+        echo "FATAL: failed to create container from $TEST_IMAGE_TAG" >&2
+        return 1
+    fi
+    if ! MOUNT_POINT=$(buildah mount "$CONTAINER"); then
+        echo "FATAL: failed to mount container $CONTAINER" >&2
+        return 1
+    fi
 
     export CONTAINER MOUNT_POINT
     echo "--- Container filesystem mounted at $MOUNT_POINT ---"
