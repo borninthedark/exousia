@@ -153,6 +153,15 @@ OTEL_EXPORTER_OTLP_ENDPOINT=
 OTEL_EXPORTER_OTLP_HEADERS=
 ```
 
+### Build defaults and overrides
+
+- CI uses `tools/resolve_build_config.py` to read `.fedora-version` when dispatch inputs
+  request the `current` value, while explicit workflow or API dispatch inputs take
+  precedence over the file contents.
+- `fedora-bootc` builds accept either `window_manager` **or** `desktop_environment`
+  overrides in build trigger requests; the selected value rewrites the YAML configuration
+  before validation to keep the generated Containerfile aligned with the requested desktop.
+
 ## Middleware & Observability
 
 - **CORS** - Cross-origin resource sharing configuration

@@ -5,7 +5,7 @@ Pydantic Models
 Request and response models for API endpoints.
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, root_validator, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -122,7 +122,20 @@ class BuildTriggerRequest(BaseModel):
     image_type: ImageType = Field(ImageType.FEDORA_SWAY_ATOMIC)
     fedora_version: str = Field("43")
     enable_plymouth: bool = Field(True)
+    window_manager: Optional[str] = Field(None, description="Override window manager for Fedora bootc builds")
+    desktop_environment: Optional[str] = Field(None, description="Override desktop environment for Fedora bootc builds")
     ref: str = Field("main", description="Git ref to build from")
+
+    @root_validator(skip_on_failure=True)
+    def validate_desktop_selection(cls, values):
+        """Ensure only one of window_manager or desktop_environment is provided."""
+        wm = values.get("window_manager")
+        de = values.get("desktop_environment")
+
+        if wm and de:
+            raise ValueError("Specify only one of window_manager or desktop_environment")
+
+        return values
 
 
 class BuildResponse(BaseModel):

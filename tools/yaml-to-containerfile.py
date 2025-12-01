@@ -293,6 +293,25 @@ class ContainerfileGenerator:
                 else:
                     self.lines.append(f"COPY --chmod={mode} {src} {dst}")
 
+    def _render_script_lines(self, lines: List[str], set_command: str):
+        """Render a sequence of shell lines as a single RUN instruction."""
+
+        SHELL_KEYWORDS = {'if', 'then', 'else', 'elif', 'fi', 'do', 'done', 'case', 'esac'}
+
+        self.lines.append(f"RUN {set_command}; \\")
+
+        for i, line in enumerate(lines):
+            # Check if line ends with a shell keyword
+            last_word = line.split()[-1] if line.split() else ""
+            needs_semicolon = last_word not in SHELL_KEYWORDS and i < len(lines) - 1
+
+            if needs_semicolon:
+                self.lines.append(f"    {line}; \\")
+            elif i < len(lines) - 1:
+                self.lines.append(f"    {line} \\")
+            else:
+                self.lines.append(f"    {line}")
+
     def _process_script_module(self, module: Dict[str, Any]):
         """Process script module (RUN instructions)."""
         scripts = module.get("scripts", [])
@@ -300,38 +319,31 @@ class ContainerfileGenerator:
         if not scripts:
             return
 
-        # Shell keywords that should not have trailing semicolons
-        SHELL_KEYWORDS = {'if', 'then', 'else', 'elif', 'fi', 'do', 'done', 'case', 'esac'}
+        def collect_lines(script_block: str) -> List[str]:
+            return [line.strip() for line in script_block.split("\n") if line.strip()]
 
-        # Combine multiple scripts into single RUN if possible
         if len(scripts) == 1:
-            script = scripts[0].strip()
+            script = scripts[0]
             if "\n" in script:
-                # Multi-line script - preserve shell structure
-                lines = [line.strip() for line in script.split("\n") if line.strip()]
-                self.lines.append("RUN set -e; \\")
-                for i, line in enumerate(lines):
-                    # Check if line ends with a shell keyword
-                    last_word = line.split()[-1] if line.split() else ""
-                    needs_semicolon = last_word not in SHELL_KEYWORDS and i < len(lines) - 1
-
-                    if needs_semicolon:
-                        self.lines.append(f"    {line}; \\")
-                    elif i < len(lines) - 1:
-                        self.lines.append(f"    {line} \\")
-                    else:
-                        self.lines.append(f"    {line}")
+                lines = collect_lines(script)
+                if lines:
+                    self._render_script_lines(lines, "set -e")
             else:
-                self.lines.append(f"RUN {script}")
-        else:
-            # Multiple separate commands
-            self.lines.append("RUN set -euxo pipefail; \\")
-            for i, script in enumerate(scripts):
                 script = script.strip()
-                if i < len(scripts) - 1:
-                    self.lines.append(f"    {script}; \\")
+                if script:
+                    self.lines.append(f"RUN {script}")
+        else:
+            lines: List[str] = []
+            for script in scripts:
+                if "\n" in script:
+                    lines.extend(collect_lines(script))
                 else:
-                    self.lines.append(f"    {script}")
+                    stripped = script.strip()
+                    if stripped:
+                        lines.append(stripped)
+
+            if lines:
+                self._render_script_lines(lines, "set -euxo pipefail")
 
     def _process_rpm_module(self, module: Dict[str, Any]):
         """Process rpm-ostree module (DNF operations)."""

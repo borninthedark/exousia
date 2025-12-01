@@ -180,6 +180,37 @@ fi
 - `44` - Fedora 44
 - `rawhide` - Fedora Rawhide (bleeding edge)
 
+### Fedora bootc desktop overrides
+
+When requesting the `fedora-bootc` image type, the `client_payload` accepts either
+`window_manager` **or** `desktop_environment` to regenerate the YAML with the requested
+desktop before validation. Supplying both fields results in a validation error to avoid
+ambiguous desktop selection.
+
+```json
+{
+  "event_type": "api",
+  "client_payload": {
+    "image_type": "fedora-bootc",
+    "distro_version": "44",
+    "enable_plymouth": true,
+    "window_manager": "river"
+  }
+}
+```
+
+### Fedora version source precedence
+
+The build workflow resolves Fedora metadata through `tools/resolve_build_config.py` using
+these sources, in order of priority:
+
+1. Explicit repository/ workflow dispatch inputs (`image_type`, `distro_version`).
+2. `.fedora-version` file in the repository when dispatch inputs are set to `current`.
+3. Built-in defaults (`43:fedora-sway-atomic`).
+
+This ensures CI runs stay aligned with repository defaults while still allowing API calls
+to override the version and image type at dispatch time.
+
 ## Direct API Usage
 
 ### Using cURL

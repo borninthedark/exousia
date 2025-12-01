@@ -28,6 +28,41 @@ logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(current_active_user)])
 
 
+def apply_desktop_override(
+    yaml_content: str,
+    image_type: str,
+    window_manager: str | None,
+    desktop_environment: str | None,
+) -> str:
+    """Override desktop selection for Fedora bootc builds.
+
+    The default exousia.yml is targeted at Sway; when a different DE/WM is
+    selected for fedora-bootc we regenerate the YAML content with the
+    requested value so the Containerfile reflects the caller's choice.
+    """
+
+    if image_type != "fedora-bootc" or not (window_manager or desktop_environment):
+        return yaml_content
+
+    try:
+        config = yaml.safe_load(yaml_content) or {}
+    except yaml.YAMLError:
+        return yaml_content
+
+    desktop = config.get("desktop") or {}
+
+    if window_manager:
+        desktop["window_manager"] = window_manager
+        desktop.pop("desktop_environment", None)
+    elif desktop_environment:
+        desktop["desktop_environment"] = desktop_environment
+        desktop.pop("window_manager", None)
+
+    config["desktop"] = desktop
+
+    return yaml.safe_dump(config)
+
+
 async def poll_build_status(build_id: int, workflow_run_id: int, max_polls: int = 120):
     """
     Background task to poll GitHub workflow status and update build.
@@ -185,6 +220,13 @@ async def trigger_build(
             detail="Either config_id, yaml_content, or definition_filename must be provided"
         )
 
+    yaml_content = apply_desktop_override(
+        yaml_content=yaml_content,
+        image_type=str(image_type),
+        window_manager=request.window_manager,
+        desktop_environment=request.desktop_environment,
+    )
+
     # Validate YAML
     transpiler = TranspilerService()
     validation = await transpiler.validate(yaml_content)
@@ -224,6 +266,11 @@ async def trigger_build(
             "distro_version": fedora_version,
             "enable_plymouth": str(enable_plymouth).lower()
         }
+
+        if request.window_manager:
+            workflow_inputs["window_manager"] = request.window_manager
+        if request.desktop_environment:
+            workflow_inputs["desktop_environment"] = request.desktop_environment
 
         # Include yaml_config_file if using a definition file
         if yaml_config_file:
