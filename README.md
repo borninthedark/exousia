@@ -24,7 +24,7 @@ The build pipeline supports both bootc and atomic base images, each with their o
 - **Fedora Version:** 43
 - **Plymouth Customization:** ✅ Available (custom themes supported on all base images)
 - **Greetd Display Manager:** ❌ Not available
-- **Last Updated:** 2025-12-01 00:57:47 UTC
+- **Last Updated:** 2025-12-01 01:58:16 UTC
 
 > **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are applied for both `fedora-bootc` and `fedora-sway-atomic` base image types.
 
@@ -349,17 +349,15 @@ New to Exousia? Start here:
 
 ### API Documentation
 
-Use the REST API and webhooks to manage configurations programmatically:
-- **[Webhook API](docs/WEBHOOK_API.md)** - Trigger builds remotely via GitHub webhooks
+Use the REST API to manage configurations programmatically:
 - **[API Overview](docs/api/README.md)** - FastAPI backend architecture and features
 - **[API Endpoints](docs/api/endpoints.md)** - Complete endpoint reference with examples
 - **[Development Guide](docs/api/development.md)** - Contributing to the API
 
-The API and webhook system enable:
+The API enables:
 - YAML configuration validation and storage
 - Dynamic Containerfile transpilation
-- GitHub Actions build triggering via webhooks
-- Remote build automation and integration
+- GitHub Actions build triggering
 - Build status tracking
 
 ### Building & Customization
@@ -439,4 +437,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with bootc**
 
-*This README was automatically generated on 2025-12-01 00:57:47 UTC*
+*This README was automatically generated on 2025-12-01 01:58:16 UTC*
