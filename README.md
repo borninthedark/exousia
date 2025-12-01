@@ -69,6 +69,78 @@ If tests pass and the event is not a pull request, the image is published and cr
 
 ---
 
+## Triggering Builds Remotely
+
+You can trigger builds programmatically using the webhook API. This is useful for automation, CI/CD integration, or testing different configurations.
+
+### Quick Start
+
+**Prerequisites:**
+- GitHub Personal Access Token with `repo` scope ([Create one here](https://github.com/settings/tokens))
+- Python 3.7+ with `requests` library: `pip install requests`
+
+**Basic Usage:**
+
+```bash
+# Set your GitHub token
+export GITHUB_TOKEN="ghp_your_token_here"
+
+# Trigger a build with default settings
+python api/webhook_trigger.py
+
+# Trigger specific image type and version
+python api/webhook_trigger.py \
+  --image-type fedora-sway-atomic \
+  --distro-version 43 \
+  --enable-plymouth
+```
+
+**Using YAML Definitions:**
+
+```bash
+# Use a YAML config file from the repository
+python api/webhook_trigger.py \
+  --yaml-config yaml-definitions/fedora-bootc.yml \
+  --distro-version 44
+
+# Use a local YAML file (will be validated and sent securely)
+python api/webhook_trigger.py \
+  --yaml-content-file my-custom-config.yml \
+  --image-type fedora-sway-atomic \
+  --distro-version 43
+
+# Build with custom configuration and disable Plymouth
+python api/webhook_trigger.py \
+  --yaml-config yaml-definitions/fedora-sway-atomic.yml \
+  --disable-plymouth \
+  --verbose
+```
+
+**Direct API Usage (cURL):**
+
+```bash
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/borninthedark/exousia/dispatches \
+  -d '{
+    "event_type": "api",
+    "client_payload": {
+      "image_type": "fedora-bootc",
+      "distro_version": "44",
+      "enable_plymouth": true,
+      "yaml_config": "yaml-definitions/fedora-bootc.yml"
+    }
+  }'
+```
+
+View your triggered builds at: **https://github.com/borninthedark/exousia/actions**
+
+📚 **Complete documentation:** [Webhook API Guide](docs/WEBHOOK_API.md)
+
+---
+
 ## Getting Started
 
 ### Prerequisites
