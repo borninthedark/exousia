@@ -127,7 +127,7 @@ jobs:
           done
           echo "✓ All package list files present"
 
-          for script in setup-plymouth-theme dracut-rebuild fedora-version-switcher; do
+          for script in setup-plymouth-theme dracut-rebuild; do
             if [[ ! -f "custom-scripts/$script" ]]; then
               echo "::error::Missing custom-scripts/$script"
               exit 1
@@ -300,13 +300,75 @@ jobs:
         run: |
           pip install pyyaml
 
+      - name: Validate webhook inputs
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          echo "::group::Webhook Input Validation"
+
+          # Validate image_type is in allowed list
+          ALLOWED_TYPES="fedora-bootc fedora-silverblue fedora-kinoite fedora-sway-atomic fedora-onyx fedora-budgie fedora-cinnamon fedora-cosmic fedora-deepin fedora-lxqt fedora-mate fedora-xfce arch gentoo debian ubuntu opensuse proxmox current"
+          IMAGE_TYPE="${{ github.event.client_payload.image_type || 'current' }}"
+
+          if [[ ! " $ALLOWED_TYPES " =~ " $IMAGE_TYPE " ]]; then
+            echo "::error::Invalid image_type: $IMAGE_TYPE"
+            echo "::error::Allowed types: $ALLOWED_TYPES"
+            exit 1
+          fi
+          echo "✓ Image type validated: $IMAGE_TYPE"
+
+          # Validate distro_version
+          ALLOWED_VERSIONS="42 43 44 rawhide current"
+          DISTRO_VERSION="${{ github.event.client_payload.distro_version || 'current' }}"
+
+          if [[ ! " $ALLOWED_VERSIONS " =~ " $DISTRO_VERSION " ]]; then
+            echo "::error::Invalid distro_version: $DISTRO_VERSION"
+            echo "::error::Allowed versions: $ALLOWED_VERSIONS"
+            exit 1
+          fi
+          echo "✓ Distro version validated: $DISTRO_VERSION"
+
+          # Validate enable_plymouth is boolean
+          ENABLE_PLYMOUTH="${{ github.event.client_payload.enable_plymouth || 'true' }}"
+          if [[ ! "$ENABLE_PLYMOUTH" =~ ^(true|false)$ ]]; then
+            echo "::error::Invalid enable_plymouth value: $ENABLE_PLYMOUTH (must be true or false)"
+            exit 1
+          fi
+          echo "✓ Plymouth setting validated: $ENABLE_PLYMOUTH"
+
+          # Validate YAML config if provided (prevent path traversal)
+          YAML_CONFIG="${{ github.event.client_payload.yaml_config || 'auto' }}"
+          if [[ "$YAML_CONFIG" != "auto" ]]; then
+            # Remove any ../ path traversal attempts
+            SAFE_PATH=$(echo "$YAML_CONFIG" | sed 's|\.\.||g')
+            if [[ "$YAML_CONFIG" != "$SAFE_PATH" ]]; then
+              echo "::error::Path traversal detected in yaml_config: $YAML_CONFIG"
+              exit 1
+            fi
+
+            # Ensure it's a YAML file in allowed directories
+            if [[ ! "$YAML_CONFIG" =~ ^(yaml-definitions/|exousia\.yml$) ]]; then
+              echo "::error::yaml_config must be in yaml-definitions/ directory or exousia.yml"
+              exit 1
+            fi
+
+            # Ensure it's a YAML file extension
+            if [[ ! "$YAML_CONFIG" =~ \.ya?ml$ ]]; then
+              echo "::error::yaml_config must be a .yml or .yaml file"
+              exit 1
+            fi
+            echo "✓ YAML config validated: $YAML_CONFIG"
+          fi
+
+          echo "::notice::All webhook inputs validated successfully"
+          echo "::endgroup::"
+
       - name: Detect and resolve distro configuration
         id: config
         env:
-          INPUT_IMAGE_TYPE: ${{ github.event.inputs.image_type || 'current' }}
-          INPUT_DISTRO_VERSION: ${{ github.event.inputs.distro_version || 'current' }}
-          INPUT_ENABLE_PLYMOUTH: ${{ github.event.inputs.enable_plymouth || 'true' }}
-          INPUT_YAML_CONFIG: ${{ github.event.inputs.yaml_config_file || 'auto' }}
+          INPUT_IMAGE_TYPE: ${{ github.event.inputs.image_type || github.event.client_payload.image_type || 'current' }}
+          INPUT_DISTRO_VERSION: ${{ github.event.inputs.distro_version || github.event.client_payload.distro_version || 'current' }}
+          INPUT_ENABLE_PLYMOUTH: ${{ github.event.inputs.enable_plymouth || github.event.client_payload.enable_plymouth || 'true' }}
+          INPUT_YAML_CONFIG: ${{ github.event.inputs.yaml_config_file || github.event.client_payload.yaml_config || 'auto' }}
         run: |
           echo "::group::Configuration Detection"
           echo "Input image type: $INPUT_IMAGE_TYPE"
@@ -390,11 +452,8 @@ jobs:
           # Update .fedora-version if changed (for Fedora-based images)
           if [[ "$TARGET_IMAGE_TYPE" =~ ^fedora- ]]; then
             if [[ "$TARGET_VERSION" != "$CURRENT_VERSION" ]] || [[ "$TARGET_IMAGE_TYPE" != "$CURRENT_IMAGE_TYPE" ]]; then
-              if [[ -x ./custom-scripts/fedora-version-switcher ]]; then
-                chmod +x ./custom-scripts/fedora-version-switcher
-                ./custom-scripts/fedora-version-switcher "$TARGET_VERSION" "$TARGET_IMAGE_TYPE"
-                echo "Configuration updated to: $TARGET_VERSION:$TARGET_IMAGE_TYPE"
-              fi
+              echo "${TARGET_VERSION}:${TARGET_IMAGE_TYPE}" > .fedora-version
+              echo "Configuration updated to: $TARGET_VERSION:$TARGET_IMAGE_TYPE"
             else
               echo "Configuration unchanged"
             fi

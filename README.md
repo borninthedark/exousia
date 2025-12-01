@@ -2,7 +2,7 @@
 
 [![CI/CD Pipeline](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions/workflows/build.yaml)
 [![GHCR Image](https://img.shields.io/badge/GHCR-ghcr.io/borninthedark/exousia-blue?logo=github)](https://ghcr.io/borninthedark/exousia)
-[![Docker Hub Image](https://img.shields.io/docker/pulls/1borninthedark/exousia?logo=docker)](https://hub.docker.com/r/borninthedark/exousia)
+[![Docker Hub Image](https://img.shields.io/docker/pulls/1borninthedark/exousia?logo=docker)](https://hub.docker.com/r/1borninthedark/exousia)
 [![Fedora Version](https://img.shields.io/badge/Fedora-43-51A2DA?logo=fedora)](https://fedoraproject.org)
 [![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
 
@@ -69,6 +69,78 @@ If tests pass and the event is not a pull request, the image is published and cr
 
 ---
 
+## Triggering Builds Remotely
+
+You can trigger builds programmatically using the webhook API. This is useful for automation, CI/CD integration, or testing different configurations.
+
+### Quick Start
+
+**Prerequisites:**
+- GitHub Personal Access Token with `repo` scope ([Create one here](https://github.com/settings/tokens))
+- Python 3.7+ with `requests` library: `pip install requests`
+
+**Basic Usage:**
+
+```bash
+# Set your GitHub token
+export GITHUB_TOKEN="ghp_your_token_here"
+
+# Trigger a build with default settings
+python api/webhook_trigger.py
+
+# Trigger specific image type and version
+python api/webhook_trigger.py \
+  --image-type fedora-sway-atomic \
+  --distro-version 43 \
+  --enable-plymouth
+```
+
+**Using YAML Definitions:**
+
+```bash
+# Use a YAML config file from the repository
+python api/webhook_trigger.py \
+  --yaml-config yaml-definitions/fedora-bootc.yml \
+  --distro-version 44
+
+# Use a local YAML file (will be validated and sent securely)
+python api/webhook_trigger.py \
+  --yaml-content-file my-custom-config.yml \
+  --image-type fedora-sway-atomic \
+  --distro-version 43
+
+# Build with custom configuration and disable Plymouth
+python api/webhook_trigger.py \
+  --yaml-config yaml-definitions/fedora-sway-atomic.yml \
+  --disable-plymouth \
+  --verbose
+```
+
+**Direct API Usage (cURL):**
+
+```bash
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/borninthedark/exousia/dispatches \
+  -d '{
+    "event_type": "api",
+    "client_payload": {
+      "image_type": "fedora-bootc",
+      "distro_version": "44",
+      "enable_plymouth": true,
+      "yaml_config": "yaml-definitions/fedora-bootc.yml"
+    }
+  }'
+```
+
+View your triggered builds at: **https://github.com/borninthedark/exousia/actions**
+
+📚 **Complete documentation:** [Webhook API Guide](docs/WEBHOOK_API.md)
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -119,25 +191,28 @@ make push
 
 ## Customization
 
-### Switching Fedora Versions
+### Switching Fedora Versions and Image Types
 
-Use the version switcher script to change Fedora versions or base image types:
+**Recommended: Use the Webhook API** for programmatic version and image type switching:
 
 ```bash
-# Switch to Fedora 43
-./custom-scripts/fedora-version-switcher 43
+# Switch to Fedora 44 with bootc base
+python api/webhook_trigger.py \
+  --image-type fedora-bootc \
+  --distro-version 44
 
-# Switch to Fedora 42 with standard bootc base
-./custom-scripts/fedora-version-switcher 42 fedora-bootc
+# Switch to Fedora 43 Sway Atomic
+python api/webhook_trigger.py \
+  --image-type fedora-sway-atomic \
+  --distro-version 43
 
-# Switch to Sway Atomic desktop
-./custom-scripts/fedora-version-switcher 42 fedora-sway-atomic
-
-# List available options
-./custom-scripts/fedora-version-switcher list
+# Use custom YAML configuration
+python api/webhook_trigger.py \
+  --yaml-config yaml-definitions/fedora-bootc.yml \
+  --distro-version 44
 ```
 
-Or use GitHub Actions workflow dispatch:
+**Alternative: GitHub Actions UI:**
 
 1. Go to **Actions** → **Fedora Bootc DevSec CI**
 2. Click **Run workflow**
@@ -145,6 +220,26 @@ Or use GitHub Actions workflow dispatch:
 4. Click **Run workflow**
 
 The README will automatically update to reflect the new configuration.
+
+<details>
+<summary><b>Deprecated: Local version switcher script</b></summary>
+
+> ⚠️ **Note:** The local `fedora-version-switcher` script is deprecated in favor of the webhook API. Use the webhook method above for better automation and integration capabilities.
+
+```bash
+# Switch to Fedora 43 (deprecated)
+./custom-scripts/fedora-version-switcher 43
+
+# Switch to Fedora 42 with standard bootc base (deprecated)
+./custom-scripts/fedora-version-switcher 42 fedora-bootc
+
+# Switch to Sway Atomic desktop (deprecated)
+./custom-scripts/fedora-version-switcher 42 fedora-sway-atomic
+
+# List available options (deprecated)
+./custom-scripts/fedora-version-switcher list
+```
+</details>
 
 ### Modifying Packages
 
@@ -254,15 +349,17 @@ New to Exousia? Start here:
 
 ### API Documentation
 
-Use the REST API to manage configurations programmatically:
+Use the REST API and webhooks to manage configurations programmatically:
+- **[Webhook API](docs/WEBHOOK_API.md)** - Trigger builds remotely via GitHub webhooks
 - **[API Overview](docs/api/README.md)** - FastAPI backend architecture and features
 - **[API Endpoints](docs/api/endpoints.md)** - Complete endpoint reference with examples
 - **[Development Guide](docs/api/development.md)** - Contributing to the API
 
-The API enables:
+The API and webhook system enable:
 - YAML configuration validation and storage
 - Dynamic Containerfile transpilation
-- GitHub Actions build triggering
+- GitHub Actions build triggering via webhooks
+- Remote build automation and integration
 - Build status tracking
 
 ### Building & Customization
