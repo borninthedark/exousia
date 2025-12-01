@@ -321,25 +321,28 @@ make push
 
 ## Customization
 
-### Switching Fedora Versions
+### Switching Fedora Versions and Image Types
 
-Use the version switcher script to change Fedora versions or base image types:
+**Recommended: Use the Webhook API** for programmatic version and image type switching:
 
 \`\`\`bash
-# Switch to Fedora 43
-./custom-scripts/fedora-version-switcher 43
+# Switch to Fedora 44 with bootc base
+python api/webhook_trigger.py \\
+  --image-type fedora-bootc \\
+  --distro-version 44
 
-# Switch to Fedora 42 with standard bootc base
-./custom-scripts/fedora-version-switcher 42 fedora-bootc
+# Switch to Fedora 43 Sway Atomic
+python api/webhook_trigger.py \\
+  --image-type fedora-sway-atomic \\
+  --distro-version 43
 
-# Switch to Sway Atomic desktop
-./custom-scripts/fedora-version-switcher 42 fedora-sway-atomic
-
-# List available options
-./custom-scripts/fedora-version-switcher list
+# Use custom YAML configuration
+python api/webhook_trigger.py \\
+  --yaml-config yaml-definitions/fedora-bootc.yml \\
+  --distro-version 44
 \`\`\`
 
-Or use GitHub Actions workflow dispatch:
+**Alternative: GitHub Actions UI:**
 
 1. Go to **Actions** → **Fedora Bootc DevSec CI**
 2. Click **Run workflow**
@@ -347,6 +350,26 @@ Or use GitHub Actions workflow dispatch:
 4. Click **Run workflow**
 
 The README will automatically update to reflect the new configuration.
+
+<details>
+<summary><b>Deprecated: Local version switcher script</b></summary>
+
+> ⚠️ **Note:** The local \`fedora-version-switcher\` script is deprecated in favor of the webhook API. Use the webhook method above for better automation and integration capabilities.
+
+\`\`\`bash
+# Switch to Fedora 43 (deprecated)
+./custom-scripts/fedora-version-switcher 43
+
+# Switch to Fedora 42 with standard bootc base (deprecated)
+./custom-scripts/fedora-version-switcher 42 fedora-bootc
+
+# Switch to Sway Atomic desktop (deprecated)
+./custom-scripts/fedora-version-switcher 42 fedora-sway-atomic
+
+# List available options (deprecated)
+./custom-scripts/fedora-version-switcher list
+\`\`\`
+</details>
 
 ### Modifying Packages
 
