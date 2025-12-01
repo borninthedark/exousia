@@ -139,7 +139,7 @@ DATABASE_URL=sqlite+aiosqlite:///./exousia.db
 # GitHub Integration
 GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
 GITHUB_REPO=owner/repo
-GITHUB_WORKFLOW_FILE=build.yaml
+GITHUB_WORKFLOW_FILE=build.yml
 
 # Transpiler
 TRANSPILER_SCRIPT=tools/yaml-to-containerfile.py

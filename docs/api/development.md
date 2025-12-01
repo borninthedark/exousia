@@ -37,7 +37,7 @@ DATABASE_URL=sqlite+aiosqlite:///./exousia.db
 # GitHub integration (optional for local dev)
 GITHUB_TOKEN=your_token_here
 GITHUB_REPO=borninthedark/exousia
-GITHUB_WORKFLOW_FILE=build.yaml
+GITHUB_WORKFLOW_FILE=build.yml
 
 # Transpiler
 TRANSPILER_SCRIPT=tools/yaml-to-containerfile.py
@@ -436,7 +436,7 @@ Tests run automatically in GitHub Actions:
 - **Testing**: pytest with coverage
 - **Coverage**: Uploaded to Codecov
 
-See `.github/workflows/build.yaml` for configuration.
+See `.github/workflows/build.yml` for configuration.
 
 ## Common Issues
 

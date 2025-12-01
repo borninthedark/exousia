@@ -272,7 +272,7 @@ To add support for a new distro:
 
 1. Add distro config to `BOOTCREW_DISTROS` in `tools/yaml-to-containerfile.py`
 2. Create YAML template in `yaml-definitions/{distro}-bootc.yml`
-3. Add distro to workflow dispatch options in `.github/workflows/build.yaml`
+3. Add distro to workflow dispatch options in `.github/workflows/build.yml`
 4. Update tests to handle distro-specific behaviors
 5. Test the build pipeline
 

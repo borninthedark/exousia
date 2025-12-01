@@ -130,7 +130,7 @@ generate_readme() {
     cat > "$README_FILE" << EOF
 # Exousia: Declarative Bootc Builder
 
-[![CI/CD Pipeline](https://github.com/${GITHUB_REPO}/actions/workflows/build.yaml/badge.svg)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yaml)
+[![CI/CD Pipeline](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml/badge.svg)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml)
 [![GHCR Image](https://img.shields.io/badge/GHCR-${GHCR_IMAGE}-blue?logo=github)](https://${GHCR_IMAGE})
 [![Docker Hub Image](https://img.shields.io/docker/pulls/1${GITHUB_OWNER}/exousia?logo=docker)](https://hub.docker.com/r/1${GITHUB_OWNER}/exousia)
 [![Fedora Version](https://img.shields.io/badge/Fedora-${FEDORA_VERSION}-51A2DA?logo=fedora)](https://fedoraproject.org)

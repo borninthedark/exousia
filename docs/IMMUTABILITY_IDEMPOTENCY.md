@@ -273,7 +273,7 @@ curl -X POST http://localhost:8000/builds/trigger \
 # Calling again with same payload = same build ID (idempotent!)
 ```
 
-#### Kubernetes (`k8s/exousia-deployment.yaml`)
+#### Kubernetes (`k8s/exousia-deployment.yml`)
 
 **Architecture:**
 - StatefulSet: 3-node BlazingMQ cluster (HA)

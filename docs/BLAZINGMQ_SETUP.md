@@ -221,13 +221,13 @@ kubectl create secret generic exousia-secrets \
   -n exousia
 
 # 3. Deploy BlazingMQ cluster
-kubectl apply -f k8s/blazingmq/blazingmq-statefulset.yaml
+kubectl apply -f k8s/blazingmq/blazingmq-statefulset.yml
 
 # 4. Wait for BlazingMQ to be ready
 kubectl wait --for=condition=ready pod -l app=blazingmq -n exousia --timeout=300s
 
 # 5. Deploy sidecar architecture
-kubectl apply -f k8s/exousia-sidecar-deployment.yaml
+kubectl apply -f k8s/exousia-sidecar-deployment.yml
 
 # 6. Get service URL
 kubectl get svc exousia -n exousia
@@ -239,7 +239,7 @@ kubectl get svc exousia -n exousia
 # 1-3. Same as above
 
 # 4. Deploy microservices
-kubectl apply -f k8s/exousia-deployment.yaml
+kubectl apply -f k8s/exousia-deployment.yml
 
 # 5. Check deployment
 kubectl get pods -n exousia
