@@ -130,13 +130,10 @@ generate_readme() {
     cat > "$README_FILE" << EOF
 # Exousia: Declarative Bootc Builder
 
-[![CI/CD Pipeline](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml/badge.svg)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml)
-[![GHCR Image](https://img.shields.io/badge/GHCR-${GHCR_IMAGE}-blue?logo=github)](https://${GHCR_IMAGE})
-[![Docker Hub Image](https://img.shields.io/docker/pulls/1${GITHUB_OWNER}/exousia?logo=docker)](https://hub.docker.com/r/1${GITHUB_OWNER}/exousia)
-[![Fedora Version](https://img.shields.io/badge/Fedora-${FEDORA_VERSION}-51A2DA?logo=fedora)](https://fedoraproject.org)
-[![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
+[![Spiritual Pressure](https://img.shields.io/github/actions/workflow/status/${GITHUB_REPO}/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Spiritual%20Pressure&color=00A4EF)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml)
+<img src=".github/quincy-pentacle.svg" alt="Custom Quincy Pentacle" width="28" />
 
-This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs.
+This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs. Bleach and its concept of Spiritual Pressure are the creations of Tite Kubo; this project uses the motif solely as a playful status indicator.
 
 ## Philosophy: Exousia
 
