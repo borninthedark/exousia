@@ -1,0 +1,65 @@
+# GNOME Desktop Environment Package Definition
+# This defines all packages needed for a GNOME desktop environment
+
+metadata:
+  name: gnome
+  type: desktop-environment
+  description: Full-featured desktop environment with modern design
+  homepage: https://www.gnome.org/
+
+# Core GNOME components
+core:
+  - gnome-shell
+  - gnome-session
+  - gnome-settings-daemon
+  - gnome-control-center
+  - gnome-terminal
+
+# GNOME applications
+applications:
+  - nautilus
+  - gnome-text-editor
+  - gnome-calculator
+  - gnome-system-monitor
+  - gnome-calendar
+  - gnome-contacts
+
+# Display manager
+display_manager:
+  - gdm
+
+# Session and authentication
+session:
+  - xdg-utils
+  - xdg-user-dirs
+  - xdg-desktop-portal
+  - xdg-desktop-portal-gnome
+
+# Audio stack (PipeWire)
+audio:
+  - pipewire
+  - pipewire-alsa
+  - pipewire-pulseaudio
+  - wireplumber
+
+# Graphics drivers
+graphics:
+  - mesa-dri-drivers
+  - mesa-vulkan-drivers
+
+# Essential fonts
+fonts:
+  - google-noto-sans-fonts
+  - google-noto-serif-fonts
+  - dejavu-sans-fonts
+  - dejavu-sans-mono-fonts
+
+# Power management
+power:
+  - power-profiles-daemon
+
+# Boot splash
+boot_splash:
+  - plymouth
+  - plymouth-system-theme
+  - plymouth-plugin-two-step

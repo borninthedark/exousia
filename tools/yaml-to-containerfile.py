@@ -222,7 +222,7 @@ class ContainerfileGenerator:
 
         if self.context.image_type == "fedora-bootc":
             plymouth_val = str(self.context.enable_plymouth).lower()
-            self.lines.append(f"    ENABLE_PLYMOUTH={plymouth_val}")
+            self.lines.append(f"ENV ENABLE_PLYMOUTH={plymouth_val}")
             self.lines.append("")
             self.lines.append(
                 f'RUN echo "BUILD_IMAGE_TYPE={self.context.image_type}" '
@@ -266,6 +266,8 @@ class ContainerfileGenerator:
                 self._process_script_module(module)
             elif module_type == "rpm-ostree":
                 self._process_rpm_module(module)
+            elif module_type == "package-loader":
+                self._process_package_loader_module(module)
             elif module_type == "systemd":
                 self._process_systemd_module(module)
             elif module_type == "bootcrew-setup":
@@ -390,6 +392,75 @@ class ContainerfileGenerator:
                 '/usr/local/share/fedora-sway-atomic/packages-removed | '
                 'xargs -r dnf remove -y; \\'
             )
+
+        # Upgrade and cleanup
+        self.lines.append("    dnf upgrade -y; \\")
+        self.lines.append("    dnf clean all")
+
+    def _process_package_loader_module(self, module: Dict[str, Any]):
+        """Process package-loader module (new YAML-based package management)."""
+        from pathlib import Path
+        import sys
+
+        # Import the package loader
+        script_dir = Path(__file__).parent
+        sys.path.insert(0, str(script_dir))
+
+        try:
+            from package_loader import PackageLoader
+        except ImportError:
+            self.lines.append("# ERROR: package_loader module not found")
+            return
+
+        loader = PackageLoader()
+
+        wm = module.get("window_manager")
+        de = module.get("desktop_environment")
+        include_common = module.get("include_common", True)
+
+        # Load packages
+        try:
+            packages = loader.get_package_list(wm=wm, de=de, include_common=include_common)
+        except Exception as e:
+            self.lines.append(f"# ERROR loading packages: {e}")
+            return
+
+        install_packages = packages["install"]
+        remove_packages = packages["remove"]
+
+        # Generate installation instructions
+        self.lines.append("# hadolint ignore=DL3041,SC2086")
+        self.lines.append("RUN set -euxo pipefail; \\")
+
+        # Install dnf5
+        self.lines.append("    dnf install -y dnf5 dnf5-plugins && \\")
+        self.lines.append("    rm -f /usr/bin/dnf && ln -s /usr/bin/dnf5 /usr/bin/dnf; \\")
+
+        # Add repositories (RPMFusion for Fedora)
+        if self.context.distro == "fedora":
+            self.lines.append("    FEDORA_VERSION=$(rpm -E %fedora); \\")
+            self.lines.append("    dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm; \\")
+            self.lines.append("    dnf install -y https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \\")
+            self.lines.append("    dnf config-manager setopt fedora-cisco-openh264.enabled=1; \\")
+
+        # Install packages
+        if install_packages:
+            # Split packages into chunks to avoid command line length issues
+            chunk_size = 50
+            chunks = [install_packages[i:i + chunk_size] for i in range(0, len(install_packages), chunk_size)]
+
+            for i, chunk in enumerate(chunks):
+                packages_str = " ".join(chunk)
+                if i == len(chunks) - 1 and not remove_packages:
+                    # Last chunk, no remove packages
+                    self.lines.append(f"    dnf install -y --skip-unavailable {packages_str}; \\")
+                else:
+                    self.lines.append(f"    dnf install -y --skip-unavailable {packages_str}; \\")
+
+        # Remove packages
+        if remove_packages:
+            packages_str = " ".join(remove_packages)
+            self.lines.append(f"    dnf remove -y {packages_str} || true; \\")
 
         # Upgrade and cleanup
         self.lines.append("    dnf upgrade -y; \\")

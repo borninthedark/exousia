@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+"""
+Package Loader for Exousia
+===========================
+
+Loads and merges package definitions from YAML files for different desktop
+environments and window managers.
+"""
+
+from pathlib import Path
+from typing import Dict, List, Set
+import yaml
+
+
+class PackageLoader:
+    """Loads package definitions from YAML files."""
+
+    def __init__(self, packages_dir: Path = None):
+        """Initialize the package loader.
+
+        Args:
+            packages_dir: Root directory containing package definitions
+        """
+        if packages_dir is None:
+            # Default to ../packages relative to this script
+            script_dir = Path(__file__).parent
+            packages_dir = script_dir.parent / "packages"
+
+        self.packages_dir = Path(packages_dir)
+        self.wm_dir = self.packages_dir / "window-managers"
+        self.de_dir = self.packages_dir / "desktop-environments"
+        self.common_dir = self.packages_dir / "common"
+
+    def load_yaml(self, file_path: Path) -> Dict:
+        """Load a YAML file and return its contents."""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return yaml.safe_load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Package definition not found: {file_path}")
+        except yaml.YAMLError as e:
+            raise ValueError(f"Invalid YAML in {file_path}: {e}")
+
+    def flatten_packages(self, config: Dict) -> List[str]:
+        """Flatten a package configuration into a list of package names.
+
+        Recursively extracts all package names from nested dictionaries and lists,
+        skipping the 'metadata' key.
+
+        Args:
+            config: Package configuration dictionary
+
+        Returns:
+            List of package names
+        """
+        packages = []
+
+        for key, value in config.items():
+            if key == "metadata":
+                continue
+
+            if isinstance(value, list):
+                packages.extend(value)
+            elif isinstance(value, dict):
+                packages.extend(self.flatten_packages(value))
+
+        return packages
+
+    def load_wm(self, wm_name: str) -> List[str]:
+        """Load packages for a window manager.
+
+        Args:
+            wm_name: Name of the window manager (e.g., 'sway', 'hyprland')
+
+        Returns:
+            List of package names
+        """
+        wm_file = self.wm_dir / f"{wm_name}.yml"
+        config = self.load_yaml(wm_file)
+        return self.flatten_packages(config)
+
+    def load_de(self, de_name: str) -> List[str]:
+        """Load packages for a desktop environment.
+
+        Args:
+            de_name: Name of the desktop environment (e.g., 'gnome', 'kde')
+
+        Returns:
+            List of package names
+        """
+        de_file = self.de_dir / f"{de_name}.yml"
+        config = self.load_yaml(de_file)
+        return self.flatten_packages(config)
+
+    def load_common(self, common_name: str = "base") -> List[str]:
+        """Load common packages.
+
+        Args:
+            common_name: Name of the common package set (default: 'base')
+
+        Returns:
+            List of package names
+        """
+        common_file = self.common_dir / f"{common_name}.yml"
+        config = self.load_yaml(common_file)
+        return self.flatten_packages(config)
+
+    def load_remove(self) -> List[str]:
+        """Load packages to remove.
+
+        Returns:
+            List of package names to remove
+        """
+        remove_file = self.common_dir / "remove.yml"
+        config = self.load_yaml(remove_file)
+        return config.get("packages", [])
+
+    def get_package_list(
+        self,
+        wm: str = None,
+        de: str = None,
+        include_common: bool = True
+    ) -> Dict[str, List[str]]:
+        """Get complete package lists for a build configuration.
+
+        Args:
+            wm: Window manager name (optional)
+            de: Desktop environment name (optional)
+            include_common: Whether to include common packages (default: True)
+
+        Returns:
+            Dictionary with 'install' and 'remove' keys containing package lists
+        """
+        install_packages: Set[str] = set()
+
+        # Load common packages
+        if include_common:
+            install_packages.update(self.load_common("base"))
+
+        # Load WM or DE packages
+        if wm:
+            install_packages.update(self.load_wm(wm))
+        elif de:
+            install_packages.update(self.load_de(de))
+
+        # Load packages to remove
+        remove_packages = self.load_remove()
+
+        # Remove any packages that are in both install and remove
+        # (remove takes precedence)
+        install_packages = install_packages - set(remove_packages)
+
+        return {
+            "install": sorted(list(install_packages)),
+            "remove": remove_packages
+        }
+
+    def list_available_wms(self) -> List[str]:
+        """List all available window managers."""
+        if not self.wm_dir.exists():
+            return []
+        return [f.stem for f in self.wm_dir.glob("*.yml")]
+
+    def list_available_des(self) -> List[str]:
+        """List all available desktop environments."""
+        if not self.de_dir.exists():
+            return []
+        return [f.stem for f in self.de_dir.glob("*.yml")]
+
+    def export_to_text_files(
+        self,
+        wm: str = None,
+        de: str = None,
+        output_dir: Path = None
+    ):
+        """Export package lists to text files (legacy format).
+
+        Creates packages.add and packages.remove files in the specified directory.
+
+        Args:
+            wm: Window manager name (optional)
+            de: Desktop environment name (optional)
+            output_dir: Directory to write files to (default: custom-pkgs/)
+        """
+        if output_dir is None:
+            output_dir = Path(__file__).parent.parent / "custom-pkgs"
+
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        packages = self.get_package_list(wm=wm, de=de)
+
+        # Write install packages
+        add_file = output_dir / "packages.add"
+        with open(add_file, 'w', encoding='utf-8') as f:
+            f.write("# Auto-generated package list\n")
+            f.write(f"# Generated for: {wm or de or 'base'}\n")
+            f.write("# DO NOT EDIT MANUALLY - Changes will be overwritten\n\n")
+            for pkg in packages["install"]:
+                f.write(f"{pkg}\n")
+
+        # Write remove packages
+        remove_file = output_dir / "packages.remove"
+        with open(remove_file, 'w', encoding='utf-8') as f:
+            f.write("# Auto-generated package removal list\n")
+            f.write("# DO NOT EDIT MANUALLY - Changes will be overwritten\n\n")
+            for pkg in packages["remove"]:
+                f.write(f"{pkg}\n")
+
+
+def main():
+    """CLI entry point for package loader."""
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Load and manage package definitions for Exousia builds"
+    )
+    parser.add_argument("--wm", help="Window manager to load")
+    parser.add_argument("--de", help="Desktop environment to load")
+    parser.add_argument("--list-wms", action="store_true",
+                       help="List available window managers")
+    parser.add_argument("--list-des", action="store_true",
+                       help="List available desktop environments")
+    parser.add_argument("--export", action="store_true",
+                       help="Export to text files (legacy format)")
+    parser.add_argument("--output-dir", type=Path,
+                       help="Output directory for exported files")
+
+    args = parser.parse_args()
+
+    loader = PackageLoader()
+
+    if args.list_wms:
+        wms = loader.list_available_wms()
+        print("Available window managers:")
+        for wm in wms:
+            print(f"  - {wm}")
+        return
+
+    if args.list_des:
+        des = loader.list_available_des()
+        print("Available desktop environments:")
+        for de in des:
+            print(f"  - {de}")
+        return
+
+    if args.export:
+        loader.export_to_text_files(
+            wm=args.wm,
+            de=args.de,
+            output_dir=args.output_dir
+        )
+        print(f"✓ Exported package lists to {args.output_dir or 'custom-pkgs/'}")
+        return
+
+    # Default: print package list
+    packages = loader.get_package_list(wm=args.wm, de=args.de)
+
+    print("Packages to install:")
+    for pkg in packages["install"]:
+        print(f"  {pkg}")
+
+    print("\nPackages to remove:")
+    for pkg in packages["remove"]:
+        print(f"  {pkg}")
+
+
+if __name__ == "__main__":
+    main()

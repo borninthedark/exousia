@@ -1,0 +1,61 @@
+# Common Base Packages
+# These packages are installed regardless of desktop environment or window manager choice
+
+metadata:
+  name: base
+  type: common
+  description: Base packages for all Exousia builds
+
+# Core utilities
+core_utilities:
+  - neovim
+  - flatpak
+  - rtkit
+  - cargo
+  - git
+  - htop
+  - btop
+  - etckeeper
+  - fastfetch
+  - glances
+
+# Audio and media
+audio_media:
+  - mpd
+  - ranger
+
+# Development and power user tools
+development:
+  - chezmoi
+  - bat
+  - wf-recorder
+  - lsd
+  - fzf
+  - direnv
+  - distrobox
+  - wireguard-tools
+  - ripgrep
+  - zoxide
+
+# Virtualization
+virtualization:
+  - virt-manager
+  - qemu-kvm
+  - libvirt
+
+# Security
+security:
+  - pam-u2f
+  - pamu2fcfg
+  - lynis
+  - openssl
+
+# Shell and terminal enhancements
+shell:
+  - zsh
+  - zsh-autosuggestions
+  - zsh-syntax-highlighting
+
+# Extra utilities
+extra:
+  - cava
