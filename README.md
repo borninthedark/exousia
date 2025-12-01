@@ -2,7 +2,7 @@
 
 [![CI/CD Pipeline](https://github.com/borninthedark/exousia/actions/workflows/build.yaml/badge.svg)](https://github.com/borninthedark/exousia/actions/workflows/build.yaml)
 [![GHCR Image](https://img.shields.io/badge/GHCR-ghcr.io/borninthedark/exousia-blue?logo=github)](https://ghcr.io/borninthedark/exousia)
-[![Docker Hub Image](https://img.shields.io/docker/pulls/borninthedark/exousia?logo=docker)](https://hub.docker.com/r/borninthedark/exousia)
+[![Docker Hub Image](https://img.shields.io/docker/pulls/1borninthedark/exousia?logo=docker)](https://hub.docker.com/r/1borninthedark/exousia)
 [![Fedora Version](https://img.shields.io/badge/Fedora-43-51A2DA?logo=fedora)](https://fedoraproject.org)
 [![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
 
