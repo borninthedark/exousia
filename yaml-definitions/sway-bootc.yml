@@ -1,18 +1,25 @@
 # Exousia Sway Bootc Build Configuration
-# Fedora bootc image with Sway desktop environment and custom package selection
+# Uses the new package structure with DE/WM selection
 
 name: exousia-sway-bootc
-description: Custom Fedora bootc image with Sway desktop environment and custom package selection
+description: Custom Fedora bootc image with Sway desktop environment
 image-version: 43
 
 # Base image configuration
 base-image: quay.io/fedora/fedora-bootc:43
 image-type: fedora-bootc
 
+# Desktop environment selection
+# Use either 'window_manager' or 'desktop_environment', not both
+desktop:
+  window_manager: sway  # Options: sway, hyprland
+  # desktop_environment: gnome  # Options: gnome
+  include_common: true  # Include common base packages
+
 # Container metadata
 labels:
   org.opencontainers.image.title: "Exousia Sway Bootc"
-  org.opencontainers.image.description: "Custom Fedora bootc image with Sway desktop environment and custom package selection"
+  org.opencontainers.image.description: "Custom Fedora bootc image with Sway desktop environment"
   org.opencontainers.image.source: "https://github.com/borninthedark/exousia"
   org.opencontainers.image.licenses: "MIT"
   maintainer: "uryu"
@@ -75,19 +82,6 @@ modules:
         rm -rf /opt
         ln -sf /var/opt /opt
 
-  # Copy package lists
-  - type: files
-    files:
-      - src: ./custom-pkgs/packages.remove
-        dst: /usr/local/share/fedora-sway-atomic/packages-removed
-        mode: "0644"
-      - src: ./custom-pkgs/packages.add
-        dst: /usr/local/share/fedora-sway-atomic/packages-added
-        mode: "0644"
-      - src: ./custom-pkgs/packages.sway
-        dst: /usr/local/share/fedora-sway-atomic/packages-sway
-        mode: "0644"
-
   # Plymouth theme files (toggleable per image type)
   - type: files
     condition: enable_plymouth == true
@@ -119,6 +113,7 @@ modules:
 
   # Sway session files
   - type: files
+    condition: window_manager == "sway"
     files:
       - src: custom-configs/sway/sway.desktop
         dst: /usr/share/wayland-sessions/sway.desktop
@@ -130,157 +125,10 @@ modules:
         dst: /usr/bin/start-sway
         mode: "0755"
 
-  # Create base package list
-  - type: script
-    scripts:
-      - |
-        mkdir -p /usr/local/share/fedora-sway-atomic
-        rpm -qa --qf '%{NAME}\n' | sort > /usr/local/share/fedora-sway-atomic/packages-base
-      - test -s /usr/local/share/fedora-sway-atomic/packages-base || touch /usr/local/share/fedora-sway-atomic/packages-base
-
-  # Package management
-  - type: rpm-ostree
-    install-dnf5: true
-    repos:
-      - https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm
-      - https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-43.noarch.rpm
-
-    config-manager:
-      - fedora-cisco-openh264
-
-    # Sway desktop packages (bootc needs these)
-    install-conditional:
-        - condition: image-type == "fedora-bootc"
-          packages:
-            # Core Sway Desktop Components
-            - sway
-            - swaylock
-            - swayidle
-            - swaybg
-            - waybar
-            - firefox
-            # Display Manager
-            - greetd
-            - tuigreet
-            # Wayland Core
-            - wlroots
-            - xorg-x11-server-Xwayland
-            # Session and Authentication
-            - xfce-polkit
-            - xdg-utils
-            - xdg-user-dirs
-            - xdg-dbus-proxy
-            - flatpak-xdg-utils
-            - xdg-desktop-portal
-            - xdg-desktop-portal-wlr
-            - xdg-desktop-portal-gtk
-            # Audio Stack
-            - pipewire
-            - pipewire-alsa
-            - pipewire-pulseaudio
-            - wireplumber
-            # Graphics Drivers
-            - mesa-dri-drivers
-            - mesa-vulkan-drivers
-            # Essential Fonts
-            - google-noto-sans-fonts
-            - google-noto-serif-fonts
-            - dejavu-sans-fonts
-            - dejavu-sans-mono-fonts
-            # File Manager
-            - thunar
-            - thunar-archive-plugin
-            - thunar-volman
-            - gvfs
-            - gvfs-mtp
-            - gvfs-gphoto2
-            # Media Viewers
-            - imv
-            - zathura
-            - zathura-pdf-mupdf
-            # Screenshot Tools
-            - grim
-            - slurp
-            - swappy
-            # System Controls
-            - brightnessctl
-            - pavucontrol
-            - nm-connection-editor
-            - network-manager-applet
-            # Bluetooth Support
-            - bluez-tools
-            - blueman
-            # Power Management
-            - tlp
-            - powertop
-            # GTK/Theme Support
-            - adwaita-icon-theme
-            - adwaita-gtk2-theme
-            - gnome-themes-extra
-            # Wayland Utilities
-            - wl-clipboard
-            - wev
-            - kanshi
-
-        - condition: enable_plymouth == true
-          packages:
-            # Boot Splash
-            - plymouth
-            - plymouth-system-theme
-            - plymouth-plugin-two-step
-
-    # Custom packages (always installed)
-    install:
-      # Core Utilities
-      - kitty
-      - neovim
-      - flatpak
-      - wob
-      - rtkit
-      - cargo
-      - git
-      - swaync
-      - fuzzel
-      - htop
-      - nwg-look
-      - btop
-      - etckeeper
-      - fastfetch
-      - glances
-      # Audio & Media
-      - mpd
-      - ranger
-      # Tools
-      - chezmoi
-      - bat
-      - wf-recorder
-      - lsd
-      - fzf
-      - direnv
-      - distrobox
-      - wireguard-tools
-      # Virtualization
-      - virt-manager
-      - qemu-kvm
-      - libvirt
-      # Security
-      - pam-u2f
-      - pamu2fcfg
-      - lynis
-      - openssl
-      # Developer Tools
-      - ripgrep
-      - zoxide
-      # Extra
-      - cava
-      - zsh
-      - zsh-autosuggestions
-      - zsh-syntax-highlighting
-
-    remove:
-      - firefox-langpacks
-
-    upgrade: true
+  # Package management with new loader
+  - type: package-loader
+    window_manager: sway
+    include_common: true
 
   # Flatpak setup
   - type: script

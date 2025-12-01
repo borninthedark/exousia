@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Secure webhook trigger for GitHub repository_dispatch events.
-Triggers the build.yaml workflow with custom configuration via webhook.
+Triggers the build.yml workflow with custom configuration via webhook.
 """
 import os
 import sys

@@ -90,7 +90,7 @@ make test
 
 ## CI/CD Integration
 
-Tests run automatically in GitHub Actions after each build. See `.github/workflows/build.yaml` for configuration.
+Tests run automatically in GitHub Actions after each build. See `.github/workflows/build.yml` for configuration.
 
 **CI Features:**
 - Automatic bats library installation
@@ -254,5 +254,5 @@ If you encounter issues:
 **Quick Links:**
 - [Main README](../../README.md)
 - [Test Files](../../tests/)
-- [CI Workflow](../../.github/workflows/build.yaml)
+- [CI Workflow](../../.github/workflows/build.yml)
 - [Containerfile](../../Containerfile)

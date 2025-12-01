@@ -1,0 +1,91 @@
+# MATE Desktop Environment Package Definition
+# This defines all packages needed for a MATE desktop environment
+
+metadata:
+  name: mate
+  type: desktop-environment
+  description: Traditional desktop environment forked from GNOME 2
+  homepage: https://mate-desktop.org/
+
+# Package groups (for Fedora/DNF-based distros)
+# These are installed via `dnf install @group-name`
+groups:
+  - mate-desktop
+
+# Core MATE components
+# These are additional packages beyond the group install
+core:
+  - mate-desktop
+  - mate-session-manager
+  - mate-settings-daemon
+  - mate-control-center
+  - mate-panel
+  - caja
+  - marco
+
+# MATE applications
+applications:
+  - mate-terminal
+  - pluma
+  - atril
+  - engrampa
+  - eom
+  - mate-calc
+  - mate-system-monitor
+
+# Display manager
+display_manager:
+  - lightdm
+  - lightdm-gtk
+
+# Session and authentication
+session:
+  - xdg-utils
+  - xdg-user-dirs
+  - xdg-desktop-portal
+  - xdg-desktop-portal-gtk
+
+# Audio stack (PipeWire)
+audio:
+  - pipewire
+  - pipewire-alsa
+  - pipewire-pulseaudio
+  - wireplumber
+  - mate-media
+
+# Graphics drivers
+graphics:
+  - mesa-dri-drivers
+  - mesa-vulkan-drivers
+
+# Essential fonts
+fonts:
+  - google-noto-sans-fonts
+  - google-noto-serif-fonts
+  - dejavu-sans-fonts
+  - dejavu-sans-mono-fonts
+
+# Network management
+network:
+  - NetworkManager
+  - network-manager-applet
+
+# Power management
+power:
+  - mate-power-manager
+
+# Screensaver
+screensaver:
+  - mate-screensaver
+
+# Themes
+themes:
+  - mate-themes
+  - mate-icon-theme
+  - mate-backgrounds
+
+# Boot splash
+boot_splash:
+  - plymouth
+  - plymouth-system-theme
+  - plymouth-plugin-two-step

@@ -74,7 +74,7 @@ class Settings(BaseSettings):
     # GitHub Settings
     GITHUB_TOKEN: str = ""
     GITHUB_REPO: str = "borninthedark/exousia"
-    GITHUB_WORKFLOW_FILE: str = "build.yaml"
+    GITHUB_WORKFLOW_FILE: str = "build.yml"
 
     # Repository Paths
     REPO_ROOT: Path = Path(__file__).parent.parent

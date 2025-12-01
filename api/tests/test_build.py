@@ -65,7 +65,7 @@ class TestBuildOperations:
         with patch("api.routers.build.settings") as mock_settings:
             mock_settings.GITHUB_TOKEN = "fake_token"
             mock_settings.GITHUB_REPO = "test/repo"
-            mock_settings.GITHUB_WORKFLOW_FILE = "build.yaml"
+            mock_settings.GITHUB_WORKFLOW_FILE = "build.yml"
             mock_settings.BUILD_STATUS_POLLING_ENABLED = False
 
             response = await client.post(

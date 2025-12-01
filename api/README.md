@@ -326,7 +326,7 @@ Cancel a running build.
 | `DATABASE_URL` | Database connection string | `sqlite+aiosqlite:///./exousia.db` | No |
 | `GITHUB_TOKEN` | GitHub personal access token | - | Yes* |
 | `GITHUB_REPO` | Repository (owner/repo) | `borninthedark/exousia` | No |
-| `GITHUB_WORKFLOW_FILE` | Workflow file name | `build.yaml` | No |
+| `GITHUB_WORKFLOW_FILE` | Workflow file name | `build.yml` | No |
 | `API_HOST` | API host | `0.0.0.0` | No |
 | `API_PORT` | API port | `8000` | No |
 | `API_RELOAD` | Auto-reload on changes | `true` | No |
@@ -513,5 +513,5 @@ MIT License - see LICENSE file for details
 
 - [Main Documentation](../README.md)
 - [YAML Transpiler](../tools/README.md)
-- [GitHub Actions Workflow](../.github/workflows/build.yaml)
+- [GitHub Actions Workflow](../.github/workflows/build.yml)
 - [Witness Repository](https://github.com/borninthedark/witness) - Architectural inspiration
