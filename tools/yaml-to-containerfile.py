@@ -365,7 +365,7 @@ class ContainerfileGenerator:
                     self.lines.append('    echo "==> Installing Sway desktop packages..."; \\')
                     self.lines.append(
                         '    grep -vE \'^#|^$\' '
-                        '/usr/local/share/sericea-bootc/packages-sway | '
+                        '/usr/local/share/fedora-sway-atomic/packages-sway | '
                         'xargs -r dnf install -y --skip-unavailable; \\'
                     )
 
@@ -377,7 +377,7 @@ class ContainerfileGenerator:
             )
             self.lines.append(
                 '    grep -vE \'^#|^$\' '
-                '/usr/local/share/sericea-bootc/packages-added | '
+                '/usr/local/share/fedora-sway-atomic/packages-added | '
                 'xargs -r dnf install -y; \\'
             )
 
@@ -387,7 +387,7 @@ class ContainerfileGenerator:
             self.lines.append('    echo "==> Removing packages from packages.remove..."; \\')
             self.lines.append(
                 '    grep -vE \'^#|^$\' '
-                '/usr/local/share/sericea-bootc/packages-removed | '
+                '/usr/local/share/fedora-sway-atomic/packages-removed | '
                 'xargs -r dnf remove -y; \\'
             )
 

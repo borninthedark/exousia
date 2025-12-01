@@ -79,13 +79,13 @@ modules:
   - type: files
     files:
       - src: ./custom-pkgs/packages.remove
-        dst: /usr/local/share/sericea-bootc/packages-removed
+        dst: /usr/local/share/fedora-sway-atomic/packages-removed
         mode: "0644"
       - src: ./custom-pkgs/packages.add
-        dst: /usr/local/share/sericea-bootc/packages-added
+        dst: /usr/local/share/fedora-sway-atomic/packages-added
         mode: "0644"
       - src: ./custom-pkgs/packages.sway
-        dst: /usr/local/share/sericea-bootc/packages-sway
+        dst: /usr/local/share/fedora-sway-atomic/packages-sway
         mode: "0644"
 
   # Plymouth theme files (toggleable per image type)
@@ -134,9 +134,9 @@ modules:
   - type: script
     scripts:
       - |
-        mkdir -p /usr/local/share/sericea-bootc
-        rpm -qa --qf '%{NAME}\n' | sort > /usr/local/share/sericea-bootc/packages-fedora-bootc
-      - test -s /usr/local/share/sericea-bootc/packages-fedora-bootc || touch /usr/local/share/sericea-bootc/packages-fedora-bootc
+        mkdir -p /usr/local/share/fedora-sway-atomic
+        rpm -qa --qf '%{NAME}\n' | sort > /usr/local/share/fedora-sway-atomic/packages-base
+      - test -s /usr/local/share/fedora-sway-atomic/packages-base || touch /usr/local/share/fedora-sway-atomic/packages-base
 
   # Package management
   - type: rpm-ostree
