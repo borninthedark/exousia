@@ -132,7 +132,7 @@ generate_readme() {
 
 [![CI/CD Pipeline](https://github.com/${GITHUB_REPO}/actions/workflows/build.yaml/badge.svg)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yaml)
 [![GHCR Image](https://img.shields.io/badge/GHCR-${GHCR_IMAGE}-blue?logo=github)](https://${GHCR_IMAGE})
-[![Docker Hub Image](https://img.shields.io/docker/pulls/${GITHUB_OWNER}/exousia?logo=docker)](https://hub.docker.com/r/${GITHUB_OWNER}/exousia)
+[![Docker Hub Image](https://img.shields.io/docker/pulls/1${GITHUB_OWNER}/exousia?logo=docker)](https://hub.docker.com/r/${GITHUB_OWNER}/exousia)
 [![Fedora Version](https://img.shields.io/badge/Fedora-${FEDORA_VERSION}-51A2DA?logo=fedora)](https://fedoraproject.org)
 [![bootc](https://img.shields.io/badge/bootc-enabled-success)](https://bootc-dev.github.io/bootc/)
 
