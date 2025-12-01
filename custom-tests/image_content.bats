@@ -171,16 +171,13 @@ get_package_manager() {
 
 # --- Plymouth ---
 
-@test "Directory structure should be correct for fedora-bootc" {
-    if ! is_fedora_bootc; then
-        skip "Test only applies to fedora-bootc builds"
-    fi
-
     if [ -d "$MOUNT_POINT/var/roothome" ]; then
         assert_dir_exists "$MOUNT_POINT/var/roothome"
     else
         skip "Skipping /var/roothome check: directory not provisioned in this image"
     fi
+
+    assert_dir_exists "$MOUNT_POINT/var/roothome"
     
     # /opt symlink should exist in fedora-bootc builds
     run test -L "$MOUNT_POINT/opt"
@@ -236,9 +233,9 @@ get_package_manager() {
     run grep -q 'add_dracutmodules.*plymouth' "$MOUNT_POINT/usr/lib/dracut/dracut.conf.d/plymouth.conf"
     assert_success "Dracut config should include Plymouth module"
 
-    if [ -f "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml" ]; then
-        run grep -q 'splash' "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
-        assert_success "Kernel arguments should contain 'splash'"
+    assert_file_exists "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
+    run grep -q 'splash' "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
+    assert_success "Kernel arguments should contain 'splash'"
 
         run grep -q 'quiet' "$MOUNT_POINT/usr/lib/bootc/kargs.d/plymouth.toml"
         assert_success "Kernel arguments should contain 'quiet'"
