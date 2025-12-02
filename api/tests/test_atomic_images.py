@@ -237,8 +237,8 @@ class TestAtomicWithCustomizations:
     """Test atomic images with various customizations."""
 
     @patch("api.routers.build.GitHubService")
-    async def test_silverblue_with_custom_yaml(self, mock_github_service, client: AsyncClient):
-        """Test Silverblue with custom YAML content."""
+    async def test_kinoite_with_custom_yaml(self, mock_github_service, client: AsyncClient):
+        """Test Kinoite (KDE) with custom YAML content."""
         mock_workflow_run = AsyncMock()
         mock_workflow_run.id = 20201
         mock_github = AsyncMock()
@@ -246,8 +246,8 @@ class TestAtomicWithCustomizations:
         mock_github_service.return_value = mock_github
 
         custom_yaml = """
-name: custom-silverblue
-description: Custom Silverblue configuration
+name: custom-kinoite
+description: Custom Kinoite (KDE) configuration
 modules:
   - type: packages
     packages:
@@ -265,7 +265,7 @@ modules:
                 "/api/build/trigger",
                 json={
                     "yaml_content": custom_yaml,
-                    "image_type": "fedora-silverblue",
+                    "image_type": "fedora-kinoite",
                     "fedora_version": "43",
                     "enable_plymouth": True,
                     "ref": "main",
@@ -274,7 +274,7 @@ modules:
 
             assert response.status_code == 202
             data = response.json()
-            assert data["image_type"] == "fedora-silverblue"
+            assert data["image_type"] == "fedora-kinoite"
 
             # Verify custom YAML was passed to workflow
             mock_github.trigger_workflow.assert_called_once()

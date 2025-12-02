@@ -75,10 +75,9 @@ class TestWindowManagerPackages:
         # Verify core Hyprland package
         assert "hyprland" in packages, "Core hyprland package not found"
 
-        # Verify Wayland support
-        wayland_packages = ["wayland"]
-        found_wayland = [pkg for pkg in wayland_packages if any(wp in pkg for wp in packages)]
-        assert len(found_wayland) > 0, "No Wayland support packages found"
+        # Verify Wayland support (check for packages containing "wayland" or "wlroots")
+        found_wayland = [pkg for pkg in packages if "wayland" in pkg.lower() or "wlroots" in pkg.lower()]
+        assert len(found_wayland) > 0, f"No Wayland support packages found. Packages: {packages}"
 
 
 class TestDesktopEnvironmentPackages:
