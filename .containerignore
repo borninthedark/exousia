@@ -19,4 +19,8 @@ image.tar
 .vscode/
 .idea/
 
+# Ignore local environment files
+.env
+env
+
 

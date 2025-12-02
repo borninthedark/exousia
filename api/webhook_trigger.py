@@ -10,6 +10,8 @@ import json
 import argparse
 from typing import Optional
 
+from dotenv import load_dotenv
+
 try:
     import requests
 except ImportError:
@@ -209,6 +211,8 @@ Security Notes:
         action="store_true",
         help="Enable verbose output"
     )
+
+    load_dotenv()
 
     args = parser.parse_args()
 

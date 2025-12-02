@@ -16,7 +16,7 @@ from typing import Optional
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..config import settings
+from ..config import get_github_token, settings
 from ..database import async_session_maker, BuildModel, BuildEventModel, get_db
 from ..models import BuildStatus
 from ..queue import QueueMessage, get_queue_backend, shutdown_queue_backend
@@ -43,7 +43,7 @@ class BuildWorker:
     def __init__(self):
         self.queue = get_queue_backend()
         self.github = GitHubService(
-            token=settings.GITHUB_TOKEN,
+            token=get_github_token(),
             repo_name=settings.GITHUB_REPO
         )
         self.running = False

@@ -56,6 +56,13 @@ pip install requests
 export GITHUB_TOKEN="ghp_your_token_here"
 ```
 
+Alternatively, create a local `.env` file (gitignored) to keep secrets out of your shell history while still letting the CLI
+pick up the token automatically:
+
+```bash
+echo "GITHUB_TOKEN=ghp_your_token_here" > .env
+```
+
 ## Usage
 
 ### Basic Examples
