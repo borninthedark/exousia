@@ -24,12 +24,9 @@ core:
 # Terminal emulators
 terminals:
   - kitty
-  - alacritty
 
 # Application launchers and notifications
 launchers:
-  - rofi
-  - fuzzel
   - wofi
 
 notifications:
