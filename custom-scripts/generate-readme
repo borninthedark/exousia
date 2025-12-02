@@ -537,6 +537,24 @@ Edit the package lists in \`custom-pkgs/\`:
 - \`packages.add\` - Packages to install
 - \`packages.remove\` - Packages to remove from base image
 
+#### Fedora Hyprland COPR setup
+
+If you are building the Hyprland profile on Fedora, add the COPR repositories before validating or building packages:
+
+1. Enable the Hyprland COPR maintained by **lionheartp**:
+   \`\`\`bash
+   sudo dnf copr enable lionheartp/Hyprland
+   sudo dnf update --refresh
+   \`\`\`
+2. Add the supporting COPRs called out in the package definition when you need optional components:
+   - \`erikreider/SwayNotificationCenter\` for SwayNC
+   - \`tofik/nwg-shell\` if you plan to install \`nwg-displays\`
+3. Be aware of package availability constraints:
+   - \`wallust\` is provided by the Hyprland COPR; without the repo it will be reported missing during validation.
+   - \`nwg-displays\` requires the \`nwg-shell\` COPR and may not exist in the base Fedora repos.
+
+These repos match the expectations defined in \`packages/window-managers/hyprland.yml\` and prevent false negatives during validation.
+
 ### Adding Custom Configuration
 
 Place configuration files in the appropriate \`custom-configs/\` subdirectories:
@@ -576,15 +594,91 @@ The greetd display manager availability depends on your base image type:
 **To use greetd display manager:**
 
 1. Switch to \`fedora-bootc\` base image:
-   \\\`\\\`\\\`bash
+   \`\`\`bash
    ./custom-scripts/fedora-version-switcher 43 fedora-bootc
-   \\\`\\\`\\\`
+   \`\`\`
 
 2. Customize the greetd configuration in \`custom-configs/greetd/config.toml\` as needed
 
 ### Custom Scripts
 
 Add executable scripts to \`custom-scripts/\` - they will be copied to \`/usr/local/bin/\`
+
+---
+
+## Package validation and dependency tooling
+
+### Package dependency transpiler CLI
+
+Use \`tools/package_dependency_checker.py\` to translate package dependencies across distros and confirm they are installed locally. The tool auto-selects the native package manager (dnf, pacman, apt, zypper, emerge, pkg) and standardizes the output for cross-distro comparisons.
+
+Common invocation patterns:
+
+- Fedora (dnf repoquery):
+  \`\`\`bash
+  python3 tools/package_dependency_checker.py --packages python3-requests neovim
+  \`\`\`
+- Arch Linux (pacman):
+  \`\`\`bash
+  python3 tools/package_dependency_checker.py --distro arch --packages python-requests hyprland
+  \`\`\`
+- Debian/Ubuntu (apt):
+  \`\`\`bash
+  python3 tools/package_dependency_checker.py --distro debian --packages python3-requests sway
+  \`\`\`
+  \`\`\`bash
+  python3 tools/package_dependency_checker.py --distro ubuntu --packages python3-requests plymouth
+  \`\`\`
+- OpenSUSE (zypper):
+  \`\`\`bash
+  python3 tools/package_dependency_checker.py --distro opensuse --packages python3-requests waybar
+  \`\`\`
+- Gentoo (emerge):
+  \`\`\`bash
+  python3 tools/package_dependency_checker.py --distro gentoo --packages dev-python/requests greetd
+  \`\`\`
+- FreeBSD (pkg):
+  \`\`\`bash
+  python3 tools/package_dependency_checker.py --distro freebsd --packages py311-requests sway
+  \`\`\`
+
+Use \`--verify-only\` to quickly flag missing packages and \`--json\` for machine-readable output. The checker reports which dependencies were found, what each package provides, and whether anything is absent on the target system.
+
+### Validation CLI image-type mapping
+
+\`tools/validate_installed_packages.py\` supports \`--image-type\` to infer the distro when you only know the build target. The resolver auto-maps atomic image types (for example, \`fedora-bootc\`, \`fedora-sway-atomic\`, or \`fedora-onyx\`) to \`fedora\`, then falls back to distro detection when a mapping is unknown.
+
+Usage examples:
+
+- Map a bootc image type to Fedora automatically:
+  \`\`\`bash
+  python3 tools/validate_installed_packages.py --yaml adnyeus.yml --image-type fedora-bootc
+  \`\`\`
+- Override with a specific distro (skips auto-mapping):
+  \`\`\`bash
+  python3 tools/validate_installed_packages.py --wm hyprland --distro arch
+  \`\`\`
+- Combine mapping with verbose logging to see the resolved distro:
+  \`\`\`bash
+  python3 tools/validate_installed_packages.py --de kde --image-type fedora-sway-atomic --verbose
+  \`\`\`
+
+### Troubleshooting validation failures
+
+- **Common naming differences:** Package names often vary by distro. If validation fails, cross-check whether the package uses \`python3-\` prefixes on Fedora/Debian-based images versus \`python-\` prefixes on Arch, or category names like \`dev-python/\` on Gentoo.
+- **Missing repositories:** Errors mentioning missing packages frequently mean a required repository is not configured (for example, the Hyprland COPR for \`wallust\` or \`nwg-shell\` for \`nwg-displays\`). Add the repo and rerun validation.
+- **Distro-specific gotchas:** Some packages are split differently (e.g., \`plymouth-plugin-two-step\` exists on Fedora but not on Arch). Use \`--distro\` or \`--image-type\` to align expectations with your target platform and adjust the package list accordingly.
+
+### Package naming equivalents
+
+Use these mappings when reconciling package lists between distros:
+
+- Fedora/Debian: \`python3-requests\`
+- Arch: \`python-requests\`
+- Gentoo: \`dev-python/requests\`
+- FreeBSD: \`py311-requests\`
+
+Aligning names before validation reduces false positives when comparing configurations across platforms.
 
 ---
 
