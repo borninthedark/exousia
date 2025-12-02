@@ -1,33 +1,39 @@
 # Hyprland Window Manager Package Definition
 # This defines all packages needed for a Hyprland desktop environment
+# Based on JaKooLit/Fedora-Hyprland best practices
 
 metadata:
   name: hyprland
   type: window-manager
   description: Dynamic tiling Wayland compositor based on wlroots
   homepage: https://hyprland.org/
+  # Fedora COPR repos needed:
+  # - copr.fedorainfracloud.org/coprs/lionheartp/Hyprland/
+  # - copr.fedorainfracloud.org/coprs/erikreider/SwayNotificationCenter/
+  # - copr.fedorainfracloud.org/coprs/tofik/nwg-shell/ (nwg-displays only)
 
 # Core Hyprland components
 core:
   - hyprland
-  - hyprpaper
   - hyprlock
+  - hyprpaper
   - hypridle
+  - hyprsunset
   - waybar
 
 # Terminal emulators
 terminals:
   - kitty
-  - alacritty
 
 # Application launchers and notifications
 launchers:
-  - fuzzel
   - wofi
 
 notifications:
-  - mako
   - swaync
+
+logout:
+  - wlogout
 
 # Display manager
 display_manager:
@@ -41,7 +47,7 @@ wayland:
 
 # Session and authentication
 session:
-  - xfce-polkit
+  - hyprpolkitagent
   - xdg-utils
   - xdg-user-dirs
   - xdg-dbus-proxy
@@ -55,8 +61,11 @@ audio:
   - pipewire
   - pipewire-alsa
   - pipewire-pulseaudio
+  - pipewire-utils
   - wireplumber
   - pavucontrol
+  - pamixer
+  - playerctl
 
 # Graphics drivers
 graphics:
@@ -107,20 +116,40 @@ power:
   - tlp
   - powertop
 
-# GTK theme support
+# Theme support (GTK + Qt)
 theme:
   - adwaita-icon-theme
   - adwaita-gtk2-theme
   - gnome-themes-extra
   - nwg-look
+  - kvantum
+  - qt5ct
+  - qt6ct
+  - qt6-qtsvg
 
 # Wayland utilities
 utilities:
   - wl-clipboard
+  - cliphist
+  - swww
+  - wallust
+  - nwg-displays
   - wev
   - kanshi
-  - wlsunset
   - wob
+
+# System utilities
+system:
+  - ImageMagick
+  - jq
+  - yad
+  - curl
+  - wget2
+  - unzip
+  - bc
+  - inxi
+  - python3-requests
+  - python3-pyquery
 
 # Boot splash (optional, for bootc images)
 boot_splash:

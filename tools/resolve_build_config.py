@@ -38,7 +38,7 @@ def resolve_yaml_config(input_yaml_config: str, target_image_type: str) -> Path:
             print(f"Auto-detected config: {candidate}")
             return candidate.resolve()
 
-        default_config = Path("exousia.yml")
+        default_config = Path("adnyeus.yml")
         if default_config.exists():
             print(f"Using default config: {default_config}")
             return default_config.resolve()

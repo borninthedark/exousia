@@ -20,7 +20,6 @@ class YamlSelectorService:
     DISTRO_DEFINITIONS = {
         "fedora-bootc": "sway-bootc.yml",
         "fedora-atomic": "sway-atomic.yml",
-        "fedora-silverblue": "fedora-silverblue.yml",
         "fedora-kinoite": "fedora-kinoite.yml",
         "arch": "arch-bootc.yml",
         "debian": "debian-bootc.yml",
@@ -31,7 +30,7 @@ class YamlSelectorService:
     # Mapping of desktop environments to their preferred definitions
     DE_DEFINITIONS = {
         "kde": "fedora-kinoite.yml",
-        "gnome": "fedora-silverblue.yml",
+        "mate": "fedora-mate.yml",  # TODO: Create fedora-mate.yml if needed
     }
 
     # Mapping of window managers to their preferred definitions
@@ -48,6 +47,43 @@ class YamlSelectorService:
 
     def __init__(self):
         self.definitions_dir = settings.YAML_DEFINITIONS_DIR
+
+    @staticmethod
+    def _is_traversal(path: Path) -> bool:
+        return path.is_absolute() or any(part == ".." for part in path.parts)
+
+    def _is_allowed_path(self, path: Path) -> bool:
+        allowed_bases = {
+            self.definitions_dir.resolve(),
+            settings.REPO_ROOT.resolve(),
+        }
+        return any(path.resolve().is_relative_to(base) for base in allowed_bases)
+
+    def _resolve_definition_path(self, definition_filename: str) -> Path:
+        """Resolve a YAML definition path and ensure it stays within trusted roots."""
+
+        filename_path = Path(definition_filename)
+
+        if self._is_traversal(filename_path):
+            raise ValueError("Path traversal detected in definition filename")
+
+        candidate_paths = [
+            (self.definitions_dir / filename_path).resolve(),
+            (settings.REPO_ROOT / filename_path).resolve(),
+        ]
+
+        allowed_candidates = [c for c in candidate_paths if self._is_allowed_path(c)]
+
+        if not allowed_candidates:
+            raise ValueError("Definition path escapes allowed directories")
+
+        for candidate in allowed_candidates:
+            if candidate.exists():
+                return candidate
+
+        raise FileNotFoundError(
+            f"YAML definition not found: {definition_filename}"
+        )
 
     def select_definition(
         self,
@@ -69,7 +105,7 @@ class YamlSelectorService:
         Args:
             os: Operating system/distro (e.g., "fedora", "arch", "debian")
             image_type: Image type (e.g., "fedora-bootc", "fedora-atomic")
-            desktop_environment: Desktop environment (e.g., "kde", "gnome")
+            desktop_environment: Desktop environment (e.g., "kde", "mate")
             window_manager: Window manager (e.g., "sway", "hyprland")
 
         Returns:
@@ -112,7 +148,13 @@ class YamlSelectorService:
             if (self.definitions_dir / distro_def).exists():
                 return distro_def
 
-        # Default fallback
+        # Default fallback to adnyeus.yml at project root
+        project_root = settings.REPO_ROOT
+        adnyeus_default = project_root / "adnyeus.yml"
+        if adnyeus_default.exists():
+            return "adnyeus.yml"
+
+        # Fallback to sway-bootc.yml in definitions dir
         default_def = "sway-bootc.yml"
         if (self.definitions_dir / default_def).exists():
             return default_def
@@ -140,10 +182,7 @@ class YamlSelectorService:
         Returns:
             Customized YAML content as string
         """
-        definition_path = self.definitions_dir / definition_filename
-
-        if not definition_path.exists():
-            raise FileNotFoundError(f"YAML definition not found: {definition_filename}")
+        definition_path = self._resolve_definition_path(definition_filename)
 
         # Load YAML
         with open(definition_path, 'r') as f:

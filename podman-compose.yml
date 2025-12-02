@@ -36,7 +36,7 @@ services:
     volumes:
       - ./api:/app/api:z
       - ./tools:/app/tools:z
-      - ./exousia.yml:/app/exousia.yml:z
+      - ./adnyeus.yml:/app/adnyeus.yml:z
       - ./api_data:/app/data:z
     ports:
       - "8000:8000"

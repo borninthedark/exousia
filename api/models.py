@@ -15,7 +15,6 @@ class ImageType(str, Enum):
     """Supported base image types."""
     FEDORA_BOOTC = "fedora-bootc"
     FEDORA_SWAY_ATOMIC = "fedora-sway-atomic"
-    FEDORA_SILVERBLUE = "fedora-silverblue"
     FEDORA_KINOITE = "fedora-kinoite"
     FEDORA_ONYX = "fedora-onyx"
     FEDORA_BUDGIE = "fedora-budgie"
@@ -139,7 +138,7 @@ class BuildTriggerRequest(BaseModel):
     fedora_version: str = Field("43")
     enable_plymouth: bool = Field(True)
     window_manager: Optional[str] = Field(None, description="Window manager (e.g., 'sway', 'hyprland') - used for auto-selection and override")
-    desktop_environment: Optional[str] = Field(None, description="Desktop environment (e.g., 'kde', 'gnome') - used for auto-selection and override")
+    desktop_environment: Optional[str] = Field(None, description="Desktop environment (e.g., 'kde', 'mate') - used for auto-selection and override")
     ref: str = Field("main", description="Git ref to build from")
 
     @root_validator(skip_on_failure=True)

@@ -8,6 +8,7 @@ import sys
 import base64
 import json
 import argparse
+from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -56,8 +57,9 @@ def trigger_build(
     image_type: str = "fedora-sway-atomic",
     distro_version: str = "43",
     enable_plymouth: bool = True,
-    yaml_config: Optional[str] = None,
-    yaml_content: Optional[str] = None,
+    yaml: Optional[str] = None,
+    window_manager: Optional[str] = None,
+    desktop_environment: Optional[str] = None,
     verbose: bool = False
 ) -> requests.Response:
     """
@@ -69,8 +71,13 @@ def trigger_build(
         image_type: Image type to build (default: fedora-sway-atomic)
         distro_version: Distro version (default: 43)
         enable_plymouth: Enable Plymouth boot splash (default: True)
-        yaml_config: Path to YAML config file in repo (alternative to yaml_content)
-        yaml_content: YAML content to use (will be base64 encoded)
+        yaml: YAML config - can be:
+            - Filename only (e.g., 'sway-bootc.yml') - will look in yaml-definitions/
+            - Any path (e.g., 'custom/my-config.yml', 'yaml-definitions/sway-bootc.yml')
+            - Full YAML content (will be base64 encoded)
+            - If None, defaults to 'adnyeus.yml'
+        window_manager: Window manager selection (e.g., 'sway', 'hyprland')
+        desktop_environment: Desktop environment selection (e.g., 'kde', 'mate')
         verbose: Print detailed information
 
     Returns:
@@ -97,7 +104,44 @@ def trigger_build(
         "enable_plymouth": enable_plymouth,
     }
 
-    # Add YAML content if provided
+    # Add DE/WM selection if provided
+    if window_manager:
+        client_payload["window_manager"] = window_manager
+    if desktop_environment:
+        client_payload["desktop_environment"] = desktop_environment
+
+    # Handle YAML parameter (unified yaml_config and yaml_content)
+    yaml_config = None
+    yaml_content = None
+
+    if yaml:
+        # Detect if it's a file reference or actual YAML content
+        # If it contains newlines or starts with typical YAML markers, treat as content
+        if '\n' in yaml or yaml.strip().startswith(('name:', 'description:', 'modules:', 'base-image:')):
+            yaml_content = yaml
+        else:
+            # It's a filename or path
+            yaml_filename = yaml
+
+            # Only auto-prepend yaml-definitions/ if it's a simple filename (no path separators)
+            if '/' not in yaml_filename and yaml_filename != 'adnyeus.yml':
+                yaml_filename = f'yaml-definitions/{yaml_filename}'
+
+            yaml_path = Path(yaml_filename)
+
+            if yaml_path.is_absolute() or any(part == ".." for part in yaml_path.parts):
+                raise ValueError("YAML config path must be relative and cannot traverse directories")
+
+            allowed_roots = {Path("yaml-definitions"), Path("custom-configs")}
+            if len(yaml_path.parts) > 1 and yaml_path.parts[0] not in {root.parts[0] for root in allowed_roots}:
+                raise ValueError("YAML config path must stay within allowed directories (yaml-definitions/, custom-configs/)")
+
+            yaml_config = yaml_path.as_posix()
+    else:
+        # Default to adnyeus.yml if nothing provided
+        yaml_config = 'adnyeus.yml'
+
+    # Add YAML content or config to payload
     if yaml_content:
         if not validate_yaml_content(yaml_content):
             raise ValueError("YAML content validation failed: contains potentially dangerous patterns")
@@ -136,21 +180,30 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Trigger build with default configuration
+  # Trigger build with default configuration (uses adnyeus.yml)
   python webhook_trigger.py --token ghp_xxxxx
 
-  # Trigger build with specific image type and version
-  python webhook_trigger.py --token ghp_xxxxx --image-type fedora-bootc --distro-version 44
+  # Trigger build with specific YAML definition (auto-prepends yaml-definitions/)
+  python webhook_trigger.py --token ghp_xxxxx --yaml sway-bootc.yml
 
-  # Trigger build with custom YAML config from repo
-  python webhook_trigger.py --token ghp_xxxxx --yaml-config yaml-definitions/fedora-bootc.yml
+  # Trigger build with custom path
+  python webhook_trigger.py --token ghp_xxxxx --yaml custom/my-config.yml
 
-  # Trigger build with YAML content from file
-  python webhook_trigger.py --token ghp_xxxxx --yaml-content-file my-custom-config.yml
+  # Trigger build with specific window manager
+  python webhook_trigger.py --token ghp_xxxxx --wm sway
+
+  # Trigger build with specific desktop environment
+  python webhook_trigger.py --token ghp_xxxxx --de kde
+
+  # Trigger build with local YAML file
+  python webhook_trigger.py --token ghp_xxxxx --yaml /path/to/my-config.yml
+
+  # Combine options
+  python webhook_trigger.py --token ghp_xxxxx --yaml sway-bootc.yml --wm hyprland --distro-version 44
 
   # Use environment variable for token
   export GITHUB_TOKEN=ghp_xxxxx
-  python webhook_trigger.py --image-type fedora-sway-atomic
+  python webhook_trigger.py --wm sway
 
 Security Notes:
   - Token requires 'repo' scope for private repos or 'public_repo' for public repos
@@ -173,7 +226,7 @@ Security Notes:
         "--image-type",
         default="fedora-sway-atomic",
         choices=[
-            'fedora-bootc', 'fedora-silverblue', 'fedora-kinoite',
+            'fedora-bootc', 'fedora-kinoite',
             'fedora-sway-atomic', 'fedora-onyx', 'fedora-budgie',
             'fedora-cinnamon', 'fedora-cosmic', 'fedora-deepin',
             'fedora-lxqt', 'fedora-mate', 'fedora-xfce',
@@ -199,12 +252,26 @@ Security Notes:
         help="Disable Plymouth boot splash"
     )
     parser.add_argument(
-        "--yaml-config",
-        help="Path to YAML config file in repository (e.g., yaml-definitions/fedora-bootc.yml)"
+        "--yaml",
+        help=(
+            "YAML configuration - can be a filename (e.g., 'sway-bootc.yml'), "
+            "any path (e.g., 'custom/config.yml', 'yaml-definitions/sway-bootc.yml'), or local file path. "
+            "If not provided, defaults to 'adnyeus.yml'"
+        )
     )
     parser.add_argument(
-        "--yaml-content-file",
-        help="Local file containing YAML content to send"
+        "--window-manager",
+        "--wm",
+        dest="window_manager",
+        choices=['sway', 'hyprland'],
+        help="Window manager to use (e.g., 'sway', 'hyprland')"
+    )
+    parser.add_argument(
+        "--desktop-environment",
+        "--de",
+        dest="desktop_environment",
+        choices=['kde', 'mate'],
+        help="Desktop environment to use (e.g., 'kde', 'mate')"
     )
     parser.add_argument(
         "-v", "--verbose",
@@ -231,21 +298,28 @@ Security Notes:
     # Handle Plymouth flag
     enable_plymouth = not args.disable_plymouth if args.disable_plymouth else args.enable_plymouth
 
-    # Read YAML content from file if provided
-    yaml_content = None
-    if args.yaml_content_file:
-        try:
-            with open(args.yaml_content_file, 'r', encoding='utf-8') as f:
-                yaml_content = f.read()
+    # Validate DE/WM exclusivity
+    if args.window_manager and args.desktop_environment:
+        print("Error: Cannot specify both --window-manager and --desktop-environment")
+        print("Please choose one or the other")
+        sys.exit(1)
 
-            if args.verbose:
-                print(f"Loaded YAML content from: {args.yaml_content_file}")
-        except FileNotFoundError:
-            print(f"Error: File not found: {args.yaml_content_file}")
-            sys.exit(1)
-        except Exception as e:
-            print(f"Error reading file: {e}")
-            sys.exit(1)
+    # Handle YAML parameter - could be filename or file path
+    yaml_param = args.yaml
+    if yaml_param:
+        # Check if it's a local file path
+        from pathlib import Path
+        yaml_path = Path(yaml_param)
+        if yaml_path.exists() and yaml_path.is_file():
+            try:
+                with open(yaml_path, 'r', encoding='utf-8') as f:
+                    yaml_param = f.read()
+
+                if args.verbose:
+                    print(f"Loaded YAML content from local file: {yaml_param}")
+            except Exception as e:
+                print(f"Error reading file: {e}")
+                sys.exit(1)
 
     # Display configuration
     print("=" * 60)
@@ -256,12 +330,18 @@ Security Notes:
     print(f"Distro Version:   {args.distro_version}")
     print(f"Plymouth:         {'Enabled' if enable_plymouth else 'Disabled'}")
 
-    if args.yaml_config:
-        print(f"YAML Config:      {args.yaml_config}")
-    elif yaml_content:
-        print(f"YAML Content:     {len(yaml_content)} bytes from {args.yaml_content_file}")
+    if args.window_manager:
+        print(f"Window Manager:   {args.window_manager}")
+    if args.desktop_environment:
+        print(f"Desktop Env:      {args.desktop_environment}")
+
+    if yaml_param:
+        if '\n' in yaml_param:
+            print(f"YAML Content:     {len(yaml_param)} bytes (from file)")
+        else:
+            print(f"YAML Config:      {yaml_param}")
     else:
-        print("YAML Config:      Auto-detect")
+        print("YAML Config:      adnyeus.yml (default)")
 
     print("=" * 60)
 
@@ -274,8 +354,9 @@ Security Notes:
             image_type=args.image_type,
             distro_version=args.distro_version,
             enable_plymouth=enable_plymouth,
-            yaml_config=args.yaml_config,
-            yaml_content=yaml_content,
+            yaml=yaml_param,
+            window_manager=args.window_manager,
+            desktop_environment=args.desktop_environment,
             verbose=args.verbose
         )
 

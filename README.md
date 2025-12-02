@@ -4,7 +4,9 @@
 [![Last Build: Fedora 43 • Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%E2%80%A2%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 <img src=".github/quincy-pentacle.svg" alt="Custom Quincy Pentacle" width="28" />
 
-This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs. Bleach and its concept of Spiritual Pressure are the creations of Tite Kubo; this project uses the motif solely as a playful status indicator.
+This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs.
+
+**Note on Theming:** The "Spiritual Pressure" build status badge and Quincy pentacle imagery are inspired by *BLEACH*, the manga and anime series created by **Tite Kubo**. These thematic elements are used purely as playful project aesthetics and status indicators, with full credit and acknowledgment to the original creator.
 
 ## Philosophy: Exousia
 
@@ -71,7 +73,7 @@ You can trigger builds programmatically using the webhook API. This is useful fo
 # Set your GitHub token
 export GITHUB_TOKEN="ghp_your_token_here"
 
-# Trigger a build with default settings
+# Trigger a build with default settings (uses adnyeus.yml)
 python api/webhook_trigger.py
 
 # Trigger specific image type and version
@@ -81,23 +83,38 @@ python api/webhook_trigger.py \
   --enable-plymouth
 ```
 
-**Using YAML Definitions:**
+**Using YAML Definitions and Desktop Environments:**
 
 ```bash
-# Use a YAML config file from the repository
+# Use a YAML definition file (auto-prepends yaml-definitions/)
 python api/webhook_trigger.py \
-  --yaml-config yaml-definitions/fedora-bootc.yml \
+  --yaml sway-bootc.yml \
+  --distro-version 44
+
+# Use custom path (any directory)
+python api/webhook_trigger.py \
+  --yaml custom/my-config.yml \
   --distro-version 44
 
 # Use a local YAML file (will be validated and sent securely)
 python api/webhook_trigger.py \
-  --yaml-content-file my-custom-config.yml \
+  --yaml /path/to/my-custom-config.yml \
   --image-type fedora-sway-atomic \
   --distro-version 43
 
+# Build with specific window manager
+python api/webhook_trigger.py \
+  --wm sway \
+  --distro-version 43
+
+# Build with specific desktop environment
+python api/webhook_trigger.py \
+  --de kde \
+  --distro-version 44
+
 # Build with custom configuration and disable Plymouth
 python api/webhook_trigger.py \
-  --yaml-config yaml-definitions/fedora-sway-atomic.yml \
+  --yaml sway-atomic.yml \
   --disable-plymouth \
   --verbose
 ```
@@ -105,6 +122,22 @@ python api/webhook_trigger.py \
 **Direct API Usage (cURL):**
 
 ```bash
+# Trigger build with default adnyeus.yml
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/borninthedark/exousia/dispatches \
+  -d '{
+    "event_type": "api",
+    "client_payload": {
+      "image_type": "fedora-bootc",
+      "distro_version": "44",
+      "enable_plymouth": true
+    }
+  }'
+
+# Trigger build with specific YAML definition (yaml-definitions/)
 curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -116,7 +149,55 @@ curl -X POST \
       "image_type": "fedora-bootc",
       "distro_version": "44",
       "enable_plymouth": true,
-      "yaml_config": "yaml-definitions/fedora-bootc.yml"
+      "yaml_config": "yaml-definitions/sway-bootc.yml"
+    }
+  }'
+
+# Trigger build with custom path (any directory)
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/borninthedark/exousia/dispatches \
+  -d '{
+    "event_type": "api",
+    "client_payload": {
+      "image_type": "fedora-bootc",
+      "distro_version": "44",
+      "enable_plymouth": true,
+      "yaml_config": "custom/my-config.yml"
+    }
+  }'
+
+# Trigger build with specific window manager
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/borninthedark/exousia/dispatches \
+  -d '{
+    "event_type": "api",
+    "client_payload": {
+      "image_type": "fedora-bootc",
+      "distro_version": "43",
+      "enable_plymouth": true,
+      "window_manager": "sway"
+    }
+  }'
+
+# Trigger build with specific desktop environment
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/borninthedark/exousia/dispatches \
+  -d '{
+    "event_type": "api",
+    "client_payload": {
+      "image_type": "fedora-bootc",
+      "distro_version": "44",
+      "enable_plymouth": true,
+      "desktop_environment": "kde"
     }
   }'
 ```
@@ -234,6 +315,24 @@ Edit the package lists in `custom-pkgs/`:
 - `packages.add` - Packages to install
 - `packages.remove` - Packages to remove from base image
 
+#### Fedora Hyprland COPR setup
+
+If you are building the Hyprland profile on Fedora, add the COPR repositories before validating or building packages:
+
+1. Enable the Hyprland COPR maintained by **lionheartp**:
+   ```bash
+   sudo dnf copr enable lionheartp/Hyprland
+   sudo dnf update --refresh
+   ```
+2. Add the supporting COPRs called out in the package definition when you need optional components:
+   - `erikreider/SwayNotificationCenter` for SwayNC
+   - `tofik/nwg-shell` if you plan to install `nwg-displays`
+3. Be aware of package availability constraints:
+   - `wallust` is provided by the Hyprland COPR; without the repo it will be reported missing during validation.
+   - `nwg-displays` requires the `nwg-shell` COPR and may not exist in the base Fedora repos.
+
+These repos match the expectations defined in `packages/window-managers/hyprland.yml` and prevent false negatives during validation.
+
 ### Adding Custom Configuration
 
 Place configuration files in the appropriate `custom-configs/` subdirectories:
@@ -273,15 +372,91 @@ The greetd display manager availability depends on your base image type:
 **To use greetd display manager:**
 
 1. Switch to `fedora-bootc` base image:
-   \`\`\`bash
+   ```bash
    ./custom-scripts/fedora-version-switcher 43 fedora-bootc
-   \`\`\`
+   ```
 
 2. Customize the greetd configuration in `custom-configs/greetd/config.toml` as needed
 
 ### Custom Scripts
 
 Add executable scripts to `custom-scripts/` - they will be copied to `/usr/local/bin/`
+
+---
+
+## Package validation and dependency tooling
+
+### Package dependency transpiler CLI
+
+Use `tools/package_dependency_checker.py` to translate package dependencies across distros and confirm they are installed locally. The tool auto-selects the native package manager (dnf, pacman, apt, zypper, emerge, pkg) and standardizes the output for cross-distro comparisons.
+
+Common invocation patterns:
+
+- Fedora (dnf repoquery):
+  ```bash
+  python3 tools/package_dependency_checker.py --packages python3-requests neovim
+  ```
+- Arch Linux (pacman):
+  ```bash
+  python3 tools/package_dependency_checker.py --distro arch --packages python-requests hyprland
+  ```
+- Debian/Ubuntu (apt):
+  ```bash
+  python3 tools/package_dependency_checker.py --distro debian --packages python3-requests sway
+  ```
+  ```bash
+  python3 tools/package_dependency_checker.py --distro ubuntu --packages python3-requests plymouth
+  ```
+- OpenSUSE (zypper):
+  ```bash
+  python3 tools/package_dependency_checker.py --distro opensuse --packages python3-requests waybar
+  ```
+- Gentoo (emerge):
+  ```bash
+  python3 tools/package_dependency_checker.py --distro gentoo --packages dev-python/requests greetd
+  ```
+- FreeBSD (pkg):
+  ```bash
+  python3 tools/package_dependency_checker.py --distro freebsd --packages py311-requests sway
+  ```
+
+Use `--verify-only` to quickly flag missing packages and `--json` for machine-readable output. The checker reports which dependencies were found, what each package provides, and whether anything is absent on the target system.
+
+### Validation CLI image-type mapping
+
+`tools/validate_installed_packages.py` supports `--image-type` to infer the distro when you only know the build target. The resolver auto-maps atomic image types (for example, `fedora-bootc`, `fedora-sway-atomic`, or `fedora-onyx`) to `fedora`, then falls back to distro detection when a mapping is unknown.
+
+Usage examples:
+
+- Map a bootc image type to Fedora automatically:
+  ```bash
+  python3 tools/validate_installed_packages.py --yaml adnyeus.yml --image-type fedora-bootc
+  ```
+- Override with a specific distro (skips auto-mapping):
+  ```bash
+  python3 tools/validate_installed_packages.py --wm hyprland --distro arch
+  ```
+- Combine mapping with verbose logging to see the resolved distro:
+  ```bash
+  python3 tools/validate_installed_packages.py --de kde --image-type fedora-sway-atomic --verbose
+  ```
+
+### Troubleshooting validation failures
+
+- **Common naming differences:** Package names often vary by distro. If validation fails, cross-check whether the package uses `python3-` prefixes on Fedora/Debian-based images versus `python-` prefixes on Arch, or category names like `dev-python/` on Gentoo.
+- **Missing repositories:** Errors mentioning missing packages frequently mean a required repository is not configured (for example, the Hyprland COPR for `wallust` or `nwg-shell` for `nwg-displays`). Add the repo and rerun validation.
+- **Distro-specific gotchas:** Some packages are split differently (e.g., `plymouth-plugin-two-step` exists on Fedora but not on Arch). Use `--distro` or `--image-type` to align expectations with your target platform and adjust the package list accordingly.
+
+### Package naming equivalents
+
+Use these mappings when reconciling package lists between distros:
+
+- Fedora/Debian: `python3-requests`
+- Arch: `python-requests`
+- Gentoo: `dev-python/requests`
+- FreeBSD: `py311-requests`
+
+Aligning names before validation reduces false positives when comparing configurations across platforms.
 
 ---
 
@@ -415,6 +590,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - All contributors to the referenced documentation and guides
 - **Claude** (Anthropic) and **GPT Codex** (OpenAI) for AI-assisted development
 
+### Creative Acknowledgments
+
+- **Tite Kubo** - Creator of *BLEACH* (manga and anime series)
+  - The "Spiritual Pressure" status indicator and Quincy pentacle imagery in this project are inspired by themes from BLEACH
+  - These elements are used respectfully as playful project aesthetics with full acknowledgment of the original creator
+  - All rights to BLEACH and its associated concepts belong to Tite Kubo and respective copyright holders
+  - This project is not affiliated with or endorsed by Tite Kubo, Shueisha, or Viz Media
+
 ### Development Notes
 
 This project leverages AI-assisted development practices. The build pipeline, testing framework, and automation scripts were developed in collaboration with Claude and GPT Codex, demonstrating modern DevOps workflows enhanced by AI capabilities.
@@ -423,4 +606,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with bootc**
 
-*This README was automatically generated on 2025-12-02 03:22:02 UTC*
+*This README was automatically generated on 2025-12-02 16:42:16 UTC*

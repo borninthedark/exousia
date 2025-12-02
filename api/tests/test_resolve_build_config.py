@@ -57,7 +57,7 @@ def test_read_fedora_version_file_warns_on_malformed(tmp_workspace: Path, capsys
 
 
 def test_apply_fedora_overrides_updates_base_image_and_desktop(tmp_workspace: Path):
-    config_path = tmp_workspace / "exousia.yml"
+    config_path = tmp_workspace / "adnyeus.yml"
     config_path.write_text(
         yaml.safe_dump(
             {
@@ -121,7 +121,7 @@ def test_resolve_yaml_config_prefers_matching_definition(tmp_workspace: Path):
 
 
 def test_resolve_yaml_config_falls_back_to_default(tmp_workspace: Path):
-    default_yaml = tmp_workspace / "exousia.yml"
+    default_yaml = tmp_workspace / "adnyeus.yml"
     default_yaml.write_text("name: default\nmodules: []\n")
 
     selected = resolve_build_config.resolve_yaml_config("auto", "fedora-bootc")

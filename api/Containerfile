@@ -45,7 +45,7 @@ COPY --from=builder /root/.local /home/exousia/.local
 # Copy application code
 COPY api/ /app/api/
 COPY tools/ /app/tools/
-COPY exousia.yml /app/
+COPY adnyeus.yml /app/
 
 # Set ownership
 RUN chown -R exousia:exousia /app

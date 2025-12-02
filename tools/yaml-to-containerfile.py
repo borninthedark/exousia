@@ -7,8 +7,8 @@ Converts BlueBuild-compatible YAML configuration into Containerfile format.
 Supports conditional logic, multiple base images, and modular build steps.
 
 Usage:
-    python3 yaml-to-containerfile.py --config exousia.yml --output Containerfile
-    python3 yaml-to-containerfile.py --config exousia.yml --image-type fedora-bootc --validate
+    python3 yaml-to-containerfile.py --config adnyeus.yml --output Containerfile
+    python3 yaml-to-containerfile.py --config adnyeus.yml --image-type fedora-bootc --validate
 """
 
 import argparse
@@ -856,13 +856,13 @@ def main():
         epilog="""
 Examples:
   # Generate Containerfile for fedora-sway-atomic
-  python3 yaml-to-containerfile.py --config exousia.yml --output Containerfile.generated
+  python3 yaml-to-containerfile.py --config adnyeus.yml --output Containerfile.generated
 
   # Generate for fedora-bootc with Plymouth enabled
-  python3 yaml-to-containerfile.py --config exousia.yml --image-type fedora-bootc --enable-plymouth --output Containerfile.bootc.generated
+  python3 yaml-to-containerfile.py --config adnyeus.yml --image-type fedora-bootc --enable-plymouth --output Containerfile.bootc.generated
 
   # Validate only
-  python3 yaml-to-containerfile.py --config exousia.yml --validate
+  python3 yaml-to-containerfile.py --config adnyeus.yml --validate
         """
     )
 

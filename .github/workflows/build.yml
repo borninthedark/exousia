@@ -163,10 +163,10 @@ jobs:
         run: |
           echo "::group::Generating Containerfile"
           python3 tools/yaml-to-containerfile.py \
-            --config exousia.yml \
+            --config adnyeus.yml \
             --output Containerfile.generated \
             --verbose
-          echo "Generated Containerfile.generated from exousia.yml"
+          echo "Generated Containerfile.generated from adnyeus.yml"
           echo "::endgroup::"
 
       - name: Lint generated Containerfile
