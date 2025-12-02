@@ -73,7 +73,7 @@ You can trigger builds programmatically using the webhook API. This is useful fo
 # Set your GitHub token
 export GITHUB_TOKEN="ghp_your_token_here"
 
-# Trigger a build with default settings
+# Trigger a build with default settings (uses adnyeus.yml)
 python api/webhook_trigger.py
 
 # Trigger specific image type and version
@@ -89,6 +89,11 @@ python api/webhook_trigger.py \
 # Use a YAML definition file (auto-prepends yaml-definitions/)
 python api/webhook_trigger.py \
   --yaml sway-bootc.yml \
+  --distro-version 44
+
+# Use custom path (any directory)
+python api/webhook_trigger.py \
+  --yaml custom/my-config.yml \
   --distro-version 44
 
 # Use a local YAML file (will be validated and sent securely)
@@ -117,7 +122,7 @@ python api/webhook_trigger.py \
 **Direct API Usage (cURL):**
 
 ```bash
-# Trigger build with default exousia.yml
+# Trigger build with default adnyeus.yml
 curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -132,7 +137,7 @@ curl -X POST \
     }
   }'
 
-# Trigger build with specific YAML definition
+# Trigger build with specific YAML definition (yaml-definitions/)
 curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -145,6 +150,22 @@ curl -X POST \
       "distro_version": "44",
       "enable_plymouth": true,
       "yaml_config": "yaml-definitions/sway-bootc.yml"
+    }
+  }'
+
+# Trigger build with custom path (any directory)
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/borninthedark/exousia/dispatches \
+  -d '{
+    "event_type": "api",
+    "client_payload": {
+      "image_type": "fedora-bootc",
+      "distro_version": "44",
+      "enable_plymouth": true,
+      "yaml_config": "custom/my-config.yml"
     }
   }'
 

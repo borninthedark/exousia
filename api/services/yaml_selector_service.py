@@ -111,12 +111,12 @@ class YamlSelectorService:
             if (self.definitions_dir / distro_def).exists():
                 return distro_def
 
-        # Default fallback to exousia.yml at project root
-        # First check for exousia.yml in parent directory (project root)
+        # Default fallback to adnyeus.yml at project root
+        # First check for adnyeus.yml in parent directory (project root)
         project_root = self.definitions_dir.parent
-        exousia_default = project_root / "exousia.yml"
-        if exousia_default.exists():
-            return "../exousia.yml"
+        adnyeus_default = project_root / "adnyeus.yml"
+        if adnyeus_default.exists():
+            return "../adnyeus.yml"
 
         # Fallback to sway-bootc.yml in definitions dir
         default_def = "sway-bootc.yml"

@@ -71,10 +71,10 @@ def trigger_build(
         distro_version: Distro version (default: 43)
         enable_plymouth: Enable Plymouth boot splash (default: True)
         yaml: YAML config - can be:
-            - Filename (e.g., 'sway-bootc.yml') - will look in yaml-definitions/
-            - Path with yaml-definitions prefix (e.g., 'yaml-definitions/sway-bootc.yml')
+            - Filename only (e.g., 'sway-bootc.yml') - will look in yaml-definitions/
+            - Any path (e.g., 'custom/my-config.yml', 'yaml-definitions/sway-bootc.yml')
             - Full YAML content (will be base64 encoded)
-            - If None, defaults to 'exousia.yml'
+            - If None, defaults to 'adnyeus.yml'
         window_manager: Window manager selection (e.g., 'sway', 'hyprland')
         desktop_environment: Desktop environment selection (e.g., 'kde', 'mate')
         verbose: Print detailed information
@@ -122,14 +122,15 @@ def trigger_build(
             # It's a filename or path
             yaml_filename = yaml
 
-            # Auto-prepend yaml-definitions/ if not already present and not exousia.yml
-            if not yaml_filename.startswith('yaml-definitions/') and yaml_filename != 'exousia.yml':
+            # Only auto-prepend yaml-definitions/ if it's a simple filename (no path separators)
+            # This allows any path to be used, not just yaml-definitions/
+            if '/' not in yaml_filename and yaml_filename != 'adnyeus.yml':
                 yaml_filename = f'yaml-definitions/{yaml_filename}'
 
             yaml_config = yaml_filename
     else:
-        # Default to exousia.yml if nothing provided
-        yaml_config = 'exousia.yml'
+        # Default to adnyeus.yml if nothing provided
+        yaml_config = 'adnyeus.yml'
 
     # Add YAML content or config to payload
     if yaml_content:
@@ -170,11 +171,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Trigger build with default configuration (uses exousia.yml)
+  # Trigger build with default configuration (uses adnyeus.yml)
   python webhook_trigger.py --token ghp_xxxxx
 
   # Trigger build with specific YAML definition (auto-prepends yaml-definitions/)
   python webhook_trigger.py --token ghp_xxxxx --yaml sway-bootc.yml
+
+  # Trigger build with custom path
+  python webhook_trigger.py --token ghp_xxxxx --yaml custom/my-config.yml
 
   # Trigger build with specific window manager
   python webhook_trigger.py --token ghp_xxxxx --wm sway
@@ -242,8 +246,8 @@ Security Notes:
         "--yaml",
         help=(
             "YAML configuration - can be a filename (e.g., 'sway-bootc.yml'), "
-            "path (e.g., 'yaml-definitions/sway-bootc.yml'), or local file path. "
-            "If not provided, defaults to 'exousia.yml'"
+            "any path (e.g., 'custom/config.yml', 'yaml-definitions/sway-bootc.yml'), or local file path. "
+            "If not provided, defaults to 'adnyeus.yml'"
         )
     )
     parser.add_argument(
@@ -328,7 +332,7 @@ Security Notes:
         else:
             print(f"YAML Config:      {yaml_param}")
     else:
-        print("YAML Config:      exousia.yml (default)")
+        print("YAML Config:      adnyeus.yml (default)")
 
     print("=" * 60)
 
