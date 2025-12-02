@@ -21,9 +21,8 @@ terminals:
 
 # Application launchers and notifications
 launchers:
-  - wofi
-  - fuzzel
-
+  - rofi
+  
 notifications:
   - mako
   - swaync
