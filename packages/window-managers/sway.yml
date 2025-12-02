@@ -55,8 +55,11 @@ audio:
   - pipewire
   - pipewire-alsa
   - pipewire-pulseaudio
+  - pipewire-utils
   - wireplumber
   - pavucontrol
+  - pamixer
+  - playerctl
 
 # Graphics drivers
 graphics:
@@ -118,10 +121,17 @@ theme:
 # Wayland utilities
 utilities:
   - wl-clipboard
+  - cliphist
   - wev
   - kanshi
   - wlsunset
   - wob
+
+# System utilities
+system:
+  - jq
+  - curl
+  - ImageMagick
 
 # Boot splash (optional, for bootc images)
 boot_splash:
