@@ -22,7 +22,7 @@ from ..models import (
 from ..services.github_service import GitHubService
 from ..services.transpiler_service import TranspilerService
 from ..services.yaml_selector_service import YamlSelectorService
-from ..config import settings
+from ..config import get_github_token, settings
 from ..auth import current_active_user
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ async def poll_build_status(build_id: int, workflow_run_id: int, max_polls: int 
 
     logger.info(f"Starting status polling for build {build_id}, workflow {workflow_run_id}")
 
-    github = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
+    github = GitHubService(get_github_token(settings), settings.GITHUB_REPO)
     poll_count = 0
 
     while poll_count < max_polls:
@@ -221,6 +221,14 @@ async def trigger_build(
         fedora_version = request.fedora_version
         enable_plymouth = request.enable_plymouth
     else:
+        if not (request.os or request.desktop_environment or request.window_manager):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "config_id, yaml_content, or definition_filename must be provided"
+                ),
+            )
+
         # Auto-select YAML definition based on OS/DE/WM inputs
         logger.info(
             f"Auto-selecting YAML definition: os={request.os}, "
@@ -295,15 +303,15 @@ async def trigger_build(
 
     # Trigger GitHub workflow directly
     try:
-        if not settings.GITHUB_TOKEN:
+        token = get_github_token(settings)
+
+        if not token:
             raise HTTPException(
                 status_code=503,
-                detail="GitHub token not configured. Set GITHUB_TOKEN environment variable."
+                detail="GitHub token not configured. Set GITHUB_TOKEN environment variable.",
             )
 
-        github = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
-
-        # Build workflow inputs
+        github = GitHubService(token, settings.GITHUB_REPO)
         workflow_inputs = {
             "image_type": image_type,
             "distro_version": fedora_version,
@@ -385,9 +393,11 @@ async def get_build_status(build_id: int, db: AsyncSession = Depends(get_db)):
     conclusion = None
     logs_url = None
 
-    if build.workflow_run_id and settings.GITHUB_TOKEN:
+    token = get_github_token(settings)
+
+    if build.workflow_run_id and token:
         try:
-            github_service = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
+            github_service = GitHubService(token, settings.GITHUB_REPO)
             workflow_run = await github_service.get_workflow_run(build.workflow_run_id)
 
             workflow_status = workflow_run.status
@@ -487,9 +497,11 @@ async def cancel_build(build_id: int, db: AsyncSession = Depends(get_db)):
         )
 
     # Cancel GitHub workflow if available
-    if build.workflow_run_id and settings.GITHUB_TOKEN:
+    token = get_github_token(settings)
+
+    if build.workflow_run_id and token:
         try:
-            github_service = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
+            github_service = GitHubService(token, settings.GITHUB_REPO)
             await github_service.cancel_workflow_run(build.workflow_run_id)
         except Exception as e:
             raise HTTPException(

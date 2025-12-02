@@ -6,10 +6,17 @@ Centralized configuration management using Pydantic Settings.
 Supports environment variables and .env files.
 """
 
-from pydantic_settings import BaseSettings
-from typing import List, Optional
-from pathlib import Path
+import os
 from enum import Enum
+from pathlib import Path
+from typing import List, Optional
+
+from dotenv import load_dotenv
+from pydantic_settings import BaseSettings
+
+# Load variables from a local .env so they are available to both Pydantic settings
+# and any os.getenv fallbacks (e.g., GitHub token reads in CLI utilities).
+load_dotenv()
 
 
 class DeploymentMode(str, Enum):
@@ -103,3 +110,10 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def get_github_token(override_settings: Optional[BaseSettings] | None = None) -> str:
+    """Return the configured GitHub token from provided settings or environment variables."""
+
+    token_source = override_settings or settings
+    return getattr(token_source, "GITHUB_TOKEN", "") or os.getenv("GITHUB_TOKEN", "")
