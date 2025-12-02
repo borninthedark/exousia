@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..models import HealthResponse
-from ..config import settings
+from ..config import get_github_token, settings
 from ..services.github_service import GitHubService
 
 router = APIRouter()
@@ -35,9 +35,11 @@ async def health_check(db: AsyncSession = Depends(get_db)):
 
     # Check GitHub API
     github_status = "healthy"
-    if settings.GITHUB_TOKEN:
+    token = get_github_token(settings)
+
+    if token:
         try:
-            github_service = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
+            github_service = GitHubService(token, settings.GITHUB_REPO)
             # Simple check - try to get repo info
             await github_service.get_repo()
         except Exception:

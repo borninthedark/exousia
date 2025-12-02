@@ -1,6 +1,7 @@
 # Exousia: Declarative Bootc Builder
 
 [![Spiritual Pressure](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Spiritual%20Pressure&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
+[![Last Build: Fedora 43 • Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%E2%80%A2%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 <img src=".github/quincy-pentacle.svg" alt="Custom Quincy Pentacle" width="28" />
 
 This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs. Bleach and its concept of Spiritual Pressure are the creations of Tite Kubo; this project uses the motif solely as a playful status indicator.
@@ -12,18 +13,6 @@ Exousia (ἐξουσία) is Greek for "authority" and "power."
 This is a personal project for building my own DevSecOps-hardened laptop OS using the bootc project. Still under development, but the goal is full control and transparency over packages, settings, and behaviors.
 
 The build pipeline supports both bootc and atomic base images, each with their own defaults and configurations. Automated tests help ensure things actually work as development progresses.
-
-
-## Current Configuration
-
-- **Base Image:** `Fedora Sway Atomic Desktop`
-- **Image Type:** `fedora-sway-atomic`
-- **Fedora Version:** 43
-- **Plymouth Customization:** ✅ Available (custom themes supported on all base images)
-- **Greetd Display Manager:** ❌ Not available
-- **Last Updated:** 2025-12-01 16:56:42 UTC
-
-> **Note:** Custom Plymouth themes from `custom-configs/plymouth/` are applied for both `fedora-bootc` and `fedora-sway-atomic` base image types.
 
 ## CI/CD Workflow: Fedora Bootc DevSec CI
 
@@ -279,7 +268,7 @@ The greetd display manager availability depends on your base image type:
 | `fedora-bootc` | ✅ Available | greetd.service enabled, custom config in `custom-configs/greetd/` |
 | `fedora-sway-atomic` | ❌ Not available | Uses SDDM display manager instead |
 
-**Note:** The `fedora-sway-atomic` image uses SDDM (Simple Desktop Display Manager) by default. Switch to `fedora-bootc` if you need greetd.
+**Note:** greetd.service is enabled and custom configuration is available in `custom-configs/greetd/`.
 
 **To use greetd display manager:**
 
@@ -434,4 +423,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with bootc**
 
-*This README was automatically generated on 2025-12-01 16:56:42 UTC*
+*This README was automatically generated on 2025-12-02 03:22:02 UTC*

@@ -126,6 +126,9 @@ pytest api/tests/ -v -m integration
 
 Environment variables (`.env` file):
 
+> Tip: `.env` is gitignored and loaded automatically, so you can store `GITHUB_TOKEN` and other secrets locally without exporting
+> them into every shell session.
+
 ```bash
 # API Settings
 API_HOST=0.0.0.0
