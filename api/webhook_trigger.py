@@ -156,7 +156,31 @@ def trigger_build(
             print(f"Base64 encoded size: {len(encoded)} bytes")
 
     elif yaml_config:
-        client_payload["yaml_config"] = yaml_config
+        # Read the YAML file and send its content
+        yaml_file_path = Path(yaml_config)
+
+        if not yaml_file_path.exists():
+            raise ValueError(f"YAML config file not found: {yaml_config}")
+
+        try:
+            with open(yaml_file_path, 'r', encoding='utf-8') as f:
+                file_content = f.read()
+
+            if not validate_yaml_content(file_content):
+                raise ValueError("YAML file validation failed: contains potentially dangerous patterns")
+
+            # Base64 encode for safe transmission
+            encoded = base64.b64encode(file_content.encode()).decode()
+            client_payload["yaml_content"] = encoded
+            client_payload["yaml_encoding"] = "base64"
+
+            if verbose:
+                print(f"YAML file: {yaml_config}")
+                print(f"YAML content size: {len(file_content)} bytes")
+                print(f"Base64 encoded size: {len(encoded)} bytes")
+
+        except Exception as e:
+            raise ValueError(f"Error reading YAML config file '{yaml_config}': {e}")
 
     payload = {
         "event_type": "api",
