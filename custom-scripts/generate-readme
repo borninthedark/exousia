@@ -224,11 +224,16 @@ generate_readme() {
 
 [![Spiritual Pressure](https://img.shields.io/github/actions/workflow/status/${GITHUB_REPO}/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Spiritual%20Pressure&color=00A4EF)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml)
 [![Last Build: ${OS_NAME} ${OS_VERSION} • ${WM_DE_LABEL}](https://img.shields.io/badge/Last%20Build-${BUILD_BADGE_TEXT_URI}-${OS_BADGE_COLOR}?style=for-the-badge&logo=${OS_LOGO}&logoColor=white)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
+[![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 <img src=".github/quincy-pentacle.svg" alt="Custom Quincy Pentacle" width="28" />
 
 This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs.
 
 **Note on Theming:** The "Spiritual Pressure" build status badge and Quincy pentacle imagery are inspired by *BLEACH*, the manga and anime series created by **Tite Kubo**. These thematic elements are used purely as playful project aesthetics and status indicators, with full credit and acknowledgment to the original creator.
+
+## Highly Experimental Disclaimer
+
+⚠️ This project is highly experimental. There are **no guarantees** about stability, data safety, or fitness for any purpose. Running these builds or scripts can leave your system in a non-working state, require recovery steps, or force a full reinstall. Proceed only if you understand the risks and are comfortable rebuilding your environment from scratch.
 
 ## Philosophy: Exousia
 
