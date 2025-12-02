@@ -11,4 +11,4 @@ packages:
   - firefox-langpacks  # From original packages.remove
   - foot  # Using kitty/alacritty instead
   - dunst  # Using mako/swaync instead
-  - rofi-wayland  # Using wofi/fuzzel instead
+
