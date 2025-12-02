@@ -16,6 +16,7 @@ metadata:
 core:
   - hyprland
   - hyprlock
+  - hyprpaper
   - hypridle
   - hyprsunset
   - waybar
