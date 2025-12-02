@@ -20,7 +20,6 @@ class YamlSelectorService:
     DISTRO_DEFINITIONS = {
         "fedora-bootc": "sway-bootc.yml",
         "fedora-atomic": "sway-atomic.yml",
-        "fedora-silverblue": "fedora-silverblue.yml",
         "fedora-kinoite": "fedora-kinoite.yml",
         "arch": "arch-bootc.yml",
         "debian": "debian-bootc.yml",
@@ -31,7 +30,7 @@ class YamlSelectorService:
     # Mapping of desktop environments to their preferred definitions
     DE_DEFINITIONS = {
         "kde": "fedora-kinoite.yml",
-        "gnome": "fedora-silverblue.yml",
+        "mate": "fedora-mate.yml",  # TODO: Create fedora-mate.yml if needed
     }
 
     # Mapping of window managers to their preferred definitions
@@ -69,7 +68,7 @@ class YamlSelectorService:
         Args:
             os: Operating system/distro (e.g., "fedora", "arch", "debian")
             image_type: Image type (e.g., "fedora-bootc", "fedora-atomic")
-            desktop_environment: Desktop environment (e.g., "kde", "gnome")
+            desktop_environment: Desktop environment (e.g., "kde", "mate")
             window_manager: Window manager (e.g., "sway", "hyprland")
 
         Returns:
@@ -112,7 +111,14 @@ class YamlSelectorService:
             if (self.definitions_dir / distro_def).exists():
                 return distro_def
 
-        # Default fallback
+        # Default fallback to exousia.yml at project root
+        # First check for exousia.yml in parent directory (project root)
+        project_root = self.definitions_dir.parent
+        exousia_default = project_root / "exousia.yml"
+        if exousia_default.exists():
+            return "../exousia.yml"
+
+        # Fallback to sway-bootc.yml in definitions dir
         default_def = "sway-bootc.yml"
         if (self.definitions_dir / default_def).exists():
             return default_def

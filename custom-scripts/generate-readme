@@ -226,7 +226,9 @@ generate_readme() {
 [![Last Build: ${OS_NAME} ${OS_VERSION} • ${WM_DE_LABEL}](https://img.shields.io/badge/Last%20Build-${BUILD_BADGE_TEXT_URI}-${OS_BADGE_COLOR}?style=for-the-badge&logo=${OS_LOGO}&logoColor=white)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 <img src=".github/quincy-pentacle.svg" alt="Custom Quincy Pentacle" width="28" />
 
-This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs. Bleach and its concept of Spiritual Pressure are the creations of Tite Kubo; this project uses the motif solely as a playful status indicator.
+This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs.
+
+**Note on Theming:** The "Spiritual Pressure" build status badge and Quincy pentacle imagery are inspired by *BLEACH*, the manga and anime series created by **Tite Kubo**. These thematic elements are used purely as playful project aesthetics and status indicators, with full credit and acknowledgment to the original creator.
 
 ## Philosophy: Exousia
 
@@ -303,23 +305,33 @@ python api/webhook_trigger.py \\
   --enable-plymouth
 \`\`\`
 
-**Using YAML Definitions:**
+**Using YAML Definitions and Desktop Environments:**
 
 \`\`\`bash
-# Use a YAML config file from the repository
+# Use a YAML definition file (auto-prepends yaml-definitions/)
 python api/webhook_trigger.py \\
-  --yaml-config yaml-definitions/fedora-bootc.yml \\
+  --yaml sway-bootc.yml \\
   --distro-version 44
 
 # Use a local YAML file (will be validated and sent securely)
 python api/webhook_trigger.py \\
-  --yaml-content-file my-custom-config.yml \\
+  --yaml /path/to/my-custom-config.yml \\
   --image-type fedora-sway-atomic \\
   --distro-version 43
 
+# Build with specific window manager
+python api/webhook_trigger.py \\
+  --wm sway \\
+  --distro-version 43
+
+# Build with specific desktop environment
+python api/webhook_trigger.py \\
+  --de kde \\
+  --distro-version 44
+
 # Build with custom configuration and disable Plymouth
 python api/webhook_trigger.py \\
-  --yaml-config yaml-definitions/fedora-sway-atomic.yml \\
+  --yaml sway-atomic.yml \\
   --disable-plymouth \\
   --verbose
 \`\`\`
@@ -636,6 +648,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - The broader container and immutable OS community
 - All contributors to the referenced documentation and guides
 - **Claude** (Anthropic) and **GPT Codex** (OpenAI) for AI-assisted development
+
+### Creative Acknowledgments
+
+- **Tite Kubo** - Creator of *BLEACH* (manga and anime series)
+  - The "Spiritual Pressure" status indicator and Quincy pentacle imagery in this project are inspired by themes from BLEACH
+  - These elements are used respectfully as playful project aesthetics with full acknowledgment of the original creator
+  - All rights to BLEACH and its associated concepts belong to Tite Kubo and respective copyright holders
+  - This project is not affiliated with or endorsed by Tite Kubo, Shueisha, or Viz Media
 
 ### Development Notes
 
