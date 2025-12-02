@@ -17,6 +17,27 @@ from typing import List, Dict, Set, Optional
 import argparse
 import json
 
+# Import distro mapper for image type → distro resolution
+try:
+    from distro_mapper import get_distro_for_image_type
+except ImportError:
+    # Fallback if distro_mapper not in path
+    def get_distro_for_image_type(image_type: str) -> Optional[str]:
+        """Fallback distro mapper."""
+        if 'fedora' in image_type.lower():
+            return 'fedora'
+        elif 'arch' in image_type.lower():
+            return 'arch'
+        elif 'debian' in image_type.lower() or 'proxmox' in image_type.lower():
+            return 'debian'
+        elif 'ubuntu' in image_type.lower():
+            return 'ubuntu'
+        elif 'opensuse' in image_type.lower():
+            return 'opensuse'
+        elif 'gentoo' in image_type.lower():
+            return 'gentoo'
+        return None
+
 
 def load_yaml_config(yaml_path: Path) -> Dict:
     """Load and parse YAML configuration."""
@@ -173,8 +194,10 @@ Examples:
                        help="Desktop environment name to validate")
     parser.add_argument("--wm", type=str,
                        help="Window manager name to validate")
+    parser.add_argument("--image-type", type=str,
+                       help="Image type (e.g., fedora-bootc, arch) - auto-maps to distro")
     parser.add_argument("--distro", choices=["fedora", "arch", "debian", "ubuntu", "opensuse", "gentoo", "freebsd"],
-                       help="Force specific distro (auto-detect if not specified)")
+                       help="Force specific distro (overrides --image-type)")
     parser.add_argument("--json", action="store_true",
                        help="Output results as JSON")
     parser.add_argument("--verbose", "-v", action="store_true",
@@ -183,6 +206,15 @@ Examples:
                        help="Exit with error if any packages are missing (default: true)")
 
     args = parser.parse_args()
+
+    # Resolve distro from image type if provided
+    distro = args.distro
+    if not distro and args.image_type:
+        distro = get_distro_for_image_type(args.image_type)
+        if distro and args.verbose:
+            print(f"Mapped image type '{args.image_type}' to distro '{distro}'")
+        elif not distro:
+            print(f"Warning: Unknown image type '{args.image_type}', will auto-detect distro", file=sys.stderr)
 
     # Validate arguments
     if not any([args.yaml, args.de, args.wm]):
@@ -207,13 +239,13 @@ Examples:
         if args.verbose:
             print(f"Found {len(packages)} packages in configuration")
 
-        all_installed, results = validate_packages(list(packages), distro=args.distro, verbose=args.verbose)
+        all_installed, results = validate_packages(list(packages), distro=distro, verbose=args.verbose)
 
     else:
         all_installed, results = validate_de_wm_packages(
             de_name=args.de,
             wm_name=args.wm,
-            distro=args.distro,
+            distro=distro,
             verbose=args.verbose
         )
 
