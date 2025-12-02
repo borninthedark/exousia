@@ -22,6 +22,7 @@ terminals:
 # Application launchers and notifications
 launchers:
   - rofi
+  - rofi-wayland
   
 notifications:
   - mako
