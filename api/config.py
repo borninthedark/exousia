@@ -85,7 +85,7 @@ class Settings(BaseSettings):
 
     # Repository Paths
     REPO_ROOT: Path = Path(__file__).parent.parent
-    CONFIG_FILE: Path = REPO_ROOT / "exousia.yml"
+    CONFIG_FILE: Path = REPO_ROOT / "adnyeus.yml"
     TRANSPILER_SCRIPT: Path = REPO_ROOT / "tools" / "yaml-to-containerfile.py"
     YAML_DEFINITIONS_DIR: Path = REPO_ROOT / "yaml-definitions"
 

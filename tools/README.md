@@ -31,7 +31,7 @@ Generate a Containerfile from YAML configuration:
 
 ```bash
 python3 tools/yaml-to-containerfile.py \
-  --config exousia.yml \
+  --config adnyeus.yml \
   --output Containerfile.generated
 ```
 
@@ -42,13 +42,13 @@ Generate for a specific base image type:
 ```bash
 # For fedora-sway-atomic
 python3 tools/yaml-to-containerfile.py \
-  --config exousia.yml \
+  --config adnyeus.yml \
   --image-type fedora-sway-atomic \
   --output Containerfile.atomic.generated
 
 # For fedora-bootc with Plymouth
 python3 tools/yaml-to-containerfile.py \
-  --config exousia.yml \
+  --config adnyeus.yml \
   --image-type fedora-bootc \
   --enable-plymouth \
   --output Containerfile.bootc.generated
@@ -72,7 +72,7 @@ Validate YAML without generating output:
 
 ```bash
 python3 tools/yaml-to-containerfile.py \
-  --config exousia.yml \
+  --config adnyeus.yml \
   --validate
 ```
 
@@ -82,7 +82,7 @@ Get detailed information during generation:
 
 ```bash
 python3 tools/yaml-to-containerfile.py \
-  --config exousia.yml \
+  --config adnyeus.yml \
   --output Containerfile.generated \
   --verbose
 ```
@@ -144,7 +144,7 @@ applies the requested OS/DE version to keep images explicitly versioned.
 
 ### Full Configuration
 
-See `exousia.yml` in the repository root for a complete example.
+See `adnyeus.yml` in the repository root for a complete example.
 
 ### Module Types
 
@@ -291,18 +291,18 @@ The workflow automatically uses the correct configuration based on:
 
 1. **Edit YAML configuration**:
    ```bash
-   vim exousia.yml
+   vim adnyeus.yml
    ```
 
 2. **Validate changes**:
    ```bash
-   python3 tools/yaml-to-containerfile.py --config exousia.yml --validate
+   python3 tools/yaml-to-containerfile.py --config adnyeus.yml --validate
    ```
 
 3. **Generate Containerfile**:
    ```bash
    python3 tools/yaml-to-containerfile.py \
-     --config exousia.yml \
+     --config adnyeus.yml \
      --image-type fedora-sway-atomic \
      --output Containerfile.test
    ```
@@ -314,7 +314,7 @@ The workflow automatically uses the correct configuration based on:
 
 ### Adding New Packages
 
-Edit `exousia.yml` and add packages to the `rpm-ostree` module:
+Edit `adnyeus.yml` and add packages to the `rpm-ostree` module:
 
 ```yaml
 - type: rpm-ostree

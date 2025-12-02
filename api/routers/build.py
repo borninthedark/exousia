@@ -37,7 +37,7 @@ def apply_desktop_override(
 ) -> str:
     """Override desktop selection for Fedora bootc builds.
 
-    The default exousia.yml is targeted at Sway; when a different DE/WM is
+    The default adnyeus.yml is targeted at Sway; when a different DE/WM is
     selected for fedora-bootc we regenerate the YAML content with the
     requested value so the Containerfile reflects the caller's choice.
     """

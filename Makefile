@@ -64,20 +64,20 @@ clean: ## Clean generated files
 
 build-atomic: ## Build atomic Containerfile from YAML
 	python3 tools/yaml-to-containerfile.py \
-		--config exousia.yml \
+		--config adnyeus.yml \
 		--image-type fedora-sway-atomic \
 		--output Containerfile.atomic.generated
 
 build-bootc: ## Build bootc Containerfile from YAML
 	python3 tools/yaml-to-containerfile.py \
-		--config exousia.yml \
+		--config adnyeus.yml \
 		--image-type fedora-bootc \
 		--enable-plymouth \
 		--output Containerfile.bootc.generated
 
 validate: ## Validate YAML configuration
 	python3 tools/yaml-to-containerfile.py \
-		--config exousia.yml \
+		--config adnyeus.yml \
 		--validate
 
 build-api-image: ## Build API container image with podman
