@@ -62,11 +62,11 @@ on:
         required: false
         type: string
         default: ''
-      yaml_config_file:
-        description: 'YAML config file to use (default: auto-detect from image type)'
+      yaml_content:
+        description: 'YAML configuration content (optional, overrides auto-detection)'
         required: false
         type: string
-        default: 'auto'
+        default: ''
   schedule:
     - cron: "20 4 * * *" # Nightly build at 4:20 AM UTC
 
@@ -359,30 +359,6 @@ jobs:
           fi
           echo "✓ Plymouth setting validated: $ENABLE_PLYMOUTH"
 
-          # Validate YAML config if provided (prevent path traversal)
-          YAML_CONFIG="${{ github.event.client_payload.yaml_config || 'auto' }}"
-          if [[ "$YAML_CONFIG" != "auto" ]]; then
-            # Remove any ../ path traversal attempts
-            SAFE_PATH=$(echo "$YAML_CONFIG" | sed 's|\.\.||g')
-            if [[ "$YAML_CONFIG" != "$SAFE_PATH" ]]; then
-              echo "::error::Path traversal detected in yaml_config: $YAML_CONFIG"
-              exit 1
-            fi
-
-            # Ensure it's a YAML file in allowed directories
-            if [[ ! "$YAML_CONFIG" =~ ^(yaml-definitions/|exousia\.yml$) ]]; then
-              echo "::error::yaml_config must be in yaml-definitions/ directory or exousia.yml"
-              exit 1
-            fi
-
-            # Ensure it's a YAML file extension
-            if [[ ! "$YAML_CONFIG" =~ \.ya?ml$ ]]; then
-              echo "::error::yaml_config must be a .yml or .yaml file"
-              exit 1
-            fi
-            echo "✓ YAML config validated: $YAML_CONFIG"
-          fi
-
           echo "::notice::All webhook inputs validated successfully"
           echo "::endgroup::"
 
@@ -394,8 +370,21 @@ jobs:
           INPUT_ENABLE_PLYMOUTH: ${{ github.event.inputs.enable_plymouth || github.event.client_payload.enable_plymouth || 'true' }}
           INPUT_WINDOW_MANAGER: ${{ github.event.inputs.window_manager || github.event.client_payload.window_manager || '' }}
           INPUT_DESKTOP_ENVIRONMENT: ${{ github.event.inputs.desktop_environment || github.event.client_payload.desktop_environment || '' }}
-          INPUT_YAML_CONFIG: ${{ github.event.inputs.yaml_config_file || github.event.client_payload.yaml_config || 'auto' }}
+          INPUT_YAML_CONTENT: ${{ github.event.inputs.yaml_content || github.event.client_payload.yaml_content || '' }}
         run: |
+          # If YAML content is provided, write it to a temp file
+          if [[ -n "$INPUT_YAML_CONTENT" ]]; then
+            echo "::group::Writing YAML content to temporary file"
+            cat > /tmp/api-yaml-config.yml <<'EOF'
+          ${{ github.event.inputs.yaml_content || github.event.client_payload.yaml_content || '' }}
+          EOF
+            echo "YAML content written to /tmp/api-yaml-config.yml"
+            echo "::endgroup::"
+            export INPUT_YAML_CONFIG="/tmp/api-yaml-config.yml"
+          else
+            export INPUT_YAML_CONFIG="auto"
+          fi
+
           python3 tools/resolve_build_config.py
 
       - name: Generate image tags and labels

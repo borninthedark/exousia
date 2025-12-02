@@ -15,7 +15,22 @@ class ImageType(str, Enum):
     """Supported base image types."""
     FEDORA_BOOTC = "fedora-bootc"
     FEDORA_SWAY_ATOMIC = "fedora-sway-atomic"
-    BOOTCREW = "bootcrew"
+    FEDORA_SILVERBLUE = "fedora-silverblue"
+    FEDORA_KINOITE = "fedora-kinoite"
+    FEDORA_ONYX = "fedora-onyx"
+    FEDORA_BUDGIE = "fedora-budgie"
+    FEDORA_CINNAMON = "fedora-cinnamon"
+    FEDORA_COSMIC = "fedora-cosmic"
+    FEDORA_DEEPIN = "fedora-deepin"
+    FEDORA_LXQT = "fedora-lxqt"
+    FEDORA_MATE = "fedora-mate"
+    FEDORA_XFCE = "fedora-xfce"
+    ARCH = "arch"
+    GENTOO = "gentoo"
+    DEBIAN = "debian"
+    UBUNTU = "ubuntu"
+    OPENSUSE = "opensuse"
+    PROXMOX = "proxmox"
 
 
 class BuildStatus(str, Enum):
@@ -119,11 +134,12 @@ class BuildTriggerRequest(BaseModel):
     config_id: Optional[int] = Field(None, description="Config ID to build (or use yaml_content/definition_filename)")
     yaml_content: Optional[str] = Field(None, description="YAML content to build (ad-hoc)")
     definition_filename: Optional[str] = Field(None, description="YAML definition filename from yaml-definitions/")
+    os: Optional[str] = Field(None, description="Operating system/distro (e.g., 'fedora', 'arch', 'debian') - used for auto-selection")
     image_type: ImageType = Field(ImageType.FEDORA_SWAY_ATOMIC)
     fedora_version: str = Field("43")
     enable_plymouth: bool = Field(True)
-    window_manager: Optional[str] = Field(None, description="Override window manager for Fedora bootc builds")
-    desktop_environment: Optional[str] = Field(None, description="Override desktop environment for Fedora bootc builds")
+    window_manager: Optional[str] = Field(None, description="Window manager (e.g., 'sway', 'hyprland') - used for auto-selection and override")
+    desktop_environment: Optional[str] = Field(None, description="Desktop environment (e.g., 'kde', 'gnome') - used for auto-selection and override")
     ref: str = Field("main", description="Git ref to build from")
 
     @root_validator(skip_on_failure=True)
