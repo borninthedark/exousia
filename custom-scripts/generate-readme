@@ -179,10 +179,8 @@ PY
 
     # Greetd display manager support detection
     if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
-        GREETD_SUPPORT="✅ Available"
         GREETD_NOTE="greetd.service is enabled and custom configuration is available in \`custom-configs/greetd/\`."
     else
-        GREETD_SUPPORT="❌ Not available"
         GREETD_NOTE="The \`fedora-sway-atomic\` image uses SDDM (Simple Desktop Display Manager) by default. Switch to \`fedora-bootc\` if you need greetd."
     fi
 
