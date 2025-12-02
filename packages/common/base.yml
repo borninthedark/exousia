@@ -10,7 +10,6 @@ metadata:
 core_utilities:
   - neovim
   - flatpak
-  - fuzzel
   - rtkit
   - cargo
   - git
