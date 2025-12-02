@@ -170,4 +170,5 @@ modules:
   - type: script
     scripts:
       - bootc container lint
+      - restorecon -vv /usr/local/bin/tuigreet
       - echo "composefs=true" >> /etc/ostree/repo.config || true
