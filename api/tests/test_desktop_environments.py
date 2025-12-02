@@ -254,5 +254,131 @@ class TestPackageLoaderIntegration:
         assert "mate" in des, "MATE not in available DEs"
 
 
+@pytest.mark.integration
+class TestPackageDependencyValidation:
+    """Test package dependency validation using the cross-distro transpiler."""
+
+    @pytest.fixture
+    def loader(self):
+        """Create package loader instance."""
+        packages_dir = project_root / "packages"
+        return PackageLoader(packages_dir)
+
+    def test_dependency_checker_import(self):
+        """Test that the dependency checker can be imported."""
+        try:
+            from tools.package_dependency_checker import PackageDependencyTranspiler
+            assert PackageDependencyTranspiler is not None
+        except ImportError as e:
+            pytest.fail(f"Failed to import PackageDependencyTranspiler: {e}")
+
+    def test_dependency_checker_interface(self):
+        """Test the dependency checker interface and basic functionality."""
+        try:
+            from tools.package_dependency_checker import (
+                PackageDependencyTranspiler,
+                FedoraDnfChecker,
+                ArchPacmanChecker
+            )
+
+            # Test that the checkers have the required methods
+            for checker_class in [FedoraDnfChecker, ArchPacmanChecker]:
+                checker = checker_class()
+                assert hasattr(checker, 'get_package_info')
+                assert hasattr(checker, 'get_dependencies')
+                assert hasattr(checker, 'is_installed')
+                assert hasattr(checker, 'check_dependencies_installed')
+                assert hasattr(checker, 'is_available')
+
+        except ImportError as e:
+            pytest.fail(f"Failed to import dependency checker components: {e}")
+
+    @pytest.mark.skipif(
+        not Path('/usr/bin/dnf').exists() and not Path('/usr/bin/pacman').exists(),
+        reason="Requires dnf or pacman to be installed"
+    )
+    def test_hyprland_dependencies_validation(self, loader):
+        """
+        Test Hyprland dependency validation using native package manager.
+
+        This test will query the actual package manager to verify that
+        Hyprland's dependencies are correctly defined.
+        """
+        try:
+            from tools.package_dependency_checker import PackageDependencyTranspiler
+
+            # Skip if no supported package manager is available
+            try:
+                transpiler = PackageDependencyTranspiler()
+            except RuntimeError:
+                pytest.skip("No supported package manager found")
+
+            # Load Hyprland packages from our definition
+            packages = loader.load_wm("hyprland")
+            assert "hyprland" in packages, "Hyprland not in package list"
+
+            # Check that Hyprland package exists in repos
+            result = transpiler.check_package("hyprland")
+
+            # The package should be found in repositories
+            assert result.found, f"Hyprland not found in {result.distro} repositories"
+
+            # If we're on a system where Hyprland is available, verify it has dependencies
+            if result.found and len(result.dependencies) > 0:
+                # Hyprland should have Wayland-related dependencies
+                dep_names = [dep.name for dep in result.dependencies]
+                has_wayland_deps = any(
+                    'wayland' in dep.lower() or 'wlroots' in dep.lower()
+                    for dep in dep_names
+                )
+                assert has_wayland_deps, f"Hyprland missing Wayland dependencies on {result.distro}"
+
+        except ImportError as e:
+            pytest.skip(f"Dependency checker not available: {e}")
+
+    @pytest.mark.skipif(
+        not Path('/usr/bin/dnf').exists() and not Path('/usr/bin/pacman').exists(),
+        reason="Requires dnf or pacman to be installed"
+    )
+    def test_sway_dependencies_validation(self, loader):
+        """
+        Test Sway dependency validation using native package manager.
+        """
+        try:
+            from tools.package_dependency_checker import PackageDependencyTranspiler
+
+            try:
+                transpiler = PackageDependencyTranspiler()
+            except RuntimeError:
+                pytest.skip("No supported package manager found")
+
+            # Load Sway packages
+            packages = loader.load_wm("sway")
+            assert "sway" in packages, "Sway not in package list"
+
+            # Check Sway package
+            result = transpiler.check_package("sway")
+            assert result.found, f"Sway not found in {result.distro} repositories"
+
+        except ImportError as e:
+            pytest.skip(f"Dependency checker not available: {e}")
+
+    def test_transpiler_distro_detection(self):
+        """Test that the transpiler can detect or use forced distro."""
+        try:
+            from tools.package_dependency_checker import PackageDependencyTranspiler
+
+            # Test forced distro selection
+            for distro in ['fedora', 'arch']:
+                transpiler = PackageDependencyTranspiler(distro=distro)
+                assert transpiler.get_current_distro() == distro
+
+        except ImportError as e:
+            pytest.skip(f"Dependency checker not available: {e}")
+        except RuntimeError:
+            # Expected if package manager not available
+            pass
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
