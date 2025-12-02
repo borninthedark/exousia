@@ -116,6 +116,7 @@ theme:
   - adwaita-icon-theme
   - adwaita-gtk2-theme
   - gnome-themes-extra
+  - kvantum
   - nwg-look
 
 # Wayland utilities
