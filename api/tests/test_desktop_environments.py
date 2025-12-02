@@ -380,5 +380,89 @@ class TestPackageDependencyValidation:
             pass
 
 
+class TestDistroSpecificDependencyValidation:
+    """Mocked distro-specific validation covering multiple package managers."""
+
+    @pytest.fixture
+    def loader(self):
+        packages_dir = project_root / "packages"
+        return PackageLoader(packages_dir)
+
+    def test_debian_checker_marks_missing_dependency(self, monkeypatch, loader):
+        from tools.package_dependency_checker import PackageDependency, DebianAptChecker
+
+        checker = DebianAptChecker()
+
+        def fake_get_package_info(name):
+            if name == "sway":
+                return PackageDependency(name="sway", dependencies=["wlroots"], installed=True, distro="debian")
+            if name == "wlroots":
+                return PackageDependency(name="wlroots", dependencies=[], installed=False, distro="debian")
+            return None
+
+        monkeypatch.setattr(checker, "get_package_info", fake_get_package_info)
+
+        assert "sway" in loader.load_wm("sway")
+        result = checker.check_dependencies_installed("sway")
+
+        assert result.distro == "debian"
+        assert result.missing_deps == ["wlroots"]
+
+    def test_opensuse_checker_validates_kde_group(self, monkeypatch, loader):
+        from tools.package_dependency_checker import PackageDependency, OpenSUSEZypperChecker
+
+        checker = OpenSUSEZypperChecker()
+
+        def fake_get_package_info(name):
+            if name == "plasma-desktop":
+                return PackageDependency(
+                    name="plasma-desktop",
+                    dependencies=["plasma-workspace"],
+                    installed=True,
+                    distro="opensuse",
+                )
+            if name == "plasma-workspace":
+                return PackageDependency(name="plasma-workspace", dependencies=[], installed=True, distro="opensuse")
+            return None
+
+        monkeypatch.setattr(checker, "get_package_info", fake_get_package_info)
+
+        kde_packages = loader.load_de("kde")
+        assert any("plasma" in pkg for pkg in kde_packages)
+        result = checker.check_dependencies_installed("plasma-desktop")
+
+        assert result.found is True
+        assert result.missing_deps == []
+        assert result.dependencies[0].name == "plasma-workspace"
+
+    def test_gentoo_checker_captures_nested_dependencies(self, monkeypatch, loader):
+        from tools.package_dependency_checker import PackageDependency, GentooPortageChecker
+
+        checker = GentooPortageChecker()
+
+        def fake_get_package_info(name):
+            if name == "hyprland":
+                return PackageDependency(
+                    name="hyprland",
+                    dependencies=["wayland"],
+                    installed=True,
+                    distro="gentoo",
+                )
+            if name == "wayland":
+                return PackageDependency(name="wayland", dependencies=[], installed=False, distro="gentoo")
+            return None
+
+        monkeypatch.setattr(checker, "get_package_info", fake_get_package_info)
+
+        hyprland_packages = loader.load_wm("hyprland")
+        assert "hyprland" in hyprland_packages
+
+        result = checker.check_dependencies_installed("hyprland")
+
+        assert result.found is True
+        assert "wayland" in result.missing_deps
+        assert any(dep.name == "wayland" for dep in result.dependencies)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
