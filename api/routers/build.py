@@ -8,6 +8,7 @@ Endpoints for triggering builds and tracking build status.
 import asyncio
 import logging
 from datetime import datetime
+from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import func, select
@@ -27,6 +28,20 @@ from ..auth import current_active_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(current_active_user)])
+
+
+def _validate_definition_filename(definition_filename: str) -> str:
+    """Ensure a provided definition filename cannot escape allowed directories."""
+
+    path = Path(definition_filename)
+
+    if path.is_absolute() or any(part == ".." for part in path.parts):
+        raise HTTPException(status_code=400, detail="Invalid definition filename")
+
+    if path.parent != Path("."):
+        raise HTTPException(status_code=400, detail="Invalid definition filename")
+
+    return path.name
 
 
 def apply_desktop_override(
@@ -183,13 +198,8 @@ async def trigger_build(
         enable_plymouth = config.enable_plymouth
     elif request.definition_filename:
         # Load YAML from yaml-definitions directory
-        from pathlib import Path
-
-        # Security: prevent directory traversal
-        if '..' in request.definition_filename or '/' in request.definition_filename:
-            raise HTTPException(status_code=400, detail="Invalid definition filename")
-
-        definition_path = settings.YAML_DEFINITIONS_DIR / request.definition_filename
+        sanitized_filename = _validate_definition_filename(request.definition_filename)
+        definition_path = settings.YAML_DEFINITIONS_DIR / sanitized_filename
 
         if not definition_path.exists():
             raise HTTPException(

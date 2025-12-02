@@ -48,6 +48,43 @@ class YamlSelectorService:
     def __init__(self):
         self.definitions_dir = settings.YAML_DEFINITIONS_DIR
 
+    @staticmethod
+    def _is_traversal(path: Path) -> bool:
+        return path.is_absolute() or any(part == ".." for part in path.parts)
+
+    def _is_allowed_path(self, path: Path) -> bool:
+        allowed_bases = {
+            self.definitions_dir.resolve(),
+            settings.REPO_ROOT.resolve(),
+        }
+        return any(path.resolve().is_relative_to(base) for base in allowed_bases)
+
+    def _resolve_definition_path(self, definition_filename: str) -> Path:
+        """Resolve a YAML definition path and ensure it stays within trusted roots."""
+
+        filename_path = Path(definition_filename)
+
+        if self._is_traversal(filename_path):
+            raise ValueError("Path traversal detected in definition filename")
+
+        candidate_paths = [
+            (self.definitions_dir / filename_path).resolve(),
+            (settings.REPO_ROOT / filename_path).resolve(),
+        ]
+
+        allowed_candidates = [c for c in candidate_paths if self._is_allowed_path(c)]
+
+        if not allowed_candidates:
+            raise ValueError("Definition path escapes allowed directories")
+
+        for candidate in allowed_candidates:
+            if candidate.exists():
+                return candidate
+
+        raise FileNotFoundError(
+            f"YAML definition not found: {definition_filename}"
+        )
+
     def select_definition(
         self,
         os: Optional[str] = None,
@@ -112,11 +149,10 @@ class YamlSelectorService:
                 return distro_def
 
         # Default fallback to adnyeus.yml at project root
-        # First check for adnyeus.yml in parent directory (project root)
-        project_root = self.definitions_dir.parent
+        project_root = settings.REPO_ROOT
         adnyeus_default = project_root / "adnyeus.yml"
         if adnyeus_default.exists():
-            return "../adnyeus.yml"
+            return "adnyeus.yml"
 
         # Fallback to sway-bootc.yml in definitions dir
         default_def = "sway-bootc.yml"
@@ -146,10 +182,7 @@ class YamlSelectorService:
         Returns:
             Customized YAML content as string
         """
-        definition_path = self.definitions_dir / definition_filename
-
-        if not definition_path.exists():
-            raise FileNotFoundError(f"YAML definition not found: {definition_filename}")
+        definition_path = self._resolve_definition_path(definition_filename)
 
         # Load YAML
         with open(definition_path, 'r') as f:

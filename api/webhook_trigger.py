@@ -8,6 +8,7 @@ import sys
 import base64
 import json
 import argparse
+from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -123,11 +124,19 @@ def trigger_build(
             yaml_filename = yaml
 
             # Only auto-prepend yaml-definitions/ if it's a simple filename (no path separators)
-            # This allows any path to be used, not just yaml-definitions/
             if '/' not in yaml_filename and yaml_filename != 'adnyeus.yml':
                 yaml_filename = f'yaml-definitions/{yaml_filename}'
 
-            yaml_config = yaml_filename
+            yaml_path = Path(yaml_filename)
+
+            if yaml_path.is_absolute() or any(part == ".." for part in yaml_path.parts):
+                raise ValueError("YAML config path must be relative and cannot traverse directories")
+
+            allowed_roots = {Path("yaml-definitions"), Path("custom-configs")}
+            if len(yaml_path.parts) > 1 and yaml_path.parts[0] not in {root.parts[0] for root in allowed_roots}:
+                raise ValueError("YAML config path must stay within allowed directories (yaml-definitions/, custom-configs/)")
+
+            yaml_config = yaml_path.as_posix()
     else:
         # Default to adnyeus.yml if nothing provided
         yaml_config = 'adnyeus.yml'
