@@ -285,6 +285,37 @@ The workflow automatically uses the correct configuration based on:
 - `.fedora-version` file (automated builds)
 - Default values (fallback)
 
+### GitHub Actions examples
+
+Add validation to your pipeline by calling the helper scripts directly. This example runs the package validator against the generated configuration inside a container build job:
+
+```yaml
+jobs:
+  build-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Validate package set
+        run: |
+          python3 tools/validate_installed_packages.py \\
+            --yaml adnyeus.yml \\
+            --image-type fedora-bootc \\
+            --json
+      - name: Build image
+        run: |
+          python3 tools/yaml-to-containerfile.py --config adnyeus.yml --output Containerfile
+          buildah build -f Containerfile -t exousia:ci .
+```
+
+Containerized workflows can also call the validator inside a build container before publishing artifacts to catch distro mismatches earlier in the pipeline.
+
 ## Development Workflow
 
 ### Local Testing
