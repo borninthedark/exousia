@@ -21,7 +21,8 @@ from ..models import (
 )
 from ..services.github_service import GitHubService
 from ..services.transpiler_service import TranspilerService
-from ..config import settings
+from ..services.yaml_selector_service import YamlSelectorService
+from ..config import get_github_token, settings
 from ..auth import current_active_user
 
 logger = logging.getLogger(__name__)
@@ -82,7 +83,7 @@ async def poll_build_status(build_id: int, workflow_run_id: int, max_polls: int 
 
     logger.info(f"Starting status polling for build {build_id}, workflow {workflow_run_id}")
 
-    github = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
+    github = GitHubService(get_github_token(settings), settings.GITHUB_REPO)
     poll_count = 0
 
     while poll_count < max_polls:
@@ -157,15 +158,16 @@ async def trigger_build(
     - A saved configuration (config_id)
     - Ad-hoc YAML content (yaml_content)
     - A yaml-definition file (definition_filename)
+    - Auto-selected based on OS/DE/WM inputs
 
     The build is triggered directly via GitHub API and a background task
     polls for status updates.
     """
     yaml_content = None
     config_id = request.config_id
-    yaml_config_file = None  # For GitHub workflow input
+    yaml_selector = YamlSelectorService()
 
-    # Get YAML content from config, definition file, or request
+    # Get YAML content from config, definition file, request, or auto-select
     if config_id:
         result = await db.execute(
             select(ConfigModel).where(ConfigModel.id == config_id)
@@ -196,16 +198,20 @@ async def trigger_build(
             )
 
         try:
-            with open(definition_path, 'r') as f:
-                yaml_content = f.read()
+            # Load and customize the YAML
+            yaml_content = yaml_selector.load_and_customize_yaml(
+                definition_filename=request.definition_filename,
+                desktop_environment=request.desktop_environment,
+                window_manager=request.window_manager,
+                distro_version=request.fedora_version,
+                enable_plymouth=request.enable_plymouth,
+            )
         except Exception as e:
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to read definition file: {str(e)}"
             ) from e
 
-        # Use the filename for GitHub workflow
-        yaml_config_file = f"yaml-definitions/{request.definition_filename}"
         image_type = request.image_type.value
         fedora_version = request.fedora_version
         enable_plymouth = request.enable_plymouth
@@ -215,10 +221,55 @@ async def trigger_build(
         fedora_version = request.fedora_version
         enable_plymouth = request.enable_plymouth
     else:
-        raise HTTPException(
-            status_code=400,
-            detail="Either config_id, yaml_content, or definition_filename must be provided"
+        if not (request.os or request.desktop_environment or request.window_manager):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "config_id, yaml_content, or definition_filename must be provided"
+                ),
+            )
+
+        # Auto-select YAML definition based on OS/DE/WM inputs
+        logger.info(
+            f"Auto-selecting YAML definition: os={request.os}, "
+            f"image_type={request.image_type}, de={request.desktop_environment}, "
+            f"wm={request.window_manager}"
         )
+
+        selected_filename = yaml_selector.select_definition(
+            os=request.os,
+            image_type=request.image_type.value,
+            desktop_environment=request.desktop_environment,
+            window_manager=request.window_manager,
+        )
+
+        if not selected_filename:
+            raise HTTPException(
+                status_code=400,
+                detail="Could not auto-select YAML definition. Please provide config_id, "
+                       "yaml_content, or definition_filename explicitly."
+            )
+
+        logger.info(f"Auto-selected YAML definition: {selected_filename}")
+
+        try:
+            # Load and customize the auto-selected YAML
+            yaml_content = yaml_selector.load_and_customize_yaml(
+                definition_filename=selected_filename,
+                desktop_environment=request.desktop_environment,
+                window_manager=request.window_manager,
+                distro_version=request.fedora_version,
+                enable_plymouth=request.enable_plymouth,
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to load auto-selected definition: {str(e)}"
+            ) from e
+
+        image_type = request.image_type.value
+        fedora_version = request.fedora_version
+        enable_plymouth = request.enable_plymouth
 
     yaml_content = apply_desktop_override(
         yaml_content=yaml_content,
@@ -252,29 +303,26 @@ async def trigger_build(
 
     # Trigger GitHub workflow directly
     try:
-        if not settings.GITHUB_TOKEN:
+        token = get_github_token(settings)
+
+        if not token:
             raise HTTPException(
                 status_code=503,
-                detail="GitHub token not configured. Set GITHUB_TOKEN environment variable."
+                detail="GitHub token not configured. Set GITHUB_TOKEN environment variable.",
             )
 
-        github = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
-
-        # Build workflow inputs
+        github = GitHubService(token, settings.GITHUB_REPO)
         workflow_inputs = {
             "image_type": image_type,
             "distro_version": fedora_version,
-            "enable_plymouth": str(enable_plymouth).lower()
+            "enable_plymouth": str(enable_plymouth).lower(),
+            "yaml_content": yaml_content
         }
 
         if request.window_manager:
             workflow_inputs["window_manager"] = request.window_manager
         if request.desktop_environment:
             workflow_inputs["desktop_environment"] = request.desktop_environment
-
-        # Include yaml_config_file if using a definition file
-        if yaml_config_file:
-            workflow_inputs["yaml_config_file"] = yaml_config_file
 
         logger.info(
             f"Triggering GitHub workflow for build {build.id}: "
@@ -345,9 +393,11 @@ async def get_build_status(build_id: int, db: AsyncSession = Depends(get_db)):
     conclusion = None
     logs_url = None
 
-    if build.workflow_run_id and settings.GITHUB_TOKEN:
+    token = get_github_token(settings)
+
+    if build.workflow_run_id and token:
         try:
-            github_service = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
+            github_service = GitHubService(token, settings.GITHUB_REPO)
             workflow_run = await github_service.get_workflow_run(build.workflow_run_id)
 
             workflow_status = workflow_run.status
@@ -447,9 +497,11 @@ async def cancel_build(build_id: int, db: AsyncSession = Depends(get_db)):
         )
 
     # Cancel GitHub workflow if available
-    if build.workflow_run_id and settings.GITHUB_TOKEN:
+    token = get_github_token(settings)
+
+    if build.workflow_run_id and token:
         try:
-            github_service = GitHubService(settings.GITHUB_TOKEN, settings.GITHUB_REPO)
+            github_service = GitHubService(token, settings.GITHUB_REPO)
             await github_service.cancel_workflow_run(build.workflow_run_id)
         except Exception as e:
             raise HTTPException(

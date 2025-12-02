@@ -18,7 +18,13 @@ else
 fi
 
 README_FILE="${REPO_ROOT}/README.md"
-FEDORA_VERSION_FILE="${REPO_ROOT}/.fedora-version"
+VERSION_FILE="${REPO_ROOT}/.fedora-version"
+
+OS_NAME="Linux"
+OS_LOGO="linux"
+OS_BADGE_COLOR="0A74DA"
+OS_VERSION=""
+IMAGE_TYPE=""
 
 # Color codes for output (disabled in CI)
 if [[ "${CI:-false}" == "true" ]]; then
@@ -54,19 +60,86 @@ extract_config() {
     print_info "Repository root: $REPO_ROOT"
     print_info "Skipping Containerfile lookup; build pipeline already verifies definitions"
 
+    local base_image=""
     if [[ -f "${REPO_ROOT}/exousia.yml" ]]; then
         print_info "Found image definition blueprint: ${REPO_ROOT}/exousia.yml"
+        base_image=$(awk -F: '/^[[:space:]]*base-image:/ && $0 !~ /^[[:space:]]*#/ {gsub(/#.*/, "", $2); gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}' "${REPO_ROOT}/exousia.yml")
     else
         print_warning "exousia.yml not found; relying on pipeline inputs"
     fi
-    
-    # Read current configuration from .fedora-version if available
-    if [[ -f "$FEDORA_VERSION_FILE" ]] && [[ -s "$FEDORA_VERSION_FILE" ]]; then
+
+    # Detect OS metadata from the blueprint or base image
+    if [[ -n "$base_image" ]]; then
+        local base_lower
+        base_lower="${base_image,,}"
+
+        if [[ "$base_lower" == *"fedora"* ]]; then
+            OS_NAME="Fedora"
+            OS_LOGO="fedora"
+            OS_BADGE_COLOR="0A74DA"
+        elif [[ "$base_lower" == *"ubuntu"* ]]; then
+            OS_NAME="Ubuntu"
+            OS_LOGO="ubuntu"
+            OS_BADGE_COLOR="E95420"
+        elif [[ "$base_lower" == *"debian"* ]]; then
+            OS_NAME="Debian"
+            OS_LOGO="debian"
+            OS_BADGE_COLOR="A81D33"
+        elif [[ "$base_lower" == *"arch"* ]]; then
+            OS_NAME="Arch Linux"
+            OS_LOGO="arch-linux"
+            OS_BADGE_COLOR="1793D1"
+        elif [[ "$base_lower" == *"rocky"* ]]; then
+            OS_NAME="Rocky Linux"
+            OS_LOGO="rockylinux"
+            OS_BADGE_COLOR="10B981"
+        elif [[ "$base_lower" == *"almalinux"* ]]; then
+            OS_NAME="AlmaLinux"
+            OS_LOGO="almalinux"
+            OS_BADGE_COLOR="0A76B8"
+        fi
+
+        if [[ "$OS_NAME" == "Linux" ]]; then
+            local repo_component
+            repo_component="${base_image##*/}"
+            repo_component="${repo_component%%:*}"
+            if [[ -n "$repo_component" ]]; then
+                OS_NAME="${repo_component^}"
+            fi
+        fi
+    fi
+
+    # Collect blueprint defaults so the badge updates whenever the OS or desktop/window manager change
+    local blueprint_version=""
+    if [[ -f "${REPO_ROOT}/exousia.yml" ]]; then
+        blueprint_version=$(awk -F: '/^[[:space:]]*image-version:/ && $0 !~ /^[[:space:]]*#/ {gsub(/#.*/, "", $2); gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}' "${REPO_ROOT}/exousia.yml")
+
+        if [[ -z "$blueprint_version" ]]; then
+            blueprint_version=$(python3 - "$base_image" <<'PY'
+import sys
+image = sys.argv[1]
+if not image:
+    sys.exit()
+reference = image.split('@', 1)[0]
+if ':' in reference:
+    print(reference.rsplit(':', 1)[1])
+PY
+)
+        fi
+
+        if [[ -n "$blueprint_version" ]]; then
+            OS_VERSION="$blueprint_version"
+            print_info "Blueprint version detected: ${OS_NAME} ${OS_VERSION}"
+        fi
+    fi
+
+    # Read current configuration from .fedora-version if available (takes precedence when present)
+    if [[ -f "$VERSION_FILE" ]] && [[ -s "$VERSION_FILE" ]]; then
         local version_info
-        version_info=$(cat "$FEDORA_VERSION_FILE")
-        FEDORA_VERSION=$(echo "$version_info" | cut -d: -f1)
+        version_info=$(cat "$VERSION_FILE")
+        OS_VERSION=$(echo "$version_info" | cut -d: -f1)
         IMAGE_TYPE=$(echo "$version_info" | cut -d: -f2)
-        print_info "Configuration from .fedora-version: Fedora $FEDORA_VERSION with $IMAGE_TYPE"
+        print_info "Configuration from .fedora-version: ${OS_NAME} $OS_VERSION with $IMAGE_TYPE"
     fi
     
     # Set display name based on IMAGE_TYPE if still unset
@@ -84,20 +157,30 @@ extract_config() {
     fi
 
     # Ensure Fedora version has a value even when no Containerfile exists
-    if [[ -z "${FEDORA_VERSION:-}" ]]; then
-        FEDORA_VERSION="unknown"
+    if [[ -z "${OS_VERSION:-}" ]]; then
+        OS_VERSION="unknown"
     fi
     
-    # Plymouth support detection
-    PLYMOUTH_SUPPORT="✅ Available (custom themes supported on all base images)"
-    PLYMOUTH_NOTE="Custom Plymouth themes from \`custom-configs/plymouth/\` are applied for both \`fedora-bootc\` and \`fedora-sway-atomic\` base image types."
+    # Determine desktop environment or window manager from the blueprint
+    WM_DE_LABEL="Unknown"
+    if [[ -f "${REPO_ROOT}/exousia.yml" ]]; then
+        local desktop_env
+        local window_manager
+
+        desktop_env=$(awk -F: '/^[[:space:]]*desktop_environment:/ && $0 !~ /^[[:space:]]*#/ {gsub(/#.*/, "", $2); gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}' "${REPO_ROOT}/exousia.yml")
+        window_manager=$(awk -F: '/^[[:space:]]*window_manager:/ && $0 !~ /^[[:space:]]*#/ {gsub(/#.*/, "", $2); gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}' "${REPO_ROOT}/exousia.yml")
+
+        if [[ -n "${desktop_env}" ]]; then
+            WM_DE_LABEL="${desktop_env^}"
+        elif [[ -n "${window_manager}" ]]; then
+            WM_DE_LABEL="${window_manager^}"
+        fi
+    fi
 
     # Greetd display manager support detection
     if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
-        GREETD_SUPPORT="✅ Available"
         GREETD_NOTE="greetd.service is enabled and custom configuration is available in \`custom-configs/greetd/\`."
     else
-        GREETD_SUPPORT="❌ Not available"
         GREETD_NOTE="The \`fedora-sway-atomic\` image uses SDDM (Simple Desktop Display Manager) by default. Switch to \`fedora-bootc\` if you need greetd."
     fi
 
@@ -123,6 +206,15 @@ extract_config() {
     GITHUB_OWNER=$(echo "$GITHUB_REPO" | cut -d'/' -f1)
     GHCR_IMAGE="ghcr.io/${GITHUB_OWNER}/exousia"
     DOCKER_IMAGE="docker.io/${GITHUB_OWNER}/exousia"
+
+    # Build badge text derived from last successful build metadata
+    local badge_text="${OS_NAME} ${OS_VERSION} • ${WM_DE_LABEL}"
+    BUILD_BADGE_TEXT_URI=$(python3 - "${badge_text}" <<'PY'
+import sys, urllib.parse
+text = sys.argv[1]
+print(urllib.parse.quote(text))
+PY
+)
 }
 
 # Generate the README content
@@ -131,6 +223,7 @@ generate_readme() {
 # Exousia: Declarative Bootc Builder
 
 [![Spiritual Pressure](https://img.shields.io/github/actions/workflow/status/${GITHUB_REPO}/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Spiritual%20Pressure&color=00A4EF)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml)
+[![Last Build: ${OS_NAME} ${OS_VERSION} • ${WM_DE_LABEL}](https://img.shields.io/badge/Last%20Build-${BUILD_BADGE_TEXT_URI}-${OS_BADGE_COLOR}?style=for-the-badge&logo=${OS_LOGO}&logoColor=white)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 <img src=".github/quincy-pentacle.svg" alt="Custom Quincy Pentacle" width="28" />
 
 This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs. Bleach and its concept of Spiritual Pressure are the creations of Tite Kubo; this project uses the motif solely as a playful status indicator.
@@ -142,18 +235,6 @@ Exousia (ἐξουσία) is Greek for "authority" and "power."
 This is a personal project for building my own DevSecOps-hardened laptop OS using the bootc project. Still under development, but the goal is full control and transparency over packages, settings, and behaviors.
 
 The build pipeline supports both bootc and atomic base images, each with their own defaults and configurations. Automated tests help ensure things actually work as development progresses.
-
-
-## Current Configuration
-
-- **Base Image:** \`${IMAGE_TYPE_DISPLAY}\`
-- **Image Type:** \`${IMAGE_TYPE}\`
-- **Fedora Version:** ${FEDORA_VERSION}
-- **Plymouth Customization:** ${PLYMOUTH_SUPPORT}
-- **Greetd Display Manager:** ${GREETD_SUPPORT}
-- **Last Updated:** ${BUILD_DATE}
-
-> **Note:** ${PLYMOUTH_NOTE}
 
 ## CI/CD Workflow: Fedora Bootc DevSec CI
 
@@ -630,7 +711,7 @@ main() {
     extract_config
 
     print_info "Configuration detected:"
-    echo "  - Fedora Version: $FEDORA_VERSION"
+    echo "  - OS: ${OS_NAME} ${OS_VERSION}"
     echo "  - Image Type: $IMAGE_TYPE_DISPLAY"
     echo "  - GitHub Repo: $GITHUB_REPO"
     echo "  - GHCR Image: $GHCR_IMAGE"
