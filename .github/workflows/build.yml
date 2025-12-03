@@ -52,13 +52,18 @@ on:
         required: true
         type: boolean
         default: true
+      os:
+        description: 'Operating system (auto-detected from image_type if not specified)'
+        required: false
+        type: string
+        default: ''
       window_manager:
-        description: 'Optional window manager override for Fedora bootc'
+        description: 'Window manager (e.g., sway, hyprland) - can be combined with desktop_environment'
         required: false
         type: string
         default: ''
       desktop_environment:
-        description: 'Optional desktop environment override for Fedora bootc'
+        description: 'Desktop environment (e.g., kde, mate, lxqt) - can be combined with window_manager'
         required: false
         type: string
         default: ''
@@ -365,9 +370,10 @@ jobs:
       - name: Detect and resolve distro configuration
         id: config
         env:
-          INPUT_IMAGE_TYPE: ${{ github.event.inputs.image_type || github.event.client_payload.image_type || 'current' }}
-          INPUT_DISTRO_VERSION: ${{ github.event.inputs.distro_version || github.event.client_payload.distro_version || 'current' }}
+          INPUT_IMAGE_TYPE: ${{ github.event.inputs.image_type || github.event.client_payload.image_type || 'fedora-sway-atomic' }}
+          INPUT_DISTRO_VERSION: ${{ github.event.inputs.distro_version || github.event.client_payload.distro_version || '43' }}
           INPUT_ENABLE_PLYMOUTH: ${{ github.event.inputs.enable_plymouth || github.event.client_payload.enable_plymouth || 'true' }}
+          INPUT_OS: ${{ github.event.inputs.os || github.event.client_payload.os || '' }}
           INPUT_WINDOW_MANAGER: ${{ github.event.inputs.window_manager || github.event.client_payload.window_manager || '' }}
           INPUT_DESKTOP_ENVIRONMENT: ${{ github.event.inputs.desktop_environment || github.event.client_payload.desktop_environment || '' }}
           INPUT_YAML_CONTENT: ${{ github.event.inputs.yaml_content || github.event.client_payload.yaml_content || '' }}
@@ -908,14 +914,14 @@ jobs:
           chmod +x ./custom-scripts/generate-readme
           ./custom-scripts/generate-readme
 
-      - name: Report README and version status
+      - name: Report README status
         run: |
-          if [[ -n $(git status --porcelain README.md .fedora-version) ]]; then
-            echo "README.md or .fedora-version were regenerated."
-            echo "Diff summary:" && git diff --stat README.md .fedora-version
+          if [[ -n $(git status --porcelain README.md) ]]; then
+            echo "README.md was regenerated."
+            echo "Diff summary:" && git diff --stat README.md
             echo "No automated commit or push is performed."
           else
-            echo "No README or version changes detected."
+            echo "No README changes detected."
           fi
 
       - name: Final summary

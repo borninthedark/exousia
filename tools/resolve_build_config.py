@@ -6,52 +6,101 @@ from pathlib import Path
 
 import yaml
 
+# Add parent directory to path to import from api package
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+try:
+    from api.services.yaml_selector_service import YamlSelectorService
+    from api.config import settings
+    YAML_SELECTOR_AVAILABLE = True
+except ImportError:
+    YAML_SELECTOR_AVAILABLE = False
+    print("::warning::YamlSelectorService not available, using fallback logic")
+
 
 DEFAULT_VERSION = "43"
 DEFAULT_IMAGE_TYPE = "fedora-sway-atomic"
 
 
-def read_fedora_version_file(path: Path) -> tuple[str, str]:
-    if not path.exists():
-        print(f"Using defaults: {DEFAULT_VERSION}:{DEFAULT_IMAGE_TYPE}")
-        return DEFAULT_VERSION, DEFAULT_IMAGE_TYPE
+def resolve_yaml_config(
+    input_yaml_config: str,
+    target_image_type: str,
+    os_name: str = "",
+    window_manager: str = "",
+    desktop_environment: str = ""
+) -> Path:
+    """
+    Resolve YAML configuration path using YamlSelectorService.
 
-    content = path.read_text().strip()
-    if not content:
-        print(f"Using defaults: {DEFAULT_VERSION}:{DEFAULT_IMAGE_TYPE}")
-        return DEFAULT_VERSION, DEFAULT_IMAGE_TYPE
+    Args:
+        input_yaml_config: Explicit path or "auto" for auto-selection
+        target_image_type: Image type (e.g., "fedora-bootc", "fedora-atomic")
+        os_name: OS name for selection (e.g., "fedora", "arch")
+        window_manager: Window manager for selection (e.g., "sway", "hyprland")
+        desktop_environment: Desktop environment for selection (e.g., "kde", "mate")
 
-    parts = content.split(":", 1)
-    if len(parts) == 2:
-        version, image_type = parts
-        print(f"Detected from .fedora-version: {version}:{image_type}")
-        return version, image_type
+    Returns:
+        Resolved Path to YAML config file
+    """
+    if input_yaml_config != "auto":
+        yaml_config = Path(input_yaml_config)
+        if not yaml_config.exists():
+            print(f"::error::YAML config file not found: {yaml_config}")
+            sys.exit(1)
+        return yaml_config.resolve()
 
-    print("::warning::.fedora-version is malformed; falling back to defaults")
-    return DEFAULT_VERSION, DEFAULT_IMAGE_TYPE
+    # Auto-selection mode
+    if YAML_SELECTOR_AVAILABLE:
+        try:
+            selector = YamlSelectorService()
 
+            # Use YamlSelectorService to intelligently select definition
+            selected_filename = selector.select_definition(
+                os=os_name,
+                image_type=target_image_type,
+                desktop_environment=desktop_environment,
+                window_manager=window_manager,
+            )
 
-def resolve_yaml_config(input_yaml_config: str, target_image_type: str) -> Path:
-    if input_yaml_config == "auto":
-        candidate = Path(f"yaml-definitions/{target_image_type}.yml")
-        if candidate.exists():
-            print(f"Auto-detected config: {candidate}")
-            return candidate.resolve()
+            if selected_filename:
+                # Resolve the path (could be in yaml-definitions/ or repo root)
+                selected_path = selector._resolve_definition_path(selected_filename)
+                print(f"Auto-selected config: {selected_path} (from {selected_filename})")
+                return selected_path
 
-        default_config = Path("adnyeus.yml")
-        if default_config.exists():
-            print(f"Using default config: {default_config}")
-            return default_config.resolve()
+            print("::warning::YamlSelectorService could not select a definition")
+        except Exception as e:
+            print(f"::warning::YamlSelectorService failed: {e}")
 
-        print(f"::error::No config file found for {target_image_type}")
-        sys.exit(1)
+    # Fallback logic if YamlSelectorService unavailable or failed
+    candidate = Path(f"yaml-definitions/{target_image_type}.yml")
+    if candidate.exists():
+        print(f"Fallback: using {candidate}")
+        return candidate.resolve()
 
-    yaml_config = Path(input_yaml_config)
-    if not yaml_config.exists():
-        print(f"::error::YAML config file not found: {yaml_config}")
-        sys.exit(1)
+    # Check for common definitions based on image type
+    fallback_map = {
+        "fedora-bootc": "sway-bootc.yml",
+        "fedora-sway-atomic": "sway-atomic.yml",
+        "fedora-atomic": "sway-atomic.yml",
+        "fedora-kinoite": "fedora-kinoite.yml",
+    }
 
-    return yaml_config.resolve()
+    if target_image_type in fallback_map:
+        fallback_name = fallback_map[target_image_type]
+        fallback_path = Path("yaml-definitions") / fallback_name
+        if fallback_path.exists():
+            print(f"Fallback: using {fallback_path}")
+            return fallback_path.resolve()
+
+    # Last resort: adnyeus.yml
+    default_config = Path("adnyeus.yml")
+    if default_config.exists():
+        print(f"::warning::Using default config: {default_config}")
+        return default_config.resolve()
+
+    print(f"::error::No config file found for {target_image_type}")
+    sys.exit(1)
 
 
 def apply_fedora_overrides(
@@ -74,15 +123,14 @@ def apply_fedora_overrides(
     elif base_image is None:
         config["base-image"] = f"quay.io/fedora/fedora-bootc:{target_version}"
 
-    if target_image_type == "fedora-bootc":
+    # Desktop customization - supports combined DE+WM
+    if window_manager or desktop_environment:
         desktop = config.get("desktop") or {}
 
         if window_manager:
             desktop["window_manager"] = window_manager
-            desktop.pop("desktop_environment", None)
-        elif desktop_environment:
+        if desktop_environment:
             desktop["desktop_environment"] = desktop_environment
-            desktop.pop("window_manager", None)
 
         config["desktop"] = desktop
 
@@ -113,31 +161,42 @@ def render_outputs(
 def main() -> None:
     print("::group::Configuration Detection")
 
-    input_image_type = os.environ.get("INPUT_IMAGE_TYPE", "current")
-    input_distro_version = os.environ.get("INPUT_DISTRO_VERSION", "current")
+    input_image_type = os.environ.get("INPUT_IMAGE_TYPE", DEFAULT_IMAGE_TYPE)
+    input_distro_version = os.environ.get("INPUT_DISTRO_VERSION", DEFAULT_VERSION)
     input_enable_plymouth = os.environ.get("INPUT_ENABLE_PLYMOUTH", "true").lower()
     input_window_manager = os.environ.get("INPUT_WINDOW_MANAGER", "")
     input_desktop_environment = os.environ.get("INPUT_DESKTOP_ENVIRONMENT", "")
+    input_os = os.environ.get("INPUT_OS", "")
     input_yaml_config = os.environ.get("INPUT_YAML_CONFIG", "auto")
 
     print(f"Input image type: {input_image_type}")
     print(f"Input distro version: {input_distro_version}")
+    print(f"Input OS: {input_os}")
     print(f"Input Plymouth: {input_enable_plymouth}")
     print(f"Input window manager: {input_window_manager}")
     print(f"Input desktop environment: {input_desktop_environment}")
     print(f"Input YAML config: {input_yaml_config}")
 
-    fedora_version_file = Path(".fedora-version")
-    current_version, current_image_type = read_fedora_version_file(fedora_version_file)
-
-    target_version = input_distro_version if input_distro_version != "current" else current_version
-    target_image_type = input_image_type if input_image_type != "current" else current_image_type
+    target_version = input_distro_version
+    target_image_type = input_image_type
     enable_plymouth = input_enable_plymouth == "true"
+
+    # Extract OS name from image type if not explicitly provided
+    os_name = input_os
+    if not os_name and target_image_type:
+        # Extract OS from image type (e.g., "fedora-bootc" -> "fedora")
+        os_name = target_image_type.split("-")[0] if "-" in target_image_type else target_image_type
 
     print(f"Resolved target: {target_image_type} version {target_version}")
     print(f"Plymouth enabled: {enable_plymouth}")
 
-    yaml_config = resolve_yaml_config(input_yaml_config, target_image_type)
+    yaml_config = resolve_yaml_config(
+        input_yaml_config,
+        target_image_type,
+        os_name=os_name,
+        window_manager=input_window_manager,
+        desktop_environment=input_desktop_environment
+    )
 
     resolved_yaml = yaml_config
     if target_image_type.startswith("fedora-"):
@@ -172,15 +231,6 @@ def main() -> None:
 
     print(f"Generated Containerfile: {containerfile_path}")
     print("::endgroup::")
-
-    if target_image_type.startswith("fedora-"):
-        desired = f"{target_version}:{target_image_type}\n"
-        current_contents = fedora_version_file.read_text() if fedora_version_file.exists() else ""
-        if current_contents != desired:
-            fedora_version_file.write_text(desired)
-            print(f"Configuration updated to: {desired.strip()}")
-        else:
-            print("Configuration unchanged")
 
     os_family = "unknown"
     os_version = "latest"

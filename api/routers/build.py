@@ -50,14 +50,13 @@ def apply_desktop_override(
     window_manager: str | None,
     desktop_environment: str | None,
 ) -> str:
-    """Override desktop selection for Fedora bootc builds.
+    """Override desktop selection for builds.
 
-    The default adnyeus.yml is targeted at Sway; when a different DE/WM is
-    selected for fedora-bootc we regenerate the YAML content with the
-    requested value so the Containerfile reflects the caller's choice.
+    Supports both individual DE/WM selection and combined DE+WM (e.g., lxqt+sway).
+    When both are specified, both are added to the desktop configuration.
     """
 
-    if image_type != "fedora-bootc" or not (window_manager or desktop_environment):
+    if not (window_manager or desktop_environment):
         return yaml_content
 
     try:
@@ -67,12 +66,11 @@ def apply_desktop_override(
 
     desktop = config.get("desktop") or {}
 
+    # Support combined DE+WM
     if window_manager:
         desktop["window_manager"] = window_manager
-        desktop.pop("desktop_environment", None)
-    elif desktop_environment:
+    if desktop_environment:
         desktop["desktop_environment"] = desktop_environment
-        desktop.pop("window_manager", None)
 
     config["desktop"] = desktop
 

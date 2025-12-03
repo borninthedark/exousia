@@ -30,7 +30,8 @@ class YamlSelectorService:
     # Mapping of desktop environments to their preferred definitions
     DE_DEFINITIONS = {
         "kde": "fedora-kinoite.yml",
-        "mate": "fedora-mate.yml",  # TODO: Create fedora-mate.yml if needed
+        "mate": "fedora-mate.yml",
+        "lxqt": "sway-bootc.yml",  # LXQt can use bootc base, packages defined separately
     }
 
     # Mapping of window managers to their preferred definitions
@@ -197,19 +198,15 @@ class YamlSelectorService:
                 config["build"] = {}
             config["build"]["enable_plymouth"] = enable_plymouth
 
-        # Desktop customization
+        # Desktop customization - supports combined DE+WM
         if desktop_environment or window_manager:
             if "desktop" not in config:
                 config["desktop"] = {}
 
             if window_manager:
                 config["desktop"]["window_manager"] = window_manager
-                # Remove desktop_environment if setting window_manager
-                config["desktop"].pop("desktop_environment", None)
-            elif desktop_environment:
+            if desktop_environment:
                 config["desktop"]["desktop_environment"] = desktop_environment
-                # Remove window_manager if setting desktop_environment
-                config["desktop"].pop("window_manager", None)
 
         return yaml.safe_dump(config)
 

@@ -293,26 +293,6 @@ python api/webhook_trigger.py \
 
 The README will automatically update to reflect the new configuration.
 
-<details>
-<summary><b>Deprecated: Local version switcher script</b></summary>
-
-> ⚠️ **Note:** The local `fedora-version-switcher` script is deprecated in favor of the webhook API. Use the webhook method above for better automation and integration capabilities.
-
-```bash
-# Switch to Fedora 43 (deprecated)
-./custom-scripts/fedora-version-switcher 43
-
-# Switch to Fedora 42 with standard bootc base (deprecated)
-./custom-scripts/fedora-version-switcher 42 fedora-bootc
-
-# Switch to Sway Atomic desktop (deprecated)
-./custom-scripts/fedora-version-switcher 42 fedora-sway-atomic
-
-# List available options (deprecated)
-./custom-scripts/fedora-version-switcher list
-```
-</details>
-
 ### Modifying Packages
 
 Edit the package lists in `custom-pkgs/`:
@@ -376,10 +356,7 @@ The greetd display manager availability depends on your base image type:
 
 **To use greetd display manager:**
 
-1. Switch to `fedora-bootc` base image:
-   ```bash
-   ./custom-scripts/fedora-version-switcher 43 fedora-bootc
-   ```
+1. Use the webhook API or workflow dispatch to build with the fedora-bootc image type
 
 2. Customize the greetd configuration in `custom-configs/greetd/config.toml` as needed
 
