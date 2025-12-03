@@ -1,13 +1,13 @@
 # Exousia: Declarative Bootc Builder
 
-[![Spiritual Pressure](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Spiritual%20Pressure&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
+[![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
 [![Last Build: Fedora 43 • Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%E2%80%A2%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 <img src=".github/quincy-pentacle.svg" alt="Custom Quincy Pentacle" width="28" />
 
 This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs.
 
-**Note on Theming:** The "Spiritual Pressure" build status badge and Quincy pentacle imagery are inspired by *BLEACH*, the manga and anime series created by **Tite Kubo**. These thematic elements are used purely as playful project aesthetics and status indicators, with full credit and acknowledgment to the original creator.
+**Note on Theming:** The "Reiatsu" (霊圧, spiritual pressure) build status badge and Quincy pentacle imagery are inspired by *BLEACH*, the manga and anime series created by **Tite Kubo**. These thematic elements are used purely as playful project aesthetics and status indicators, with full credit and acknowledgment to the original creator.
 
 ## Highly Experimental Disclaimer
 
@@ -606,7 +606,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ### Creative Acknowledgments
 
 - **Tite Kubo** - Creator of *BLEACH* (manga and anime series)
-  - The "Spiritual Pressure" status indicator and Quincy pentacle imagery in this project are inspired by themes from BLEACH
+  - The "Reiatsu" (霊圧, spiritual pressure) status indicator and Quincy pentacle imagery in this project are inspired by themes from BLEACH
   - These elements are used respectfully as playful project aesthetics with full acknowledgment of the original creator
   - All rights to BLEACH and its associated concepts belong to Tite Kubo and respective copyright holders
   - This project is not affiliated with or endorsed by Tite Kubo, Shueisha, or Viz Media
