@@ -87,8 +87,11 @@ def test_resolve_yaml_config_prefers_matching_definition(tmp_workspace: Path, mo
     fedora_bootc = yaml_definitions / "fedora-bootc.yml"
     fedora_bootc.write_text("name: test\nmodules: []\n")
 
-    # Mock YamlSelectorService as unavailable to test fallback logic
-    monkeypatch.setattr(resolve_build_config, "YAML_SELECTOR_AVAILABLE", False)
+    class DummySelector:
+        def select_definition(self, **_kwargs):
+            return None
+
+    monkeypatch.setattr(resolve_build_config, "YamlSelectorService", lambda: DummySelector())
 
     selected = resolve_build_config.resolve_yaml_config("auto", "fedora-bootc")
 
@@ -123,8 +126,11 @@ def test_resolve_yaml_config_falls_back_to_default(tmp_workspace: Path, monkeypa
     default_yaml = tmp_workspace / "adnyeus.yml"
     default_yaml.write_text("name: default\nmodules: []\n")
 
-    # Mock YamlSelectorService as unavailable to test fallback logic
-    monkeypatch.setattr(resolve_build_config, "YAML_SELECTOR_AVAILABLE", False)
+    class DummySelector:
+        def select_definition(self, **_kwargs):
+            return None
+
+    monkeypatch.setattr(resolve_build_config, "YamlSelectorService", lambda: DummySelector())
 
     selected = resolve_build_config.resolve_yaml_config("auto", "fedora-bootc")
 
@@ -133,8 +139,11 @@ def test_resolve_yaml_config_falls_back_to_default(tmp_workspace: Path, monkeypa
 
 def test_resolve_yaml_config_errors_when_missing(tmp_workspace: Path, monkeypatch: pytest.MonkeyPatch):
     """Test that resolve_yaml_config exits with error when no config file found."""
-    # Mock YamlSelectorService as unavailable to test fallback logic
-    monkeypatch.setattr(resolve_build_config, "YAML_SELECTOR_AVAILABLE", False)
+    class DummySelector:
+        def select_definition(self, **_kwargs):
+            return None
+
+    monkeypatch.setattr(resolve_build_config, "YamlSelectorService", lambda: DummySelector())
 
     with pytest.raises(SystemExit):
         resolve_build_config.resolve_yaml_config("auto", "fedora-bootc")

@@ -10,7 +10,17 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 import yaml
 
-from ..config import settings
+try:
+    from ..config import settings
+except Exception:
+    # Provide a lightweight fallback so CLI utilities can import the selector
+    # without requiring optional runtime dependencies (e.g., pydantic_settings)
+    # that may not be installed in minimal environments.
+    class _FallbackSettings:
+        REPO_ROOT = Path(__file__).resolve().parents[2]
+        YAML_DEFINITIONS_DIR = REPO_ROOT / "yaml-definitions"
+
+    settings = _FallbackSettings()  # type: ignore[assignment]
 
 
 class YamlSelectorService:
