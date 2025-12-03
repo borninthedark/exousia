@@ -13,6 +13,158 @@ GPT-Codex embraces AI as a collaborative development partner rather than a repla
 - **Maintain Control**: Keep humans in the decision-making loop for architecture and critical logic
 - **Preserve Transparency**: Document AI contributions and maintain clear attribution
 
+## 🔴 HIGH PRIORITY: Continuous Quality Requirements
+
+**These requirements MUST be met on EVERY branch before merging, regardless of the feature or fix being implemented.**
+
+### Test Conformance (Mandatory)
+
+Every branch must ensure:
+
+#### 1. **Existing Tests Pass**
+```bash
+# Run all existing tests before starting work
+python -m pytest api/tests/ -v
+python -m pytest tools/test_*.py -v
+
+# Bats tests for shell scripts
+bats custom-tests/*.bats
+```
+
+#### 2. **New Tests for New Code**
+- **New features**: Must include unit tests and integration tests
+- **Bug fixes**: Must include regression test that would have caught the bug
+- **API changes**: Must update API tests and include examples
+- **Configuration changes**: Must validate with test cases
+
+```bash
+# Example: Adding new API endpoint
+# REQUIRED: Add tests in api/tests/test_<feature>.py
+
+# Example: Adding new YAML definition
+# REQUIRED: Add validation tests
+```
+
+#### 3. **Test Coverage Requirements**
+```bash
+# Minimum coverage thresholds
+pytest --cov=api --cov-report=term --cov-fail-under=80
+pytest --cov=tools --cov-report=term --cov-fail-under=75
+```
+
+#### 4. **Linting & Type Checks**
+```bash
+# Python linting (must pass)
+ruff check api/ tools/
+pylint api/**/*.py tools/*.py
+
+# Type checking
+mypy api/ --strict
+
+# Shell script linting
+shellcheck custom-scripts/*
+```
+
+### Admin Tasks Checklist
+
+Before opening a PR, complete this checklist:
+
+- [ ] **All tests pass** (pytest, bats, integration tests)
+- [ ] **Linting passes** (ruff, pylint, shellcheck)
+- [ ] **Type checks pass** (mypy for Python code)
+- [ ] **Documentation updated** (README, API docs, inline comments)
+- [ ] **CHANGELOG.md updated** (if applicable)
+- [ ] **API examples updated** (if API changes were made)
+- [ ] **Security scan clean** (no new vulnerabilities introduced)
+- [ ] **Performance tested** (if performance-critical code was changed)
+- [ ] **Backwards compatibility verified** (or breaking changes documented)
+
+### Documentation Requirements
+
+Every significant change requires:
+
+#### 1. **Code-Level Documentation**
+```python
+# Example: All new functions/classes need docstrings
+def new_feature(param: str) -> dict:
+    """
+    Brief description of what this does.
+
+    Args:
+        param: Description of parameter
+
+    Returns:
+        Description of return value
+
+    Raises:
+        ValueError: When param is invalid
+    """
+```
+
+#### 2. **User-Facing Documentation**
+- Update README.md if user-visible behavior changes
+- Update API documentation in `api/README.md`
+- Update webhook examples in `docs/WEBHOOK_API.md`
+- Add examples for new features
+
+#### 3. **Developer Documentation**
+- Update `tools/README.md` for new tools
+- Document new configuration options
+- Update architecture docs if structure changes
+
+### Quick Validation Script
+
+Use this before committing:
+
+```bash
+#!/bin/bash
+# .git/hooks/pre-commit or run manually
+
+echo "🔍 Running quality checks..."
+
+# 1. Run tests
+echo "📋 Running tests..."
+pytest api/tests/ -q || exit 1
+pytest tools/test_*.py -q || exit 1
+
+# 2. Linting
+echo "🔧 Running linters..."
+ruff check api/ tools/ || exit 1
+shellcheck custom-scripts/* || exit 1
+
+# 3. Type checking
+echo "📐 Type checking..."
+mypy api/ || exit 1
+
+# 4. Check for common issues
+echo "🔎 Security scan..."
+semgrep --config auto api/ || exit 1
+
+echo "✅ All quality checks passed!"
+```
+
+### AI Agent Responsibilities
+
+When using AI agents (Claude, Codex, etc.) for development:
+
+1. **Always run tests after AI-generated changes**
+2. **Review all AI-generated code for security issues**
+3. **Ensure AI-generated code has proper error handling**
+4. **Add tests for AI-generated functionality**
+5. **Update documentation for AI-generated features**
+
+### Exemptions
+
+The only valid exemptions from these requirements:
+
+- **Documentation-only changes** (README updates, typo fixes)
+- **CI/CD configuration** (workflow files only, must still be tested)
+- **Emergency hotfixes** (must be followed up with tests in next commit)
+
+All other changes require full compliance with quality requirements.
+
+---
+
 ## AI Agent Roles
 
 ### Primary Development Agents

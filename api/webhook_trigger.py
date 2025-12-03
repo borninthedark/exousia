@@ -58,6 +58,7 @@ def trigger_build(
     distro_version: str = "43",
     enable_plymouth: bool = True,
     yaml: Optional[str] = None,
+    os: Optional[str] = None,
     window_manager: Optional[str] = None,
     desktop_environment: Optional[str] = None,
     verbose: bool = False
@@ -75,9 +76,10 @@ def trigger_build(
             - Filename only (e.g., 'sway-bootc.yml') - will look in yaml-definitions/
             - Any path (e.g., 'custom/my-config.yml', 'yaml-definitions/sway-bootc.yml')
             - Full YAML content (will be base64 encoded)
-            - If None, defaults to 'adnyeus.yml'
-        window_manager: Window manager selection (e.g., 'sway', 'hyprland')
-        desktop_environment: Desktop environment selection (e.g., 'kde', 'mate')
+            - If None, auto-selected based on OS/DE/WM inputs
+        os: Operating system (e.g., 'fedora', 'arch', 'debian') for auto-selection
+        window_manager: Window manager (e.g., 'sway', 'hyprland') - can be combined with desktop_environment
+        desktop_environment: Desktop environment (e.g., 'kde', 'mate', 'lxqt') - can be combined with window_manager
         verbose: Print detailed information
 
     Returns:
@@ -104,7 +106,9 @@ def trigger_build(
         "enable_plymouth": enable_plymouth,
     }
 
-    # Add DE/WM selection if provided
+    # Add OS/DE/WM selection if provided
+    if os:
+        client_payload["os"] = os
     if window_manager:
         client_payload["window_manager"] = window_manager
     if desktop_environment:
@@ -137,9 +141,8 @@ def trigger_build(
                 raise ValueError("YAML config path must stay within allowed directories (yaml-definitions/, custom-configs/)")
 
             yaml_config = yaml_path.as_posix()
-    else:
-        # Default to adnyeus.yml if nothing provided
-        yaml_config = 'adnyeus.yml'
+    # If no YAML specified, allow auto-selection based on OS/DE/WM
+    # Don't default to adnyeus.yml - let the workflow auto-select
 
     # Add YAML content or config to payload
     if yaml_content:
@@ -284,18 +287,22 @@ Security Notes:
         )
     )
     parser.add_argument(
+        "--os",
+        help="Operating system (e.g., 'fedora', 'arch', 'debian') for auto-selection"
+    )
+    parser.add_argument(
         "--window-manager",
         "--wm",
         dest="window_manager",
         choices=['sway', 'hyprland'],
-        help="Window manager to use (e.g., 'sway', 'hyprland')"
+        help="Window manager (e.g., 'sway', 'hyprland') - can be combined with --de"
     )
     parser.add_argument(
         "--desktop-environment",
         "--de",
         dest="desktop_environment",
-        choices=['kde', 'mate'],
-        help="Desktop environment to use (e.g., 'kde', 'mate')"
+        choices=['kde', 'mate', 'lxqt'],
+        help="Desktop environment (e.g., 'kde', 'mate', 'lxqt') - can be combined with --wm"
     )
     parser.add_argument(
         "-v", "--verbose",
@@ -321,12 +328,6 @@ Security Notes:
 
     # Handle Plymouth flag
     enable_plymouth = not args.disable_plymouth if args.disable_plymouth else args.enable_plymouth
-
-    # Validate DE/WM exclusivity
-    if args.window_manager and args.desktop_environment:
-        print("Error: Cannot specify both --window-manager and --desktop-environment")
-        print("Please choose one or the other")
-        sys.exit(1)
 
     # Handle YAML parameter - could be filename or file path
     yaml_param = args.yaml
@@ -354,10 +355,12 @@ Security Notes:
     print(f"Distro Version:   {args.distro_version}")
     print(f"Plymouth:         {'Enabled' if enable_plymouth else 'Disabled'}")
 
-    if args.window_manager:
-        print(f"Window Manager:   {args.window_manager}")
+    if args.os:
+        print(f"OS:               {args.os}")
     if args.desktop_environment:
         print(f"Desktop Env:      {args.desktop_environment}")
+    if args.window_manager:
+        print(f"Window Manager:   {args.window_manager}")
 
     if yaml_param:
         if '\n' in yaml_param:
@@ -365,7 +368,7 @@ Security Notes:
         else:
             print(f"YAML Config:      {yaml_param}")
     else:
-        print("YAML Config:      adnyeus.yml (default)")
+        print("YAML Config:      auto (based on OS/DE/WM)")
 
     print("=" * 60)
 
@@ -379,6 +382,7 @@ Security Notes:
             distro_version=args.distro_version,
             enable_plymouth=enable_plymouth,
             yaml=yaml_param,
+            os=args.os,
             window_manager=args.window_manager,
             desktop_environment=args.desktop_environment,
             verbose=args.verbose

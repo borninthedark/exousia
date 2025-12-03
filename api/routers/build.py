@@ -10,21 +10,24 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+import yaml
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-import yaml
 
-from ..database import get_db, ConfigModel, BuildModel, async_session_maker
+from ..auth import current_active_user
+from ..config import get_github_token, settings
+from ..database import BuildModel, ConfigModel, async_session_maker, get_db
 from ..models import (
-    BuildTriggerRequest, BuildResponse, BuildStatusResponse,
-    BuildListResponse, BuildStatus
+    BuildListResponse,
+    BuildResponse,
+    BuildStatus,
+    BuildStatusResponse,
+    BuildTriggerRequest,
 )
 from ..services.github_service import GitHubService
 from ..services.transpiler_service import TranspilerService
 from ..services.yaml_selector_service import YamlSelectorService
-from ..config import get_github_token, settings
-from ..auth import current_active_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(current_active_user)])
@@ -50,14 +53,19 @@ def apply_desktop_override(
     window_manager: str | None,
     desktop_environment: str | None,
 ) -> str:
-    """Override desktop selection for Fedora bootc builds.
+    """Override desktop selection for builds.
 
-    The default adnyeus.yml is targeted at Sway; when a different DE/WM is
-    selected for fedora-bootc we regenerate the YAML content with the
-    requested value so the Containerfile reflects the caller's choice.
+    Supports both individual DE/WM selection and combined DE+WM (e.g., lxqt+sway).
+    When both are specified, both are added to the desktop configuration.
+
+    Only applies to bootc-type images. Other image types are returned unchanged.
     """
 
-    if image_type != "fedora-bootc" or not (window_manager or desktop_environment):
+    # Only apply to bootc images
+    if "bootc" not in image_type.lower():
+        return yaml_content
+
+    if not (window_manager or desktop_environment):
         return yaml_content
 
     try:
@@ -67,12 +75,11 @@ def apply_desktop_override(
 
     desktop = config.get("desktop") or {}
 
+    # Support combined DE+WM
     if window_manager:
         desktop["window_manager"] = window_manager
-        desktop.pop("desktop_environment", None)
-    elif desktop_environment:
+    if desktop_environment:
         desktop["desktop_environment"] = desktop_environment
-        desktop.pop("window_manager", None)
 
     config["desktop"] = desktop
 

@@ -1,13 +1,15 @@
 # Exousia: Declarative Bootc Builder
 
-[![Spiritual Pressure](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Spiritual%20Pressure&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
+[![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
 [![Last Build: Fedora 43 • Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%E2%80%A2%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
+[![Code Quality](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Code%20Quality)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
+[![Code Coverage](https://img.shields.io/badge/Coverage-Generated%20in%20CI-0A74DA?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 <img src=".github/quincy-pentacle.svg" alt="Custom Quincy Pentacle" width="28" />
 
 This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs.
 
-**Note on Theming:** The "Spiritual Pressure" build status badge and Quincy pentacle imagery are inspired by *BLEACH*, the manga and anime series created by **Tite Kubo**. These thematic elements are used purely as playful project aesthetics and status indicators, with full credit and acknowledgment to the original creator.
+**Note on Theming:** The "Reiatsu" (霊圧, spiritual pressure) build status badge and Quincy pentacle imagery are inspired by *BLEACH*, the manga and anime series created by **Tite Kubo**. These thematic elements are used purely as playful project aesthetics and status indicators, with full credit and acknowledgment to the original creator.
 
 ## Highly Experimental Disclaimer
 
@@ -74,11 +76,13 @@ You can trigger builds programmatically using the webhook API. This is useful fo
 
 **Basic Usage:**
 
+> Default behavior: When you omit `--yaml`, `--os`, `--de`, and `--wm`, the dispatcher auto-loads the repository's `adnyeus.yml` blueprint.
+
 ```bash
 # Set your GitHub token
 export GITHUB_TOKEN="ghp_your_token_here"
 
-# Trigger a build with default settings (uses adnyeus.yml)
+# Trigger a build using repo defaults (auto-falls back to adnyeus.yml)
 python api/webhook_trigger.py
 
 # Trigger specific image type and version
@@ -107,15 +111,28 @@ python api/webhook_trigger.py \
   --image-type fedora-sway-atomic \
   --distro-version 43
 
-# Build with specific window manager
+# Build with specific window manager (auto-selects YAML)
 python api/webhook_trigger.py \
   --wm sway \
   --distro-version 43
 
-# Build with specific desktop environment
+# Build with specific desktop environment (auto-selects YAML)
 python api/webhook_trigger.py \
   --de kde \
   --distro-version 44
+
+# Build with combined DE+WM (e.g., LXQt with Sway)
+python api/webhook_trigger.py \
+  --de lxqt \
+  --wm sway \
+  --distro-version 43
+
+# Build with OS specification for auto-selection
+python api/webhook_trigger.py \
+  --os fedora \
+  --image-type fedora-bootc \
+  --de lxqt \
+  --distro-version 43
 
 # Build with custom configuration and disable Plymouth
 python api/webhook_trigger.py \
@@ -126,8 +143,10 @@ python api/webhook_trigger.py \
 
 **Direct API Usage (cURL):**
 
+> Default behavior: If you omit `yaml_config`, `yaml_content`, `os`, `desktop_environment`, and `window_manager`, the dispatcher falls back to the repository `adnyeus.yml` blueprint.
+
 ```bash
-# Trigger build with default adnyeus.yml
+# Trigger build with auto-selected YAML (defaults to adnyeus.yml when no selectors are provided)
 curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -158,23 +177,7 @@ curl -X POST \
     }
   }'
 
-# Trigger build with custom path (any directory)
-curl -X POST \
-  -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $GITHUB_TOKEN" \
-  -H "X-GitHub-Api-Version: 2022-11-28" \
-  https://api.github.com/repos/borninthedark/exousia/dispatches \
-  -d '{
-    "event_type": "api",
-    "client_payload": {
-      "image_type": "fedora-bootc",
-      "distro_version": "44",
-      "enable_plymouth": true,
-      "yaml_config": "custom/my-config.yml"
-    }
-  }'
-
-# Trigger build with specific window manager
+# Trigger build with specific window manager (auto-selects YAML)
 curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -190,7 +193,7 @@ curl -X POST \
     }
   }'
 
-# Trigger build with specific desktop environment
+# Trigger build with specific desktop environment (auto-selects YAML)
 curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -203,6 +206,40 @@ curl -X POST \
       "distro_version": "44",
       "enable_plymouth": true,
       "desktop_environment": "kde"
+    }
+  }'
+
+# Trigger build with combined DE+WM (e.g., LXQt with Sway)
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/borninthedark/exousia/dispatches \
+  -d '{
+    "event_type": "api",
+    "client_payload": {
+      "image_type": "fedora-bootc",
+      "distro_version": "43",
+      "enable_plymouth": true,
+      "desktop_environment": "lxqt",
+      "window_manager": "sway"
+    }
+  }'
+
+# Trigger build with OS specification for auto-selection
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/borninthedark/exousia/dispatches \
+  -d '{
+    "event_type": "api",
+    "client_payload": {
+      "os": "fedora",
+      "image_type": "fedora-bootc",
+      "distro_version": "43",
+      "enable_plymouth": true,
+      "desktop_environment": "lxqt"
     }
   }'
 ```
@@ -293,26 +330,6 @@ python api/webhook_trigger.py \
 
 The README will automatically update to reflect the new configuration.
 
-<details>
-<summary><b>Deprecated: Local version switcher script</b></summary>
-
-> ⚠️ **Note:** The local `fedora-version-switcher` script is deprecated in favor of the webhook API. Use the webhook method above for better automation and integration capabilities.
-
-```bash
-# Switch to Fedora 43 (deprecated)
-./custom-scripts/fedora-version-switcher 43
-
-# Switch to Fedora 42 with standard bootc base (deprecated)
-./custom-scripts/fedora-version-switcher 42 fedora-bootc
-
-# Switch to Sway Atomic desktop (deprecated)
-./custom-scripts/fedora-version-switcher 42 fedora-sway-atomic
-
-# List available options (deprecated)
-./custom-scripts/fedora-version-switcher list
-```
-</details>
-
 ### Modifying Packages
 
 Edit the package lists in `custom-pkgs/`:
@@ -376,10 +393,7 @@ The greetd display manager availability depends on your base image type:
 
 **To use greetd display manager:**
 
-1. Switch to `fedora-bootc` base image:
-   ```bash
-   ./custom-scripts/fedora-version-switcher 43 fedora-bootc
-   ```
+1. Use the webhook API or workflow dispatch to build with the fedora-bootc image type
 
 2. Customize the greetd configuration in `custom-configs/greetd/config.toml` as needed
 
@@ -598,7 +612,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ### Creative Acknowledgments
 
 - **Tite Kubo** - Creator of *BLEACH* (manga and anime series)
-  - The "Spiritual Pressure" status indicator and Quincy pentacle imagery in this project are inspired by themes from BLEACH
+  - The "Reiatsu" (霊圧, spiritual pressure) status indicator and Quincy pentacle imagery in this project are inspired by themes from BLEACH
   - These elements are used respectfully as playful project aesthetics with full acknowledgment of the original creator
   - All rights to BLEACH and its associated concepts belong to Tite Kubo and respective copyright holders
   - This project is not affiliated with or endorsed by Tite Kubo, Shueisha, or Viz Media

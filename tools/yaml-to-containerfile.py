@@ -53,8 +53,8 @@ FEDORA_ATOMIC_VARIANTS = {
     "fedora-xfce": "quay.io/fedora-ostree-desktops/xfce",
 }
 
-# Distro configurations for bootcrew images
-BOOTCREW_DISTROS = {
+# Distro configurations for Linux bootc images (formerly called bootcrew)
+LINUX_BOOTC_DISTROS = {
     "arch": DistroConfig(
         name="arch",
         base_image_template="docker.io/archlinux/archlinux:latest",
@@ -128,7 +128,7 @@ BOOTCREW_DISTROS = {
 class BuildContext:
     """Build context for evaluating conditions and generating Containerfile."""
     image_type: str
-    fedora_version: str  # For Fedora-based images; can be empty for bootcrew
+    fedora_version: str  # For Fedora-based images; can be empty for Linux bootc
     enable_plymouth: bool
     base_image: str
     distro: str = "fedora"  # fedora, arch, gentoo, debian, ubuntu, opensuse, proxmox
@@ -156,6 +156,16 @@ class ContainerfileGenerator:
         self._add_environment()
         self._process_modules()
         return "\n".join(self.lines)
+
+    def _load_common_remove_packages(self) -> List[str]:
+        """Load the shared removal list from packages/common/remove.yml."""
+        try:
+            from package_loader import PackageLoader
+
+            loader = PackageLoader()
+            return loader.load_remove()
+        except Exception:
+            return []
 
     def _add_header(self):
         """Add file header with generation info."""
@@ -375,35 +385,37 @@ class ContainerfileGenerator:
             if condition and self._evaluate_condition(condition):
                 packages = cond_install.get("packages", [])
                 if packages:
-                    # Read from packages.sway file
-                    self.lines.append('    echo "==> Installing Sway desktop packages..."; \\')
+                    pkg_list = " ".join(packages)
                     self.lines.append(
-                        '    grep -vE \'^#|^$\' '
-                        '/usr/local/share/fedora-sway-atomic/packages-sway | '
-                        'xargs -r dnf install -y --skip-unavailable; \\'
+                        f'    echo "==> Installing {len(packages)} conditional packages..."; \\'
+                    )
+                    self.lines.append(
+                        f'    dnf install -y --skip-unavailable {pkg_list}; \\'
                     )
 
         # Regular package installation
         install_packages = module.get("install", [])
         if install_packages:
+            pkg_list = " ".join(install_packages)
             self.lines.append(
-                '    echo "==> Installing custom packages from packages.add..."; \\'
+                f'    echo "==> Installing {len(install_packages)} custom packages..."; \\'
             )
-            self.lines.append(
-                '    grep -vE \'^#|^$\' '
-                '/usr/local/share/fedora-sway-atomic/packages-added | '
-                'xargs -r dnf install -y; \\'
-            )
+            self.lines.append(f'    dnf install -y {pkg_list}; \\')
 
         # Package removal
-        remove_packages = module.get("remove", [])
+        remove_packages = list(dict.fromkeys(module.get("remove", [])))
+
+        # Always honor the shared removal list so common removals are consistent
+        for pkg in self._load_common_remove_packages():
+            if pkg not in remove_packages:
+                remove_packages.append(pkg)
+
         if remove_packages:
-            self.lines.append('    echo "==> Removing packages from packages.remove..."; \\')
+            pkg_list = " ".join(remove_packages)
             self.lines.append(
-                '    grep -vE \'^#|^$\' '
-                '/usr/local/share/fedora-sway-atomic/packages-removed | '
-                'xargs -r dnf remove -y; \\'
+                f'    echo "==> Removing {len(remove_packages)} packages..."; \\'
             )
+            self.lines.append(f'    dnf remove -y {pkg_list}; \\')
 
         # Upgrade and cleanup
         self.lines.append("    dnf upgrade -y; \\")
@@ -504,7 +516,7 @@ class ContainerfileGenerator:
 
     def _process_bootcrew_setup_module(self, module: Dict[str, Any]):
         """Process bootcrew-setup module (build bootc from source and configure for bootcrew distros)."""
-        if self.context.distro not in BOOTCREW_DISTROS:
+        if self.context.distro not in LINUX_BOOTC_DISTROS:
             self.lines.append(f"# WARNING: bootcrew-setup not applicable for {self.context.distro}")
             return
 
@@ -785,16 +797,6 @@ def load_yaml_config(config_path: Path) -> Dict[str, Any]:
 def determine_base_image(config: Dict[str, Any], image_type: str, version: str) -> str:
     """Determine the base image URL based on configuration."""
     preferred_base = config.get("base-image")
-    allowed_prefixes = [
-        "quay.io/fedora/fedora-bootc",
-        "quay.io/fedora/fedora-sway-atomic",
-        "ghcr.io/bootcrew/",
-        "docker.io/archlinux/",
-        "ghcr.io/gentoo/",
-        "debian:",
-        "ubuntu:",
-        "registry.opensuse.org/",
-    ]
 
     def ensure_version_tag(image: str) -> str:
         """Ensure the image reference is tagged with the provided version.
@@ -813,7 +815,7 @@ def determine_base_image(config: Dict[str, Any], image_type: str, version: str) 
 
         return f"{image}:{version}"
 
-    if preferred_base and any(preferred_base.startswith(prefix) for prefix in allowed_prefixes):
+    if preferred_base:
         return ensure_version_tag(preferred_base)
 
     # Fedora-based images
@@ -824,13 +826,27 @@ def determine_base_image(config: Dict[str, Any], image_type: str, version: str) 
     if image_type in FEDORA_ATOMIC_VARIANTS:
         return f"{FEDORA_ATOMIC_VARIANTS[image_type]}:{version}"
 
-    # Bootcrew distros - use distro configs
-    if image_type in BOOTCREW_DISTROS:
-        return BOOTCREW_DISTROS[image_type].base_image_template
-
-    # Legacy bootcrew alias
+    # The legacy 'bootcrew' alias referred to non-Fedora bootc builds and is
+    # now deprecated. Require callers to migrate to linux-bootc so we don't
+    # silently fall back to Fedora defaults.
     if image_type == "bootcrew":
-        return f"ghcr.io/bootcrew/bootc:{version}"
+        raise ValueError(
+            "image-type 'bootcrew' is deprecated; use 'linux-bootc' with an explicit base-image"
+        )
+
+    # Linux bootc distros are explicitly supplied FROM images, not a standalone
+    # distro family. Require the caller to set base-image when using the
+    # linux-bootc alias to avoid silently falling back to Fedora defaults.
+    if image_type == "linux-bootc":
+        if not preferred_base:
+            raise ValueError(
+                "image-type 'linux-bootc' requires base-image to reference the desired bootc distro"
+            )
+        return ensure_version_tag(preferred_base)
+
+    # Linux bootc distros - use distro configs
+    if image_type in LINUX_BOOTC_DISTROS:
+        return LINUX_BOOTC_DISTROS[image_type].base_image_template
 
     # Use config default
     return preferred_base or f"quay.io/fedora/fedora-bootc:{version}"
@@ -872,15 +888,15 @@ Examples:
                         help="Output Containerfile path (default: stdout)")
     # Build the list of all supported image types dynamically
     all_image_types = (
-        ["fedora-bootc", "bootcrew"] +
+        ["fedora-bootc", "linux-bootc", "bootcrew"] +
         list(FEDORA_ATOMIC_VARIANTS.keys()) +
-        list(BOOTCREW_DISTROS.keys())
+        list(LINUX_BOOTC_DISTROS.keys())
     )
 
     parser.add_argument("--image-type", choices=all_image_types,
                         help="Base image type (default: from config)")
     parser.add_argument("--fedora-version", default="43",
-                        help="Fedora version (default: 43, ignored for bootcrew distros)")
+                        help="Fedora version (default: 43, ignored for Linux bootc distros)")
     parser.add_argument("--enable-plymouth", action="store_true", default=True,
                         help="Enable Plymouth")
     parser.add_argument("--disable-plymouth", action="store_true",
@@ -909,11 +925,17 @@ Examples:
     image_type = args.image_type or config.get("image-type", "fedora-sway-atomic")
     fedora_version = args.fedora_version or str(config.get("image-version", "43"))
     enable_plymouth = args.enable_plymouth and not args.disable_plymouth
-    base_image = determine_base_image(config, image_type, fedora_version)
+    try:
+        base_image = determine_base_image(config, image_type, fedora_version)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
 
     # Determine distro based on image_type
-    if image_type in BOOTCREW_DISTROS:
+    if image_type in LINUX_BOOTC_DISTROS:
         distro = image_type
+    elif image_type == "linux-bootc":
+        distro = config.get("distro", "linux-bootc")
     elif image_type == "fedora-bootc" or image_type in FEDORA_ATOMIC_VARIANTS:
         distro = "fedora"
     else:

@@ -63,16 +63,6 @@ modules:
     scripts:
       - ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
 
-  # Copy package lists (Sway already included in base image)
-  - type: files
-    files:
-      - src: ./custom-pkgs/packages.remove
-        dst: /usr/local/share/fedora-sway-atomic/packages-removed
-        mode: "0644"
-      - src: ./custom-pkgs/packages.add
-        dst: /usr/local/share/fedora-sway-atomic/packages-added
-        mode: "0644"
-
   # Plymouth theme files (toggleable)
   - type: files
     condition: enable_plymouth == true
@@ -106,6 +96,7 @@ modules:
   - type: script
     scripts:
       - |
+        mkdir -p /usr/local/share/fedora-sway-atomic
         if [ -f /usr/share/rpm-ostree/treefile.json ]; then
           jq -r .packages[] /usr/share/rpm-ostree/treefile.json > /usr/local/share/fedora-sway-atomic/packages-base
         else

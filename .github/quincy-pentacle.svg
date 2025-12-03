@@ -12,6 +12,6 @@
   <!-- Inner circle highlight -->
   <circle cx="12" cy="12" r="3" fill="#00D4FF" opacity="0.4"/>
 
-  <!-- Center point (spiritual pressure core) -->
+  <!-- Center point (Reiatsu core) -->
   <circle cx="12" cy="12" r="1.5" fill="#FFFFFF"/>
 </svg>
