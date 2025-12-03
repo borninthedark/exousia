@@ -95,6 +95,29 @@ def test_resolve_yaml_config_prefers_matching_definition(tmp_workspace: Path, mo
     assert selected == fedora_bootc
 
 
+def test_resolve_yaml_config_requires_os_for_linux_bootc(tmp_workspace: Path):
+    """linux-bootc builds must specify INPUT_OS so selection does not fall back incorrectly."""
+
+    with pytest.raises(SystemExit):
+        resolve_build_config.resolve_yaml_config("auto", "linux-bootc", os_name="")
+
+
+def test_resolve_yaml_config_selects_linux_bootc_definition(tmp_workspace: Path, monkeypatch: pytest.MonkeyPatch):
+    """linux-bootc builds should pull the distro-specific definition when provided."""
+
+    yaml_definitions = tmp_workspace / "yaml-definitions"
+    yaml_definitions.mkdir()
+    arch_bootc = yaml_definitions / "arch-bootc.yml"
+    arch_bootc.write_text("name: arch\nmodules: []\n")
+
+    # Mock YamlSelectorService as unavailable to test fallback logic
+    monkeypatch.setattr(resolve_build_config, "YAML_SELECTOR_AVAILABLE", False)
+
+    selected = resolve_build_config.resolve_yaml_config("auto", "linux-bootc", os_name="arch")
+
+    assert selected == arch_bootc
+
+
 def test_resolve_yaml_config_falls_back_to_default(tmp_workspace: Path, monkeypatch: pytest.MonkeyPatch):
     """Test that resolve_yaml_config falls back to adnyeus.yml when no specific definition found."""
     default_yaml = tmp_workspace / "adnyeus.yml"
