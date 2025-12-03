@@ -3,18 +3,21 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional
 
 import yaml
 
 # Add parent directory to path to import from api package
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+YAML_SELECTOR_AVAILABLE = True
+YAML_SELECTOR_IMPORT_ERROR: Optional[Exception] = None
+
 try:
     from api.services.yaml_selector_service import YamlSelectorService
-    YAML_SELECTOR_AVAILABLE = True
-except ImportError:
+except Exception as exc:
     YAML_SELECTOR_AVAILABLE = False
-    print("::warning::YamlSelectorService not available, using fallback logic")
+    YAML_SELECTOR_IMPORT_ERROR = exc
 
 
 DEFAULT_VERSION = "43"
@@ -41,6 +44,10 @@ def resolve_yaml_config(
     Returns:
         Resolved Path to YAML config file
     """
+    if target_image_type == "linux-bootc" and not os_name:
+        print("::error::INPUT_OS must be set for linux-bootc builds to select the distro definition")
+        sys.exit(1)
+
     if input_yaml_config != "auto":
         yaml_config = Path(input_yaml_config)
         if not yaml_config.exists():
@@ -49,7 +56,11 @@ def resolve_yaml_config(
         return yaml_config.resolve()
 
     # Auto-selection mode
-    if YAML_SELECTOR_AVAILABLE:
+    if not YAML_SELECTOR_AVAILABLE:
+        if YAML_SELECTOR_IMPORT_ERROR is not None:
+            print(f"::error::Failed to import YamlSelectorService: {YAML_SELECTOR_IMPORT_ERROR}")
+            sys.exit(1)
+    else:
         try:
             selector = YamlSelectorService()
 
@@ -70,6 +81,12 @@ def resolve_yaml_config(
             print("::warning::YamlSelectorService could not select a definition")
         except Exception as e:
             print(f"::warning::YamlSelectorService failed: {e}")
+
+    if target_image_type == "linux-bootc" and os_name:
+        distro_candidate = Path(f"yaml-definitions/{os_name}-bootc.yml")
+        if distro_candidate.exists():
+            print(f"Fallback: using {distro_candidate}")
+            return distro_candidate.resolve()
 
     # Fallback logic if YamlSelectorService unavailable or failed
     candidate = Path(f"yaml-definitions/{target_image_type}.yml")
@@ -185,6 +202,10 @@ def main() -> None:
     if not os_name and target_image_type:
         # Extract OS from image type (e.g., "fedora-bootc" -> "fedora")
         os_name = target_image_type.split("-")[0] if "-" in target_image_type else target_image_type
+
+    if target_image_type == "linux-bootc" and not os_name:
+        print("::error::INPUT_OS is required for linux-bootc builds")
+        sys.exit(1)
 
     print(f"Resolved target: {target_image_type} version {target_version}")
     print(f"Plymouth enabled: {enable_plymouth}")
