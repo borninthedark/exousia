@@ -10,7 +10,17 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 import yaml
 
-from ..config import settings
+try:
+    from ..config import settings
+except Exception:
+    # Provide a lightweight fallback so CLI utilities can import the selector
+    # without requiring optional runtime dependencies (e.g., pydantic_settings)
+    # that may not be installed in minimal environments.
+    class _FallbackSettings:
+        REPO_ROOT = Path(__file__).resolve().parents[2]
+        YAML_DEFINITIONS_DIR = REPO_ROOT / "yaml-definitions"
+
+    settings = _FallbackSettings()  # type: ignore[assignment]
 
 
 class YamlSelectorService:
@@ -112,6 +122,15 @@ class YamlSelectorService:
         Returns:
             Filename of the selected YAML definition
         """
+        # The linux-bootc alias represents non-Fedora bootc builds that rely on
+        # per-distro definitions. If the caller provides an OS/distro, prefer
+        # that mapping immediately instead of attempting image-type heuristics
+        # that only apply to Fedora variants.
+        if image_type == "linux-bootc" and os and os in self.DISTRO_DEFINITIONS:
+            distro_def = self.DISTRO_DEFINITIONS[os]
+            if (self.definitions_dir / distro_def).exists():
+                return distro_def
+
         # Priority 1: Desktop environment
         if desktop_environment:
             de_def = self.DE_DEFINITIONS.get(desktop_environment.lower())

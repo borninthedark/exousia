@@ -8,6 +8,9 @@ import sys
 import importlib.util
 from pathlib import Path
 
+import pytest
+import yaml
+
 # Load module from file path (handles hyphens in filename)
 script_path = Path(__file__).parent / "yaml-to-containerfile.py"
 spec = importlib.util.spec_from_file_location("yaml_to_containerfile", script_path)
@@ -18,7 +21,7 @@ ContainerfileGenerator = yaml_to_containerfile.ContainerfileGenerator
 BuildContext = yaml_to_containerfile.BuildContext
 determine_base_image = yaml_to_containerfile.determine_base_image
 FEDORA_ATOMIC_VARIANTS = yaml_to_containerfile.FEDORA_ATOMIC_VARIANTS
-BOOTCREW_DISTROS = yaml_to_containerfile.BOOTCREW_DISTROS
+LINUX_BOOTC_DISTROS = yaml_to_containerfile.LINUX_BOOTC_DISTROS
 
 
 def test_generator_is_stateless():
@@ -64,6 +67,46 @@ def test_generator_is_stateless():
     assert output1.count("Hello World") == 1, "Should only have one script instance"
 
     print("✓ Generator is stateless - multiple generate() calls work correctly")
+
+
+def test_rpm_module_includes_common_remove_packages():
+    """Ensure rpm-ostree modules respect the shared removal list."""
+
+    remove_file = Path(__file__).parent.parent / "packages" / "common" / "remove.yml"
+    common_remove = (yaml.safe_load(remove_file.read_text()) or {}).get("packages", [])
+
+    config = {
+        "name": "rpm-remove-test",
+        "description": "Validate removal handling",
+        "modules": [
+            {
+                "type": "rpm-ostree",
+                "install": ["htop"],
+                "remove": ["firefox-langpacks"],
+            }
+        ],
+    }
+
+    context = BuildContext(
+        image_type="fedora-sway-atomic",
+        fedora_version="43",
+        enable_plymouth=False,
+        base_image="quay.io/fedora/fedora-sway-atomic:43",
+        distro="fedora",
+    )
+
+    generator = ContainerfileGenerator(config, context)
+    output = generator.generate()
+
+    removal_lines = [line for line in output.splitlines() if "dnf remove -y" in line]
+    assert removal_lines, "Removal command not rendered"
+
+    removal_line = " ".join(removal_lines)
+    expected_remove = {"firefox-langpacks", *common_remove}
+    for pkg in expected_remove:
+        assert pkg in removal_line, f"{pkg} was not included in removal list"
+
+    print("✓ rpm-ostree module appends common removal packages")
 
 
 def test_generator_with_different_contexts():
@@ -122,7 +165,7 @@ def test_custom_base_image_sources_are_respected():
         "base-image": "ghcr.io/bootcrew/sericea-atomic:43",
     }
 
-    base = determine_base_image(config, "bootcrew", "43")
+    base = determine_base_image(config, "linux-bootc", "43")
     assert base == "ghcr.io/bootcrew/sericea-atomic:43"
 
     sway_config = {
@@ -146,7 +189,7 @@ def test_custom_bases_without_tags_are_versioned():
         "base-image": "ghcr.io/bootcrew/sericea-atomic",
     }
 
-    base = determine_base_image(untagged_bootcrew, "bootcrew", "43")
+    base = determine_base_image(untagged_bootcrew, "linux-bootc", "43")
     assert base == "ghcr.io/bootcrew/sericea-atomic:43"
 
     untagged_sway = {
@@ -161,8 +204,36 @@ def test_custom_bases_without_tags_are_versioned():
     print("✓ Untagged custom bases are pinned to the requested version")
 
 
-def test_bootcrew_distro_support():
-    """Test that bootcrew distros are properly supported."""
+def test_linux_bootc_alias_requires_base_image():
+    """The linux-bootc alias should not silently default to Fedora bases."""
+
+    config = {
+        "name": "linux-bootc-alias-without-base",
+        "description": "Missing base-image should be rejected",
+    }
+
+    with pytest.raises(ValueError):
+        determine_base_image(config, "linux-bootc", "43")
+
+    print("✓ linux-bootc alias enforces explicit base-image selection")
+
+
+def test_bootcrew_alias_is_deprecated():
+    """Calling the old bootcrew alias should surface a deprecation error."""
+
+    config = {
+        "name": "bootcrew-deprecated",
+        "description": "Deprecated alias should fail fast",
+    }
+
+    with pytest.raises(ValueError):
+        determine_base_image(config, "bootcrew", "43")
+
+    print("✓ bootcrew alias is blocked with a deprecation notice")
+
+
+def test_linux_bootc_distro_support():
+    """Test that Linux bootc distros are properly supported."""
     config = {
         "name": "arch-bootc",
         "description": "Arch bootc test",
@@ -192,7 +263,7 @@ def test_bootcrew_distro_support():
     assert "ostree" in output.lower()  # Should mention ostree
     assert "pacman" in output  # Arch package manager
 
-    print("✓ Bootcrew distros are supported correctly")
+    print("✓ Linux bootc distros are supported correctly")
 
 
 def test_fedora_atomic_variants():
@@ -219,7 +290,7 @@ def test_distro_detection():
     )
     assert fedora_context.distro == "fedora"
 
-    # Bootcrew distro
+    # Linux bootc distro
     arch_context = BuildContext(
         image_type="arch",
         fedora_version="",
@@ -406,7 +477,7 @@ if __name__ == "__main__":
     test_generator_with_different_contexts()
     test_custom_base_image_sources_are_respected()
     test_custom_bases_without_tags_are_versioned()
-    test_bootcrew_distro_support()
+    test_linux_bootc_distro_support()
     test_fedora_atomic_variants()
     test_distro_detection()
     test_enable_plymouth_generates_env()
