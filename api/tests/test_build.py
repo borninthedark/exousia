@@ -85,24 +85,43 @@ class TestBuildOperations:
         assert response.status_code == 400
         assert "config_id, yaml_content, or definition_filename must be provided" in response.json()["detail"]
 
-    async def test_trigger_build_rejects_conflicting_desktop_overrides(self, client: AsyncClient):
-        """Ensure window_manager and desktop_environment cannot be provided together."""
+    @patch("api.routers.build.GitHubService")
+    async def test_trigger_build_accepts_combined_desktop_overrides(
+        self, mock_github_service, client: AsyncClient
+    ):
+        """Ensure window_manager and desktop_environment can be combined for DE+WM setups."""
+        # Mock GitHub workflow run
+        mock_workflow_run = AsyncMock()
+        mock_workflow_run.id = 12345
+        mock_workflow_run.html_url = "https://github.com/test/repo/actions/runs/12345"
 
-        response = await client.post(
-            "/api/build/trigger",
-            json={
-                "yaml_content": "name: test\ndescription: test\nmodules: []\n",
-                "image_type": "fedora-bootc",
-                "fedora_version": "43",
-                "enable_plymouth": True,
-                "window_manager": "river",
-                "desktop_environment": "sway",
-                "ref": "main",
-            },
-        )
+        # Mock GitHub service
+        mock_github = AsyncMock()
+        mock_github.trigger_workflow = AsyncMock(return_value=mock_workflow_run)
+        mock_github_service.return_value = mock_github
 
-        assert response.status_code == 422
-        assert "window_manager" in response.text
+        # Mock settings
+        with patch("api.routers.build.settings") as mock_settings:
+            mock_settings.GITHUB_TOKEN = "fake_token"
+            mock_settings.GITHUB_REPO = "test/repo"
+            mock_settings.GITHUB_WORKFLOW_FILE = "build.yml"
+            mock_settings.BUILD_STATUS_POLLING_ENABLED = False
+
+            response = await client.post(
+                "/api/build/trigger",
+                json={
+                    "yaml_content": "name: test\ndescription: test\nmodules: []\n",
+                    "image_type": "fedora-bootc",
+                    "fedora_version": "43",
+                    "enable_plymouth": True,
+                    "window_manager": "sway",
+                    "desktop_environment": "lxqt",
+                    "ref": "main",
+                },
+            )
+
+            # Should accept combined DE+WM
+            assert response.status_code == 202
 
     @patch("api.routers.build.GitHubService")
     async def test_cancel_build(self, mock_github_service, client: AsyncClient, sample_build):

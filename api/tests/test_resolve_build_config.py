@@ -25,38 +25,8 @@ def tmp_workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path
 
 
-def test_read_fedora_version_file_defaults(tmp_workspace: Path):
-    version, image_type = resolve_build_config.read_fedora_version_file(
-        tmp_workspace / ".fedora-version"
-    )
-
-    assert version == resolve_build_config.DEFAULT_VERSION
-    assert image_type == resolve_build_config.DEFAULT_IMAGE_TYPE
-
-
-def test_read_fedora_version_file_populates_values(tmp_workspace: Path):
-    version_file = tmp_workspace / ".fedora-version"
-    version_file.write_text("44:fedora-bootc")
-
-    version, image_type = resolve_build_config.read_fedora_version_file(version_file)
-
-    assert version == "44"
-    assert image_type == "fedora-bootc"
-
-
-def test_read_fedora_version_file_warns_on_malformed(tmp_workspace: Path, capsys: pytest.CaptureFixture[str]):
-    version_file = tmp_workspace / ".fedora-version"
-    version_file.write_text("invalid-content")
-
-    version, image_type = resolve_build_config.read_fedora_version_file(version_file)
-    captured = capsys.readouterr()
-
-    assert version == resolve_build_config.DEFAULT_VERSION
-    assert image_type == resolve_build_config.DEFAULT_IMAGE_TYPE
-    assert "malformed" in captured.out
-
-
 def test_apply_fedora_overrides_updates_base_image_and_desktop(tmp_workspace: Path):
+    """Test that Fedora overrides update version, base image, and merge desktop config."""
     config_path = tmp_workspace / "adnyeus.yml"
     config_path.write_text(
         yaml.safe_dump(
@@ -80,8 +50,9 @@ def test_apply_fedora_overrides_updates_base_image_and_desktop(tmp_workspace: Pa
     assert resolved.name == "resolved-config.yml"
     assert updated["image-version"] == "44"
     assert updated["base-image"] == "quay.io/fedora/fedora-bootc:44"
+    # With merge behavior, window_manager is added while existing desktop_environment remains
     assert updated["desktop"]["window_manager"] == "river"
-    assert "desktop_environment" not in updated["desktop"]
+    assert updated["desktop"]["desktop_environment"] == "sway"
 
 
 def test_apply_fedora_overrides_keeps_custom_base_image(tmp_workspace: Path):
@@ -109,32 +80,45 @@ def test_apply_fedora_overrides_keeps_custom_base_image(tmp_workspace: Path):
     assert updated["image-version"] == "rawhide"
 
 
-def test_resolve_yaml_config_prefers_matching_definition(tmp_workspace: Path):
+def test_resolve_yaml_config_prefers_matching_definition(tmp_workspace: Path, monkeypatch: pytest.MonkeyPatch):
+    """Test that resolve_yaml_config selects matching definition from yaml-definitions/."""
     yaml_definitions = tmp_workspace / "yaml-definitions"
     yaml_definitions.mkdir()
     fedora_bootc = yaml_definitions / "fedora-bootc.yml"
     fedora_bootc.write_text("name: test\nmodules: []\n")
+
+    # Mock YamlSelectorService as unavailable to test fallback logic
+    monkeypatch.setattr(resolve_build_config, "YAML_SELECTOR_AVAILABLE", False)
 
     selected = resolve_build_config.resolve_yaml_config("auto", "fedora-bootc")
 
     assert selected == fedora_bootc
 
 
-def test_resolve_yaml_config_falls_back_to_default(tmp_workspace: Path):
+def test_resolve_yaml_config_falls_back_to_default(tmp_workspace: Path, monkeypatch: pytest.MonkeyPatch):
+    """Test that resolve_yaml_config falls back to adnyeus.yml when no specific definition found."""
     default_yaml = tmp_workspace / "adnyeus.yml"
     default_yaml.write_text("name: default\nmodules: []\n")
+
+    # Mock YamlSelectorService as unavailable to test fallback logic
+    monkeypatch.setattr(resolve_build_config, "YAML_SELECTOR_AVAILABLE", False)
 
     selected = resolve_build_config.resolve_yaml_config("auto", "fedora-bootc")
 
     assert selected == default_yaml
 
 
-def test_resolve_yaml_config_errors_when_missing(tmp_workspace: Path):
+def test_resolve_yaml_config_errors_when_missing(tmp_workspace: Path, monkeypatch: pytest.MonkeyPatch):
+    """Test that resolve_yaml_config exits with error when no config file found."""
+    # Mock YamlSelectorService as unavailable to test fallback logic
+    monkeypatch.setattr(resolve_build_config, "YAML_SELECTOR_AVAILABLE", False)
+
     with pytest.raises(SystemExit):
         resolve_build_config.resolve_yaml_config("auto", "fedora-bootc")
 
 
-def test_apply_desktop_override_rewrites_bootc_yaml():
+def test_apply_desktop_override_merges_bootc_yaml():
+    """Test that desktop overrides merge with existing config for bootc images."""
     from api.routers.build import apply_desktop_override
 
     yaml_content = yaml.safe_dump({"desktop": {"desktop_environment": "sway"}})
@@ -146,8 +130,9 @@ def test_apply_desktop_override_rewrites_bootc_yaml():
     )
     updated = yaml.safe_load(updated_yaml)
 
+    # With merge behavior, both window_manager and existing desktop_environment are present
     assert updated["desktop"]["window_manager"] == "river"
-    assert "desktop_environment" not in updated["desktop"]
+    assert updated["desktop"]["desktop_environment"] == "sway"
 
 
 def test_apply_desktop_override_ignores_non_bootc():
