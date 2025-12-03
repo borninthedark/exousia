@@ -3,11 +3,15 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional
 
 import yaml
 
 # Add parent directory to path to import from api package
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+YAML_SELECTOR_AVAILABLE = True
+YAML_SELECTOR_IMPORT_ERROR: Optional[Exception] = None
 
 try:
     from api.services.yaml_selector_service import YamlSelectorService
@@ -72,6 +76,12 @@ def resolve_yaml_config(
         print("::warning::YamlSelectorService could not select a definition")
     except Exception as e:
         print(f"::warning::YamlSelectorService failed: {e}")
+
+    if target_image_type == "linux-bootc" and os_name:
+        distro_candidate = Path(f"yaml-definitions/{os_name}-bootc.yml")
+        if distro_candidate.exists():
+            print(f"Fallback: using {distro_candidate}")
+            return distro_candidate.resolve()
 
     if target_image_type == "linux-bootc" and os_name:
         distro_candidate = Path(f"yaml-definitions/{os_name}-bootc.yml")
