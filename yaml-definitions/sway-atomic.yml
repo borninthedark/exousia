@@ -96,6 +96,7 @@ modules:
   - type: script
     scripts:
       - |
+        mkdir -p /usr/local/share/fedora-sway-atomic
         if [ -f /usr/share/rpm-ostree/treefile.json ]; then
           jq -r .packages[] /usr/share/rpm-ostree/treefile.json > /usr/local/share/fedora-sway-atomic/packages-base
         else
