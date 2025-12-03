@@ -56,8 +56,9 @@ class YamlSelectorService:
         },
     }
 
-    def __init__(self):
-        self.definitions_dir = settings.YAML_DEFINITIONS_DIR
+    def __init__(self, definitions_dir: Path | None = None):
+        provided_dir = definitions_dir.resolve() if definitions_dir else None
+        self.definitions_dir = provided_dir or settings.YAML_DEFINITIONS_DIR
 
     @staticmethod
     def _is_traversal(path: Path) -> bool:
