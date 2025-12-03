@@ -375,12 +375,12 @@ class ContainerfileGenerator:
             if condition and self._evaluate_condition(condition):
                 packages = cond_install.get("packages", [])
                 if packages:
-                    # Read from packages.sway file
-                    self.lines.append('    echo "==> Installing Sway desktop packages..."; \\')
+                    pkg_list = " ".join(packages)
                     self.lines.append(
-                        '    grep -vE \'^#|^$\' '
-                        '/usr/local/share/fedora-sway-atomic/packages-sway | '
-                        'xargs -r dnf install -y --skip-unavailable; \\'
+                        f'    echo "==> Installing {len(packages)} conditional packages..."; \\'
+                    )
+                    self.lines.append(
+                        f'    dnf install -y --skip-unavailable {pkg_list}; \\'
                     )
 
         # Regular package installation
