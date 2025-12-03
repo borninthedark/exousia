@@ -460,7 +460,7 @@ Cancel a running build.
 ### ImageType Enum
 - `fedora-bootc`
 - `fedora-sway-atomic`
-- `bootcrew`
+- `linux-bootc` (deprecated alias: `bootcrew`)
 
 ### BuildStatus Enum
 - `pending` - Build created, not started
