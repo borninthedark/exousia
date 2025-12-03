@@ -386,24 +386,20 @@ class ContainerfileGenerator:
         # Regular package installation
         install_packages = module.get("install", [])
         if install_packages:
+            pkg_list = " ".join(install_packages)
             self.lines.append(
-                '    echo "==> Installing custom packages from packages.add..."; \\'
+                f'    echo "==> Installing {len(install_packages)} custom packages..."; \\'
             )
-            self.lines.append(
-                '    grep -vE \'^#|^$\' '
-                '/usr/local/share/fedora-sway-atomic/packages-added | '
-                'xargs -r dnf install -y; \\'
-            )
+            self.lines.append(f'    dnf install -y {pkg_list}; \\')
 
         # Package removal
         remove_packages = module.get("remove", [])
         if remove_packages:
-            self.lines.append('    echo "==> Removing packages from packages.remove..."; \\')
+            pkg_list = " ".join(remove_packages)
             self.lines.append(
-                '    grep -vE \'^#|^$\' '
-                '/usr/local/share/fedora-sway-atomic/packages-removed | '
-                'xargs -r dnf remove -y; \\'
+                f'    echo "==> Removing {len(remove_packages)} packages..."; \\'
             )
+            self.lines.append(f'    dnf remove -y {pkg_list}; \\')
 
         # Upgrade and cleanup
         self.lines.append("    dnf upgrade -y; \\")
