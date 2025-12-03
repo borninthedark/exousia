@@ -79,6 +79,12 @@ def resolve_yaml_config(
             print(f"Fallback: using {distro_candidate}")
             return distro_candidate.resolve()
 
+    if target_image_type == "linux-bootc" and os_name:
+        distro_candidate = Path(f"yaml-definitions/{os_name}-bootc.yml")
+        if distro_candidate.exists():
+            print(f"Fallback: using {distro_candidate}")
+            return distro_candidate.resolve()
+
     # Fallback logic if YamlSelectorService unavailable or failed
     candidate = Path(f"yaml-definitions/{target_image_type}.yml")
     if candidate.exists():

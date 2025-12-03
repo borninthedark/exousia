@@ -113,11 +113,8 @@ def test_resolve_yaml_config_selects_linux_bootc_definition(tmp_workspace: Path,
     arch_bootc = yaml_definitions / "arch-bootc.yml"
     arch_bootc.write_text("name: arch\nmodules: []\n")
 
-    class DummySelector:
-        def select_definition(self, **_kwargs):
-            return None
-
-    monkeypatch.setattr(resolve_build_config, "YamlSelectorService", lambda: DummySelector())
+    # Mock YamlSelectorService as unavailable to test fallback logic
+    monkeypatch.setattr(resolve_build_config, "YAML_SELECTOR_AVAILABLE", False)
 
     selected = resolve_build_config.resolve_yaml_config("auto", "linux-bootc", os_name="arch")
 
