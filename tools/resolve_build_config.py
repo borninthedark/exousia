@@ -15,9 +15,9 @@ YAML_SELECTOR_IMPORT_ERROR: Optional[Exception] = None
 
 try:
     from api.services.yaml_selector_service import YamlSelectorService
-except Exception as exc:
-    YAML_SELECTOR_AVAILABLE = False
-    YAML_SELECTOR_IMPORT_ERROR = exc
+except ImportError as exc:
+    print(f"::error::Failed to import YamlSelectorService: {exc}")
+    sys.exit(1)
 
 
 DEFAULT_VERSION = "43"
@@ -56,31 +56,38 @@ def resolve_yaml_config(
         return yaml_config.resolve()
 
     # Auto-selection mode
-    if not YAML_SELECTOR_AVAILABLE:
-        if YAML_SELECTOR_IMPORT_ERROR is not None:
-            print(f"::error::Failed to import YamlSelectorService: {YAML_SELECTOR_IMPORT_ERROR}")
-            sys.exit(1)
-    else:
-        try:
-            selector = YamlSelectorService()
+    try:
+        selector = YamlSelectorService()
 
-            # Use YamlSelectorService to intelligently select definition
-            selected_filename = selector.select_definition(
-                os=os_name,
-                image_type=target_image_type,
-                desktop_environment=desktop_environment,
-                window_manager=window_manager,
-            )
+        # Use YamlSelectorService to intelligently select definition
+        selected_filename = selector.select_definition(
+            os=os_name,
+            image_type=target_image_type,
+            desktop_environment=desktop_environment,
+            window_manager=window_manager,
+        )
 
-            if selected_filename:
-                # Resolve the path (could be in yaml-definitions/ or repo root)
-                selected_path = selector._resolve_definition_path(selected_filename)
-                print(f"Auto-selected config: {selected_path} (from {selected_filename})")
-                return selected_path
+        if selected_filename:
+            # Resolve the path (could be in yaml-definitions/ or repo root)
+            selected_path = selector._resolve_definition_path(selected_filename)
+            print(f"Auto-selected config: {selected_path} (from {selected_filename})")
+            return selected_path
 
-            print("::warning::YamlSelectorService could not select a definition")
-        except Exception as e:
-            print(f"::warning::YamlSelectorService failed: {e}")
+        print("::warning::YamlSelectorService could not select a definition")
+    except Exception as e:
+        print(f"::warning::YamlSelectorService failed: {e}")
+
+    if target_image_type == "linux-bootc" and os_name:
+        distro_candidate = Path(f"yaml-definitions/{os_name}-bootc.yml")
+        if distro_candidate.exists():
+            print(f"Fallback: using {distro_candidate}")
+            return distro_candidate.resolve()
+
+    if target_image_type == "linux-bootc" and os_name:
+        distro_candidate = Path(f"yaml-definitions/{os_name}-bootc.yml")
+        if distro_candidate.exists():
+            print(f"Fallback: using {distro_candidate}")
+            return distro_candidate.resolve()
 
     if target_image_type == "linux-bootc" and os_name:
         distro_candidate = Path(f"yaml-definitions/{os_name}-bootc.yml")
