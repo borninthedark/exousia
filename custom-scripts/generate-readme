@@ -296,11 +296,13 @@ You can trigger builds programmatically using the webhook API. This is useful fo
 
 **Basic Usage:**
 
+> Default behavior: When you omit `--yaml`, `--os`, `--de`, and `--wm`, the dispatcher auto-loads the repository's `adnyeus.yml` blueprint.
+
 \`\`\`bash
 # Set your GitHub token
 export GITHUB_TOKEN="ghp_your_token_here"
 
-# Trigger a build with auto-selected YAML based on image type
+# Trigger a build using repo defaults (auto-falls back to adnyeus.yml)
 python api/webhook_trigger.py
 
 # Trigger specific image type and version
@@ -361,8 +363,10 @@ python api/webhook_trigger.py \\
 
 **Direct API Usage (cURL):**
 
+> Default behavior: If you omit `yaml_config`, `yaml_content`, `os`, `desktop_environment`, and `window_manager`, the dispatcher falls back to the repository `adnyeus.yml` blueprint.
+
 \`\`\`bash
-# Trigger build with auto-selected YAML (based on image_type)
+# Trigger build with auto-selected YAML (defaults to adnyeus.yml when no selectors are provided)
 curl -X POST \\
   -H "Accept: application/vnd.github+json" \\
   -H "Authorization: Bearer \$GITHUB_TOKEN" \\

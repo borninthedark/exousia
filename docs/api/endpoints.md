@@ -345,6 +345,8 @@ Trigger a new build via GitHub Actions.
 }
 ```
 
+> Default behavior: If you omit `yaml_content`, `definition_filename`, `config_id`, and selection hints (`os`, `desktop_environment`, `window_manager`), the service falls back to the repository `adnyeus.yml` blueprint when present.
+
 **Response (202 Accepted):**
 ```json
 {
