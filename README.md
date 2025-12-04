@@ -75,7 +75,7 @@ You can trigger builds programmatically using the webhook API. This is useful fo
 
 **Basic Usage:**
 
-> Default behavior: When you omit `--yaml`, `--os`, `--de`, and `--wm`, the dispatcher auto-loads the repository's `adnyeus.yml` blueprint.
+ > Default behavior: When you omit `--yaml`, `--os`, `--de`, and `--wm`, the dispatcher auto-loads the repository's `adnyeus.yml` blueprint.
 
 ```bash
 # Set your GitHub token
@@ -388,7 +388,7 @@ The greetd display manager availability depends on your base image type:
 | `fedora-bootc` | ✅ Available | greetd.service enabled, custom config in `custom-configs/greetd/` |
 | `fedora-sway-atomic` | ❌ Not available | Uses SDDM display manager instead |
 
-**Note:** greetd.service is enabled and custom configuration is available in `custom-configs/greetd/`.
+**Note:** The `fedora-sway-atomic` image uses SDDM (Simple Desktop Display Manager) by default. Switch to `fedora-bootc` if you need greetd.
 
 **To use greetd display manager:**
 
@@ -624,4 +624,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with bootc**
 
-*This README was automatically generated on 2025-12-02 16:42:16 UTC*
+*This README was automatically generated on 2025-12-04 04:04:21 UTC*
