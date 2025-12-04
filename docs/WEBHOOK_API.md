@@ -89,6 +89,12 @@ python api/webhook_trigger.py \
 
 #### Use Custom YAML Config from Repository
 ```bash
+# New simplified format - just provide the filename
+python api/webhook_trigger.py \
+  --token ghp_xxxxx \
+  --yaml sway-bootc.yml
+
+# Or use the full path (also works)
 python api/webhook_trigger.py \
   --token ghp_xxxxx \
   --yaml-config yaml-definitions/fedora-bootc.yml
@@ -150,11 +156,24 @@ fi
 | `--distro-version` | No | `43` | Distro version (42, 43, 44, rawhide) |
 | `--enable-plymouth` | No | `true` | Enable Plymouth boot splash |
 | `--disable-plymouth` | No | - | Disable Plymouth boot splash |
-| `--yaml-config` | No | - | YAML config file path in repo |
+| `--yaml-config` | No | - | YAML config file path (auto-resolved) |
 | `--yaml-content-file` | No | - | Local file with YAML content |
 | `-v`, `--verbose` | No | - | Enable verbose output |
 
 \* Required unless `GITHUB_TOKEN` environment variable is set
+
+**Note on `--yaml-config` path resolution:**
+The `yaml_config` parameter now supports automatic path resolution. When you provide a filename or path, the system will:
+1. Try the exact path as specified
+2. Look in the `yaml-definitions/` directory
+3. Search the entire repository (preferring `yaml-definitions/` matches)
+
+This means you can use any of these formats:
+- Just the filename: `sway-bootc.yml` → automatically finds `yaml-definitions/sway-bootc.yml`
+- Subdirectory path: `yaml-definitions/sway-bootc.yml` → works as before
+- Any path in repo: `configs/custom/my-config.yml` → automatically found via repo search
+
+Path traversal protection is enforced (e.g., `../../../etc/passwd` will be rejected).
 
 ### Supported Image Types
 
@@ -223,6 +242,23 @@ to override the version and image type at dispatch time.
 ### Using cURL
 
 ```bash
+# Simplified: just provide the filename
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/borninthedark/exousia/dispatches \
+  -d '{
+    "event_type": "api",
+    "client_payload": {
+      "image_type": "fedora-bootc",
+      "distro_version": "44",
+      "enable_plymouth": true,
+      "yaml_config": "sway-bootc.yml"
+    }
+  }'
+
+# Or use full path (also works)
 curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer $GITHUB_TOKEN" \

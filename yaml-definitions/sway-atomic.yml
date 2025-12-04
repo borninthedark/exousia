@@ -23,11 +23,11 @@ build:
 
 # Modules define the build steps
 modules:
-  # System users configuration
+  # System users configuration (rtkit only for atomic, no greetd needed)
   - type: files
     files:
-      - src: sysusers/bootc.conf
-        dst: /usr/lib/sysusers.d/bootc.conf
+      - src: sysusers/atomic.conf
+        dst: /usr/lib/sysusers.d/atomic.conf
         mode: "0644"
 
   # Initialize system users
@@ -39,14 +39,21 @@ modules:
       - systemd-sysusers || true
       - |
         set -e
-        systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf
-        mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit
+        systemd-sysusers --root=/ /usr/lib/sysusers.d/atomic.conf
+        mkdir -p /var/lib/rtkit
 
-  # Greetd configuration
+  # SDDM configuration (atomic images include SDDM)
   - type: files
     files:
-      - src: custom-configs/greetd/config.toml
-        dst: /etc/greetd/config.toml
+      - src: custom-configs/sddm/sddm.conf.d/
+        dst: /etc/sddm.conf.d/
+        mode: "0644"
+
+  # SDDM theme bundles (will be extracted by setup script)
+  - type: files
+    files:
+      - src: custom-configs/sddm/themes/
+        dst: /tmp/sddm-themes-source/
         mode: "0644"
 
   # Container authentication
@@ -91,6 +98,12 @@ modules:
       - src: custom-scripts/
         dst: /usr/local/bin/
         mode: "0755"
+
+  # Extract and configure SDDM themes
+  - type: sddm-themes
+    source: /tmp/sddm-themes-source
+    destination: /usr/share/sddm/themes
+    config: /etc/sddm.conf.d/99-theme.conf
 
   # Create base package list
   - type: script

@@ -225,7 +225,6 @@ generate_readme() {
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/${GITHUB_REPO}/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml)
 [![Last Build: ${OS_NAME} ${OS_VERSION} • ${WM_DE_LABEL}](https://img.shields.io/badge/Last%20Build-${BUILD_BADGE_TEXT_URI}-${OS_BADGE_COLOR}?style=for-the-badge&logo=${OS_LOGO}&logoColor=white)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 [![Code Quality](https://img.shields.io/github/actions/workflow/status/${GITHUB_REPO}/build.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Code%20Quality)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml)
-[![Code Coverage](https://img.shields.io/badge/Coverage-Generated%20in%20CI-0A74DA?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 <img src=".github/quincy-pentacle.svg" alt="Custom Quincy Pentacle" width="28" />
 
