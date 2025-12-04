@@ -73,7 +73,7 @@ on:
         type: string
         default: ''
   schedule:
-    - cron: "20 4 * * *" # Nightly build at 4:20 AM UTC
+    - cron: "10 3 * * *"
 
 permissions:
   contents: write
@@ -377,6 +377,7 @@ jobs:
           INPUT_WINDOW_MANAGER: ${{ github.event.inputs.window_manager || github.event.client_payload.window_manager || '' }}
           INPUT_DESKTOP_ENVIRONMENT: ${{ github.event.inputs.desktop_environment || github.event.client_payload.desktop_environment || '' }}
           INPUT_YAML_CONTENT: ${{ github.event.inputs.yaml_content || github.event.client_payload.yaml_content || '' }}
+          INPUT_YAML_CONFIG: ${{ github.event.inputs.yaml_config || github.event.client_payload.yaml_config || '' }}
         run: |
           # If YAML content is provided, write it to a temp file
           if [[ -n "$INPUT_YAML_CONTENT" ]]; then
@@ -387,6 +388,10 @@ jobs:
             echo "YAML content written to /tmp/api-yaml-config.yml"
             echo "::endgroup::"
             export INPUT_YAML_CONFIG="/tmp/api-yaml-config.yml"
+          elif [[ -n "$INPUT_YAML_CONFIG" ]]; then
+            echo "::group::Using YAML config path"
+            echo "YAML config path: $INPUT_YAML_CONFIG"
+            echo "::endgroup::"
           else
             export INPUT_YAML_CONFIG="auto"
           fi

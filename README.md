@@ -3,7 +3,6 @@
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
 [![Last Build: Fedora 43 • Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%E2%80%A2%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 [![Code Quality](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Code%20Quality)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
-[![Code Coverage](https://img.shields.io/badge/Coverage-Generated%20in%20CI-0A74DA?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 <img src=".github/quincy-pentacle.svg" alt="Custom Quincy Pentacle" width="28" />
 

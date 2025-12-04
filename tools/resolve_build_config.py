@@ -49,11 +49,55 @@ def resolve_yaml_config(
         sys.exit(1)
 
     if input_yaml_config != "auto":
-        yaml_config = Path(input_yaml_config)
-        if not yaml_config.exists():
-            print(f"::error::YAML config file not found: {yaml_config}")
+        # Try to resolve the YAML config path with automatic search
+        config_path = Path(input_yaml_config)
+
+        # Check for path traversal attacks
+        if config_path.is_absolute() or any(part == ".." for part in config_path.parts):
+            print(f"::error::Invalid YAML config path (path traversal detected): {input_yaml_config}")
             sys.exit(1)
-        return yaml_config.resolve()
+
+        # Try multiple locations in order:
+        # 1. Exact path as specified
+        # 2. yaml-definitions/ + filename
+        # 3. Search entire repo for the file
+        candidate_paths = [
+            config_path,  # Try exact path first
+            Path("yaml-definitions") / config_path,  # Try yaml-definitions/ directory
+        ]
+
+        # Find first existing path
+        for candidate in candidate_paths:
+            if candidate.exists():
+                resolved = candidate.resolve()
+                print(f"Resolved YAML config: {resolved}")
+                return resolved
+
+        # If not found in standard locations, search the repo
+        print(f"::warning::YAML config not found in standard locations, searching repo for: {config_path.name}")
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["find", ".", "-name", config_path.name, "-type", "f"],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=5
+            )
+            matches = [p.strip() for p in result.stdout.strip().split('\n') if p.strip()]
+            if matches:
+                # Prefer yaml-definitions matches first, then others
+                yaml_def_matches = [m for m in matches if 'yaml-definitions' in m]
+                selected_match = yaml_def_matches[0] if yaml_def_matches else matches[0]
+                resolved = Path(selected_match).resolve()
+                print(f"Found YAML config via repo search: {resolved}")
+                return resolved
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+            print(f"::warning::Repo search failed: {e}")
+
+        print(f"::error::YAML config file not found: {input_yaml_config}")
+        print(f"::error::Searched locations: {[str(p) for p in candidate_paths]}")
+        sys.exit(1)
 
     # Auto-selection mode
     if not YAML_SELECTOR_AVAILABLE:
