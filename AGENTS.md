@@ -218,7 +218,7 @@ The build system automatically resolves YAML configuration paths:
 
 ### Cron Schedule (Updated: 2025-12-04)
 
-- Nightly builds run at **7:10 PM Seattle time (PST)** / 3:10 AM UTC
+- Nightly builds run at 3:10 AM UTC
 - Schedule: `10 3 * * *` in `.github/workflows/build.yml`
 
 ### Build Status Badges
