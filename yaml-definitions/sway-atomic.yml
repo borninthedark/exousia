@@ -42,6 +42,20 @@ modules:
         systemd-sysusers --root=/ /usr/lib/sysusers.d/atomic.conf
         mkdir -p /var/lib/rtkit
 
+  # SDDM configuration (atomic images include SDDM)
+  - type: files
+    files:
+      - src: custom-configs/sddm/sddm.conf.d/
+        dst: /etc/sddm.conf.d/
+        mode: "0644"
+
+  # SDDM theme bundles (will be extracted by setup script)
+  - type: files
+    files:
+      - src: custom-configs/sddm/themes/
+        dst: /tmp/sddm-themes-source/
+        mode: "0644"
+
   # Container authentication
   - type: files
     files:
@@ -84,6 +98,11 @@ modules:
       - src: custom-scripts/
         dst: /usr/local/bin/
         mode: "0755"
+
+  # Extract and configure SDDM themes
+  - type: script
+    scripts:
+      - /usr/local/bin/setup-sddm-themes
 
   # Create base package list
   - type: script

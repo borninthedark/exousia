@@ -23,6 +23,32 @@ build:
 
 # Modules define the build steps
 modules:
+  # SDDM configuration (KDE uses SDDM)
+  - type: files
+    files:
+      - src: custom-configs/sddm/sddm.conf.d/
+        dst: /etc/sddm.conf.d/
+        mode: "0644"
+
+  # SDDM theme bundles (will be extracted by setup script)
+  - type: files
+    files:
+      - src: custom-configs/sddm/themes/
+        dst: /tmp/sddm-themes-source/
+        mode: "0644"
+
+  # Custom scripts (needed before theme setup)
+  - type: files
+    files:
+      - src: custom-scripts/
+        dst: /usr/local/bin/
+        mode: "0755"
+
+  # Extract and configure SDDM themes
+  - type: script
+    scripts:
+      - /usr/local/bin/setup-sddm-themes
+
   # Package management
   - type: rpm-ostree
     repos:

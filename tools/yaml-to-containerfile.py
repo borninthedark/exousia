@@ -132,6 +132,8 @@ class BuildContext:
     enable_plymouth: bool
     base_image: str
     distro: str = "fedora"  # fedora, arch, gentoo, debian, ubuntu, opensuse, proxmox
+    desktop_environment: str = ""  # kde, gnome, mate, etc.
+    window_manager: str = ""  # sway, hyprland, kwin, etc.
 
 
 class ContainerfileGenerator:
@@ -751,7 +753,8 @@ class ContainerfileGenerator:
     def _evaluate_condition(self, condition: str) -> bool:
         """Evaluate a condition string against current context."""
         # Simple condition evaluation
-        # Supports: image-type == "value", enable_plymouth == true/false, distro == "value"
+        # Supports: image-type == "value", enable_plymouth == true/false, distro == "value",
+        #          desktop_environment == "value", window_manager == "value"
 
         condition = condition.strip()
 
@@ -776,6 +779,10 @@ class ContainerfileGenerator:
                 return self.context.distro == right
             if left == "enable_plymouth":
                 return self.context.enable_plymouth == (right.lower() == "true")
+            if left == "desktop_environment":
+                return self.context.desktop_environment == right
+            if left == "window_manager":
+                return self.context.window_manager == right
 
         return False
 
@@ -941,6 +948,11 @@ Examples:
     else:
         distro = config.get("distro", "fedora")
 
+    # Extract desktop configuration
+    desktop_config = config.get("desktop", {})
+    desktop_environment = desktop_config.get("desktop_environment", "")
+    window_manager = desktop_config.get("window_manager", "")
+
     if args.verbose:
         print("Build context:")
         print(f"  Image type: {image_type}")
@@ -948,13 +960,17 @@ Examples:
         print(f"  Fedora version: {fedora_version}")
         print(f"  Plymouth: {enable_plymouth}")
         print(f"  Base image: {base_image}")
+        print(f"  Desktop Environment: {desktop_environment}")
+        print(f"  Window Manager: {window_manager}")
 
     context = BuildContext(
         image_type=image_type,
         fedora_version=fedora_version,
         enable_plymouth=enable_plymouth,
         base_image=base_image,
-        distro=distro
+        distro=distro,
+        desktop_environment=desktop_environment,
+        window_manager=window_manager
     )
 
     # Generate Containerfile

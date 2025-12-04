@@ -1,0 +1,83 @@
+#!/bin/bash
+# Setup SDDM themes from bundles
+# Automatically extracts theme archives and sets default theme
+
+set -euo pipefail
+
+THEMES_SOURCE="/tmp/sddm-themes-source"
+THEMES_DEST="/usr/share/sddm/themes"
+SDDM_CONF="/etc/sddm.conf.d/99-theme.conf"
+
+echo "==> Setting up SDDM themes"
+
+# Create destination directory
+mkdir -p "$THEMES_DEST"
+
+# Check if there are any theme bundles
+if [ ! -d "$THEMES_SOURCE" ] || [ -z "$(ls -A "$THEMES_SOURCE" 2>/dev/null)" ]; then
+    echo "No SDDM theme bundles found, skipping theme setup"
+    exit 0
+fi
+
+# Track extracted themes
+EXTRACTED_THEMES=()
+
+# Extract theme bundles
+for bundle in "$THEMES_SOURCE"/*.{zip,tar,tar.gz,tgz,tar.bz2,tar.xz} 2>/dev/null || true; do
+    [ -e "$bundle" ] || continue
+
+    echo "Processing theme bundle: $(basename "$bundle")"
+
+    case "$bundle" in
+        *.zip)
+            unzip -q "$bundle" -d "$THEMES_DEST"
+            ;;
+        *.tar.gz|*.tgz)
+            tar -xzf "$bundle" -C "$THEMES_DEST"
+            ;;
+        *.tar.bz2)
+            tar -xjf "$bundle" -C "$THEMES_DEST"
+            ;;
+        *.tar.xz)
+            tar -xJf "$bundle" -C "$THEMES_DEST"
+            ;;
+        *.tar)
+            tar -xf "$bundle" -C "$THEMES_DEST"
+            ;;
+    esac
+
+    echo "  Extracted: $(basename "$bundle")"
+done
+
+# Find all valid SDDM themes (directories with metadata.desktop)
+for theme_dir in "$THEMES_DEST"/*; do
+    [ -d "$theme_dir" ] || continue
+
+    if [ -f "$theme_dir/metadata.desktop" ]; then
+        theme_name=$(basename "$theme_dir")
+        EXTRACTED_THEMES+=("$theme_name")
+        echo "  Found valid theme: $theme_name"
+    fi
+done
+
+# Set default theme if any were extracted
+if [ ${#EXTRACTED_THEMES[@]} -gt 0 ]; then
+    DEFAULT_THEME="${EXTRACTED_THEMES[0]}"
+
+    echo "==> Setting default SDDM theme: $DEFAULT_THEME"
+
+    # Create theme configuration
+    mkdir -p "$(dirname "$SDDM_CONF")"
+    cat > "$SDDM_CONF" <<EOF
+[Theme]
+# Auto-configured by setup-sddm-themes
+Current=$DEFAULT_THEME
+EOF
+
+    echo "  Theme configuration written to: $SDDM_CONF"
+    echo "  Total themes installed: ${#EXTRACTED_THEMES[@]}"
+else
+    echo "No valid SDDM themes found in bundles"
+fi
+
+echo "==> SDDM theme setup complete"
