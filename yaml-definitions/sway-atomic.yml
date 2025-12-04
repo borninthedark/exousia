@@ -23,11 +23,11 @@ build:
 
 # Modules define the build steps
 modules:
-  # System users configuration
+  # System users configuration (rtkit only for atomic, no greetd needed)
   - type: files
     files:
-      - src: sysusers/bootc.conf
-        dst: /usr/lib/sysusers.d/bootc.conf
+      - src: sysusers/atomic.conf
+        dst: /usr/lib/sysusers.d/atomic.conf
         mode: "0644"
 
   # Initialize system users
@@ -39,15 +39,8 @@ modules:
       - systemd-sysusers || true
       - |
         set -e
-        systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf
-        mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit
-
-  # Greetd configuration
-  - type: files
-    files:
-      - src: custom-configs/greetd/config.toml
-        dst: /etc/greetd/config.toml
-        mode: "0644"
+        systemd-sysusers --root=/ /usr/lib/sysusers.d/atomic.conf
+        mkdir -p /var/lib/rtkit
 
   # Container authentication
   - type: files
