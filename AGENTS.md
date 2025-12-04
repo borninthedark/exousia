@@ -216,11 +216,6 @@ The build system automatically resolves YAML configuration paths:
 - Prevents path traversal attacks
 - Documented in `docs/WEBHOOK_API.md`
 
-### Cron Schedule (Updated: 2025-12-04)
-
-- Nightly builds run at **7:10 PM Seattle time (PST)** / 3:10 AM UTC
-- Schedule: `10 3 * * *` in `.github/workflows/build.yml`
-
 ### Build Status Badges
 
 The project uses custom badges in README.md:
