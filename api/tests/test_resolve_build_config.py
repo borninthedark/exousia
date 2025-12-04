@@ -189,3 +189,82 @@ def test_apply_desktop_override_ignores_non_bootc():
     )
 
     assert yaml.safe_load(unchanged) == yaml.safe_load(yaml_content)
+
+
+def test_resolve_yaml_config_with_exact_path(tmp_workspace: Path):
+    """Test that resolve_yaml_config finds file at exact path."""
+    config_file = tmp_workspace / "my-config.yml"
+    config_file.write_text("name: test\nmodules: []\n")
+
+    resolved = resolve_build_config.resolve_yaml_config(
+        str(config_file.name), "fedora-bootc"
+    )
+
+    assert resolved == config_file
+
+
+def test_resolve_yaml_config_with_yaml_definitions_fallback(tmp_workspace: Path):
+    """Test that resolve_yaml_config finds file in yaml-definitions/ directory."""
+    yaml_definitions = tmp_workspace / "yaml-definitions"
+    yaml_definitions.mkdir()
+    config_file = yaml_definitions / "sway-bootc.yml"
+    config_file.write_text("name: test\nmodules: []\n")
+
+    resolved = resolve_build_config.resolve_yaml_config(
+        "sway-bootc.yml", "fedora-bootc"
+    )
+
+    assert resolved == config_file
+
+
+def test_resolve_yaml_config_with_repo_search(tmp_workspace: Path):
+    """Test that resolve_yaml_config searches entire repo for file."""
+    # Create a file in a subdirectory
+    subdir = tmp_workspace / "configs" / "custom"
+    subdir.mkdir(parents=True)
+    config_file = subdir / "special-config.yml"
+    config_file.write_text("name: test\nmodules: []\n")
+
+    resolved = resolve_build_config.resolve_yaml_config(
+        "special-config.yml", "fedora-bootc"
+    )
+
+    assert resolved == config_file
+
+
+def test_resolve_yaml_config_prefers_yaml_definitions_in_search(tmp_workspace: Path):
+    """Test that repo search prefers yaml-definitions/ matches."""
+    # Create file in yaml-definitions
+    yaml_definitions = tmp_workspace / "yaml-definitions"
+    yaml_definitions.mkdir()
+    preferred_file = yaml_definitions / "config.yml"
+    preferred_file.write_text("name: preferred\nmodules: []\n")
+
+    # Create same filename elsewhere
+    other_dir = tmp_workspace / "other"
+    other_dir.mkdir()
+    other_file = other_dir / "config.yml"
+    other_file.write_text("name: other\nmodules: []\n")
+
+    resolved = resolve_build_config.resolve_yaml_config(
+        "config.yml", "fedora-bootc"
+    )
+
+    # Should prefer yaml-definitions match
+    assert resolved == preferred_file
+
+
+def test_resolve_yaml_config_rejects_path_traversal(tmp_workspace: Path):
+    """Test that resolve_yaml_config rejects path traversal attempts."""
+    with pytest.raises(SystemExit):
+        resolve_build_config.resolve_yaml_config(
+            "../../../etc/passwd", "fedora-bootc"
+        )
+
+
+def test_resolve_yaml_config_rejects_absolute_paths(tmp_workspace: Path):
+    """Test that resolve_yaml_config rejects absolute paths."""
+    with pytest.raises(SystemExit):
+        resolve_build_config.resolve_yaml_config(
+            "/etc/passwd", "fedora-bootc"
+        )

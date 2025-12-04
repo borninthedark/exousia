@@ -2,11 +2,46 @@
 
 ## Overview
 
-This document defines the AI agent configurations, workflows, and best practices used in the GPT-Codex project for AI-assisted development. GPT-Codex leverages multiple AI agents (Claude, GPT-4, and specialized coding assistants) to enhance development velocity, code quality, and system reliability.
+This document defines the AI agent configurations, workflows, and best practices used in the Exousia project for AI-assisted development. Exousia leverages multiple AI agents (Claude, GPT Codex, and specialized coding assistants) to enhance development velocity, code quality, and system reliability.
+
+## Project Context
+
+**Exousia** is a declarative bootc image builder with:
+- **FastAPI backend** (`api/`) for build orchestration and configuration management
+- **Python tools** (`tools/`) for YAML transpilation, package validation, and build configuration
+- **GitHub Actions CI/CD** (`.github/workflows/`) for automated builds, tests, and deployments
+- **YAML-based configuration** (`yaml-definitions/`) for defining bootc images
+- **Comprehensive test suite** (52+ tests covering API, tools, and integration)
+
+### Project Structure
+
+```
+exousia/
+├── .github/workflows/     # CI/CD pipeline definitions
+│   └── build.yml         # Main build workflow
+├── api/                  # FastAPI backend
+│   ├── routers/         # API endpoint handlers
+│   ├── services/        # Business logic services
+│   ├── tests/           # API and integration tests
+│   └── models.py        # Pydantic data models
+├── tools/               # Python CLI tools
+│   ├── resolve_build_config.py    # Build configuration resolver
+│   ├── yaml-to-containerfile.py  # YAML → Containerfile transpiler
+│   ├── package_loader.py          # Package definition loader
+│   └── validate_installed_packages.py  # Package validator
+├── yaml-definitions/    # YAML configuration files
+├── custom-scripts/      # Shell scripts for builds
+├── custom-tests/        # Bats integration tests
+├── packages/           # Package definitions
+│   ├── common/         # Base packages
+│   ├── desktop-environments/
+│   └── window-managers/
+└── docs/               # Documentation
+```
 
 ## Philosophy: AI-Augmented Development
 
-GPT-Codex embraces AI as a collaborative development partner rather than a replacement for human expertise. The goal is to:
+Exousia embraces AI as a collaborative development partner rather than a replacement for human expertise. The goal is to:
 
 - **Accelerate Development**: Leverage AI for rapid prototyping, boilerplate generation, and iterative refinement
 - **Enhance Quality**: Use AI for code review, test generation, and documentation
@@ -78,6 +113,123 @@ Before opening a PR, complete this checklist:
 - [ ] **Security scan clean** (no new vulnerabilities introduced)
 - [ ] **Performance tested** (if performance-critical code was changed)
 - [ ] **Backwards compatibility verified** (or breaking changes documented)
+
+## Common Development Scenarios (Exousia-Specific)
+
+### Scenario 1: Adding New API Endpoint
+
+```bash
+# Step 1: Implement endpoint in api/routers/*.py
+# Step 2: Add Pydantic models in api/models.py
+# Step 3: Create tests in api/tests/test_*.py
+
+# Required tests:
+# - Happy path (200 OK)
+# - Invalid input (400/422)
+# - Auth failure (401/403)
+# - Not found (404)
+# - Server error handling (500)
+
+# Step 4: Update API documentation
+# - Add examples to api/README.md
+# - Document request/response schemas
+
+# Step 5: Run tests
+pytest api/tests/test_<feature>.py -v
+
+# Step 6: Verify coverage
+pytest --cov=api.routers.<module> --cov-report=term
+```
+
+### Scenario 2: Modifying Build Pipeline
+
+```bash
+# Step 1: Update workflow in .github/workflows/build.yml
+# Step 2: Update resolve_build_config.py if needed
+# Step 3: Test locally with act or similar
+
+# Required validations:
+# - YAML syntax is valid
+# - Environment variables are documented
+# - Fallback logic is tested
+
+# Step 4: Update documentation
+# - Document new workflow inputs
+# - Add examples to README.md and WEBHOOK_API.md
+
+# Step 5: Create PR with test plan
+```
+
+### Scenario 3: Adding New Package Definition
+
+```bash
+# Step 1: Create YAML in packages/desktop-environments/ or packages/window-managers/
+# Step 2: Validate YAML structure
+
+# Required validations:
+python tools/package_loader.py --validate packages/<category>/<name>.yml
+
+# Step 3: Add to YamlSelectorService mappings (if needed)
+# Step 4: Test auto-selection logic
+
+pytest api/tests/test_yaml_selector.py -v
+
+# Step 5: Document in README
+```
+
+### Scenario 4: Fixing Bug
+
+```bash
+# Step 1: Write failing test that reproduces bug
+# Step 2: Implement fix
+# Step 3: Verify test now passes
+# Step 4: Add regression test to prevent recurrence
+
+# Example test structure:
+def test_bug_<issue_number>_<description>():
+    """Regression test for bug #<issue_number>."""
+    # Setup that triggers bug
+    # Assert expected behavior (not buggy behavior)
+```
+
+### Scenario 5: Updating YAML Path Resolution
+
+The project uses automatic YAML path resolution in `tools/resolve_build_config.py`:
+
+1. **Exact path**: Try the path as specified
+2. **yaml-definitions/ directory**: Prepend `yaml-definitions/` and try again
+3. **Repo-wide search**: Use `find` to search entire repo (prefer yaml-definitions matches)
+4. **Security**: Reject path traversal attempts (`..` or absolute paths)
+
+When modifying this logic:
+- Update tests in `api/tests/test_resolve_build_config.py`
+- Ensure path traversal protection remains intact
+- Document changes in `docs/WEBHOOK_API.md`
+
+## Key Project Features
+
+### Automatic YAML Path Resolution (Added: 2025-12-04)
+
+The build system automatically resolves YAML configuration paths:
+- Users can specify just a filename: `sway-bootc.yml`
+- System searches: exact path → yaml-definitions/ → entire repo
+- Prevents path traversal attacks
+- Documented in `docs/WEBHOOK_API.md`
+
+### Cron Schedule (Updated: 2025-12-04)
+
+- Nightly builds run at **7:10 PM Seattle time (PST)** / 3:10 AM UTC
+- Schedule: `10 3 * * *` in `.github/workflows/build.yml`
+
+### Build Status Badges
+
+The project uses custom badges in README.md:
+- **Reiatsu** (霊圧, spiritual pressure) - Build status
+- **Last Build** - Dynamic badge showing OS version and desktop environment
+- **Code Quality** - Workflow status
+- **Highly Experimental** - Warning badge
+
+Code coverage badge was removed as of 2025-12-04.
 
 ### Documentation Requirements
 
