@@ -160,7 +160,7 @@ curl -X POST \
     }
   }'
 
-# Trigger build with specific YAML definition (yaml-definitions/)
+# Trigger build with specific YAML definition (just the filename - searches yaml-definitions/ and repo)
 curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -172,7 +172,7 @@ curl -X POST \
       "image_type": "fedora-bootc",
       "distro_version": "44",
       "enable_plymouth": true,
-      "yaml_config": "yaml-definitions/sway-bootc.yml"
+      "yaml_config": "sway-bootc.yml"
     }
   }'
 
@@ -624,4 +624,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with bootc**
 
-*This README was automatically generated on 2025-12-04 04:04:21 UTC*
+*This README was automatically generated on 2025-12-04 15:16:24 UTC*
