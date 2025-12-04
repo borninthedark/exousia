@@ -282,6 +282,8 @@ class ContainerfileGenerator:
                 self._process_package_loader_module(module)
             elif module_type == "systemd":
                 self._process_systemd_module(module)
+            elif module_type == "sddm-themes":
+                self._process_sddm_themes_module(module)
             elif module_type == "bootcrew-setup":
                 self._process_bootcrew_setup_module(module)
             else:
@@ -515,6 +517,67 @@ class ContainerfileGenerator:
 
         if commands:
             self.lines.append("RUN " + " && \\\n    ".join(commands))
+
+    def _process_sddm_themes_module(self, module: Dict[str, Any]):
+        """Process sddm-themes module for automatic theme extraction and configuration."""
+        themes_source = module.get("source", "/tmp/sddm-themes-source")
+        themes_dest = module.get("destination", "/usr/share/sddm/themes")
+        config_file = module.get("config", "/etc/sddm.conf.d/99-theme.conf")
+
+        self.lines.extend([
+            "RUN set -eux; \\",
+            f"    THEMES_SOURCE='{themes_source}'; \\",
+            f"    THEMES_DEST='{themes_dest}'; \\",
+            f"    SDDM_CONF='{config_file}'; \\",
+            "    echo '==> Setting up SDDM themes'; \\",
+            "    mkdir -p \"$THEMES_DEST\"; \\",
+            "    if [ ! -d \"$THEMES_SOURCE\" ] || [ -z \"$(ls -A \"$THEMES_SOURCE\" 2>/dev/null || true)\" ]; then \\",
+            "        echo 'No SDDM theme bundles found, skipping theme setup'; \\",
+            "        exit 0; \\",
+            "    fi; \\",
+            "    EXTRACTED_THEMES=(); \\",
+            "    for bundle in \"$THEMES_SOURCE\"/*.zip \"$THEMES_SOURCE\"/*.tar \"$THEMES_SOURCE\"/*.tar.gz \"$THEMES_SOURCE\"/*.tgz \"$THEMES_SOURCE\"/*.tar.bz2 \"$THEMES_SOURCE\"/*.tar.xz 2>/dev/null || true; do \\",
+            "        [ -e \"$bundle\" ] || continue; \\",
+            "        echo \"Processing theme bundle: $(basename \"$bundle\")\"; \\",
+            "        case \"$bundle\" in \\",
+            "            *.zip) \\",
+            "                unzip -q \"$bundle\" -d \"$THEMES_DEST\"; \\",
+            "                ;; \\",
+            "            *.tar.gz|*.tgz) \\",
+            "                tar -xzf \"$bundle\" -C \"$THEMES_DEST\"; \\",
+            "                ;; \\",
+            "            *.tar.bz2) \\",
+            "                tar -xjf \"$bundle\" -C \"$THEMES_DEST\"; \\",
+            "                ;; \\",
+            "            *.tar.xz) \\",
+            "                tar -xJf \"$bundle\" -C \"$THEMES_DEST\"; \\",
+            "                ;; \\",
+            "            *.tar) \\",
+            "                tar -xf \"$bundle\" -C \"$THEMES_DEST\"; \\",
+            "                ;; \\",
+            "        esac; \\",
+            "        echo \"  Extracted: $(basename \"$bundle\")\"; \\",
+            "    done; \\",
+            "    for theme_dir in \"$THEMES_DEST\"/*; do \\",
+            "        [ -d \"$theme_dir\" ] || continue; \\",
+            "        if [ -f \"$theme_dir/metadata.desktop\" ]; then \\",
+            "            theme_name=$(basename \"$theme_dir\"); \\",
+            "            EXTRACTED_THEMES+=(\"$theme_name\"); \\",
+            "            echo \"  Found valid theme: $theme_name\"; \\",
+            "        fi; \\",
+            "    done; \\",
+            "    if [ ${#EXTRACTED_THEMES[@]} -gt 0 ]; then \\",
+            "        DEFAULT_THEME=\"${EXTRACTED_THEMES[0]}\"; \\",
+            "        echo \"==> Setting default SDDM theme: $DEFAULT_THEME\"; \\",
+            "        mkdir -p \"$(dirname \"$SDDM_CONF\")\"; \\",
+            "        printf '[Theme]\\\\n# Auto-configured by sddm-themes module\\\\nCurrent=%s\\\\n' \"$DEFAULT_THEME\" > \"$SDDM_CONF\"; \\",
+            "        echo \"  Theme configuration written to: $SDDM_CONF\"; \\",
+            "        echo \"  Total themes installed: ${#EXTRACTED_THEMES[@]}\"; \\",
+            "    else \\",
+            "        echo 'No valid SDDM themes found in bundles'; \\",
+            "    fi; \\",
+            "    echo '==> SDDM theme setup complete'"
+        ])
 
     def _process_bootcrew_setup_module(self, module: Dict[str, Any]):
         """Process bootcrew-setup module (build bootc from source and configure for bootcrew distros)."""

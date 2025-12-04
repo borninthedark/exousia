@@ -37,17 +37,11 @@ modules:
         dst: /tmp/sddm-themes-source/
         mode: "0644"
 
-  # Custom scripts (needed before theme setup)
-  - type: files
-    files:
-      - src: custom-scripts/
-        dst: /usr/local/bin/
-        mode: "0755"
-
   # Extract and configure SDDM themes
-  - type: script
-    scripts:
-      - /usr/local/bin/setup-sddm-themes
+  - type: sddm-themes
+    source: /tmp/sddm-themes-source
+    destination: /usr/share/sddm/themes
+    config: /etc/sddm.conf.d/99-theme.conf
 
   # Package management
   - type: rpm-ostree

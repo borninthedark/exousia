@@ -100,9 +100,10 @@ modules:
         mode: "0755"
 
   # Extract and configure SDDM themes
-  - type: script
-    scripts:
-      - /usr/local/bin/setup-sddm-themes
+  - type: sddm-themes
+    source: /tmp/sddm-themes-source
+    destination: /usr/share/sddm/themes
+    config: /etc/sddm.conf.d/99-theme.conf
 
   # Create base package list
   - type: script
