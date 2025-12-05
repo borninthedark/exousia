@@ -124,6 +124,9 @@ modules:
       - src: custom-configs/sway/start-sway
         dst: /usr/bin/start-sway
         mode: "0755"
+      - src: custom-scripts/layered-include
+        dst: /usr/libexec/sway/layered-include
+        mode: "0755"
 
   # Package management with new loader
   - type: package-loader
