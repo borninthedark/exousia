@@ -99,6 +99,13 @@ modules:
         dst: /usr/local/bin/
         mode: "0755"
 
+  # Sway layered-include script
+  - type: files
+    files:
+      - src: custom-scripts/layered-include
+        dst: /usr/libexec/sway/layered-include
+        mode: "0755"
+
   # Extract and configure SDDM themes
   - type: sddm-themes
     source: /tmp/sddm-themes-source
