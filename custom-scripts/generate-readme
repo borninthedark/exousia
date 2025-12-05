@@ -240,6 +240,8 @@ generate_readme() {
 
 This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs.
 
+**Note on Theming:** The "Reiatsu" (霊圧, spiritual pressure) build status badge is inspired by *BLEACH*, the manga and anime series created by **Tite Kubo**. This thematic element is used purely as a playful project aesthetic and status indicator, with full credit and acknowledgment to the original creator.
+
 ## Highly Experimental Disclaimer
 
 ⚠️ This project is highly experimental. There are **no guarantees** about stability, data safety, or fitness for any purpose. Running these builds or scripts can leave your system in a non-working state, require recovery steps, or force a full reinstall. Proceed only if you understand the risks and are comfortable rebuilding your environment from scratch.
@@ -836,6 +838,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - The broader container and immutable OS community
 - All contributors to the referenced documentation and guides
 - **Claude** (Anthropic) and **GPT Codex** (OpenAI) for AI-assisted development
+
+### Creative Acknowledgments
+
+- **Tite Kubo** - Creator of *BLEACH* (manga and anime series)
+  - The "Reiatsu" (霊圧, spiritual pressure) status indicator in this project is inspired by themes from BLEACH
+  - This element is used respectfully as a playful project aesthetic with full acknowledgment of the original creator
+  - All rights to BLEACH and its associated concepts belong to Tite Kubo and respective copyright holders
+  - This project is not affiliated with or endorsed by Tite Kubo, Shueisha, or Viz Media
 
 ### Development Notes
 
