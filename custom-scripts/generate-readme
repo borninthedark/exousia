@@ -171,7 +171,24 @@ PY
         window_manager=$(awk -F: '/^[[:space:]]*window_manager:/ && $0 !~ /^[[:space:]]*#/ {gsub(/#.*/, "", $2); gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}' "${REPO_ROOT}/adnyeus.yml")
 
         if [[ -n "${desktop_env}" ]]; then
-            WM_DE_LABEL="${desktop_env^}"
+            # Special case handling for proper capitalization
+            case "${desktop_env,,}" in
+                lxqt)
+                    WM_DE_LABEL="LXQt"
+                    ;;
+                kde)
+                    WM_DE_LABEL="KDE Plasma"
+                    ;;
+                mate)
+                    WM_DE_LABEL="MATE"
+                    ;;
+                gnome)
+                    WM_DE_LABEL="GNOME"
+                    ;;
+                *)
+                    WM_DE_LABEL="${desktop_env^}"
+                    ;;
+            esac
         elif [[ -n "${window_manager}" ]]; then
             WM_DE_LABEL="${window_manager^}"
         fi
@@ -219,11 +236,11 @@ generate_readme() {
 [![Last Build: ${OS_NAME} ${OS_VERSION} • ${WM_DE_LABEL}](https://img.shields.io/badge/Last%20Build-${BUILD_BADGE_TEXT_URI}-${OS_BADGE_COLOR}?style=for-the-badge&logo=${OS_LOGO}&logoColor=white)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 [![Code Quality](https://img.shields.io/github/actions/workflow/status/${GITHUB_REPO}/build.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Code%20Quality)](https://github.com/${GITHUB_REPO}/actions/workflows/build.yml)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
-<img src=".github/quincy-pentacle.svg" alt="Custom Quincy Pentacle" width="28" />
+<img src=".github/blue-sparrow.svg" alt="Blue Sparrow" width="28" />
 
 This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs.
 
-**Note on Theming:** The "Reiatsu" (霊圧, spiritual pressure) build status badge and Quincy pentacle imagery are inspired by *BLEACH*, the manga and anime series created by **Tite Kubo**. These thematic elements are used purely as playful project aesthetics and status indicators, with full credit and acknowledgment to the original creator.
+**Note on Theming:** The "Reiatsu" (霊圧, spiritual pressure) build status badge is inspired by *BLEACH*, the manga and anime series created by **Tite Kubo**. This thematic element is used purely as a playful project aesthetic and status indicator, with full credit and acknowledgment to the original creator.
 
 ## Highly Experimental Disclaimer
 
@@ -825,8 +842,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ### Creative Acknowledgments
 
 - **Tite Kubo** - Creator of *BLEACH* (manga and anime series)
-  - The "Reiatsu" (霊圧, spiritual pressure) status indicator and Quincy pentacle imagery in this project are inspired by themes from BLEACH
-  - These elements are used respectfully as playful project aesthetics with full acknowledgment of the original creator
+  - The "Reiatsu" (霊圧, spiritual pressure) status indicator in this project is inspired by themes from BLEACH
+  - This element is used respectfully as a playful project aesthetic with full acknowledgment of the original creator
   - All rights to BLEACH and its associated concepts belong to Tite Kubo and respective copyright holders
   - This project is not affiliated with or endorsed by Tite Kubo, Shueisha, or Viz Media
 
