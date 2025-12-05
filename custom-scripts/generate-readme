@@ -553,10 +553,24 @@ The README will automatically update to reflect the new configuration.
 
 ### Modifying Packages
 
-Edit the package lists in \`custom-pkgs/\`:
+**For bootc images:**
+- Edit package definitions in \`packages/window-managers/\` or \`packages/desktop-environments/\`
+- The \`package-loader\` module loads packages based on your WM/DE selection
 
-- \`packages.add\` - Packages to install
-- \`packages.remove\` - Packages to remove from base image
+**For atomic images:**
+- Edit the \`rpm-ostree\` section in your YAML definition (e.g., \`yaml-definitions/sway-atomic.yml\`)
+- Add to \`install:\` list or remove with \`remove:\` list
+
+**Example:**
+\`\`\`yaml
+# packages/window-managers/sway.yml
+utilities:
+  - your-package-name
+
+# yaml-definitions/sway-atomic.yml
+install:
+  - your-package-name
+\`\`\`
 
 #### Fedora Hyprland COPR setup
 
@@ -578,45 +592,28 @@ These repos match the expectations defined in \`packages/window-managers/hyprlan
 
 ### Adding Custom Configuration
 
-Place configuration files in the appropriate \`custom-configs/\` subdirectories:
-
-- \`custom-configs/sway/\` - Sway window manager configuration
-- \`custom-configs/greetd/\` - Display manager configuration
-- \`custom-configs/plymouth/\` - Boot splash configuration
+Place config files in \`custom-configs/\`:
+- \`sway/\` - Sway WM and config.d snippets
+- \`waybar/\` - Waybar status bar
+- \`swaylock/\` - Screen lock appearance
+- \`greetd/\` or \`sddm/\` - Display managers
+- \`plymouth/\` - Boot splash themes
 
 ### Plymouth Boot Splash Configuration
 
-The Plymouth boot splash configuration is toggleable on both base image types via the \`enable_plymouth\` flag:
+Plymouth is supported on both image types via the \`enable_plymouth\` flag in your YAML definition.
 
-| Base Image Type | Plymouth Support | Details |
-|-----------------|------------------|---------|
-| \`fedora-bootc\` | ✅ Custom themes supported | Uses \`custom-configs/plymouth/themes/bgrt-better-luks/\` and bootc kargs when enabled |
-| \`fedora-sway-atomic\` | ✅ Custom themes supported | Uses \`custom-configs/plymouth/themes/bgrt-better-luks/\` when enabled |
+**To enable:**
+1. Set \`enable_plymouth: true\` in your YAML (e.g., \`sway-bootc.yml\`)
+2. Custom themes go in \`custom-configs/plymouth/themes/bgrt-better-luks/\`
+3. Bootc images automatically get kernel arguments; atomic images rebuild initramfs
 
-**To use custom Plymouth themes:**
+### Display Managers
 
-1. Set \`enable_plymouth: true\` in your BlueBuild YAML (default in provided configs).
-2. Place your theme in \`custom-configs/plymouth/themes/bgrt-better-luks/\`.
-3. Build either \`fedora-bootc\` or \`fedora-sway-atomic\` variants to apply the theme.
+- **fedora-bootc**: Uses greetd (configured in \`custom-configs/greetd/\`)
+- **fedora-sway-atomic**: Uses SDDM (configured in \`custom-configs/sddm/\`)
 
-### Greetd Display Manager
-
-**⚠️ IMPORTANT: The greetd display manager is only available for \`fedora-bootc\` base images.**
-
-The greetd display manager availability depends on your base image type:
-
-| Base Image Type | Greetd Support | Details |
-|-----------------|----------------|---------|
-| \`fedora-bootc\` | ✅ Available | greetd.service enabled, custom config in \`custom-configs/greetd/\` |
-| \`fedora-sway-atomic\` | ❌ Not available | Uses SDDM display manager instead |
-
-**Note:** ${GREETD_NOTE}
-
-**To use greetd display manager:**
-
-1. Use the webhook API or workflow dispatch to build with the fedora-bootc image type
-
-2. Customize the greetd configuration in \`custom-configs/greetd/config.toml\` as needed
+To switch display managers, use a different base image type.
 
 ### Custom Scripts
 
@@ -730,11 +727,7 @@ To use the full CI/CD pipeline, configure these secrets in your repository:
 
 ## Known Issues
 
-### GHCR Authentication
-
-Currently experiencing authentication issues with \`bootc switch\` and \`bootc upgrade\` when using GHCR. The commands work flawlessly with Docker Hub. While \`skopeo inspect\` and \`podman pull\` work with GHCR, bootc operations return "403 Forbidden | Invalid Username/Password" errors.
-
-**Workaround:** Use Docker Hub for bootc operations until this is resolved.
+**GHCR Authentication:** bootc operations (\`switch\`, \`upgrade\`) may fail with GHCR. Use Docker Hub instead.
 
 ---
 
