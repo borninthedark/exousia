@@ -348,12 +348,12 @@ python api/webhook_trigger.py \\
   --wm sway \\
   --distro-version 43
 
-# Build with OS specification for auto-selection
+# Build with Debian and Sway
 python api/webhook_trigger.py \\
-  --os fedora \\
-  --image-type fedora-bootc \\
-  --de lxqt \\
-  --distro-version 43
+  --os debian \\
+  --image-type debian-bootc \\
+  --wm sway \\
+  --distro-version 12
 
 # Build with custom configuration and disable Plymouth
 python api/webhook_trigger.py \\
@@ -447,7 +447,7 @@ curl -X POST \\
     }
   }'
 
-# Trigger build with OS specification for auto-selection
+# Trigger build with Debian and Sway
 curl -X POST \\
   -H "Accept: application/vnd.github+json" \\
   -H "Authorization: Bearer \$GITHUB_TOKEN" \\
@@ -456,11 +456,11 @@ curl -X POST \\
   -d '{
     "event_type": "api",
     "client_payload": {
-      "os": "fedora",
-      "image_type": "fedora-bootc",
-      "distro_version": "43",
-      "enable_plymouth": true,
-      "desktop_environment": "lxqt"
+      "os": "debian",
+      "image_type": "debian-bootc",
+      "distro_version": "12",
+      "enable_plymouth": false,
+      "window_manager": "sway"
     }
   }'
 \`\`\`
