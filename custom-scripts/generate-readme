@@ -821,6 +821,12 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgments
 
 - The bootc project maintainers and the Fedora community
+- [Fedora Sway SIG](https://gitlab.com/fedora/sigs/sway/sway-config-fedora) for excellent Sway configuration and QoL improvements
+  - Waybar configuration, helper scripts, and keybindings adapted from their repository
+  - Special thanks for the layered-include pattern and volume-helper implementation
+- [openSUSEway](https://github.com/openSUSE/openSUSEway) for innovative Sway enhancements
+  - Advanced screenshot modes, system power menu, and touchpad gesture configurations
+  - Intelligent window floating rules and swaylock theming
 - [Universal Blue](https://universal-blue.org/) for pioneering container-native desktop workflows
 - [BlueBuild](https://blue-build.org/) for the declarative YAML specification that inspired my build system
 - [bootcrew](https://github.com/bootcrew) for community-driven bootc projects and examples

@@ -1,0 +1,59 @@
+# Swaylock configuration
+# Adapted from openSUSEway and Fedora Sway SIG
+
+# Detach from the controlling terminal after locking
+daemonize
+
+# Do nothing when pressing Enter on an empty password
+ignore-empty-password
+
+# Show current count of failed authentication attempts
+show-failed-attempts
+
+# Show the current keyboard layout
+show-keyboard-layout
+
+# Don't show lines
+line-uses-ring
+
+# Show caps lock indicator
+indicator-caps-lock
+
+# Colors (Nord-inspired)
+color=2E3440
+
+# Inside colors
+inside-color=3B4252
+inside-clear-color=81A1C1
+inside-caps-lock-color=FAE3B0
+inside-ver-color=B48EAD
+inside-wrong-color=BF616A
+
+# Ring colors
+ring-color=4C566A
+ring-clear-color=88C0D0
+ring-caps-lock-color=EBCB8B
+ring-ver-color=D08770
+ring-wrong-color=D08770
+
+# Line color
+line-color=00000000
+line-clear-color=00000000
+line-caps-lock-color=00000000
+line-ver-color=00000000
+line-wrong-color=00000000
+
+# Text colors
+text-color=ECEFF4
+text-clear-color=3B4252
+text-caps-lock-color=3B4252
+text-ver-color=3B4252
+text-wrong-color=3B4252
+
+# Separator color
+separator-color=00000000
+
+# Layout text and background
+layout-text-color=ECEFF4
+layout-bg-color=00000000
+layout-border-color=00000000
