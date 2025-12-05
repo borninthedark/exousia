@@ -177,13 +177,6 @@ PY
         fi
     fi
 
-    # Greetd display manager support detection
-    if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
-        GREETD_NOTE="greetd.service is enabled and custom configuration is available in \`custom-configs/greetd/\`."
-    else
-        GREETD_NOTE="The \`fedora-sway-atomic\` image uses SDDM (Simple Desktop Display Manager) by default. Switch to \`fedora-bootc\` if you need greetd."
-    fi
-
     # Build date
     BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
     
