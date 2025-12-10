@@ -480,6 +480,12 @@ class ContainerfileGenerator:
 
         # Install individual packages
         if install_packages:
+            # Build exclude flags for packages that need to be removed
+            # This prevents DNF from pulling them in as dependencies during install
+            exclude_flags = ""
+            if remove_packages:
+                exclude_flags = " ".join(f"--exclude={pkg}" for pkg in remove_packages) + " "
+
             # Split packages into chunks to avoid command line length issues
             chunk_size = 50
             chunks = [install_packages[i:i + chunk_size] for i in range(0, len(install_packages), chunk_size)]
@@ -488,9 +494,9 @@ class ContainerfileGenerator:
                 packages_str = " ".join(chunk)
                 if i == len(chunks) - 1 and not remove_packages:
                     # Last chunk, no remove packages
-                    self.lines.append(f"    dnf install -y --skip-unavailable {packages_str}; \\")
+                    self.lines.append(f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\")
                 else:
-                    self.lines.append(f"    dnf install -y --skip-unavailable {packages_str}; \\")
+                    self.lines.append(f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\")
 
         # Remove packages
         if remove_packages:
