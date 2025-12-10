@@ -9,6 +9,7 @@ metadata:
 # Packages to remove
 packages:
   - firefox-langpacks  
+  - swaylock
   - firefox
   - foot  # Using kitty/alacritty instead
   - dunst  # Using mako/swaync instead
