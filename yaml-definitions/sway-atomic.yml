@@ -105,9 +105,6 @@ modules:
       - src: custom-scripts/layered-include
         dst: /usr/libexec/sway/layered-include
         mode: "0755"
-      - src: custom-scripts/volume-helper
-        dst: /usr/libexec/sway/volume-helper
-        mode: "0755"
 
   # Extract and configure SDDM themes
   - type: sddm-themes
