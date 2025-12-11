@@ -103,22 +103,26 @@ ip addr show virbr0
 For the impatient, here's the 30-second version:
 
 ```bash
+# One command quickstart
+make rke2-quickstart
+
+# Or manual steps:
 # 1. Start host registry
-./tools/setup-rke2-registry.sh start
+python3 tools/rke2_ops.py registry start
 
 # 2. Build and push bootc image
-podman build -f Containerfile.rke2 -t localhost:5000/exousia-rke2:latest .
-podman push localhost:5000/exousia-rke2:latest
+make rke2-build
+make rke2-push
 
 # 3. Build VM disk image
-./tools/rke2-vm-manager.sh build
+python3 tools/rke2_ops.py vm build
 
 # 4. Create and start VM
-./tools/rke2-vm-manager.sh create
-./tools/rke2-vm-manager.sh start
+python3 tools/rke2_ops.py vm create
+python3 tools/rke2_ops.py vm start
 
 # 5. Wait ~2 minutes, then get kubeconfig
-./tools/rke2-vm-manager.sh kubeconfig
+python3 tools/rke2_ops.py kubeconfig
 
 # 6. Test cluster
 export KUBECONFIG=~/.kube/rke2-config
@@ -156,13 +160,13 @@ Start a local container registry for the VM to pull images from:
 
 ```bash
 # Start registry on libvirt bridge
-./tools/setup-rke2-registry.sh start
+python3 tools/rke2_ops.py registry start
 
 # Verify registry is running
-./tools/setup-rke2-registry.sh status
+python3 tools/rke2_ops.py registry status
 
 # View connection info
-./tools/setup-rke2-registry.sh info
+python3 tools/rke2_ops.py registry info
 ```
 
 The registry will be accessible at:
@@ -188,10 +192,10 @@ Build a bootable disk image from the bootc container:
 
 ```bash
 # Build qcow2 disk image (50GB by default)
-./tools/rke2-vm-manager.sh build
+python3 tools/rke2_ops.py vm build
 
 # Custom disk size
-RKE2_DISK_SIZE=100G ./tools/rke2-vm-manager.sh build
+RKE2_DISK_SIZE=100G python3 tools/rke2_ops.py vm build
 ```
 
 This uses `bootc-image-builder` to create a qcow2 disk image at:
@@ -209,13 +213,13 @@ Create and start the VM:
 
 ```bash
 # Create VM definition
-./tools/rke2-vm-manager.sh create
+python3 tools/rke2_ops.py vm create
 
 # Start the VM
-./tools/rke2-vm-manager.sh start
+python3 tools/rke2_ops.py vm start
 
 # Check status
-./tools/rke2-vm-manager.sh status
+python3 tools/rke2_ops.py vm status
 ```
 
 **VM will:**
@@ -228,13 +232,11 @@ Create and start the VM:
 
 ```bash
 # Watch VM console (Ctrl+] to exit)
-./tools/rke2-vm-manager.sh console
+sudo virsh console rke2-node-1
 
-# Or SSH into VM (after cloud-init completes)
-./tools/rke2-vm-manager.sh ssh
-
-# Inside VM, check RKE2 status
-rke2-status
+# Check RKE2 logs
+sudo virsh console rke2-node-1
+# Then inside VM: journalctl -u rke2-server -f
 ```
 
 ### 5. Access the Cluster
@@ -243,7 +245,7 @@ Once RKE2 starts (usually 2-3 minutes), retrieve the kubeconfig:
 
 ```bash
 # Get kubeconfig from VM
-./tools/rke2-vm-manager.sh kubeconfig
+python3 tools/rke2_ops.py kubeconfig
 
 # Use the kubeconfig
 export KUBECONFIG=~/.kube/rke2-config
@@ -294,8 +296,8 @@ podman push localhost:5000/exousia-rke2:v2
 **2. Upgrade inside VM:**
 
 ```bash
-# SSH into VM
-./tools/rke2-vm-manager.sh ssh
+# Connect to VM console
+sudo virsh console rke2-node-1
 
 # Switch to new image
 sudo bootc switch localhost:5000/exousia-rke2:v2
@@ -314,7 +316,7 @@ sudo systemctl reboot
 sleep 60
 
 # Check bootc status
-./tools/rke2-vm-manager.sh ssh
+sudo virsh console rke2-node-1
 sudo bootc status
 
 # Verify RKE2
@@ -331,8 +333,8 @@ If upgrade fails, rollback to previous image:
 **Manual rollback:**
 
 ```bash
-# SSH into VM
-./tools/rke2-vm-manager.sh ssh
+# Connect to VM
+sudo virsh console rke2-node-1
 
 # Rollback to previous deployment
 sudo bootc rollback
@@ -369,10 +371,10 @@ podman push localhost:5000/exousia-rke2-agent:latest
 # Create additional VMs
 RKE2_VM_NAME=rke2-agent-1 \
 RKE2_IMAGE_REGISTRY=localhost:5000/exousia-rke2-agent:latest \
-  ./tools/rke2-vm-manager.sh build
+  python3 tools/rke2_ops.py vm build
 
-RKE2_VM_NAME=rke2-agent-1 ./tools/rke2-vm-manager.sh create
-RKE2_VM_NAME=rke2-agent-1 ./tools/rke2-vm-manager.sh start
+RKE2_VM_NAME=rke2-agent-1 python3 tools/rke2_ops.py vm create
+RKE2_VM_NAME=rke2-agent-1 python3 tools/rke2_ops.py vm start
 ```
 
 **Configure agent to join server:**
@@ -471,7 +473,7 @@ Common issues:
 Verify 9p mount:
 
 ```bash
-./tools/rke2-vm-manager.sh ssh
+sudo virsh console rke2-node-1
 
 # Check mount
 mount | grep kubeconfigshare
@@ -485,7 +487,7 @@ sudo cp /etc/rancher/rke2/rke2.yaml /mnt/host/kubeconfig/rke2.yaml
 Test registry from VM:
 
 ```bash
-./tools/rke2-vm-manager.sh ssh
+sudo virsh console rke2-node-1
 
 # Test registry connectivity
 curl http://192.168.122.1:5000/v2/_catalog
@@ -506,7 +508,7 @@ sudo journalctl -u libvirtd -f
 Console access:
 
 ```bash
-./tools/rke2-vm-manager.sh console
+sudo virsh console rke2-node-1
 ```
 
 ### Bootc Upgrade Failed
@@ -514,7 +516,7 @@ Console access:
 Check bootc status:
 
 ```bash
-./tools/rke2-vm-manager.sh ssh
+sudo virsh console rke2-node-1
 sudo bootc status
 
 # View bootc logs
@@ -549,12 +551,12 @@ podman build \
 Pre-populate registry with required images:
 
 ```bash
-# Get RKE2 image list
-./tools/rke2-vm-manager.sh ssh
+# Get RKE2 image list (from VM)
+sudo virsh console rke2-node-1
 /var/lib/rancher/rke2/bin/rke2 images list
 
-# Pull and push to local registry
-for img in $(rke2 images list); do
+# Pull and push to local registry (on host)
+for img in $(cat /tmp/rke2-images.txt); do
   podman pull $img
   podman tag $img localhost:5000/${img#*/}
   podman push localhost:5000/${img#*/}

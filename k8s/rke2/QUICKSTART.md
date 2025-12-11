@@ -15,7 +15,7 @@ kubectl get nodes
 ### 1. Start Registry (30 seconds)
 
 ```bash
-./tools/setup-rke2-registry.sh start
+python3 tools/rke2_ops.py registry start
 ```
 
 **What this does:**
@@ -87,8 +87,8 @@ kubectl get pods -A
 # VM status
 make rke2-vm-status
 
-# SSH into VM
-./tools/rke2-vm-manager.sh ssh
+# Console into VM
+sudo virsh console rke2-node-1
 
 # Inside VM: Check RKE2
 rke2-status
@@ -104,7 +104,7 @@ make rke2-vm-stop
 make rke2-vm-start
 
 # Restart
-./tools/rke2-vm-manager.sh restart
+python3 tools/rke2_ops.py vm restart
 ```
 
 ### Upgrade
@@ -115,8 +115,8 @@ make rke2-build
 podman tag exousia-rke2:latest localhost:5000/exousia-rke2:v2
 podman push localhost:5000/exousia-rke2:v2
 
-# SSH into VM
-./tools/rke2-vm-manager.sh ssh
+# Console into VM
+sudo virsh console rke2-node-1
 
 # Upgrade
 sudo bootc switch localhost:5000/exousia-rke2:v2
@@ -127,8 +127,8 @@ sudo systemctl reboot
 ### Rollback
 
 ```bash
-# SSH into VM
-./tools/rke2-vm-manager.sh ssh
+# Console into VM
+sudo virsh console rke2-node-1
 
 # Rollback to previous version
 sudo bootc rollback
@@ -139,11 +139,11 @@ sudo systemctl reboot
 
 ```bash
 # Destroy VM (keeps disk)
-./tools/rke2-vm-manager.sh destroy
+python3 tools/rke2_ops.py vm destroy
 
 # Purge everything
-./tools/rke2-vm-manager.sh purge
-./tools/setup-rke2-registry.sh stop
+python3 tools/rke2_ops.py vm purge
+python3 tools/rke2_ops.py registry stop
 ```
 
 ## Troubleshooting
@@ -151,8 +151,8 @@ sudo systemctl reboot
 ### RKE2 not starting?
 
 ```bash
-# SSH into VM
-./tools/rke2-vm-manager.sh ssh
+# Console into VM
+sudo virsh console rke2-node-1
 
 # Check logs
 sudo journalctl -u rke2-server -f
@@ -171,7 +171,7 @@ sudo virsh domifaddr rke2-node-1
 make rke2-kubeconfig
 
 # Test from inside VM
-./tools/rke2-vm-manager.sh ssh
+sudo virsh console rke2-node-1
 export KUBECONFIG=/etc/rancher/rke2/rke2.yaml
 kubectl get nodes
 ```
@@ -180,13 +180,13 @@ kubectl get nodes
 
 ```bash
 # Check registry status
-./tools/setup-rke2-registry.sh status
+python3 tools/rke2_ops.py registry status
 
 # Test from host
 curl http://192.168.122.1:5000/v2/_catalog
 
 # Test from VM
-./tools/rke2-vm-manager.sh ssh
+sudo virsh console rke2-node-1
 curl http://192.168.122.1:5000/v2/_catalog
 ```
 

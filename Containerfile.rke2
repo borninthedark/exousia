@@ -107,10 +107,14 @@ RUN mkdir -p /mnt/host/storage
 # Helper Scripts
 # ============================================================================
 
+# Install Python 3 for management scripts
+RUN dnf install -y python3 && dnf clean all
+
 # Install helper scripts for RKE2 management
+COPY tools/rke2_ops.py /usr/local/bin/rke2_ops
 COPY custom-scripts/rke2-status.sh /usr/local/bin/rke2-status
 COPY custom-scripts/rke2-kubeconfig.sh /usr/local/bin/rke2-kubeconfig
-RUN chmod +x /usr/local/bin/rke2-status /usr/local/bin/rke2-kubeconfig
+RUN chmod +x /usr/local/bin/rke2_ops /usr/local/bin/rke2-status /usr/local/bin/rke2-kubeconfig
 
 # ============================================================================
 # Bootc Configuration
