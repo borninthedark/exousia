@@ -28,7 +28,7 @@ on:
           - 'fedora-lxqt'
           - 'fedora-mate'
           - 'fedora-xfce'
-          # Bootcrew distros
+          # Other distros
           - 'arch'
           - 'gentoo'
           - 'debian'
@@ -37,7 +37,7 @@ on:
           - 'proxmox'
         default: 'fedora-sway-atomic'
       distro_version:
-        description: 'Distro version (Fedora 42-44/rawhide, ignored for bootcrew)'
+        description: 'Distro version (Fedora 42-44/rawhide, version-specific for other distros)'
         required: true
         type: choice
         options:
@@ -52,6 +52,11 @@ on:
         required: true
         type: boolean
         default: true
+      enable_rke2:
+        description: 'Enable RKE2 Kubernetes server node'
+        required: true
+        type: boolean
+        default: false
       os:
         description: 'Operating system (auto-detected from image_type if not specified)'
         required: false
@@ -313,6 +318,7 @@ jobs:
       os_version: ${{ steps.config.outputs.OS_VERSION }}
       containerfile: ${{ steps.config.outputs.CONTAINERFILE }}
       enable_plymouth: ${{ steps.config.outputs.ENABLE_PLYMOUTH }}
+      enable_rke2: ${{ steps.config.outputs.ENABLE_RKE2 }}
 
     steps:
       - name: Checkout repository
@@ -364,6 +370,14 @@ jobs:
           fi
           echo "✓ Plymouth setting validated: $ENABLE_PLYMOUTH"
 
+          # Validate enable_rke2 is boolean
+          ENABLE_RKE2="${{ github.event.client_payload.enable_rke2 || 'false' }}"
+          if [[ ! "$ENABLE_RKE2" =~ ^(true|false)$ ]]; then
+            echo "::error::Invalid enable_rke2 value: $ENABLE_RKE2 (must be true or false)"
+            exit 1
+          fi
+          echo "✓ RKE2 setting validated: $ENABLE_RKE2"
+
           echo "::notice::All webhook inputs validated successfully"
           echo "::endgroup::"
 
@@ -373,6 +387,7 @@ jobs:
           INPUT_IMAGE_TYPE: ${{ github.event.inputs.image_type || github.event.client_payload.image_type || 'fedora-sway-atomic' }}
           INPUT_DISTRO_VERSION: ${{ github.event.inputs.distro_version || github.event.client_payload.distro_version || '43' }}
           INPUT_ENABLE_PLYMOUTH: ${{ github.event.inputs.enable_plymouth || github.event.client_payload.enable_plymouth || 'true' }}
+          INPUT_ENABLE_RKE2: ${{ github.event.inputs.enable_rke2 || github.event.client_payload.enable_rke2 || 'false' }}
           INPUT_OS: ${{ github.event.inputs.os || github.event.client_payload.os || '' }}
           INPUT_WINDOW_MANAGER: ${{ github.event.inputs.window_manager || github.event.client_payload.window_manager || '' }}
           INPUT_DESKTOP_ENVIRONMENT: ${{ github.event.inputs.desktop_environment || github.event.client_payload.desktop_environment || '' }}
@@ -470,6 +485,7 @@ jobs:
             FEDORA_VERSION=${{ steps.config.outputs.BUILD_VERSION }}
             IMAGE_TYPE=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
             ENABLE_PLYMOUTH=${{ steps.config.outputs.ENABLE_PLYMOUTH }}
+            ENABLE_RKE2=${{ steps.config.outputs.ENABLE_RKE2 }}
           oci: true
           tls-verify: true
           layers: true
@@ -510,13 +526,14 @@ jobs:
         if: always()
         run: |
           {
-            echo "## 🏗️ Build Configuration"
+            echo "## 🗃️ Build Configuration"
             echo ""
             echo "- **OS Family:** ${{ steps.config.outputs.OS_FAMILY }}"
             echo "- **OS Version:** ${{ steps.config.outputs.OS_VERSION }}"
             echo "- **Image Type:** ${{ steps.config.outputs.BUILD_IMAGE_TYPE }}"
             echo "- **Containerfile:** \`${{ steps.config.outputs.CONTAINERFILE }}\`"
             echo "- **Plymouth:** ${{ steps.config.outputs.ENABLE_PLYMOUTH }}"
+            echo "- **RKE2:** ${{ steps.config.outputs.ENABLE_RKE2 }}"
             echo "- **Image Size:** ${IMAGE_SIZE_MB:-Unknown}MB"
             echo ""
             echo "### 🏷️ Image Tags"
@@ -526,7 +543,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ══════════════════════════════════════════════════════════════════════════
-  # Job 3: Test - Integration & Compliance Tests
+  # Job 4: Test - Integration & Compliance Tests
   # ══════════════════════════════════════════════════════════════════════════
   test:
     name: Test Container Image
@@ -562,6 +579,7 @@ jobs:
           BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
           TERM: xterm
           ENABLE_PLYMOUTH: ${{ needs.build.outputs.enable_plymouth }}
+          ENABLE_RKE2: ${{ needs.build.outputs.enable_rke2 }}
         run: |
           echo "::group::Integration Tests"
           TEMP_IMAGE="${{ needs.build.outputs.temp_image }}"
@@ -614,7 +632,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ══════════════════════════════════════════════════════════════════════════
-  # Job 4: Scan - Security Vulnerability Scanning
+  # Job 5: Scan - Security Vulnerability Scanning
   # ══════════════════════════════════════════════════════════════════════════
   scan:
     name: Security Scan
@@ -704,7 +722,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ══════════════════════════════════════════════════════════════════════════
-  # Job 5: Push & Sign - Publish and Sign Container Images
+  # Job 6: Push & Sign - Publish and Sign Container Images
   # ══════════════════════════════════════════════════════════════════════════
   push-and-sign:
     name: Push & Sign
@@ -902,7 +920,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ══════════════════════════════════════════════════════════════════════════
-  # Job 6: Report - Final Summary and Documentation
+  # Job 7: Report - Final Summary and Documentation
   # ══════════════════════════════════════════════════════════════════════════
   report:
     name: Generate Report
@@ -939,6 +957,8 @@ jobs:
             echo "- **Version:** ${{ needs.build.outputs.build_version }}"
             echo "- **Type:** ${{ needs.build.outputs.build_type }}"
             echo "- **Image:** \`${{ needs.build.outputs.first_tag }}\`"
+            echo "- **Plymouth:** ${{ needs.build.outputs.enable_plymouth }}"
+            echo "- **RKE2:** ${{ needs.build.outputs.enable_rke2 }}"
             echo ""
             echo "### Pipeline Status"
             echo "- Build: ${{ needs.build.result }}"
@@ -949,5 +969,6 @@ jobs:
             echo "### Resources"
             echo "- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)"
             echo "- [bootc Project](https://bootc-dev.github.io/bootc/)"
+            echo "- [RKE2 Documentation](https://docs.rke2.io/)"
             echo "- [Repository](https://github.com/${{ github.repository }})"
           } >> "$GITHUB_STEP_SUMMARY"
