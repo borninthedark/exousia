@@ -1,0 +1,156 @@
+# Fedora bootc with RKE2 Kubernetes Distribution
+# ================================================
+#
+# Immutable infrastructure for Kubernetes nodes using Fedora bootc and RKE2.
+# Built for atomic updates, reproducible deployments, and clean separation from host.
+#
+# Build: podman build -f Containerfile.rke2 -t localhost/exousia-rke2:latest .
+# Push:  podman push localhost/exousia-rke2:latest localhost:5000/exousia-rke2:latest
+#
+# Benefits:
+# - Atomic updates via bootc upgrade
+# - Rollback capability with bootc rollback
+# - Reproducible base image versioning
+# - Clean separation from Gentoo host
+# - Self-contained RKE2 Kubernetes distribution
+
+FROM quay.io/fedora/fedora-bootc:41
+
+# Metadata
+LABEL org.opencontainers.image.title="Exousia RKE2"
+LABEL org.opencontainers.image.description="Fedora bootc image with RKE2 Kubernetes"
+LABEL org.opencontainers.image.source="https://github.com/borninthedark/exousia"
+LABEL org.opencontainers.image.licenses="MIT"
+
+# ============================================================================
+# System Configuration
+# ============================================================================
+
+# Install base dependencies for RKE2 and container runtime
+RUN dnf install -y \
+    curl \
+    iptables \
+    container-selinux \
+    policycoreutils-python-utils \
+    cryptsetup \
+    && dnf clean all
+
+# ============================================================================
+# RKE2 Installation
+# ============================================================================
+
+# RKE2 version (override with --build-arg RKE2_VERSION=vX.Y.Z)
+ARG RKE2_VERSION=latest
+ARG INSTALL_RKE2_TYPE=server
+
+# Install RKE2 using official install script
+# Binaries go to /usr/local/bin, data to /var/lib/rancher/rke2
+RUN curl -sfL https://get.rke2.io | \
+    INSTALL_RKE2_VERSION=${RKE2_VERSION} \
+    INSTALL_RKE2_TYPE=${INSTALL_RKE2_TYPE} \
+    sh -
+
+# ============================================================================
+# RKE2 Configuration
+# ============================================================================
+
+# Create RKE2 config directory
+RUN mkdir -p /etc/rancher/rke2
+
+# Configure container registry mirrors to use host Podman registry
+# Default bridge IP is 192.168.122.1 (libvirt virbr0)
+# Override at runtime via cloud-init if needed
+COPY custom-configs/rke2/registries.yaml /etc/rancher/rke2/registries.yaml
+
+# Basic RKE2 server configuration
+# Adjust cluster settings via cloud-init or config management
+COPY custom-configs/rke2/config.yaml /etc/rancher/rke2/config.yaml
+
+# ============================================================================
+# Systemd Integration
+# ============================================================================
+
+# Enable RKE2 server service at boot
+RUN systemctl enable rke2-server.service
+
+# Create systemd drop-in for kubeconfig export to host
+# This allows the host to access the cluster via shared mount
+RUN mkdir -p /etc/systemd/system/rke2-server.service.d
+COPY custom-configs/rke2/kubeconfig-export.conf /etc/systemd/system/rke2-server.service.d/kubeconfig-export.conf
+
+# ============================================================================
+# Firewall Configuration
+# ============================================================================
+
+# Open required RKE2 ports
+# 6443: Kubernetes API
+# 9345: RKE2 supervisor API
+# 10250: Kubelet
+# 2379-2380: etcd (if using embedded etcd)
+RUN firewall-offline-cmd --add-port=6443/tcp && \
+    firewall-offline-cmd --add-port=9345/tcp && \
+    firewall-offline-cmd --add-port=10250/tcp && \
+    firewall-offline-cmd --add-port=2379-2380/tcp
+
+# ============================================================================
+# Shared Volumes for Host Integration
+# ============================================================================
+
+# Create mount point for kubeconfig export to host
+# Mount via cloud-init: /mnt/host/kubeconfig
+RUN mkdir -p /mnt/host/kubeconfig
+
+# Create mount point for persistent storage (optional)
+RUN mkdir -p /mnt/host/storage
+
+# ============================================================================
+# Helper Scripts
+# ============================================================================
+
+# Install helper scripts for RKE2 management
+COPY custom-scripts/rke2-status.sh /usr/local/bin/rke2-status
+COPY custom-scripts/rke2-kubeconfig.sh /usr/local/bin/rke2-kubeconfig
+RUN chmod +x /usr/local/bin/rke2-status /usr/local/bin/rke2-kubeconfig
+
+# ============================================================================
+# Bootc Configuration
+# ============================================================================
+
+# Set bootc kargs for performance and stability
+# Enable cgroups v2 (required for modern k8s)
+# Disable swap (Kubernetes requirement)
+RUN echo 'kargs = ["systemd.unified_cgroup_hierarchy=1", "swapaccount=1"]' > /usr/lib/bootc/kargs.d/99-rke2.toml
+
+# ============================================================================
+# Final Setup
+# ============================================================================
+
+# Ensure proper SELinux context for RKE2 directories
+RUN mkdir -p /var/lib/rancher/rke2 && \
+    semanage fcontext -a -t container_var_lib_t "/var/lib/rancher/rke2(/.*)?" || true && \
+    restorecon -R /var/lib/rancher/rke2 || true
+
+# Create /etc/motd with RKE2 info
+RUN cat > /etc/motd << 'EOF'
+╔═══════════════════════════════════════════════════════════╗
+║           Exousia RKE2 - Immutable Kubernetes             ║
+╠═══════════════════════════════════════════════════════════╣
+║                                                           ║
+║  RKE2 Server: systemctl status rke2-server               ║
+║  Node Status: rke2-status                                ║
+║  Kubeconfig:  rke2-kubeconfig                            ║
+║                                                           ║
+║  Upgrade:     bootc upgrade && systemctl reboot          ║
+║  Rollback:    bootc rollback && systemctl reboot         ║
+║                                                           ║
+╚═══════════════════════════════════════════════════════════╝
+EOF
+
+# Default working directory
+WORKDIR /root
+
+# Health check: verify RKE2 binary exists
+RUN test -f /usr/local/bin/rke2 && test -f /usr/local/bin/kubectl
+
+# Expose Kubernetes API port
+EXPOSE 6443
