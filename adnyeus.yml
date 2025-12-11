@@ -117,6 +117,7 @@ modules:
 
   # ============================================================================
   # RKE2 Kubernetes Integration (optional, enabled via build.enable_rke2)
+  # Follows official quickstart: https://docs.rke2.io/install/quickstart
   # ============================================================================
 
   # RKE2 dependencies
@@ -133,82 +134,136 @@ modules:
           python3 \
           && dnf clean all
 
-  # RKE2 installation
+  # RKE2 Server installation - Step 1: Run the installer
+  # This installs rke2-server service and rke2 binary
   - type: script
     condition: enable_rke2 == true
     scripts:
       - |
-        # Install RKE2 using official install script
-        # Binaries go to /usr/local/bin, data to /var/lib/rancher/rke2
-        curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -
+        # Install RKE2 server using official install script
+        # Default INSTALL_RKE2_TYPE is "server" so we don't need to specify it
+        curl -sfL https://get.rke2.io | sh -
+        
+        # Verify installation
+        test -f /usr/local/bin/rke2 && echo "✓ RKE2 binary installed at /usr/local/bin/rke2" || echo "✗ RKE2 installation failed"
+        test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service installed" || echo "✗ rke2-server.service not found"
+
+  # RKE2 configuration directory
+  - type: script
+    condition: enable_rke2 == true
+    scripts:
+      - |
+        # Create RKE2 config directory
+        mkdir -p /etc/rancher/rke2
 
   # RKE2 configuration files (already copied via custom-configs)
-  # - custom-configs/rke2/registries.yaml -> /etc/rancher/rke2/registries.yaml
-  # - custom-configs/rke2/config.yaml -> /etc/rancher/rke2/config.yaml
-  # - custom-configs/rke2/kubeconfig-export.conf -> /etc/systemd/system/rke2-server.service.d/
+  # Ensure these files exist in your custom-configs directory:
+  # - custom-configs/rancher/rke2/registries.yaml -> /etc/rancher/rke2/registries.yaml
+  # - custom-configs/rancher/rke2/config.yaml -> /etc/rancher/rke2/config.yaml
+  # The config.yaml should contain server-specific settings like:
+  #   write-kubeconfig-mode: "0644"
+  #   tls-san:
+  #     - "your-server-hostname"
+  #   node-label:
+  #     - "node-role.kubernetes.io/control-plane=true"
 
-  # RKE2 systemd drop-in directory
+  # RKE2 systemd drop-in directory for custom overrides
   - type: script
     condition: enable_rke2 == true
     scripts:
       - mkdir -p /etc/systemd/system/rke2-server.service.d
 
-  # RKE2 firewall configuration
+  # RKE2 firewall configuration - open required ports
   - type: script
     condition: enable_rke2 == true
     scripts:
       - |
-        # Open required RKE2 ports
-        firewall-offline-cmd --add-port=6443/tcp    # Kubernetes API
-        firewall-offline-cmd --add-port=9345/tcp    # RKE2 supervisor API
-        firewall-offline-cmd --add-port=10250/tcp   # Kubelet
-        firewall-offline-cmd --add-port=2379-2380/tcp  # etcd
+        # Open required RKE2 server ports
+        firewall-offline-cmd --add-port=6443/tcp      # Kubernetes API server
+        firewall-offline-cmd --add-port=9345/tcp      # RKE2 supervisor API (for agent registration)
+        firewall-offline-cmd --add-port=10250/tcp     # Kubelet metrics
+        firewall-offline-cmd --add-port=2379-2380/tcp # etcd client/peer communication
 
-  # RKE2 shared volumes for host integration
+  # RKE2 data directories and paths
   - type: script
     condition: enable_rke2 == true
     scripts:
       - |
+        # Create required directories
+        mkdir -p /var/lib/rancher/rke2
+        mkdir -p /var/lib/rancher/rke2/bin
+        mkdir -p /var/lib/rancher/rke2/server
+        
+        # Create shared volumes for host integration
         mkdir -p /mnt/host/kubeconfig
         mkdir -p /mnt/host/storage
+        
+        # Symlink kubectl and other tools to a standard location
+        # These will be available after first boot when RKE2 runs
+        mkdir -p /usr/local/bin
 
   # RKE2 SELinux contexts
   - type: script
     condition: enable_rke2 == true
     scripts:
       - |
-        mkdir -p /var/lib/rancher/rke2
+        # Set proper SELinux contexts for RKE2 directories
         semanage fcontext -a -t container_var_lib_t "/var/lib/rancher/rke2(/.*)?" || true
         restorecon -R /var/lib/rancher/rke2 || true
 
-  # RKE2 bootc kargs
+  # RKE2 kernel arguments for proper cgroups v2 support
   - type: script
     condition: enable_rke2 == true
     scripts:
       - |
         mkdir -p /usr/lib/bootc/kargs.d
-        echo 'kargs = ["systemd.unified_cgroup_hierarchy=1", "swapaccount=1"]' > /usr/lib/bootc/kargs.d/99-rke2.toml
+        cat > /usr/lib/bootc/kargs.d/99-rke2.toml << 'EOF'
+# RKE2 kernel arguments for cgroups v2 and swap accounting
+kargs = ["systemd.unified_cgroup_hierarchy=1", "swapaccount=1"]
+EOF
 
-  # RKE2 MOTD
+  # RKE2 helper script for common operations
+  - type: script
+    condition: enable_rke2 == true
+    scripts:
+      - |
+        cat > /usr/local/bin/rke2-kubectl << 'EOF'
+#!/bin/bash
+# Helper script to run kubectl with RKE2's kubeconfig
+export KUBECONFIG=/etc/rancher/rke2/rke2.yaml
+/var/lib/rancher/rke2/bin/kubectl "$@"
+EOF
+        chmod +x /usr/local/bin/rke2-kubectl
+
+  # RKE2 MOTD with helpful commands
   - type: script
     condition: enable_rke2 == true
     scripts:
       - |
         cat > /etc/motd << 'EOF'
-        ╔═══════════════════════════════════════════════════════════╗
-        ║           Exousia RKE2 - Immutable Kubernetes             ║
-        ╠═══════════════════════════════════════════════════════════╣
-        ║                                                           ║
-        ║  RKE2 Server: systemctl status rke2-server               ║
-        ║  RKE2 Ops:    rke2_ops --help                            ║
-        ║  VM Status:   rke2_ops vm status                         ║
-        ║  Kubeconfig:  rke2_ops kubeconfig                        ║
-        ║                                                           ║
-        ║  Upgrade:     bootc upgrade && systemctl reboot          ║
-        ║  Rollback:    bootc rollback && systemctl reboot         ║
-        ║                                                           ║
-        ╚═══════════════════════════════════════════════════════════╝
-        EOF
+╔═══════════════════════════════════════════════════════════╗
+║           Exousia RKE2 - Immutable Kubernetes             ║
+╠═══════════════════════════════════════════════════════════╣
+║                                                           ║
+║  RKE2 Status:    systemctl status rke2-server            ║
+║  RKE2 Logs:      journalctl -u rke2-server -f            ║
+║  Start RKE2:     systemctl start rke2-server             ║
+║  Stop RKE2:      systemctl stop rke2-server              ║
+║                                                           ║
+║  Kubeconfig:     /etc/rancher/rke2/rke2.yaml             ║
+║  Node Token:     /var/lib/rancher/rke2/server/node-token ║
+║  Kubectl:        rke2-kubectl get nodes                   ║
+║                                                           ║
+║  RKE2 Ops:       rke2_ops --help                         ║
+║  VM Status:      rke2_ops vm status                      ║
+║                                                           ║
+║  Upgrade Image:  bootc upgrade && systemctl reboot       ║
+║  Rollback:       bootc rollback && systemctl reboot      ║
+║                                                           ║
+║  Documentation:  https://docs.rke2.io                    ║
+║                                                           ║
+╚═══════════════════════════════════════════════════════════╝
+EOF
 
   # Plymouth configuration (all images when enabled)
   - type: script
@@ -232,7 +287,8 @@ modules:
         - greetd.service
     default-target: graphical.target
 
-  # RKE2 services (when enabled)
+  # RKE2 Server service - Step 2: Enable rke2-server.service
+  # The service will start on first boot and subsequent reboots
   - type: systemd
     condition: enable_rke2 == true
     system:
@@ -245,5 +301,34 @@ modules:
       - bootc container lint
       - restorecon -vv /usr/local/bin/tuigreet || true
       - restorecon -vv /usr/local/bin/rke2_ops || true
-      - test -f /usr/local/bin/rke2 && echo "RKE2 installed" || echo "RKE2 not installed"
+      - restorecon -vv /usr/local/bin/rke2-kubectl || true
+      - test -f /usr/local/bin/rke2 && echo "✓ RKE2 installed" || echo "○ RKE2 not installed"
+      - test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service configured" || echo "○ rke2-server.service not found"
       - echo "composefs=true" >> /etc/ostree/repo.config || true
+
+  # Post-installation notes
+  - type: script
+    condition: enable_rke2 == true
+    scripts:
+      - |
+        cat << 'EOF'
+        
+        ═══════════════════════════════════════════════════════════
+        RKE2 Server Installation Complete
+        ═══════════════════════════════════════════════════════════
+        
+        On first boot, RKE2 will:
+        1. Start the rke2-server service automatically
+        2. Generate kubeconfig at: /etc/rancher/rke2/rke2.yaml
+        3. Generate node token at: /var/lib/rancher/rke2/server/node-token
+        4. Install kubectl and other tools to: /var/lib/rancher/rke2/bin/
+        
+        To access the cluster after first boot:
+        - Use: rke2-kubectl get nodes
+        - Or set: export KUBECONFIG=/etc/rancher/rke2/rke2.yaml
+        
+        To add agent nodes, use the token from:
+        /var/lib/rancher/rke2/server/node-token
+        
+        ═══════════════════════════════════════════════════════════
+        EOF
