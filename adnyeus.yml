@@ -133,7 +133,15 @@ modules:
         - libvirtd.service
         - systemd-resolved.service
         - NetworkManager.service
+        - greetd.service
     default-target: graphical.target
+
+  # Display manager configuration
+  - type: script
+    scripts:
+      - |
+        # Ensure greetd is set as the display manager
+        ln -sf /usr/lib/systemd/system/greetd.service /etc/systemd/system/display-manager.service
 
   # Validation and finalization
   - type: script
