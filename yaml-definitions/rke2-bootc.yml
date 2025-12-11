@@ -1,34 +1,33 @@
-# Exousia Build Configuration
-# BlueBuild-compatible YAML specification for declarative bootc image builds
-# https://blue-build.org/reference/module/
+# Exousia RKE2 Bootc Build Configuration
+# Minimal bootc image with RKE2 Kubernetes, no desktop environment
+# For dedicated Kubernetes nodes and VM-based cluster deployments
 
-name: exousia
-description: DevSecOps-hardened Fedora bootc image with Sway desktop
+name: exousia-rke2-bootc
+description: Minimal Fedora bootc image with RKE2 Kubernetes for immutable infrastructure
 image-version: 43
 
-# Base image configuration - can be overridden via build args
-base-image: quay.io/fedora/fedora-sway-atomic:43
-image-type: fedora-bootc  # or fedora-bootc
+# Base image configuration
+base-image: quay.io/fedora/fedora-bootc:43
+image-type: fedora-bootc
 
-# Desktop environment selection
-# Use either 'window_manager' or 'desktop_environment', not both
+# No desktop environment - server/minimal configuration
 desktop:
-  window_manager: sway  # Options: sway, hyprland
-  # desktop_environment: kde  # Options: kde, mate
-  include_common: true  # Include common base packages
+  window_manager: null
+  desktop_environment: null
+  include_common: false  # Minimal system only
 
 # Container metadata
 labels:
-  org.opencontainers.image.title: "Exousia"
-  org.opencontainers.image.description: "Custom Fedora bootc image with Sway desktop and opinionated package selection"
+  org.opencontainers.image.title: "Exousia RKE2"
+  org.opencontainers.image.description: "Minimal Fedora bootc with RKE2 Kubernetes"
   org.opencontainers.image.source: "https://github.com/borninthedark/exousia"
   org.opencontainers.image.licenses: "MIT"
   maintainer: "uryu"
 
 # Build configuration
 build:
-  enable_plymouth: true
-  enable_rke2: true  # Enable RKE2 Kubernetes for immutable k8s infrastructure
+  enable_plymouth: false  # No boot splash for server images
+  enable_rke2: true       # RKE2 is the primary purpose
 
 # Modules define the build steps
 modules:
@@ -62,13 +61,13 @@ modules:
     scripts:
       - ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
 
-  # Plymouth theme files (toggleable per image type)
-  - type: files
-    condition: enable_plymouth == true
-    files:
-      - src: custom-configs/plymouth/themes/bgrt-better-luks/
-        dst: /usr/share/plymouth/themes/bgrt-better-luks/
-        mode: "0644"
+  # Directory structure
+  - type: script
+    scripts:
+      - |
+        mkdir -p /var/roothome /var/opt /usr/lib/extensions
+        rm -rf /opt
+        ln -sf /var/opt /opt
 
   # Custom repositories
   - type: files
@@ -77,51 +76,22 @@ modules:
         dst: /etc/yum.repos.d/
         mode: "0644"
 
-  # Custom configurations
+  # RKE2 configuration files
   - type: files
     files:
-      - src: custom-configs/
-        dst: /etc/
+      - src: custom-configs/rke2/
+        dst: /etc/rancher/rke2/
         mode: "0644"
 
-  # Custom scripts
+  # Custom scripts (including RKE2 helpers)
   - type: files
     files:
       - src: custom-scripts/
         dst: /usr/local/bin/
         mode: "0755"
 
-  # Sway session files
-  - type: files
-    files:
-      - src: custom-configs/sway/sway.desktop
-        dst: /usr/share/wayland-sessions/sway.desktop
-        mode: "0644"
-      - src: custom-configs/sway/environment
-        dst: /etc/sway/environment
-        mode: "0644"
-      - src: custom-configs/sway/start-sway
-        dst: /usr/bin/start-sway
-        mode: "0755"
-
-  # Package management using new YAML-based loader
-  # Automatically loads packages based on desktop.window_manager or desktop.desktop_environment
-  - type: package-loader
-    window_manager: sway  # Loaded from packages/window-managers/sway.yml
-    include_common: true  # Also loads packages/common/base.yml
-
-  # Flatpak setup
+  # Minimal base packages for RKE2
   - type: script
-    scripts:
-      - flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
-  # ============================================================================
-  # RKE2 Kubernetes Integration (optional, enabled via build.enable_rke2)
-  # ============================================================================
-
-  # RKE2 dependencies
-  - type: script
-    condition: enable_rke2 == true
     scripts:
       - |
         dnf install -y \
@@ -131,31 +101,29 @@ modules:
           policycoreutils-python-utils \
           cryptsetup \
           python3 \
+          vim-minimal \
+          htop \
           && dnf clean all
+
+  # ============================================================================
+  # RKE2 Kubernetes Installation
+  # ============================================================================
 
   # RKE2 installation
   - type: script
-    condition: enable_rke2 == true
     scripts:
       - |
         # Install RKE2 using official install script
         # Binaries go to /usr/local/bin, data to /var/lib/rancher/rke2
         curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -
 
-  # RKE2 configuration files (already copied via custom-configs)
-  # - custom-configs/rke2/registries.yaml -> /etc/rancher/rke2/registries.yaml
-  # - custom-configs/rke2/config.yaml -> /etc/rancher/rke2/config.yaml
-  # - custom-configs/rke2/kubeconfig-export.conf -> /etc/systemd/system/rke2-server.service.d/
-
   # RKE2 systemd drop-in directory
   - type: script
-    condition: enable_rke2 == true
     scripts:
       - mkdir -p /etc/systemd/system/rke2-server.service.d
 
   # RKE2 firewall configuration
   - type: script
-    condition: enable_rke2 == true
     scripts:
       - |
         # Open required RKE2 ports
@@ -166,7 +134,6 @@ modules:
 
   # RKE2 shared volumes for host integration
   - type: script
-    condition: enable_rke2 == true
     scripts:
       - |
         mkdir -p /mnt/host/kubeconfig
@@ -174,7 +141,6 @@ modules:
 
   # RKE2 SELinux contexts
   - type: script
-    condition: enable_rke2 == true
     scripts:
       - |
         mkdir -p /var/lib/rancher/rke2
@@ -183,7 +149,6 @@ modules:
 
   # RKE2 bootc kargs
   - type: script
-    condition: enable_rke2 == true
     scripts:
       - |
         mkdir -p /usr/lib/bootc/kargs.d
@@ -191,7 +156,6 @@ modules:
 
   # RKE2 MOTD
   - type: script
-    condition: enable_rke2 == true
     scripts:
       - |
         cat > /etc/motd << 'EOF'
@@ -210,40 +174,19 @@ modules:
         ╚═══════════════════════════════════════════════════════════╝
         EOF
 
-  # Plymouth configuration (all images when enabled)
-  - type: script
-    condition: enable_plymouth == true
-    scripts:
-      - |
-        rm -rf /var/tmp && ln -sf /tmp /var/tmp
-        mkdir -p /usr/lib/dracut/dracut.conf.d
-        echo 'add_dracutmodules+=" plymouth ostree "' > /usr/lib/dracut/dracut.conf.d/plymouth.conf
-        plymouth-set-default-theme bgrt-better-luks
-        kver=$(basename /usr/lib/modules/*)
-        dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
-
-  # System services (common to all image types)
+  # System services
   - type: systemd
     system:
       enabled:
-        - libvirtd.service
         - systemd-resolved.service
         - NetworkManager.service
-        - greetd.service
-    default-target: graphical.target
-
-  # RKE2 services (when enabled)
-  - type: systemd
-    condition: enable_rke2 == true
-    system:
-      enabled:
         - rke2-server.service
+    default-target: multi-user.target  # No graphical target for server
 
   # Validation and finalization
   - type: script
     scripts:
       - bootc container lint
-      - restorecon -vv /usr/local/bin/tuigreet || true
       - restorecon -vv /usr/local/bin/rke2_ops || true
       - test -f /usr/local/bin/rke2 && echo "RKE2 installed" || echo "RKE2 not installed"
       - echo "composefs=true" >> /etc/ostree/repo.config || true
