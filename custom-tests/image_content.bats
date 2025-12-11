@@ -407,7 +407,6 @@ get_package_manager() {
         skip "Test only applies to Fedora-based images"
     fi
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/nwg-shell.repo"
-    assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/swaylock-effects.repo"
 }
 
 # --- Key packages ---

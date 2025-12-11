@@ -9,7 +9,6 @@ metadata:
 # Packages to remove
 packages:
   - firefox-langpacks  
-  - swaylock
   - firefox
   - sddm
   - foot  # Using kitty/alacritty instead

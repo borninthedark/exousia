@@ -10,7 +10,7 @@ metadata:
 # Core Sway components
 core:
   - sway
-  - swaylock-effects
+  - swaylock
   - swayidle
   - swaybg
   - waybar

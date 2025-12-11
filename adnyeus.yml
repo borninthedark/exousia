@@ -229,6 +229,7 @@ modules:
         - libvirtd.service
         - systemd-resolved.service
         - NetworkManager.service
+        - greetd.service
     default-target: graphical.target
 
   # RKE2 services (when enabled)
