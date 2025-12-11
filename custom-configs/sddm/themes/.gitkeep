@@ -1,6 +1,0 @@
-# SDDM themes directory
-# Place custom SDDM themes here
-# Theme structure should follow SDDM theme specifications:
-# - metadata.desktop (theme metadata)
-# - Main.qml (main theme file)
-# - theme assets (images, fonts, etc.)
