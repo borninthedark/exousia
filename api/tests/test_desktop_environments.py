@@ -36,7 +36,7 @@ class TestWindowManagerPackages:
         assert len(packages) > 0, "Sway package list is empty"
 
         # Check for essential Sway packages
-        essential_packages = ["sway", "swaylock-effects"]
+        essential_packages = ["sway", "swaylock"]
         for pkg in essential_packages:
             assert pkg in packages, f"Essential package '{pkg}' not found in Sway packages"
 
@@ -45,7 +45,7 @@ class TestWindowManagerPackages:
         packages = loader.load_wm("sway")
 
         # Verify core components
-        core_packages = ["sway", "swaylock-effects", "swayidle"]
+        core_packages = ["sway", "swaylock", "swayidle"]
         found_core = [pkg for pkg in core_packages if pkg in packages]
         assert len(found_core) >= 2, f"Not enough core Sway packages found: {found_core}"
 
