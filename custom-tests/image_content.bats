@@ -89,6 +89,20 @@ is_plymouth_enabled() {
     [[ "${ENABLE_PLYMOUTH:-true}" == "true" ]]
 }
 
+# Helper to check config files that may live in /etc or /usr/etc
+assert_config_present() {
+    local relative_path="$1"
+    local etc_path="$MOUNT_POINT/etc/$relative_path"
+    local usr_etc_path="$MOUNT_POINT/usr/etc/$relative_path"
+
+    if [[ -f "$etc_path" || -f "$usr_etc_path" ]]; then
+        return 0
+    fi
+
+    echo "Missing config: $relative_path (checked $etc_path and $usr_etc_path)" >&2
+    return 1
+}
+
 # Helper function to get package manager
 get_package_manager() {
     if is_fedora; then
@@ -488,20 +502,22 @@ get_package_manager() {
     if ! is_fedora_bootc; then
         skip "Greetd test only applies to fedora-bootc builds"
     fi
-    
+
     assert_file_exists "$MOUNT_POINT/etc/greetd/config.toml"
-    
+
     run buildah run "$CONTAINER" -- rpm -q greetd
     assert_success "greetd should be installed in fedora-bootc"
 }
 
-@test "SDDM should be configured for fedora-sway-atomic" {
+@test "Greetd should be configured for fedora-sway-atomic" {
     if ! is_fedora_sway_atomic; then
-        skip "SDDM test only applies to fedora-sway-atomic builds"
+        skip "Greetd test only applies to fedora-sway-atomic builds"
     fi
-    
-    run buildah run "$CONTAINER" -- rpm -q sddm
-    assert_success "sddm should be installed in fedora-sway-atomic"
+
+    assert_file_exists "$MOUNT_POINT/etc/greetd/config.toml"
+
+    run buildah run "$CONTAINER" -- rpm -q greetd
+    assert_success "greetd should be installed in fedora-sway-atomic"
 }
 
 @test "Sway session files should exist for fedora-bootc" {
@@ -521,10 +537,14 @@ get_package_manager() {
     assert_output --partial 'flathub'
 }
 
-@test "Sway configuration should be present" {
-    assert_file_exists "$MOUNT_POINT/etc/sway/config.d/51-display.conf"
-    assert_file_exists "$MOUNT_POINT/etc/sway/config.d/61-bindings.conf"
-    assert_file_exists "$MOUNT_POINT/etc/sway/config.d/95-theme.conf"
+@test "Sway configuration should be present for Sway builds" {
+    if ! is_fedora_bootc && ! is_fedora_sway_atomic; then
+        skip "Sway configuration test only applies to sway-based builds"
+    fi
+
+    assert_config_present "sway/config.d/51-display.conf"
+    assert_config_present "sway/config.d/60-bindings-volume.conf"
+    assert_config_present "sway/config.d/95-theme.conf"
 }
 
 @test "Image should pass bootc container lint" {
