@@ -11,6 +11,7 @@ packages:
   - firefox-langpacks  
   - swaylock
   - firefox
+  - sddm
   - foot  # Using kitty/alacritty instead
   - dunst  # Using mako/swaync instead
 
