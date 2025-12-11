@@ -155,7 +155,7 @@ graph TD
 
 **Tests**:
 - RPM Fusion repositories present and enabled
-- Custom repositories configured (nwg-shell, swaylock-effects)
+- Custom repositories configured (nwg-shell)
 - Repository enablement status
 
 **Example**:
