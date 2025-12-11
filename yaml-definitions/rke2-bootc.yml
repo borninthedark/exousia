@@ -1,0 +1,192 @@
+# Exousia RKE2 Bootc Build Configuration
+# Minimal bootc image with RKE2 Kubernetes, no desktop environment
+# For dedicated Kubernetes nodes and VM-based cluster deployments
+
+name: exousia-rke2-bootc
+description: Minimal Fedora bootc image with RKE2 Kubernetes for immutable infrastructure
+image-version: 43
+
+# Base image configuration
+base-image: quay.io/fedora/fedora-bootc:43
+image-type: fedora-bootc
+
+# No desktop environment - server/minimal configuration
+desktop:
+  window_manager: null
+  desktop_environment: null
+  include_common: false  # Minimal system only
+
+# Container metadata
+labels:
+  org.opencontainers.image.title: "Exousia RKE2"
+  org.opencontainers.image.description: "Minimal Fedora bootc with RKE2 Kubernetes"
+  org.opencontainers.image.source: "https://github.com/borninthedark/exousia"
+  org.opencontainers.image.licenses: "MIT"
+  maintainer: "uryu"
+
+# Build configuration
+build:
+  enable_plymouth: false  # No boot splash for server images
+  enable_rke2: true       # RKE2 is the primary purpose
+
+# Modules define the build steps
+modules:
+  # System users configuration
+  - type: files
+    files:
+      - src: sysusers/bootc.conf
+        dst: /usr/lib/sysusers.d/bootc.conf
+        mode: "0644"
+
+  # Initialize system users
+  - type: script
+    scripts:
+      - |
+        test -f /etc/passwd || touch /etc/passwd
+        test -f /etc/group  || touch /etc/group
+        systemd-sysusers || true
+        systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf
+
+  # Container authentication
+  - type: files
+    files:
+      - src: containers-auth.conf
+        dst: /usr/lib/tmpfiles.d/containers-auth.conf
+        mode: "0644"
+      - src: ./bootc-secrets/auth.json
+        dst: /usr/lib/container-auth.json
+        mode: "0600"
+
+  - type: script
+    scripts:
+      - ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
+
+  # Directory structure
+  - type: script
+    scripts:
+      - |
+        mkdir -p /var/roothome /var/opt /usr/lib/extensions
+        rm -rf /opt
+        ln -sf /var/opt /opt
+
+  # Custom repositories
+  - type: files
+    files:
+      - src: custom-repos/
+        dst: /etc/yum.repos.d/
+        mode: "0644"
+
+  # RKE2 configuration files
+  - type: files
+    files:
+      - src: custom-configs/rke2/
+        dst: /etc/rancher/rke2/
+        mode: "0644"
+
+  # Custom scripts (including RKE2 helpers)
+  - type: files
+    files:
+      - src: custom-scripts/
+        dst: /usr/local/bin/
+        mode: "0755"
+
+  # Minimal base packages for RKE2
+  - type: script
+    scripts:
+      - |
+        dnf install -y \
+          curl \
+          iptables \
+          container-selinux \
+          policycoreutils-python-utils \
+          cryptsetup \
+          python3 \
+          vim-minimal \
+          htop \
+          && dnf clean all
+
+  # ============================================================================
+  # RKE2 Kubernetes Installation
+  # ============================================================================
+
+  # RKE2 installation
+  - type: script
+    scripts:
+      - |
+        # Install RKE2 using official install script
+        # Binaries go to /usr/local/bin, data to /var/lib/rancher/rke2
+        curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -
+
+  # RKE2 systemd drop-in directory
+  - type: script
+    scripts:
+      - mkdir -p /etc/systemd/system/rke2-server.service.d
+
+  # RKE2 firewall configuration
+  - type: script
+    scripts:
+      - |
+        # Open required RKE2 ports
+        firewall-offline-cmd --add-port=6443/tcp    # Kubernetes API
+        firewall-offline-cmd --add-port=9345/tcp    # RKE2 supervisor API
+        firewall-offline-cmd --add-port=10250/tcp   # Kubelet
+        firewall-offline-cmd --add-port=2379-2380/tcp  # etcd
+
+  # RKE2 shared volumes for host integration
+  - type: script
+    scripts:
+      - |
+        mkdir -p /mnt/host/kubeconfig
+        mkdir -p /mnt/host/storage
+
+  # RKE2 SELinux contexts
+  - type: script
+    scripts:
+      - |
+        mkdir -p /var/lib/rancher/rke2
+        semanage fcontext -a -t container_var_lib_t "/var/lib/rancher/rke2(/.*)?" || true
+        restorecon -R /var/lib/rancher/rke2 || true
+
+  # RKE2 bootc kargs
+  - type: script
+    scripts:
+      - |
+        mkdir -p /usr/lib/bootc/kargs.d
+        echo 'kargs = ["systemd.unified_cgroup_hierarchy=1", "swapaccount=1"]' > /usr/lib/bootc/kargs.d/99-rke2.toml
+
+  # RKE2 MOTD
+  - type: script
+    scripts:
+      - |
+        cat > /etc/motd << 'EOF'
+        ╔═══════════════════════════════════════════════════════════╗
+        ║           Exousia RKE2 - Immutable Kubernetes             ║
+        ╠═══════════════════════════════════════════════════════════╣
+        ║                                                           ║
+        ║  RKE2 Server: systemctl status rke2-server               ║
+        ║  Node Status: rke2-status                                ║
+        ║  Kubeconfig:  rke2-kubeconfig                            ║
+        ║  RKE2 Ops:    rke2_ops --help                            ║
+        ║                                                           ║
+        ║  Upgrade:     bootc upgrade && systemctl reboot          ║
+        ║  Rollback:    bootc rollback && systemctl reboot         ║
+        ║                                                           ║
+        ╚═══════════════════════════════════════════════════════════╝
+        EOF
+
+  # System services
+  - type: systemd
+    system:
+      enabled:
+        - systemd-resolved.service
+        - NetworkManager.service
+        - rke2-server.service
+    default-target: multi-user.target  # No graphical target for server
+
+  # Validation and finalization
+  - type: script
+    scripts:
+      - bootc container lint
+      - restorecon -vv /usr/local/bin/rke2_ops || true
+      - test -f /usr/local/bin/rke2 && echo "RKE2 installed" || echo "RKE2 not installed"
+      - echo "composefs=true" >> /etc/ostree/repo.config || true
