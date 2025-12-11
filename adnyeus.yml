@@ -240,30 +240,30 @@ EOF
     condition: enable_rke2 == true
     scripts:
       - |
-        cat > /etc/motd << 'EOF'
-╔═══════════════════════════════════════════════════════════╗
-║           Exousia RKE2 - Immutable Kubernetes             ║
-╠═══════════════════════════════════════════════════════════╣
-║                                                           ║
-║  RKE2 Status:    systemctl status rke2-server            ║
-║  RKE2 Logs:      journalctl -u rke2-server -f            ║
-║  Start RKE2:     systemctl start rke2-server             ║
-║  Stop RKE2:      systemctl stop rke2-server              ║
-║                                                           ║
-║  Kubeconfig:     /etc/rancher/rke2/rke2.yaml             ║
-║  Node Token:     /var/lib/rancher/rke2/server/node-token ║
-║  Kubectl:        rke2-kubectl get nodes                   ║
-║                                                           ║
-║  RKE2 Ops:       rke2_ops --help                         ║
-║  VM Status:      rke2_ops vm status                      ║
-║                                                           ║
-║  Upgrade Image:  bootc upgrade && systemctl reboot       ║
-║  Rollback:       bootc rollback && systemctl reboot      ║
-║                                                           ║
-║  Documentation:  https://docs.rke2.io                    ║
-║                                                           ║
-╚═══════════════════════════════════════════════════════════╝
-EOF
+        cat > /etc/motd << 'EOFMOTD'
+        ╔═══════════════════════════════════════════════════════════╗
+        ║           Exousia RKE2 - Immutable Kubernetes             ║
+        ╠═══════════════════════════════════════════════════════════╣
+        ║                                                           ║
+        ║  RKE2 Status:    systemctl status rke2-server            ║
+        ║  RKE2 Logs:      journalctl -u rke2-server -f            ║
+        ║  Start RKE2:     systemctl start rke2-server             ║
+        ║  Stop RKE2:      systemctl stop rke2-server              ║
+        ║                                                           ║
+        ║  Kubeconfig:     /etc/rancher/rke2/rke2.yaml             ║
+        ║  Node Token:     /var/lib/rancher/rke2/server/node-token ║
+        ║  Kubectl:        rke2-kubectl get nodes                   ║
+        ║                                                           ║
+        ║  RKE2 Ops:       rke2_ops --help                         ║
+        ║  VM Status:      rke2_ops vm status                      ║
+        ║                                                           ║
+        ║  Upgrade Image:  bootc upgrade && systemctl reboot       ║
+        ║  Rollback:       bootc rollback && systemctl reboot      ║
+        ║                                                           ║
+        ║  Documentation:  https://docs.rke2.io                    ║
+        ║                                                           ║
+        ╚═══════════════════════════════════════════════════════════╝
+        EOFMOTD
 
   # Plymouth configuration (all images when enabled)
   - type: script
@@ -311,7 +311,7 @@ EOF
     condition: enable_rke2 == true
     scripts:
       - |
-        cat << 'EOF'
+        cat << 'EOFNOTES'
         
         ═══════════════════════════════════════════════════════════
         RKE2 Server Installation Complete
@@ -331,4 +331,4 @@ EOF
         /var/lib/rancher/rke2/server/node-token
         
         ═══════════════════════════════════════════════════════════
-        EOF
+        EOFNOTES
