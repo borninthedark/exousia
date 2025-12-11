@@ -28,6 +28,7 @@ labels:
 # Build configuration
 build:
   enable_plymouth: true
+  enable_rke2: true  # Enable RKE2 Kubernetes for immutable k8s infrastructure
 
 # Modules define the build steps
 modules:
@@ -114,6 +115,101 @@ modules:
     scripts:
       - flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
+  # ============================================================================
+  # RKE2 Kubernetes Integration (optional, enabled via build.enable_rke2)
+  # ============================================================================
+
+  # RKE2 dependencies
+  - type: script
+    condition: enable_rke2 == true
+    scripts:
+      - |
+        dnf install -y \
+          curl \
+          iptables \
+          container-selinux \
+          policycoreutils-python-utils \
+          cryptsetup \
+          python3 \
+          && dnf clean all
+
+  # RKE2 installation
+  - type: script
+    condition: enable_rke2 == true
+    scripts:
+      - |
+        # Install RKE2 using official install script
+        # Binaries go to /usr/local/bin, data to /var/lib/rancher/rke2
+        curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -
+
+  # RKE2 configuration files (already copied via custom-configs)
+  # - custom-configs/rke2/registries.yaml -> /etc/rancher/rke2/registries.yaml
+  # - custom-configs/rke2/config.yaml -> /etc/rancher/rke2/config.yaml
+  # - custom-configs/rke2/kubeconfig-export.conf -> /etc/systemd/system/rke2-server.service.d/
+
+  # RKE2 systemd drop-in directory
+  - type: script
+    condition: enable_rke2 == true
+    scripts:
+      - mkdir -p /etc/systemd/system/rke2-server.service.d
+
+  # RKE2 firewall configuration
+  - type: script
+    condition: enable_rke2 == true
+    scripts:
+      - |
+        # Open required RKE2 ports
+        firewall-offline-cmd --add-port=6443/tcp    # Kubernetes API
+        firewall-offline-cmd --add-port=9345/tcp    # RKE2 supervisor API
+        firewall-offline-cmd --add-port=10250/tcp   # Kubelet
+        firewall-offline-cmd --add-port=2379-2380/tcp  # etcd
+
+  # RKE2 shared volumes for host integration
+  - type: script
+    condition: enable_rke2 == true
+    scripts:
+      - |
+        mkdir -p /mnt/host/kubeconfig
+        mkdir -p /mnt/host/storage
+
+  # RKE2 SELinux contexts
+  - type: script
+    condition: enable_rke2 == true
+    scripts:
+      - |
+        mkdir -p /var/lib/rancher/rke2
+        semanage fcontext -a -t container_var_lib_t "/var/lib/rancher/rke2(/.*)?" || true
+        restorecon -R /var/lib/rancher/rke2 || true
+
+  # RKE2 bootc kargs
+  - type: script
+    condition: enable_rke2 == true
+    scripts:
+      - |
+        mkdir -p /usr/lib/bootc/kargs.d
+        echo 'kargs = ["systemd.unified_cgroup_hierarchy=1", "swapaccount=1"]' > /usr/lib/bootc/kargs.d/99-rke2.toml
+
+  # RKE2 MOTD
+  - type: script
+    condition: enable_rke2 == true
+    scripts:
+      - |
+        cat > /etc/motd << 'EOF'
+        ╔═══════════════════════════════════════════════════════════╗
+        ║           Exousia RKE2 - Immutable Kubernetes             ║
+        ╠═══════════════════════════════════════════════════════════╣
+        ║                                                           ║
+        ║  RKE2 Server: systemctl status rke2-server               ║
+        ║  Node Status: rke2-status                                ║
+        ║  Kubeconfig:  rke2-kubeconfig                            ║
+        ║  RKE2 Ops:    rke2_ops --help                            ║
+        ║                                                           ║
+        ║  Upgrade:     bootc upgrade && systemctl reboot          ║
+        ║  Rollback:    bootc rollback && systemctl reboot         ║
+        ║                                                           ║
+        ╚═══════════════════════════════════════════════════════════╝
+        EOF
+
   # Plymouth configuration (all images when enabled)
   - type: script
     condition: enable_plymouth == true
@@ -135,9 +231,18 @@ modules:
         - NetworkManager.service
     default-target: graphical.target
 
+  # RKE2 services (when enabled)
+  - type: systemd
+    condition: enable_rke2 == true
+    system:
+      enabled:
+        - rke2-server.service
+
   # Validation and finalization
   - type: script
     scripts:
       - bootc container lint
-      - restorecon -vv /usr/local/bin/tuigreet
+      - restorecon -vv /usr/local/bin/tuigreet || true
+      - restorecon -vv /usr/local/bin/rke2_ops || true
+      - test -f /usr/local/bin/rke2 && echo "RKE2 installed" || echo "RKE2 not installed"
       - echo "composefs=true" >> /etc/ostree/repo.config || true
