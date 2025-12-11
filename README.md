@@ -402,6 +402,109 @@ Add executable scripts to `custom-scripts/` - they will be copied to `/usr/local
 
 ---
 
+## RKE2 on Bootc: Immutable Kubernetes
+
+Build Kubernetes clusters with atomic updates using RKE2 on Fedora bootc.
+
+### Overview
+
+Exousia now supports building RKE2 (Rancher Kubernetes) on Fedora bootc, giving you:
+
+- **Immutable Infrastructure**: Entire k8s node as a container image
+- **Atomic Updates**: Upgrade cluster with `bootc upgrade`
+- **Instant Rollback**: Boot into previous version on failures
+- **Clean Separation**: Kubernetes isolated from your host system
+
+### Architecture
+
+```
+┌──────────────────────────────────────────┐
+│           Host (Gentoo/Fedora)           │
+│                                          │
+│  ┌──────────┐      ┌────────────────┐   │
+│  │ Registry │◄─────┤ libvirt/KVM    │   │
+│  │ :5000    │      │  ┌──────────┐  │   │
+│  └──────────┘      │  │ Fedora   │  │   │
+│                    │  │ bootc    │  │   │
+│  ┌──────────┐      │  │          │  │   │
+│  │Kubeconfig│◄─────┼──┤ + RKE2   │  │   │
+│  │(9p share)│      │  └──────────┘  │   │
+│  └──────────┘      └────────────────┘   │
+└──────────────────────────────────────────┘
+```
+
+### Quick Start
+
+```bash
+# One command to rule them all
+make rke2-quickstart
+
+# Use your cluster
+export KUBECONFIG=~/.kube/rke2-config
+kubectl get nodes
+```
+
+**Manual steps:**
+
+```bash
+# 1. Start local registry
+make rke2-registry-start
+
+# 2. Build and push bootc image
+make rke2-build
+make rke2-push
+
+# 3. Build VM disk image
+make rke2-vm-build
+
+# 4. Create and start VM
+make rke2-vm-create
+make rke2-vm-start
+
+# 5. Get kubeconfig (wait ~2 min)
+make rke2-kubeconfig
+```
+
+### Operations
+
+**Upgrade cluster:**
+
+```bash
+# Build new image
+make rke2-build
+podman tag exousia-rke2:latest localhost:5000/exousia-rke2:v2
+podman push localhost:5000/exousia-rke2:v2
+
+# Upgrade (inside VM)
+sudo bootc switch localhost:5000/exousia-rke2:v2
+sudo bootc upgrade
+sudo systemctl reboot
+```
+
+**Rollback:**
+
+```bash
+# Automatic on boot failure, or manual:
+sudo bootc rollback
+sudo systemctl reboot
+```
+
+### Documentation
+
+- **[Quick Start Guide](k8s/rke2/QUICKSTART.md)** - Get started in 30 seconds
+- **[Complete Setup Guide](docs/RKE2_BOOTC_SETUP.md)** - Full documentation and troubleshooting
+- **[Configuration Templates](k8s/rke2/)** - Cloud-init, libvirt XML, RKE2 configs
+
+### Benefits
+
+- **Reproducible**: Version entire k8s stack as container images
+- **Testable**: Promote images through dev → staging → prod
+- **Resilient**: Instant rollback on failures
+- **Efficient**: Registry on host, shared across VMs
+- **Flexible**: Works on Gentoo, Fedora, or any libvirt-capable host
+
+---
+
 ## Package validation and dependency tooling
 
 ### Package dependency transpiler CLI
