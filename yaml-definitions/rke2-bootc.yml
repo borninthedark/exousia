@@ -164,9 +164,9 @@ modules:
         ╠═══════════════════════════════════════════════════════════╣
         ║                                                           ║
         ║  RKE2 Server: systemctl status rke2-server               ║
-        ║  Node Status: rke2-status                                ║
-        ║  Kubeconfig:  rke2-kubeconfig                            ║
         ║  RKE2 Ops:    rke2_ops --help                            ║
+        ║  VM Status:   rke2_ops vm status                         ║
+        ║  Kubeconfig:  rke2_ops kubeconfig                        ║
         ║                                                           ║
         ║  Upgrade:     bootc upgrade && systemctl reboot          ║
         ║  Rollback:    bootc rollback && systemctl reboot         ║
