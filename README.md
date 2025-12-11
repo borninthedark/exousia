@@ -297,6 +297,69 @@ make push
 
 ---
 
+## RKE2 Kubernetes Integration
+
+**Immutable Kubernetes infrastructure built into every bootc image.**
+
+### Overview
+
+All Exousia bootc images include RKE2 (Rancher Kubernetes Engine 2) by default, providing:
+
+- **Immutable Infrastructure**: Entire k8s stack as a container image
+- **Atomic Updates**: Upgrade cluster with `bootc upgrade`
+- **Instant Rollback**: Boot previous version with `bootc rollback`
+- **Desktop & Server**: Works on laptops and production servers
+
+### Quick Start
+
+After building and booting an Exousia image:
+
+```bash
+# Check RKE2 status
+sudo systemctl status rke2-server
+
+# Access cluster
+export KUBECONFIG=/etc/rancher/rke2/rke2.yaml
+kubectl get nodes
+```
+
+### Configuration
+
+Enable/disable RKE2 in `adnyeus.yml`:
+
+```yaml
+build:
+  enable_plymouth: true
+  enable_rke2: true  # Enabled by default
+```
+
+### Use Cases
+
+- **Local Development**: Full k8s cluster on your laptop
+- **Immutable Infrastructure**: Production-grade atomic deployments
+- **Edge Computing**: Kubernetes at the edge with rollback
+
+### Documentation
+
+- **[RKE2 Integration Guide](docs/RKE2_INTEGRATION.md)** - Complete documentation
+- **[rke2_ops Tool](tools/rke2_ops.py)** - Unified management CLI
+
+For VM-based testing and deployment:
+
+```bash
+# Quick start - all in one command
+make rke2-quickstart
+
+# Or step by step
+python3 tools/rke2_ops.py registry start
+python3 tools/rke2_ops.py vm build
+python3 tools/rke2_ops.py vm create
+python3 tools/rke2_ops.py vm start
+python3 tools/rke2_ops.py kubeconfig
+```
+
+---
+
 ## Customization
 
 ### Switching Fedora Versions and Image Types
