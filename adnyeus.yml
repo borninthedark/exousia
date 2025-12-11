@@ -217,53 +217,15 @@ modules:
     scripts:
       - |
         mkdir -p /usr/lib/bootc/kargs.d
-        cat > /usr/lib/bootc/kargs.d/99-rke2.toml << 'EOF'
-# RKE2 kernel arguments for cgroups v2 and swap accounting
-kargs = ["systemd.unified_cgroup_hierarchy=1", "swapaccount=1"]
-EOF
-
-  # RKE2 helper script for common operations
-  - type: script
-    condition: enable_rke2 == true
-    scripts:
-      - |
-        cat > /usr/local/bin/rke2-kubectl << 'EOF'
-#!/bin/bash
-# Helper script to run kubectl with RKE2's kubeconfig
-export KUBECONFIG=/etc/rancher/rke2/rke2.yaml
-/var/lib/rancher/rke2/bin/kubectl "$@"
-EOF
-        chmod +x /usr/local/bin/rke2-kubectl
+        echo 'kargs = ["systemd.unified_cgroup_hierarchy=1", "swapaccount=1"]' > /usr/lib/bootc/kargs.d/99-rke2.toml
 
   # RKE2 MOTD with helpful commands
-  - type: script
+  - type: files
     condition: enable_rke2 == true
-    scripts:
-      - |
-        cat > /etc/motd << 'EOFMOTD'
-        ╔═══════════════════════════════════════════════════════════╗
-        ║           Exousia RKE2 - Immutable Kubernetes             ║
-        ╠═══════════════════════════════════════════════════════════╣
-        ║                                                           ║
-        ║  RKE2 Status:    systemctl status rke2-server            ║
-        ║  RKE2 Logs:      journalctl -u rke2-server -f            ║
-        ║  Start RKE2:     systemctl start rke2-server             ║
-        ║  Stop RKE2:      systemctl stop rke2-server              ║
-        ║                                                           ║
-        ║  Kubeconfig:     /etc/rancher/rke2/rke2.yaml             ║
-        ║  Node Token:     /var/lib/rancher/rke2/server/node-token ║
-        ║  Kubectl:        rke2-kubectl get nodes                   ║
-        ║                                                           ║
-        ║  RKE2 Ops:       rke2_ops --help                         ║
-        ║  VM Status:      rke2_ops vm status                      ║
-        ║                                                           ║
-        ║  Upgrade Image:  bootc upgrade && systemctl reboot       ║
-        ║  Rollback:       bootc rollback && systemctl reboot      ║
-        ║                                                           ║
-        ║  Documentation:  https://docs.rke2.io                    ║
-        ║                                                           ║
-        ╚═══════════════════════════════════════════════════════════╝
-        EOFMOTD
+    files:
+      - src: custom-configs/rke2/motd
+        dst: /etc/motd
+        mode: "0644"
 
   # Plymouth configuration (all images when enabled)
   - type: script
@@ -310,25 +272,4 @@ EOF
   - type: script
     condition: enable_rke2 == true
     scripts:
-      - |
-        cat << 'EOFNOTES'
-        
-        ═══════════════════════════════════════════════════════════
-        RKE2 Server Installation Complete
-        ═══════════════════════════════════════════════════════════
-        
-        On first boot, RKE2 will:
-        1. Start the rke2-server service automatically
-        2. Generate kubeconfig at: /etc/rancher/rke2/rke2.yaml
-        3. Generate node token at: /var/lib/rancher/rke2/server/node-token
-        4. Install kubectl and other tools to: /var/lib/rancher/rke2/bin/
-        
-        To access the cluster after first boot:
-        - Use: rke2-kubectl get nodes
-        - Or set: export KUBECONFIG=/etc/rancher/rke2/rke2.yaml
-        
-        To add agent nodes, use the token from:
-        /var/lib/rancher/rke2/server/node-token
-        
-        ═══════════════════════════════════════════════════════════
-        EOFNOTES
+      - echo "RKE2 Server installation configured. On first boot, rke2-server service will start automatically."
