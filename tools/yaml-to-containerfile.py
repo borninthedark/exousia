@@ -479,6 +479,12 @@ class ContainerfileGenerator:
             for group in groups:
                 self.lines.append(f"    dnf install -y @{group}; \\")
 
+        # Remove conflicting packages FIRST (before installation)
+        # This is critical for packages like swaylock that conflict with replacements (swaylock-effects)
+        if remove_packages:
+            packages_str = " ".join(remove_packages)
+            self.lines.append(f"    dnf remove -y {packages_str} || true; \\")
+
         # Install individual packages
         if install_packages:
             # Build exclude flags for packages that need to be removed
@@ -493,16 +499,7 @@ class ContainerfileGenerator:
 
             for i, chunk in enumerate(chunks):
                 packages_str = " ".join(chunk)
-                if i == len(chunks) - 1 and not remove_packages:
-                    # Last chunk, no remove packages
-                    self.lines.append(f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\")
-                else:
-                    self.lines.append(f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\")
-
-        # Remove packages
-        if remove_packages:
-            packages_str = " ".join(remove_packages)
-            self.lines.append(f"    dnf remove -y {packages_str} || true; \\")
+                self.lines.append(f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\")
 
         # Upgrade and cleanup
         self.lines.append("    dnf upgrade -y; \\")
