@@ -312,7 +312,10 @@ class ContainerfileGenerator:
     def _render_script_lines(self, lines: List[str], set_command: str):
         """Render a sequence of shell lines as a single RUN instruction."""
 
-        SHELL_KEYWORDS = {'if', 'then', 'else', 'elif', 'fi', 'do', 'done', 'case', 'esac'}
+        # Keywords that start or are in the middle of compound statements (no semicolon needed)
+        COMPOUND_STARTERS = {'if', 'then', 'else', 'elif', 'do', 'case'}
+        # Keywords that end compound statements (need semicolon before next command)
+        COMPOUND_ENDERS = {'fi', 'done', 'esac'}
 
         self.lines.append(f"RUN {set_command}; \\")
 
@@ -322,16 +325,22 @@ class ContainerfileGenerator:
 
             # Check if line ends with a shell keyword
             last_word = line.split()[-1] if line.split() else ""
-            needs_semicolon = last_word not in SHELL_KEYWORDS and i < len(lines) - 1
+            is_last_line = i >= len(lines) - 1
 
             if has_continuation:
                 # Line already has backslash continuation, don't add semicolon
                 self.lines.append(f"    {line}")
-            elif needs_semicolon:
+            elif last_word in COMPOUND_ENDERS and not is_last_line:
+                # Compound statement enders (fi, done, esac) need semicolon before next command
                 self.lines.append(f"    {line}; \\")
-            elif i < len(lines) - 1:
+            elif last_word in COMPOUND_STARTERS and not is_last_line:
+                # Compound statement starters/middles don't need semicolon
                 self.lines.append(f"    {line} \\")
+            elif not is_last_line:
+                # Regular commands need semicolon
+                self.lines.append(f"    {line}; \\")
             else:
+                # Last line
                 self.lines.append(f"    {line}")
 
     def _process_script_module(self, module: Dict[str, Any]):
