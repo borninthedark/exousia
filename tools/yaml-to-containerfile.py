@@ -130,6 +130,7 @@ class BuildContext:
     image_type: str
     fedora_version: str  # For Fedora-based images; can be empty for Linux bootc
     enable_plymouth: bool
+    enable_rke2: bool
     base_image: str
     distro: str = "fedora"  # fedora, arch, gentoo, debian, ubuntu, opensuse, proxmox
     desktop_environment: str = ""  # kde, gnome, mate, etc.
@@ -822,8 +823,8 @@ class ContainerfileGenerator:
     def _evaluate_condition(self, condition: str) -> bool:
         """Evaluate a condition string against current context."""
         # Simple condition evaluation
-        # Supports: image-type == "value", enable_plymouth == true/false, distro == "value",
-        #          desktop_environment == "value", window_manager == "value"
+        # Supports: image-type == "value", enable_plymouth == true/false, enable_rke2 == true/false,
+        #          distro == "value", desktop_environment == "value", window_manager == "value"
 
         condition = condition.strip()
 
@@ -848,6 +849,8 @@ class ContainerfileGenerator:
                 return self.context.distro == right
             if left == "enable_plymouth":
                 return self.context.enable_plymouth == (right.lower() == "true")
+            if left == "enable_rke2":
+                return self.context.enable_rke2 == (right.lower() == "true")
             if left == "desktop_environment":
                 return self.context.desktop_environment == right
             if left == "window_manager":
@@ -1001,6 +1004,11 @@ Examples:
     image_type = args.image_type or config.get("image-type", "fedora-sway-atomic")
     fedora_version = args.fedora_version or str(config.get("image-version", "43"))
     enable_plymouth = args.enable_plymouth and not args.disable_plymouth
+
+    # Extract build configuration
+    build_config = config.get("build", {})
+    enable_rke2 = build_config.get("enable_rke2", False)
+
     try:
         base_image = determine_base_image(config, image_type, fedora_version)
     except ValueError as exc:
@@ -1028,6 +1036,7 @@ Examples:
         print(f"  Distro: {distro}")
         print(f"  Fedora version: {fedora_version}")
         print(f"  Plymouth: {enable_plymouth}")
+        print(f"  RKE2: {enable_rke2}")
         print(f"  Base image: {base_image}")
         print(f"  Desktop Environment: {desktop_environment}")
         print(f"  Window Manager: {window_manager}")
@@ -1036,6 +1045,7 @@ Examples:
         image_type=image_type,
         fedora_version=fedora_version,
         enable_plymouth=enable_plymouth,
+        enable_rke2=enable_rke2,
         base_image=base_image,
         distro=distro,
         desktop_environment=desktop_environment,

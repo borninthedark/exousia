@@ -457,7 +457,7 @@ get_package_manager() {
     assert_success
     run buildah run "$CONTAINER" -- rpm -q waybar
     assert_success
-    run buildah run "$CONTAINER" -- rpm -q swaylock
+    run buildah run "$CONTAINER" -- rpm -q swaylock-effects
     assert_success
 }
 
