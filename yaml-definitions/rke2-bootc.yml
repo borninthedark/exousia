@@ -90,6 +90,13 @@ modules:
         dst: /usr/local/bin/
         mode: "0755"
 
+  # RKE2 management CLI (Python)
+  - type: files
+    files:
+      - src: tools/rke2_ops.py
+        dst: /usr/local/bin/rke2_ops
+        mode: "0755"
+
   # Minimal base packages for RKE2
   - type: script
     scripts:
@@ -116,6 +123,27 @@ modules:
         # Install RKE2 using official install script
         # Binaries go to /usr/local/bin, data to /var/lib/rancher/rke2
         curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -
+
+        # Ensure canonical RKE2 binary path exists for tests
+        if [ -x /usr/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
+          ln -s /usr/bin/rke2 /usr/local/bin/rke2
+        fi
+
+        if [ ! -x /usr/local/bin/rke2 ]; then
+          echo "✗ RKE2 binary missing after install" >&2
+          exit 1
+        fi
+
+        # Ensure kubectl from the RKE2 bundle is present
+        mkdir -p /var/lib/rancher/rke2/bin
+        if [ -x /var/lib/rancher/rke2/bin/kubectl ]; then
+          :
+        elif [ -x /usr/local/bin/kubectl ]; then
+          install -m 0755 /usr/local/bin/kubectl /var/lib/rancher/rke2/bin/kubectl
+        else
+          echo "✗ RKE2 kubectl not found after install" >&2
+          exit 1
+        fi
 
   # RKE2 systemd drop-in directory
   - type: script
@@ -196,9 +224,6 @@ modules:
         rm -f /var/log/dnf5.log /var/log/dnf5.log.[0-9]* || true
         rm -rf /var/cache/dnf /var/cache/libdnf5 /var/cache/etckeeper || true
         rm -rf /var/lib/dnf || true
-        if [ -d /var/lib/flatpak ]; then
-          find /var/lib/flatpak -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
-        fi
 
   # Validation and finalization
   - type: script
@@ -206,4 +231,5 @@ modules:
       - bootc container lint
       - restorecon -vv /usr/local/bin/rke2_ops || true
       - test -f /usr/local/bin/rke2 && echo "RKE2 installed" || echo "RKE2 not installed"
+      - rpm -q iptables container-selinux
       - echo "composefs=true" >> /etc/ostree/repo.config || true

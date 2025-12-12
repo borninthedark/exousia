@@ -151,6 +151,14 @@ modules:
           python3 \
           && dnf clean all
 
+  # RKE2 management CLI (Python)
+  - type: files
+    condition: enable_rke2 == true
+    files:
+      - src: tools/rke2_ops.py
+        dst: /usr/local/bin/rke2_ops
+        mode: "0755"
+
   # RKE2 Server installation - Step 1: Run the installer
   # This installs rke2-server service and rke2 binary
   - type: script
@@ -160,6 +168,27 @@ modules:
         # Install RKE2 server using official install script
         # Default INSTALL_RKE2_TYPE is "server" so we don't need to specify it
         curl -sfL https://get.rke2.io | sh -
+
+        # Ensure the RKE2 binary is in the expected location for tests
+        if [ -x /usr/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
+          ln -s /usr/bin/rke2 /usr/local/bin/rke2
+        fi
+
+        if [ ! -x /usr/local/bin/rke2 ]; then
+          echo "✗ RKE2 binary missing after install" >&2
+          exit 1
+        fi
+
+        # Ensure kubectl from the RKE2 bundle is present
+        mkdir -p /var/lib/rancher/rke2/bin
+        if [ -x /var/lib/rancher/rke2/bin/kubectl ]; then
+          :
+        elif [ -x /usr/local/bin/kubectl ]; then
+          install -m 0755 /usr/local/bin/kubectl /var/lib/rancher/rke2/bin/kubectl
+        else
+          echo "✗ RKE2 kubectl not found after install" >&2
+          exit 1
+        fi
 
         # Verify installation
         # Note: RKE2 binary location may vary (RPM installs to /usr/bin, script installs to /usr/local/bin)
@@ -291,9 +320,6 @@ modules:
         rm -f /var/log/dnf5.log /var/log/dnf5.log.[0-9]* || true
         rm -rf /var/cache/dnf /var/cache/libdnf5 /var/cache/etckeeper || true
         rm -rf /var/lib/dnf || true
-        if [ -d /var/lib/flatpak ]; then
-          find /var/lib/flatpak -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
-        fi
 
   # Validation and finalization
   - type: script
@@ -302,7 +328,7 @@ modules:
       - restorecon -vv /usr/local/bin/tuigreet || true
       - restorecon -vv /usr/local/bin/rke2_ops || true
       - restorecon -vv /usr/local/bin/rke2-kubectl || true
-      - |
+      - | 
         # Check RKE2 installation (binary may be in /usr/bin or /usr/local/bin)
         if [ -f /usr/local/bin/rke2 ] || [ -f /usr/bin/rke2 ]; then
             echo "✓ RKE2 installed"
@@ -310,6 +336,10 @@ modules:
             echo "○ RKE2 not installed"
         fi
       - test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service configured" || echo "○ rke2-server.service not found"
+      - |
+        if [ "${enable_rke2}" = "true" ]; then
+          rpm -q iptables container-selinux
+        fi
       - echo "composefs=true" >> /etc/ostree/repo.config || true
 
   # Post-installation notes
