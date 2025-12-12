@@ -218,10 +218,9 @@ modules:
 
         # Create shared volumes for host integration
         # Some base images have /mnt as a file, symlink, or other non-directory
-        # Force remove and recreate as a directory if it's not already a directory
-        if [ ! -d /mnt ]; then
-            rm -rf /mnt
-            mkdir -p /mnt
+        # Remove it only if it exists and is not a directory
+        if [ -e /mnt ] && [ ! -d /mnt ]; then
+            rm -f /mnt
         fi
         mkdir -p /mnt/host/kubeconfig
         mkdir -p /mnt/host/storage
