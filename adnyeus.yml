@@ -217,13 +217,12 @@ modules:
         mkdir -p /var/lib/rancher/rke2/server
 
         # Create shared volumes for host integration
-        # Some base images have /mnt as a file instead of a directory
-        # Remove it if it's a file and recreate as a directory
-        if [ -f /mnt ] && [ ! -d /mnt ]; then
-            rm -f /mnt
+        # Some base images have /mnt as a file, symlink, or other non-directory
+        # Force remove and recreate as a directory if it's not already a directory
+        if [ ! -d /mnt ]; then
+            rm -rf /mnt
+            mkdir -p /mnt
         fi
-        # Ensure /mnt exists as a directory
-        mkdir -p /mnt
         mkdir -p /mnt/host/kubeconfig
         mkdir -p /mnt/host/storage
 
