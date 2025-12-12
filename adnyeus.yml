@@ -210,11 +210,16 @@ modules:
         mkdir -p /var/lib/rancher/rke2
         mkdir -p /var/lib/rancher/rke2/bin
         mkdir -p /var/lib/rancher/rke2/server
-        
+
         # Create shared volumes for host integration
+        # Some base images have /mnt as a file instead of a directory
+        # Remove it if it's a file so we can create the directory structure
+        if [ -f /mnt ] && [ ! -d /mnt ]; then
+            rm -f /mnt
+        fi
         mkdir -p /mnt/host/kubeconfig
         mkdir -p /mnt/host/storage
-        
+
         # Symlink kubectl and other tools to a standard location
         # These will be available after first boot when RKE2 runs
         mkdir -p /usr/local/bin
