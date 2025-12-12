@@ -216,21 +216,6 @@ modules:
         mkdir -p /var/lib/rancher/rke2/bin
         mkdir -p /var/lib/rancher/rke2/server
 
-        # Create shared volumes for host integration
-        # Remove /mnt if it's not a directory (handle symlinks and files differently)
-        if [ -e /mnt ] && [ ! -d /mnt ]; then
-            if [ -L /mnt ]; then
-                # It's a symlink, use unlink
-                unlink /mnt
-            else
-                # It's a file or other type, use rm
-                rm -f /mnt
-            fi
-        fi
-        # Let mkdir -p create /mnt implicitly when creating subdirectories
-        mkdir -p /mnt/host/kubeconfig
-        mkdir -p /mnt/host/storage
-
         # Symlink kubectl and other tools to a standard location
         # These will be available after first boot when RKE2 runs
         mkdir -p /usr/local/bin
@@ -289,6 +274,26 @@ modules:
     system:
       enabled:
         - rke2-server.service
+
+  # Ensure /var layout matches bootc lint expectations
+  - type: script
+    scripts:
+      - |
+        set -euxo pipefail
+
+        # /var/run should be a symlink to /run for bootc lint
+        if [ ! -L /var/run ]; then
+          rm -rf /var/run
+          ln -s ../run /var/run
+        fi
+
+        # Drop build-time cache/log artifacts so tmpfiles can own /var
+        rm -f /var/log/dnf5.log /var/log/dnf5.log.[0-9]* || true
+        rm -rf /var/cache/dnf /var/cache/libdnf5 /var/cache/etckeeper || true
+        rm -rf /var/lib/dnf || true
+        if [ -d /var/lib/flatpak ]; then
+          find /var/lib/flatpak -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+        fi
 
   # Validation and finalization
   - type: script
