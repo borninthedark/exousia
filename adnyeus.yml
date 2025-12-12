@@ -30,6 +30,22 @@ build:
   enable_plymouth: true
   enable_rke2: true  # Enable RKE2 Kubernetes for immutable k8s infrastructure
 
+  # Sway Configuration Source Selection
+  # See: https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/
+  #
+  # false (default): Use custom Exousia configs from custom-configs/sway/
+  #   - Copies custom sway.desktop, environment, and start-sway script
+  #   - Overrides Fedora Sway SIG configurations
+  #
+  # true: Keep upstream Fedora Sway configurations
+  #   - Preserves sway-config-fedora or sway-config-upstream from base image
+  #   - Fedora uses layered config system:
+  #     * /usr/share/sway/config.d/*.conf (packaged configs)
+  #     * /etc/sway/config.d/*.conf (system overrides)
+  #     * ~/.config/sway/config.d/*.conf (user overrides)
+  #   - Swap profiles with: dnf swap sway-config sway-config-upstream
+  use_upstream_sway_config: false
+
 # Modules define the build steps
 modules:
   # System users configuration
@@ -91,8 +107,9 @@ modules:
         dst: /usr/local/bin/
         mode: "0755"
 
-  # Sway session files
+  # Sway session files (custom configs - skipped if use_upstream_sway_config == true)
   - type: files
+    condition: use_upstream_sway_config == false
     files:
       - src: custom-configs/sway/sway.desktop
         dst: /usr/share/wayland-sessions/sway.desktop

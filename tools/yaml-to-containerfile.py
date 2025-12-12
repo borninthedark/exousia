@@ -131,6 +131,7 @@ class BuildContext:
     fedora_version: str  # For Fedora-based images; can be empty for Linux bootc
     enable_plymouth: bool
     enable_rke2: bool
+    use_upstream_sway_config: bool
     base_image: str
     distro: str = "fedora"  # fedora, arch, gentoo, debian, ubuntu, opensuse, proxmox
     desktop_environment: str = ""  # kde, gnome, mate, etc.
@@ -821,7 +822,8 @@ class ContainerfileGenerator:
         """Evaluate a condition string against current context."""
         # Simple condition evaluation
         # Supports: image-type == "value", enable_plymouth == true/false, enable_rke2 == true/false,
-        #          distro == "value", desktop_environment == "value", window_manager == "value"
+        #          use_upstream_sway_config == true/false, distro == "value",
+        #          desktop_environment == "value", window_manager == "value"
 
         condition = condition.strip()
 
@@ -848,6 +850,8 @@ class ContainerfileGenerator:
                 return self.context.enable_plymouth == (right.lower() == "true")
             if left == "enable_rke2":
                 return self.context.enable_rke2 == (right.lower() == "true")
+            if left == "use_upstream_sway_config":
+                return self.context.use_upstream_sway_config == (right.lower() == "true")
             if left == "desktop_environment":
                 return self.context.desktop_environment == right
             if left == "window_manager":
@@ -1005,6 +1009,7 @@ Examples:
     # Extract build configuration
     build_config = config.get("build", {})
     enable_rke2 = build_config.get("enable_rke2", False)
+    use_upstream_sway_config = build_config.get("use_upstream_sway_config", False)
 
     try:
         base_image = determine_base_image(config, image_type, fedora_version)
@@ -1034,6 +1039,7 @@ Examples:
         print(f"  Fedora version: {fedora_version}")
         print(f"  Plymouth: {enable_plymouth}")
         print(f"  RKE2: {enable_rke2}")
+        print(f"  Sway Config: {'upstream' if use_upstream_sway_config else 'custom'}")
         print(f"  Base image: {base_image}")
         print(f"  Desktop Environment: {desktop_environment}")
         print(f"  Window Manager: {window_manager}")
@@ -1043,6 +1049,7 @@ Examples:
         fedora_version=fedora_version,
         enable_plymouth=enable_plymouth,
         enable_rke2=enable_rke2,
+        use_upstream_sway_config=use_upstream_sway_config,
         base_image=base_image,
         distro=distro,
         desktop_environment=desktop_environment,
