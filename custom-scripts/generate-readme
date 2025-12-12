@@ -835,6 +835,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [bootcrew](https://github.com/bootcrew) for community-driven bootc projects and examples
 - [Buildah](https://buildah.io/), [Skopeo](https://github.com/containers/skopeo), and [Podman](https://podman.io/) communities
   for advancing daemonless container tooling
+- [RKE2](https://docs.rke2.io/) - Rancher's Kubernetes distribution for enterprise-grade Kubernetes
+  - Comprehensive [installation documentation](https://docs.rke2.io/install/methods) and [quickstart guides](https://docs.rke2.io/install/quickstart)
+  - Security-focused design with built-in CIS hardening and FIPS compliance
+  - Seamless integration with bootc for immutable Kubernetes nodes
+- [Rancher by SUSE](https://www.rancher.com/) for the RKE2 Kubernetes distribution
 - The broader container and immutable OS community
 - All contributors to the referenced documentation and guides
 - **Claude** (Anthropic) and **GPT Codex** (OpenAI) for AI-assisted development

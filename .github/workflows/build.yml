@@ -56,7 +56,7 @@ on:
         description: 'Enable RKE2 Kubernetes server node'
         required: true
         type: boolean
-        default: false
+        default: true
       os:
         description: 'Operating system (auto-detected from image_type if not specified)'
         required: false

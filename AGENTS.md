@@ -48,6 +48,26 @@ Exousia embraces AI as a collaborative development partner rather than a replace
 - **Maintain Control**: Keep humans in the decision-making loop for architecture and critical logic
 - **Preserve Transparency**: Document AI contributions and maintain clear attribution
 
+### Test-Driven Development (TDD) - Core Principle
+
+**ALL development work in Exousia MUST follow test-driven development practices:**
+
+1. **Write Tests First**: Before implementing any feature or fix, write the test that validates the expected behavior
+2. **Red-Green-Refactor**: Follow the TDD cycle:
+   - **Red**: Write a failing test that defines the desired behavior
+   - **Green**: Implement the minimal code needed to make the test pass
+   - **Refactor**: Clean up the code while keeping tests passing
+3. **No Untested Code**: Every new function, class, or feature must have corresponding tests
+4. **Test Coverage**: Maintain minimum coverage thresholds (80% for API, 75% for tools)
+5. **Integration Tests**: Complex features require both unit tests and integration tests
+
+**Why TDD is mandatory:**
+- Prevents regressions and ensures code correctness
+- Provides living documentation of expected behavior
+- Enables confident refactoring and continuous improvement
+- Catches bugs early in the development cycle
+- Facilitates AI-assisted development by providing clear validation criteria
+
 ## 🔴 HIGH PRIORITY: Continuous Quality Requirements
 
 **These requirements MUST be met on EVERY branch before merging, regardless of the feature or fix being implemented.**
@@ -205,6 +225,60 @@ When modifying this logic:
 - Update tests in `api/tests/test_resolve_build_config.py`
 - Ensure path traversal protection remains intact
 - Document changes in `docs/WEBHOOK_API.md`
+
+### Scenario 6: Working with RKE2 Integration
+
+RKE2 (Rancher Kubernetes Engine 2) is integrated into Exousia as an optional bootc feature. When working with RKE2:
+
+```bash
+# Step 1: Enable RKE2 in your YAML definition
+# Set enable_rke2: true in adnyeus.yml or your custom YAML
+
+# Step 2: Use the rke2_ops Python module for all operations
+# Located at tools/rke2_ops.py - DO NOT create shell scripts
+
+# Available operations:
+python3 tools/rke2_ops.py registry start    # Start local registry
+python3 tools/rke2_ops.py vm build          # Build bootc disk image
+python3 tools/rke2_ops.py vm create         # Create VM
+python3 tools/rke2_ops.py vm start          # Start VM
+python3 tools/rke2_ops.py vm status         # Check status
+python3 tools/rke2_ops.py kubeconfig        # Get kubeconfig
+python3 tools/rke2_ops.py quickstart        # Run all steps
+
+# Or use Makefile targets:
+make rke2-quickstart                        # Complete automated setup
+make rke2-registry-start                    # Start registry
+make rke2-vm-build                          # Build VM image
+make rke2-vm-status                         # Check VM status
+
+# Step 3: Test RKE2 integration
+# Run the integration tests (now enabled by default)
+ENABLE_RKE2=true bats custom-tests/image_content.bats
+
+# Step 4: Required validations when modifying RKE2:
+# - All 9 RKE2 integration tests must pass
+# - Verify installation follows official RKE2 docs:
+#   https://docs.rke2.io/install/methods
+#   https://docs.rke2.io/install/quickstart
+# - Test registry connectivity (192.168.122.1:5000)
+# - Verify kubeconfig export works
+# - Check systemd integration (rke2-server.service)
+
+# Step 5: Update documentation
+# - docs/RKE2_INTEGRATION.md for feature changes
+# - docs/RKE2_BOOTC_SETUP.md for setup procedures
+# - k8s/rke2/QUICKSTART.md for quick reference
+# - README.md acknowledgements section
+```
+
+**Important RKE2 Development Principles:**
+- **No shell scripts**: Use `tools/rke2_ops.py` for all RKE2 operations
+- **Follow official docs**: Reference https://docs.rke2.io for installation methods
+- **Test thoroughly**: RKE2 integration tests verify binary, config, systemd, and networking
+- **Default enabled**: `enable_rke2` defaults to `true` in GitHub Actions and should remain so
+- **Registry-first**: RKE2 uses local Podman registry on libvirt bridge (192.168.122.1:5000)
+- **Bootc integration**: RKE2 is deployed via bootc image with proper kernel args and SELinux contexts
 
 ## Key Project Features
 
