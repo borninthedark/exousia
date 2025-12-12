@@ -337,7 +337,7 @@ modules:
         fi
       - test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service configured" || echo "○ rke2-server.service not found"
       - |
-        if [ "${enable_rke2}" = "true" ]; then
+        if [ "${enable_rke2:-false}" = "true" ]; then
           rpm -q iptables container-selinux
         fi
       - echo "composefs=true" >> /etc/ostree/repo.config || true
