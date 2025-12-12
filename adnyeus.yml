@@ -160,9 +160,14 @@ modules:
         # Install RKE2 server using official install script
         # Default INSTALL_RKE2_TYPE is "server" so we don't need to specify it
         curl -sfL https://get.rke2.io | sh -
-        
+
         # Verify installation
-        test -f /usr/local/bin/rke2 && echo "✓ RKE2 binary installed at /usr/local/bin/rke2" || echo "✗ RKE2 installation failed"
+        # Note: RKE2 binary location may vary (RPM installs to /usr/bin, script installs to /usr/local/bin)
+        if [ -f /usr/local/bin/rke2 ] || [ -f /usr/bin/rke2 ]; then
+            echo "✓ RKE2 binary installed"
+        else
+            echo "✗ RKE2 binary not found"
+        fi
         test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service installed" || echo "✗ rke2-server.service not found"
 
   # RKE2 configuration directory
@@ -213,10 +218,12 @@ modules:
 
         # Create shared volumes for host integration
         # Some base images have /mnt as a file instead of a directory
-        # Remove it if it's a file so we can create the directory structure
+        # Remove it if it's a file and recreate as a directory
         if [ -f /mnt ] && [ ! -d /mnt ]; then
             rm -f /mnt
         fi
+        # Ensure /mnt exists as a directory
+        mkdir -p /mnt
         mkdir -p /mnt/host/kubeconfig
         mkdir -p /mnt/host/storage
 
@@ -286,7 +293,13 @@ modules:
       - restorecon -vv /usr/local/bin/tuigreet || true
       - restorecon -vv /usr/local/bin/rke2_ops || true
       - restorecon -vv /usr/local/bin/rke2-kubectl || true
-      - test -f /usr/local/bin/rke2 && echo "✓ RKE2 installed" || echo "○ RKE2 not installed"
+      - |
+        # Check RKE2 installation (binary may be in /usr/bin or /usr/local/bin)
+        if [ -f /usr/local/bin/rke2 ] || [ -f /usr/bin/rke2 ]; then
+            echo "✓ RKE2 installed"
+        else
+            echo "○ RKE2 not installed"
+        fi
       - test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service configured" || echo "○ rke2-server.service not found"
       - echo "composefs=true" >> /etc/ostree/repo.config || true
 
