@@ -713,15 +713,6 @@ is_rke2_enabled() {
     assert_dir_exists "$MOUNT_POINT/var/lib/rancher/rke2"
 }
 
-@test "RKE2 host integration directories should exist when enabled" {
-    if ! is_rke2_enabled; then
-        skip "RKE2 is disabled (ENABLE_RKE2=false)"
-    fi
-
-    assert_dir_exists "$MOUNT_POINT/mnt/host/kubeconfig"
-    assert_dir_exists "$MOUNT_POINT/mnt/host/storage"
-}
-
 @test "RKE2 MOTD should be configured when enabled" {
     if ! is_rke2_enabled; then
         skip "RKE2 is disabled (ENABLE_RKE2=false)"

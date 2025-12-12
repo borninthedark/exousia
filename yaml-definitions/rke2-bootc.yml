@@ -136,8 +136,7 @@ modules:
   - type: script
     scripts:
       - |
-        mkdir -p /mnt/host/kubeconfig
-        mkdir -p /mnt/host/storage
+        echo "Host integration mount points are created at runtime"
 
   # RKE2 SELinux contexts
   - type: script
