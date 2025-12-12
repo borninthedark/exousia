@@ -537,6 +537,25 @@ get_package_manager() {
     assert_output --partial 'flathub'
 }
 
+@test "/var/run should be a symlink to /run" {
+    run buildah run "$CONTAINER" -- test -L /var/run
+    assert_success
+
+    run buildah run "$CONTAINER" -- readlink -f /var/run
+    assert_output "/run"
+}
+
+@test "Build-time package logs and caches should be cleaned" {
+    run buildah run "$CONTAINER" -- sh -c 'test ! -e /var/log/dnf5.log && test ! -e /var/log/dnf5.log.1'
+    assert_success "dnf logs should not be present in the image"
+
+    run buildah run "$CONTAINER" -- sh -c 'test ! -e /var/cache/dnf && test ! -e /var/cache/libdnf5 && test ! -e /var/cache/etckeeper'
+    assert_success "package manager caches should be removed"
+
+    run buildah run "$CONTAINER" -- sh -c 'test ! -e /var/lib/dnf'
+    assert_success "dnf state should be cleared"
+}
+
 @test "Sway configuration should be present for Sway builds" {
     if ! is_fedora_bootc && ! is_fedora_sway_atomic; then
         skip "Sway configuration test only applies to sway-based builds"

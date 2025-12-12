@@ -182,6 +182,24 @@ modules:
         - rke2-server.service
     default-target: multi-user.target  # No graphical target for server
 
+  # Ensure /var layout matches bootc lint expectations
+  - type: script
+    scripts:
+      - |
+        set -euxo pipefail
+
+        if [ ! -L /var/run ]; then
+          rm -rf /var/run
+          ln -s ../run /var/run
+        fi
+
+        rm -f /var/log/dnf5.log /var/log/dnf5.log.[0-9]* || true
+        rm -rf /var/cache/dnf /var/cache/libdnf5 /var/cache/etckeeper || true
+        rm -rf /var/lib/dnf || true
+        if [ -d /var/lib/flatpak ]; then
+          find /var/lib/flatpak -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+        fi
+
   # Validation and finalization
   - type: script
     scripts:

@@ -275,6 +275,26 @@ modules:
       enabled:
         - rke2-server.service
 
+  # Ensure /var layout matches bootc lint expectations
+  - type: script
+    scripts:
+      - |
+        set -euxo pipefail
+
+        # /var/run should be a symlink to /run for bootc lint
+        if [ ! -L /var/run ]; then
+          rm -rf /var/run
+          ln -s ../run /var/run
+        fi
+
+        # Drop build-time cache/log artifacts so tmpfiles can own /var
+        rm -f /var/log/dnf5.log /var/log/dnf5.log.[0-9]* || true
+        rm -rf /var/cache/dnf /var/cache/libdnf5 /var/cache/etckeeper || true
+        rm -rf /var/lib/dnf || true
+        if [ -d /var/lib/flatpak ]; then
+          find /var/lib/flatpak -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+        fi
+
   # Validation and finalization
   - type: script
     scripts:
