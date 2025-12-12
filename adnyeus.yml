@@ -217,15 +217,17 @@ modules:
         mkdir -p /var/lib/rancher/rke2/server
 
         # Create shared volumes for host integration
-        # Handle /mnt: keep if directory, remove if file/symlink/other
-        if [ -d /mnt ]; then
-            # /mnt is already a directory, keep it
-            :
-        elif [ -e /mnt ]; then
-            # /mnt exists but is not a directory (file, symlink, etc.), remove it
-            rm -f /mnt
+        # Remove /mnt if it's not a directory (handle symlinks and files differently)
+        if [ -e /mnt ] && [ ! -d /mnt ]; then
+            if [ -L /mnt ]; then
+                # It's a symlink, use unlink
+                unlink /mnt
+            else
+                # It's a file or other type, use rm
+                rm -f /mnt
+            fi
         fi
-        # Create directory structure (mkdir -p handles existing directories)
+        # Let mkdir -p create /mnt implicitly when creating subdirectories
         mkdir -p /mnt/host/kubeconfig
         mkdir -p /mnt/host/storage
 
