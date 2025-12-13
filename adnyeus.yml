@@ -183,6 +183,10 @@ modules:
         mkdir -p /var/lib/rancher/rke2/bin
         if [ -x /var/lib/rancher/rke2/bin/kubectl ]; then
           :
+        elif [ -x /usr/bin/kubectl.rke2 ]; then
+          install -m 0755 /usr/bin/kubectl.rke2 /var/lib/rancher/rke2/bin/kubectl
+        elif [ -x /usr/bin/kubectl ]; then
+          install -m 0755 /usr/bin/kubectl /var/lib/rancher/rke2/bin/kubectl
         elif [ -x /usr/local/bin/kubectl ]; then
           install -m 0755 /usr/local/bin/kubectl /var/lib/rancher/rke2/bin/kubectl
         else
