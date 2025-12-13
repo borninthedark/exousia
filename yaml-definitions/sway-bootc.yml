@@ -133,18 +133,6 @@ modules:
         dst: /usr/libexec/sway/volume-helper
         mode: "0755"
 
-  # Explicitly install the Sway session entry, environment, and launcher so
-  # they remain present even if upstream packages change their installed
-  # files. This guarantees the bootc image always ships functional session
-  # assets.
-  - type: script
-    scripts:
-      - |
-        set -euo pipefail
-        install -Dm0644 custom-configs/sway/sway.desktop /usr/share/wayland-sessions/sway.desktop
-        install -Dm0644 custom-configs/sway/environment /etc/sway/environment
-        install -Dm0755 custom-configs/sway/start-sway /usr/bin/start-sway
-
   # Validate that the Sway session launcher files are present
   - type: script
     scripts:
