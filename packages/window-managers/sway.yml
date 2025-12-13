@@ -10,6 +10,7 @@ metadata:
 # Core Sway components
 core:
   - sway
+  - sway-config-minimal  # Minimal config profile for headless/container builds
   - swaylock-effects  # Enhanced swaylock from COPR (pheeef/swaylock-effects)
   - swayidle
   - swaybg

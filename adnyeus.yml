@@ -30,21 +30,22 @@ build:
   enable_plymouth: true
   enable_rke2: true  # Enable RKE2 Kubernetes for immutable k8s infrastructure
 
-  # Sway Configuration Source Selection
+  # Sway Configuration
   # See: https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/
   #
-  # false (default): Use custom Exousia configs from custom-configs/sway/
-  #   - Copies custom sway.desktop, environment, and start-sway script
-  #   - Overrides Fedora Sway SIG configurations
+  # Exousia uses custom sway configs from custom-configs/sway/ by default.
+  # This provides:
+  #   - Custom sway.desktop, environment, and start-sway script
+  #   - Layered config.d snippets in /etc/sway/config.d/
+  #   - Compatible with sway-config-minimal for headless/container builds
   #
-  # true: Keep upstream Fedora Sway configurations
-  #   - Preserves sway-config-fedora or sway-config-upstream from base image
-  #   - Fedora uses layered config system:
-  #     * /usr/share/sway/config.d/*.conf (packaged configs)
-  #     * /etc/sway/config.d/*.conf (system overrides)
-  #     * ~/.config/sway/config.d/*.conf (user overrides)
-  #   - Swap profiles with: dnf swap sway-config sway-config-upstream
-  use_upstream_sway_config: false
+  # Fedora's layered config system:
+  #   * /usr/share/sway/config.d/*.conf (packaged configs)
+  #   * /etc/sway/config.d/*.conf (system overrides)
+  #   * ~/.config/sway/config.d/*.conf (user overrides)
+  #
+  # Note: sway-config-upstream has been removed from available options
+  # due to its limitations. Use sway-config-minimal for minimal builds.
 
 # Modules define the build steps
 modules:
@@ -107,9 +108,8 @@ modules:
         dst: /usr/local/bin/
         mode: "0755"
 
-  # Sway session files (custom configs - skipped if use_upstream_sway_config == true)
+  # Sway session files (custom Exousia configs)
   - type: files
-    condition: use_upstream_sway_config == false
     files:
       - src: custom-configs/sway/sway.desktop
         dst: /usr/share/wayland-sessions/sway.desktop
@@ -120,12 +120,24 @@ modules:
       - src: custom-configs/sway/start-sway
         dst: /usr/bin/start-sway
         mode: "0755"
+      - src: custom-scripts/layered-include
+        dst: /usr/libexec/sway/layered-include
+        mode: "0755"
+      - src: custom-scripts/volume-helper
+        dst: /usr/libexec/sway/volume-helper
+        mode: "0755"
 
   # Package management using new YAML-based loader
   # Automatically loads packages based on desktop.window_manager or desktop.desktop_environment
   - type: package-loader
     window_manager: sway  # Loaded from packages/window-managers/sway.yml
     include_common: true  # Also loads packages/common/base.yml
+
+  # Ensure custom Sway session assets are staged and verified without
+  # relying on inline scripts, after packages have been applied.
+  - type: script
+    scripts:
+      - /usr/local/bin/ensure-sway-session
 
   # Flatpak setup
   - type: script
@@ -265,7 +277,7 @@ modules:
   - type: files
     condition: enable_rke2 == true
     files:
-      - src: custom-configs/rke2/motd
+      - src: custom-configs/rancher/rke2/motd
         dst: /etc/motd
         mode: "0644"
 
