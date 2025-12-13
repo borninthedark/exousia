@@ -387,7 +387,7 @@ jobs:
           INPUT_IMAGE_TYPE: ${{ github.event.inputs.image_type || github.event.client_payload.image_type || 'fedora-sway-atomic' }}
           INPUT_DISTRO_VERSION: ${{ github.event.inputs.distro_version || github.event.client_payload.distro_version || '43' }}
           INPUT_ENABLE_PLYMOUTH: ${{ github.event.inputs.enable_plymouth || github.event.client_payload.enable_plymouth || 'true' }}
-          INPUT_ENABLE_RKE2: ${{ github.event.inputs.enable_rke2 || github.event.client_payload.enable_rke2 || 'false' }}
+          INPUT_ENABLE_RKE2: ${{ github.event.inputs.enable_rke2 || github.event.client_payload.enable_rke2 || 'true' }}
           INPUT_OS: ${{ github.event.inputs.os || github.event.client_payload.os || '' }}
           INPUT_WINDOW_MANAGER: ${{ github.event.inputs.window_manager || github.event.client_payload.window_manager || '' }}
           INPUT_DESKTOP_ENVIRONMENT: ${{ github.event.inputs.desktop_environment || github.event.client_payload.desktop_environment || '' }}
