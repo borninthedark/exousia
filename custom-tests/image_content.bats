@@ -792,3 +792,31 @@ is_rke2_enabled() {
         skip "/etc/environment not found"
     fi
 }
+
+@test "Locale should be configured to en_US.UTF-8" {
+    if [ -f "$MOUNT_POINT/etc/environment" ]; then
+        run grep "LANG=en_US.UTF-8" "$MOUNT_POINT/etc/environment"
+        assert_success "LANG should be set to en_US.UTF-8 in /etc/environment"
+
+        run grep "LC_ALL=en_US.UTF-8" "$MOUNT_POINT/etc/environment"
+        assert_success "LC_ALL should be set to en_US.UTF-8 in /etc/environment"
+    else
+        skip "/etc/environment not found"
+    fi
+}
+
+@test "Sway environment should have locale configured" {
+    if ! is_fedora_bootc && ! is_fedora_sway_atomic; then
+        skip "Sway environment test only applies to sway-based builds"
+    fi
+
+    if [ -f "$MOUNT_POINT/etc/sway/environment" ]; then
+        run grep "LANG=en_US.UTF-8" "$MOUNT_POINT/etc/sway/environment"
+        assert_success "LANG should be exported in /etc/sway/environment"
+
+        run grep "LC_ALL=en_US.UTF-8" "$MOUNT_POINT/etc/sway/environment"
+        assert_success "LC_ALL should be exported in /etc/sway/environment"
+    else
+        skip "/etc/sway/environment not found"
+    fi
+}

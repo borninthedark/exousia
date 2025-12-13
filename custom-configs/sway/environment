@@ -4,6 +4,11 @@
 #
 # vim: set ft=sh:
 
+## Locale Configuration
+# Ensure consistent locale across Wayland applications
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
 ## Pass extra arguments to the /usr/bin/sway executable
 #SWAY_EXTRA_ARGS="$SWAY_EXTRA_ARGS --unsupported-gpu"
 #SWAY_EXTRA_ARGS="$SWAY_EXTRA_ARGS --debug"
