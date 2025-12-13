@@ -90,20 +90,12 @@ modules:
         dst: /usr/local/bin/
         mode: "0755"
 
-  # Minimal base packages for RKE2
-  - type: script
-    scripts:
-      - |
-        dnf install -y \
-          curl \
-          iptables \
-          container-selinux \
-          policycoreutils-python-utils \
-          cryptsetup \
-          python3 \
-          vim-minimal \
-          htop \
-          && dnf clean all
+  # RKE2 management CLI (Python)
+  - type: files
+    files:
+      - src: tools/rke2_ops.py
+        dst: /usr/local/bin/rke2_ops
+        mode: "0755"
 
   # ============================================================================
   # RKE2 Kubernetes Installation
@@ -114,8 +106,31 @@ modules:
     scripts:
       - |
         # Install RKE2 using official install script
-        # Binaries go to /usr/local/bin, data to /var/lib/rancher/rke2
-        curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -
+        # Binaries go to /var/lib/rancher/rke2/bin for canonical access
+        INSTALL_RKE2_BIN_DIR=/var/lib/rancher/rke2/bin \
+          curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -
+
+        # Ensure canonical RKE2 binary path exists for tests
+        if [ -x /var/lib/rancher/rke2/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
+          ln -s /var/lib/rancher/rke2/bin/rke2 /usr/local/bin/rke2
+        elif [ -x /usr/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
+          ln -s /usr/bin/rke2 /usr/local/bin/rke2
+        fi
+
+        if [ ! -x /usr/local/bin/rke2 ]; then
+          echo "✗ RKE2 binary missing after install" >&2
+          exit 1
+        fi
+
+        # Ensure kubectl from the RKE2 bundle is present and easy to use
+        if [ -x /var/lib/rancher/rke2/bin/kubectl ] && [ ! -e /usr/local/bin/kubectl ]; then
+          ln -s /var/lib/rancher/rke2/bin/kubectl /usr/local/bin/kubectl
+        fi
+
+        if [ ! -x /var/lib/rancher/rke2/bin/kubectl ]; then
+          echo "✗ RKE2 kubectl not found after install" >&2
+          exit 1
+        fi
 
   # RKE2 systemd drop-in directory
   - type: script
@@ -136,8 +151,7 @@ modules:
   - type: script
     scripts:
       - |
-        mkdir -p /mnt/host/kubeconfig
-        mkdir -p /mnt/host/storage
+        echo "Host integration mount points are created at runtime"
 
   # RKE2 SELinux contexts
   - type: script
@@ -183,10 +197,33 @@ modules:
         - rke2-server.service
     default-target: multi-user.target  # No graphical target for server
 
+  # Ensure /var layout matches bootc lint expectations
+  - type: script
+    scripts:
+      - |
+        set -euxo pipefail
+
+        if [ ! -L /var/run ]; then
+          rm -rf /var/run
+          ln -s ../run /var/run
+        fi
+
+        rm -f /var/log/dnf5.log /var/log/dnf5.log.[0-9]* || true
+        rm -rf /var/cache/dnf /var/cache/libdnf5 /var/cache/etckeeper || true
+        rm -rf /var/lib/dnf || true
+
   # Validation and finalization
   - type: script
     scripts:
       - bootc container lint
       - restorecon -vv /usr/local/bin/rke2_ops || true
       - test -f /usr/local/bin/rke2 && echo "RKE2 installed" || echo "RKE2 not installed"
+      - |
+        rpm -q \
+          curl \
+          iptables \
+          container-selinux \
+          policycoreutils-python-utils \
+          cryptsetup \
+          python3
       - echo "composefs=true" >> /etc/ostree/repo.config || true
