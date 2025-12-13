@@ -120,6 +120,12 @@ modules:
       - src: custom-configs/sway/start-sway
         dst: /usr/bin/start-sway
         mode: "0755"
+      - src: custom-scripts/layered-include
+        dst: /usr/libexec/sway/layered-include
+        mode: "0755"
+      - src: custom-scripts/volume-helper
+        dst: /usr/libexec/sway/volume-helper
+        mode: "0755"
 
   # Package management using new YAML-based loader
   # Automatically loads packages based on desktop.window_manager or desktop.desktop_environment
