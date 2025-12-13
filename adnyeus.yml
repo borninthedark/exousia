@@ -323,6 +323,7 @@ modules:
       - echo "composefs=true" >> /etc/ostree/repo.config || true
 
   # RKE2 validation (only when enabled)
+  # Note: Dependencies (curl, iptables, container-selinux, etc.) are installed via packages/common/base.yml
   - type: script
     condition: enable_rke2 == true
     scripts:
@@ -334,7 +335,6 @@ modules:
             echo "○ RKE2 not installed"
         fi
       - test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service configured" || echo "○ rke2-server.service not found"
-      - rpm -q curl iptables container-selinux policycoreutils-python-utils cryptsetup python3 || echo "⚠ Some RKE2 dependencies may be missing (non-fatal)"
 
   # Post-installation notes
   - type: script
