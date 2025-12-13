@@ -413,6 +413,16 @@ jobs:
 
           python3 tools/resolve_build_config.py
 
+      - name: Generate Containerfile from YAML
+        run: |
+          echo "::group::Generating Containerfile"
+          python3 tools/yaml-to-containerfile.py \
+            --config adnyeus.yml \
+            --output Containerfile.generated \
+            --verbose
+          echo "Generated Containerfile.generated from adnyeus.yml"
+          echo "::endgroup::"
+
       - name: Generate image tags and labels
         id: meta
         uses: docker/metadata-action@v5
