@@ -127,6 +127,17 @@ modules:
         dst: /usr/libexec/sway/volume-helper
         mode: "0755"
 
+  # Ensure custom Sway session assets are staged even if the file module
+  # is skipped or upstream packages change. The source files are present
+  # under /etc/sway from the earlier custom-configs copy.
+  - type: script
+    scripts:
+      - |
+        set -euo pipefail
+        install -Dm0644 /etc/sway/sway.desktop /usr/share/wayland-sessions/sway.desktop
+        install -Dm0644 /etc/sway/environment /etc/sway/environment
+        install -Dm0755 /etc/sway/start-sway /usr/bin/start-sway
+
   # Validate that critical Sway session assets landed in the image
   - type: script
     scripts:
