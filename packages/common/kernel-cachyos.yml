@@ -1,0 +1,22 @@
+# CachyOS Kernel Package Definition
+# Performance-optimized kernel with BORE scheduler and sched-ext support
+# https://github.com/CachyOS/copr-linux-cachyos
+
+metadata:
+  name: kernel-cachyos
+  type: common
+  description: CachyOS performance-optimized kernel with BORE scheduler
+  requirements: "x86-64-v3 minimum (use kernel-cachyos-server for x86-64-v2)"
+  homepage: https://github.com/CachyOS/linux-cachyos
+
+# Note: These packages will REPLACE the default Fedora kernel
+# Variants available:
+# - kernel-cachyos: Recommended for Workstation/Desktop
+# - kernel-cachyos-server: For servers (x86-64-v2 compatible)
+# - kernel-cachyos-lts: Long-term support variant
+# - kernel-cachyos-rt: Real-time kernel for embedded systems
+
+packages:
+  - kernel-cachyos
+  - kernel-cachyos-headers
+  - kernel-cachyos-devel

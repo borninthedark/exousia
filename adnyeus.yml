@@ -128,22 +128,23 @@ modules:
         mode: "0755"
 
   # ============================================================================
-  # Mainline Kernel Configuration
-  # Replace Fedora stable kernel with latest kernel.org mainline kernel
-  # Provides better hardware support and latest features
+  # CachyOS Kernel Configuration
+  # Performance-optimized kernel with BORE scheduler and sched-ext support
+  # Better performance than both Fedora stable and vanilla mainline
+  # Requires: x86-64-v3 minimum CPU (Intel Haswell 2013+ / AMD Excavator 2015+)
   # See: docs/KERNEL_OPTIONS.md for details
   # ============================================================================
 
-  # Enable kernel-vanilla COPR repository for mainline kernels
+  # Enable CachyOS COPR repository
   - type: script
     scripts:
-      - dnf config-manager --set-enabled copr:copr.fedorainfracloud.org:group_kernel-vanilla:mainline
+      - dnf copr enable -y bieszczaders/kernel-cachyos
 
-  # Install mainline kernel (replaces Fedora kernel)
+  # Install CachyOS kernel (replaces Fedora kernel)
   # --allowerasing allows replacing the base kernel
   - type: script
     scripts:
-      - dnf install -y --allowerasing kernel kernel-core kernel-modules kernel-modules-core kernel-modules-extra
+      - dnf install -y --allowerasing kernel-cachyos kernel-cachyos-headers kernel-cachyos-devel
 
   # Package management using new YAML-based loader
   # Automatically loads packages based on desktop.window_manager or desktop.desktop_environment
