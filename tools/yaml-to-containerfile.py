@@ -194,6 +194,8 @@ class ContainerfileGenerator:
         if self.context.image_type == "fedora-bootc":
             self.lines.append(f"ARG ENABLE_PLYMOUTH={str(self.context.enable_plymouth).lower()}")
 
+        self.lines.append(f"ARG ENABLE_RKE2={str(self.context.enable_rke2).lower()}")
+
         self.lines.append("")
 
     def _add_from(self):
@@ -232,6 +234,8 @@ class ContainerfileGenerator:
             "# Environment",
             "# " + "-" * 30,
             f"ENV BUILD_IMAGE_TYPE={self.context.image_type}",
+            f"ENV ENABLE_RKE2={str(self.context.enable_rke2).lower()}",
+            f"ENV enable_rke2={str(self.context.enable_rke2).lower()}",
         ])
 
         if self.context.image_type == "fedora-bootc":
@@ -243,13 +247,25 @@ class ContainerfileGenerator:
                 f'>> /etc/environment && \\'
             )
             self.lines.append(
-                f'    echo "ENABLE_PLYMOUTH={plymouth_val}" >> /etc/environment'
+                f'    echo "ENABLE_PLYMOUTH={plymouth_val}" >> /etc/environment && \\'
+            )
+            self.lines.append(
+                f'    echo "ENABLE_RKE2={str(self.context.enable_rke2).lower()}" >> /etc/environment && \\'
+            )
+            self.lines.append(
+                f'    echo "enable_rke2={str(self.context.enable_rke2).lower()}" >> /etc/environment'
             )
         else:
             self.lines.append("")
             self.lines.append(
                 f'RUN echo "BUILD_IMAGE_TYPE={self.context.image_type}" '
-                f'>> /etc/environment'
+                f'>> /etc/environment && \\'
+            )
+            self.lines.append(
+                f'    echo "ENABLE_RKE2={str(self.context.enable_rke2).lower()}" >> /etc/environment && \\'
+            )
+            self.lines.append(
+                f'    echo "enable_rke2={str(self.context.enable_rke2).lower()}" >> /etc/environment'
             )
 
         self.lines.append("")
