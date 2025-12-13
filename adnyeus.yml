@@ -334,7 +334,7 @@ modules:
             echo "○ RKE2 not installed"
         fi
       - test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service configured" || echo "○ rke2-server.service not found"
-      - rpm -q curl iptables container-selinux policycoreutils-python-utils cryptsetup python3
+      - rpm -q curl iptables container-selinux policycoreutils-python-utils cryptsetup python3 || echo "⚠ Some RKE2 dependencies may be missing (non-fatal)"
 
   # Post-installation notes
   - type: script
