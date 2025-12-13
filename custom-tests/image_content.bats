@@ -747,11 +747,10 @@ is_rke2_enabled() {
         skip "RKE2 is disabled (ENABLE_RKE2=false)"
     fi
 
-    run buildah run "$CONTAINER" -- rpm -q iptables
-    assert_success "iptables should be installed"
-
-    run buildah run "$CONTAINER" -- rpm -q container-selinux
-    assert_success "container-selinux should be installed"
+    for pkg in curl iptables container-selinux policycoreutils-python-utils cryptsetup python3; do
+        run buildah run "$CONTAINER" -- rpm -q "$pkg"
+        assert_success "$pkg should be installed"
+    done
 }
 
 # --- Final validation ---

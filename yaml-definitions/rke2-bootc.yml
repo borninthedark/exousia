@@ -97,21 +97,6 @@ modules:
         dst: /usr/local/bin/rke2_ops
         mode: "0755"
 
-  # Minimal base packages for RKE2
-  - type: script
-    scripts:
-      - |
-        dnf install -y \
-          curl \
-          iptables \
-          container-selinux \
-          policycoreutils-python-utils \
-          cryptsetup \
-          python3 \
-          vim-minimal \
-          htop \
-          && dnf clean all
-
   # ============================================================================
   # RKE2 Kubernetes Installation
   # ============================================================================
@@ -235,5 +220,12 @@ modules:
       - bootc container lint
       - restorecon -vv /usr/local/bin/rke2_ops || true
       - test -f /usr/local/bin/rke2 && echo "RKE2 installed" || echo "RKE2 not installed"
-      - rpm -q iptables container-selinux
+      - |
+        rpm -q \
+          curl \
+          iptables \
+          container-selinux \
+          policycoreutils-python-utils \
+          cryptsetup \
+          python3
       - echo "composefs=true" >> /etc/ostree/repo.config || true
