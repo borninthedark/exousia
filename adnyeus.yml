@@ -145,6 +145,14 @@ modules:
         dst: /usr/local/bin/rke2_ops
         mode: "0755"
 
+  # RKE2 management CLI (Python)
+  - type: files
+    condition: enable_rke2 == true
+    files:
+      - src: tools/rke2_ops.py
+        dst: /usr/local/bin/rke2_ops
+        mode: "0755"
+
   # RKE2 Server installation - Step 1: Run the installer
   # This installs rke2-server service and rke2 binary
   - type: script
@@ -318,7 +326,7 @@ modules:
       - restorecon -vv /usr/local/bin/tuigreet || true
       - restorecon -vv /usr/local/bin/rke2_ops || true
       - restorecon -vv /usr/local/bin/rke2-kubectl || true
-      - |
+      - | 
         # Check RKE2 installation (binary may be in /usr/bin or /usr/local/bin)
         if [ -f /usr/local/bin/rke2 ] || [ -f /usr/bin/rke2 ]; then
             echo "✓ RKE2 installed"
