@@ -334,7 +334,7 @@ modules:
       - restorecon -vv /usr/local/bin/tuigreet || true
       - restorecon -vv /usr/local/bin/rke2_ops || true
       - restorecon -vv /usr/local/bin/rke2-kubectl || true
-      - |
+      - | 
         # Check RKE2 installation (binary may be in /usr/bin or /usr/local/bin)
         if [ -f /usr/local/bin/rke2 ] || [ -f /usr/bin/rke2 ]; then
             echo "✓ RKE2 installed"
