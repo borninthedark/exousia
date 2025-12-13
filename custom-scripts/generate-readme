@@ -608,6 +608,23 @@ Place config files in \`custom-configs/\`:
 - \`swaylock/\` - Screen lock appearance
 - \`greetd/\` or \`sddm/\` - Display managers
 - \`plymouth/\` - Boot splash themes
+- \`rancher/rke2/\` - RKE2 Kubernetes configuration
+
+### Sway Configuration
+
+Exousia uses custom Sway configurations from \`custom-configs/sway/\` that work with \`sway-config-minimal\`.
+
+**Why sway-config-minimal?**
+- Minimal dependencies for headless servers, containers, and buildroot usage
+- Compatible with both desktop and server deployments
+- Avoids conflicts with upstream sway-config packages
+
+The configuration follows Fedora's layered config system:
+- \`/usr/share/sway/config.d/*.conf\` - Packaged configs
+- \`/etc/sway/config.d/*.conf\` - System overrides (Exousia configs)
+- \`~/.config/sway/config.d/*.conf\` - User overrides
+
+See [Fedora Sericea Configuration Guide](https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/) for details.
 
 ### Plymouth Boot Splash Configuration
 

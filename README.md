@@ -4,11 +4,11 @@
 [![Last Build: Fedora 43 • Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%E2%80%A2%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 [![Code Quality](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Code%20Quality)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
-<img src=".github/quincy-pentacle.svg" alt="Custom Quincy Pentacle" width="28" />
+<img src=".github/blue-sparrow.svg" alt="Blue Sparrow" width="28" />
 
 This repository contains the configuration to build a custom, container-based immutable operating system using the upstream [**bootc project**](https://github.com/bootc-dev/bootc). The image is built, tested, scanned, and published to multiple container registries using a comprehensive DevSecOps CI/CD pipeline with GitHub Actions. Fedora's [bootc documentation](https://docs.fedoraproject.org/en-US/bootc/) remains an authoritative, distro-specific reference alongside the upstream project docs.
 
-**Note on Theming:** The "Reiatsu" (霊圧, spiritual pressure) build status badge and Quincy pentacle imagery are inspired by *BLEACH*, the manga and anime series created by **Tite Kubo**. These thematic elements are used purely as playful project aesthetics and status indicators, with full credit and acknowledgment to the original creator.
+**Note on Theming:** The "Reiatsu" (霊圧, spiritual pressure) build status badge is inspired by *BLEACH*, the manga and anime series created by **Tite Kubo**. This thematic element is used purely as a playful project aesthetic and status indicator, with full credit and acknowledgment to the original creator.
 
 ## Highly Experimental Disclaimer
 
@@ -126,12 +126,12 @@ python api/webhook_trigger.py \
   --wm sway \
   --distro-version 43
 
-# Build with OS specification for auto-selection
+# Build with Debian and Sway
 python api/webhook_trigger.py \
-  --os fedora \
-  --image-type fedora-bootc \
-  --de lxqt \
-  --distro-version 43
+  --os debian \
+  --image-type debian-bootc \
+  --wm sway \
+  --distro-version 12
 
 # Build with custom configuration and disable Plymouth
 python api/webhook_trigger.py \
@@ -225,7 +225,7 @@ curl -X POST \
     }
   }'
 
-# Trigger build with OS specification for auto-selection
+# Trigger build with Debian and Sway
 curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -234,11 +234,11 @@ curl -X POST \
   -d '{
     "event_type": "api",
     "client_payload": {
-      "os": "fedora",
-      "image_type": "fedora-bootc",
-      "distro_version": "43",
-      "enable_plymouth": true,
-      "desktop_environment": "lxqt"
+      "os": "debian",
+      "image_type": "debian-bootc",
+      "distro_version": "12",
+      "enable_plymouth": false,
+      "window_manager": "sway"
     }
   }'
 ```
@@ -297,69 +297,6 @@ make push
 
 ---
 
-## RKE2 Kubernetes Integration
-
-**Immutable Kubernetes infrastructure built into every bootc image.**
-
-### Overview
-
-All Exousia bootc images include RKE2 (Rancher Kubernetes Engine 2) by default, providing:
-
-- **Immutable Infrastructure**: Entire k8s stack as a container image
-- **Atomic Updates**: Upgrade cluster with `bootc upgrade`
-- **Instant Rollback**: Boot previous version with `bootc rollback`
-- **Desktop & Server**: Works on laptops and production servers
-
-### Quick Start
-
-After building and booting an Exousia image:
-
-```bash
-# Check RKE2 status
-sudo systemctl status rke2-server
-
-# Access cluster
-export KUBECONFIG=/etc/rancher/rke2/rke2.yaml
-kubectl get nodes
-```
-
-### Configuration
-
-Enable/disable RKE2 in `adnyeus.yml`:
-
-```yaml
-build:
-  enable_plymouth: true
-  enable_rke2: true  # Enabled by default
-```
-
-### Use Cases
-
-- **Local Development**: Full k8s cluster on your laptop
-- **Immutable Infrastructure**: Production-grade atomic deployments
-- **Edge Computing**: Kubernetes at the edge with rollback
-
-### Documentation
-
-- **[RKE2 Integration Guide](docs/RKE2_INTEGRATION.md)** - Complete documentation
-- **[rke2_ops Tool](tools/rke2_ops.py)** - Unified management CLI
-
-For VM-based testing and deployment:
-
-```bash
-# Quick start - all in one command
-make rke2-quickstart
-
-# Or step by step
-python3 tools/rke2_ops.py registry start
-python3 tools/rke2_ops.py vm build
-python3 tools/rke2_ops.py vm create
-python3 tools/rke2_ops.py vm start
-python3 tools/rke2_ops.py kubeconfig
-```
-
----
-
 ## Customization
 
 ### Switching Fedora Versions and Image Types
@@ -394,10 +331,24 @@ The README will automatically update to reflect the new configuration.
 
 ### Modifying Packages
 
-Edit the package lists in `custom-pkgs/`:
+**For bootc images:**
+- Edit package definitions in `packages/window-managers/` or `packages/desktop-environments/`
+- The `package-loader` module loads packages based on your WM/DE selection
 
-- `packages.add` - Packages to install
-- `packages.remove` - Packages to remove from base image
+**For atomic images:**
+- Edit the `rpm-ostree` section in your YAML definition (e.g., `yaml-definitions/sway-atomic.yml`)
+- Add to `install:` list or remove with `remove:` list
+
+**Example:**
+```yaml
+# packages/window-managers/sway.yml
+utilities:
+  - your-package-name
+
+# yaml-definitions/sway-atomic.yml
+install:
+  - your-package-name
+```
 
 #### Fedora Hyprland COPR setup
 
@@ -419,152 +370,49 @@ These repos match the expectations defined in `packages/window-managers/hyprland
 
 ### Adding Custom Configuration
 
-Place configuration files in the appropriate `custom-configs/` subdirectories:
+Place config files in `custom-configs/`:
+- `sway/` - Sway WM and config.d snippets
+- `waybar/` - Waybar status bar
+- `swaylock/` - Screen lock appearance
+- `greetd/` or `sddm/` - Display managers
+- `plymouth/` - Boot splash themes
+- `rancher/rke2/` - RKE2 Kubernetes configuration
 
-- `custom-configs/sway/` - Sway window manager configuration
-- `custom-configs/greetd/` - Display manager configuration
-- `custom-configs/plymouth/` - Boot splash configuration
+### Sway Configuration
+
+Exousia uses custom Sway configurations from `custom-configs/sway/` that work with `sway-config-minimal`.
+
+**Why sway-config-minimal?**
+- Minimal dependencies for headless servers, containers, and buildroot usage
+- Compatible with both desktop and server deployments
+- Avoids conflicts with upstream sway-config packages
+
+The configuration follows Fedora's layered config system:
+- `/usr/share/sway/config.d/*.conf` - Packaged configs
+- `/etc/sway/config.d/*.conf` - System overrides (Exousia configs)
+- `~/.config/sway/config.d/*.conf` - User overrides
+
+See [Fedora Sericea Configuration Guide](https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/) for details.
 
 ### Plymouth Boot Splash Configuration
 
-The Plymouth boot splash configuration is toggleable on both base image types via the `enable_plymouth` flag:
+Plymouth is supported on both image types via the `enable_plymouth` flag in your YAML definition.
 
-| Base Image Type | Plymouth Support | Details |
-|-----------------|------------------|---------|
-| `fedora-bootc` | ✅ Custom themes supported | Uses `custom-configs/plymouth/themes/bgrt-better-luks/` and bootc kargs when enabled |
-| `fedora-sway-atomic` | ✅ Custom themes supported | Uses `custom-configs/plymouth/themes/bgrt-better-luks/` when enabled |
+**To enable:**
+1. Set `enable_plymouth: true` in your YAML (e.g., `sway-bootc.yml`)
+2. Custom themes go in `custom-configs/plymouth/themes/bgrt-better-luks/`
+3. Bootc images automatically get kernel arguments; atomic images rebuild initramfs
 
-**To use custom Plymouth themes:**
+### Display Managers
 
-1. Set `enable_plymouth: true` in your BlueBuild YAML (default in provided configs).
-2. Place your theme in `custom-configs/plymouth/themes/bgrt-better-luks/`.
-3. Build either `fedora-bootc` or `fedora-sway-atomic` variants to apply the theme.
+- **fedora-bootc**: Uses greetd (configured in `custom-configs/greetd/`)
+- **fedora-sway-atomic**: Uses SDDM (configured in `custom-configs/sddm/`)
 
-### Greetd Display Manager
-
-**⚠️ IMPORTANT: The greetd display manager is only available for `fedora-bootc` base images.**
-
-The greetd display manager availability depends on your base image type:
-
-| Base Image Type | Greetd Support | Details |
-|-----------------|----------------|---------|
-| `fedora-bootc` | ✅ Available | greetd.service enabled, custom config in `custom-configs/greetd/` |
-| `fedora-sway-atomic` | ❌ Not available | Uses SDDM display manager instead |
-
-**Note:** The `fedora-sway-atomic` image uses SDDM (Simple Desktop Display Manager) by default. Switch to `fedora-bootc` if you need greetd.
-
-**To use greetd display manager:**
-
-1. Use the webhook API or workflow dispatch to build with the fedora-bootc image type
-
-2. Customize the greetd configuration in `custom-configs/greetd/config.toml` as needed
+To switch display managers, use a different base image type.
 
 ### Custom Scripts
 
 Add executable scripts to `custom-scripts/` - they will be copied to `/usr/local/bin/`
-
----
-
-## RKE2 on Bootc: Immutable Kubernetes
-
-Build Kubernetes clusters with atomic updates using RKE2 on Fedora bootc.
-
-### Overview
-
-Exousia now supports building RKE2 (Rancher Kubernetes) on Fedora bootc, giving you:
-
-- **Immutable Infrastructure**: Entire k8s node as a container image
-- **Atomic Updates**: Upgrade cluster with `bootc upgrade`
-- **Instant Rollback**: Boot into previous version on failures
-- **Clean Separation**: Kubernetes isolated from your host system
-
-### Architecture
-
-```
-┌──────────────────────────────────────────┐
-│           Host (Gentoo/Fedora)           │
-│                                          │
-│  ┌──────────┐      ┌────────────────┐   │
-│  │ Registry │◄─────┤ libvirt/KVM    │   │
-│  │ :5000    │      │  ┌──────────┐  │   │
-│  └──────────┘      │  │ Fedora   │  │   │
-│                    │  │ bootc    │  │   │
-│  ┌──────────┐      │  │          │  │   │
-│  │Kubeconfig│◄─────┼──┤ + RKE2   │  │   │
-│  │(9p share)│      │  └──────────┘  │   │
-│  └──────────┘      └────────────────┘   │
-└──────────────────────────────────────────┘
-```
-
-### Quick Start
-
-```bash
-# One command to rule them all
-make rke2-quickstart
-
-# Use your cluster
-export KUBECONFIG=~/.kube/rke2-config
-kubectl get nodes
-```
-
-**Manual steps:**
-
-```bash
-# 1. Start local registry
-make rke2-registry-start
-
-# 2. Build and push bootc image
-make rke2-build
-make rke2-push
-
-# 3. Build VM disk image
-make rke2-vm-build
-
-# 4. Create and start VM
-make rke2-vm-create
-make rke2-vm-start
-
-# 5. Get kubeconfig (wait ~2 min)
-make rke2-kubeconfig
-```
-
-### Operations
-
-**Upgrade cluster:**
-
-```bash
-# Build new image
-make rke2-build
-podman tag exousia-rke2:latest localhost:5000/exousia-rke2:v2
-podman push localhost:5000/exousia-rke2:v2
-
-# Upgrade (inside VM)
-sudo bootc switch localhost:5000/exousia-rke2:v2
-sudo bootc upgrade
-sudo systemctl reboot
-```
-
-**Rollback:**
-
-```bash
-# Automatic on boot failure, or manual:
-sudo bootc rollback
-sudo systemctl reboot
-```
-
-### Documentation
-
-- **[Quick Start Guide](k8s/rke2/QUICKSTART.md)** - Get started in 30 seconds
-- **[Complete Setup Guide](docs/RKE2_BOOTC_SETUP.md)** - Full documentation and troubleshooting
-- **[Configuration Templates](k8s/rke2/)** - Cloud-init, libvirt XML, RKE2 configs
-
-### Benefits
-
-- **Reproducible**: Version entire k8s stack as container images
-- **Testable**: Promote images through dev → staging → prod
-- **Resilient**: Instant rollback on failures
-- **Efficient**: Registry on host, shared across VMs
-- **Flexible**: Works on Gentoo, Fedora, or any libvirt-capable host
 
 ---
 
@@ -674,11 +522,7 @@ To use the full CI/CD pipeline, configure these secrets in your repository:
 
 ## Known Issues
 
-### GHCR Authentication
-
-Currently experiencing authentication issues with `bootc switch` and `bootc upgrade` when using GHCR. The commands work flawlessly with Docker Hub. While `skopeo inspect` and `podman pull` work with GHCR, bootc operations return "403 Forbidden | Invalid Username/Password" errors.
-
-**Workaround:** Use Docker Hub for bootc operations until this is resolved.
+**GHCR Authentication:** bootc operations (`switch`, `upgrade`) may fail with GHCR. Use Docker Hub instead.
 
 ---
 
@@ -765,6 +609,12 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgments
 
 - The bootc project maintainers and the Fedora community
+- [Fedora Sway SIG](https://gitlab.com/fedora/sigs/sway/sway-config-fedora) for excellent Sway configuration and QoL improvements
+  - Waybar configuration, helper scripts, and keybindings adapted from their repository
+  - Special thanks for the layered-include pattern and volume-helper implementation
+- [openSUSEway](https://github.com/openSUSE/openSUSEway) for innovative Sway enhancements
+  - Advanced screenshot modes, system power menu, and touchpad gesture configurations
+  - Intelligent window floating rules and swaylock theming
 - [Universal Blue](https://universal-blue.org/) for pioneering container-native desktop workflows
 - [BlueBuild](https://blue-build.org/) for the declarative YAML specification that inspired my build system
 - [bootcrew](https://github.com/bootcrew) for community-driven bootc projects and examples
@@ -782,8 +632,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ### Creative Acknowledgments
 
 - **Tite Kubo** - Creator of *BLEACH* (manga and anime series)
-  - The "Reiatsu" (霊圧, spiritual pressure) status indicator and Quincy pentacle imagery in this project are inspired by themes from BLEACH
-  - These elements are used respectfully as playful project aesthetics with full acknowledgment of the original creator
+  - The "Reiatsu" (霊圧, spiritual pressure) status indicator in this project is inspired by themes from BLEACH
+  - This element is used respectfully as a playful project aesthetic with full acknowledgment of the original creator
   - All rights to BLEACH and its associated concepts belong to Tite Kubo and respective copyright holders
   - This project is not affiliated with or endorsed by Tite Kubo, Shueisha, or Viz Media
 
@@ -795,4 +645,4 @@ This project leverages AI-assisted development practices. The build pipeline, te
 
 **Built with bootc**
 
-*This README was automatically generated on 2025-12-04 15:16:24 UTC*
+*This README was automatically generated on 2025-12-13 15:12:16 UTC*

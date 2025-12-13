@@ -410,6 +410,32 @@ ENABLE_RKE2=true bats custom-tests/image_content.bats
 2. Register in tools/copr_manager.py COPR_REPOS dict
 3. Test with package-loader module
 
+### Sway Configuration
+
+**Issue**: Sway configs not being applied correctly
+**Cause**: Wrong sway-config package installed or config path mismatch
+**Solution**: Exousia uses `sway-config-minimal` which provides:
+- Minimal dependencies for headless/container builds
+- Compatible with both desktop and server deployments
+- `sway-config-upstream` is removed via packages/common/remove.yml
+
+**Directory structure**:
+- Custom configs: `custom-configs/sway/` → `/etc/sway/`
+- Config snippets: `custom-configs/sway/config.d/` → `/etc/sway/config.d/`
+- Session files: `custom-configs/sway/sway.desktop` → `/usr/share/wayland-sessions/`
+
+See [Fedora Sericea Configuration Guide](https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/) for the layered config system.
+
+### RKE2 Configuration Path
+
+**Issue**: RKE2 config files not found at expected location
+**Cause**: Config directory structure mismatch
+**Solution**: RKE2 configs must be at `custom-configs/rancher/rke2/` to deploy to `/etc/rancher/rke2/`:
+- `custom-configs/rancher/rke2/config.yaml` → `/etc/rancher/rke2/config.yaml`
+- `custom-configs/rancher/rke2/registries.yaml` → `/etc/rancher/rke2/registries.yaml`
+
+Note: The motd file is copied separately via adnyeus.yml to `/etc/motd`.
+
 ### Testing
 
 **Issue**: Tests pass locally but fail in CI
@@ -545,15 +571,22 @@ All other changes require full compliance with quality requirements.
 - **Strengths**: Long context window, strong reasoning, excellent documentation quality
 - **Integration Points**: Direct API access, VS Code extensions, CLI tools
 
-#### 2. **GPT-4 / GPT Codex (OpenAI)** - Code Generation & Debugging
+#### 2. **GPT-4 / GPT Codex (OpenAI)** - Code Generation & Claude's Assistant
 - **Primary Use Cases**:
   - Rapid code generation and prototyping
   - Debugging assistance and error resolution
   - API integration and library usage
   - Script automation and tooling
   - Pattern recognition in codebases
+  - **Acting as Claude's assistant for parallel task execution**
 - **Strengths**: Fast iteration, broad language support, strong debugging capabilities
 - **Integration Points**: GitHub Copilot, OpenAI API, VS Code extensions
+- **Assistant Role**: GPT Codex can handle delegated tasks from Claude:
+  - Running tests and reporting results
+  - Code formatting and linting
+  - Simple refactoring tasks
+  - Documentation updates
+  - File search and codebase exploration
 
 #### 3. **GitHub Copilot** - Real-time Code Assistance
 - **Primary Use Cases**:
@@ -592,6 +625,47 @@ All other changes require full compliance with quality requirements.
   - Edge case identification
 - **Model**: GPT-4 or Claude
 - **Frameworks**: Bats, pytest, Jest, Go testing
+
+### Claude-Codex Collaborative Workflow
+
+Claude and GPT Codex work together with complementary strengths:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Claude (Lead Agent)                      │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  • Architecture decisions                            │    │
+│  │  • Complex reasoning and planning                    │    │
+│  │  • Documentation and comprehensive analysis          │    │
+│  │  • Code review and security assessment               │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                            │                                 │
+│                    Delegates Tasks                           │
+│                            ▼                                 │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              GPT Codex (Assistant)                   │    │
+│  │  • Rapid code generation                             │    │
+│  │  • Test execution and reporting                      │    │
+│  │  • File operations and refactoring                   │    │
+│  │  • Quick iterations on implementation                │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                            │                                 │
+│                    Reports Results                           │
+│                            ▼                                 │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                Human Review                          │    │
+│  │  • Final approval                                    │    │
+│  │  • Merge decisions                                   │    │
+│  │  • Production deployment                             │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Task Delegation Examples**:
+- Claude plans feature implementation → Codex executes file changes
+- Claude identifies test requirements → Codex runs test suite
+- Claude designs documentation structure → Codex generates content
+- Claude reviews security → Codex applies fixes
 
 ## AI-Assisted Workflows
 
@@ -1030,6 +1104,6 @@ AI-generated contributions are subject to the same MIT License as the rest of th
 **AI-Augmented Development**
 
 *This AGENTS.md was initially generated with Claude Sonnet 4.5 and human oversight on 2025-12-01*
-*Last updated: 2025-12-13 - Added yaml-to-containerfile transpiler scenario, common pitfalls, RKE2 test updates, and corrected model version references to Claude Sonnet 4.5*
+*Last updated: 2025-12-13 - Added sway-config-minimal documentation, RKE2 config path fix, GPT Codex assistant role, and test updates*
 
 *For questions about AI workflows, open an issue or contact the maintainers*
