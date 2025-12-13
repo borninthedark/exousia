@@ -35,19 +35,24 @@ class TestWindowManagerPackages:
         packages = loader.load_wm("sway")
         assert len(packages) > 0, "Sway package list is empty"
 
-        # Check for essential Sway packages
-        essential_packages = ["sway", "swaylock-effects"]
-        for pkg in essential_packages:
-            assert pkg in packages, f"Essential package '{pkg}' not found in Sway packages"
+        # Check for essential Sway packages - sway is always required
+        assert "sway" in packages, "Essential package 'sway' not found in Sway packages"
+
+        # Check for swaylock (either swaylock or swaylock-effects depending on distro/config)
+        has_swaylock = "swaylock" in packages or "swaylock-effects" in packages
+        assert has_swaylock, "Neither 'swaylock' nor 'swaylock-effects' found in Sway packages"
 
     def test_sway_installation_verification(self, loader):
         """Test that Sway WM can be verified after installation."""
         packages = loader.load_wm("sway")
 
-        # Verify core components
-        core_packages = ["sway", "swaylock-effects", "swayidle"]
-        found_core = [pkg for pkg in core_packages if pkg in packages]
-        assert len(found_core) >= 2, f"Not enough core Sway packages found: {found_core}"
+        # Verify core components - must have sway and swayidle
+        assert "sway" in packages, "Core package 'sway' not found"
+        assert "swayidle" in packages, "Core package 'swayidle' not found"
+
+        # Verify swaylock (either variant)
+        has_swaylock = "swaylock" in packages or "swaylock-effects" in packages
+        assert has_swaylock, "Neither 'swaylock' nor 'swaylock-effects' found"
 
         # Verify Wayland support
         wayland_packages = ["wlroots", "wayland"]
