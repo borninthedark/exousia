@@ -127,6 +127,17 @@ modules:
         dst: /usr/libexec/sway/volume-helper
         mode: "0755"
 
+  # Ensure Sway session launch assets are installed even if upstream packages
+  # change their payload. We explicitly install our curated versions so the
+  # image always ships the desktop entry, environment, and launcher script.
+  - type: script
+    scripts:
+      - |
+        set -euo pipefail
+        install -Dm0644 custom-configs/sway/sway.desktop /usr/share/wayland-sessions/sway.desktop
+        install -Dm0644 custom-configs/sway/environment /etc/sway/environment
+        install -Dm0755 custom-configs/sway/start-sway /usr/bin/start-sway
+
   # Validate that critical Sway session assets landed in the image
   - type: script
     scripts:
