@@ -182,11 +182,8 @@ modules:
         firewall-offline-cmd --add-port=10250/tcp   # Kubelet
         firewall-offline-cmd --add-port=2379-2380/tcp  # etcd
 
-  # RKE2 shared volumes for host integration
-  - type: script
-    scripts:
-      - |
-        echo "Host integration mount points are created at runtime"
+  # Note: /mnt/host/* mount points are created at runtime by cloud-init
+  # See: k8s/rke2/cloud-init.yaml for runtime directory creation
 
   # RKE2 SELinux contexts
   - type: script

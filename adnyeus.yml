@@ -246,14 +246,16 @@ modules:
     condition: enable_rke2 == true
     scripts:
       - |
-        # Create required directories
+        # Create required directories for RKE2
         mkdir -p /var/lib/rancher/rke2
         mkdir -p /var/lib/rancher/rke2/bin
         mkdir -p /var/lib/rancher/rke2/server
-
-        # Symlink kubectl and other tools to a standard location
-        # These will be available after first boot when RKE2 runs
         mkdir -p /usr/local/bin
+
+        # Note: /mnt/host/* directories are created at runtime by cloud-init
+        # See: k8s/rke2/cloud-init.yaml (lines 124-125)
+        # They serve as mount points for 9p virtio shares and don't need to be
+        # baked into the image
 
   # RKE2 SELinux contexts
   - type: script
