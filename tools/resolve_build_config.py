@@ -211,6 +211,7 @@ def render_outputs(
     os_version: str,
     containerfile_path: Path,
     enable_plymouth: bool,
+    enable_rke2: bool,
 ) -> None:
     with output_path.open("a", encoding="utf-8") as output:
         output.write(f"BUILD_VERSION={build_version}\n")
@@ -219,6 +220,7 @@ def render_outputs(
         output.write(f"OS_VERSION={os_version}\n")
         output.write(f"CONTAINERFILE={containerfile_path}\n")
         output.write(f"ENABLE_PLYMOUTH={'true' if enable_plymouth else 'false'}\n")
+        output.write(f"ENABLE_RKE2={'true' if enable_rke2 else 'false'}\n")
 
 
 def main() -> None:
@@ -227,6 +229,7 @@ def main() -> None:
     input_image_type = os.environ.get("INPUT_IMAGE_TYPE", DEFAULT_IMAGE_TYPE)
     input_distro_version = os.environ.get("INPUT_DISTRO_VERSION", DEFAULT_VERSION)
     input_enable_plymouth = os.environ.get("INPUT_ENABLE_PLYMOUTH", "true").lower()
+    input_enable_rke2 = os.environ.get("INPUT_ENABLE_RKE2", "true").lower()
     input_window_manager = os.environ.get("INPUT_WINDOW_MANAGER", "")
     input_desktop_environment = os.environ.get("INPUT_DESKTOP_ENVIRONMENT", "")
     input_os = os.environ.get("INPUT_OS", "")
@@ -236,6 +239,7 @@ def main() -> None:
     print(f"Input distro version: {input_distro_version}")
     print(f"Input OS: {input_os}")
     print(f"Input Plymouth: {input_enable_plymouth}")
+    print(f"Input RKE2: {input_enable_rke2}")
     print(f"Input window manager: {input_window_manager}")
     print(f"Input desktop environment: {input_desktop_environment}")
     print(f"Input YAML config: {input_yaml_config}")
@@ -243,6 +247,7 @@ def main() -> None:
     target_version = input_distro_version
     target_image_type = input_image_type
     enable_plymouth = input_enable_plymouth == "true"
+    enable_rke2 = input_enable_rke2 == "true"
 
     # Extract OS name from image type if not explicitly provided
     os_name = input_os
@@ -328,6 +333,7 @@ def main() -> None:
         os_version,
         containerfile_path,
         enable_plymouth,
+        enable_rke2,
     )
 
     print("::endgroup::")
