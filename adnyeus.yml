@@ -320,7 +320,13 @@ modules:
       - restorecon -vv /usr/local/bin/tuigreet || true
       - restorecon -vv /usr/local/bin/rke2_ops || true
       - restorecon -vv /usr/local/bin/rke2-kubectl || true
-      - | 
+      - echo "composefs=true" >> /etc/ostree/repo.config || true
+
+  # RKE2 validation (only when enabled)
+  - type: script
+    condition: enable_rke2 == true
+    scripts:
+      - |
         # Check RKE2 installation (binary may be in /usr/bin or /usr/local/bin)
         if [ -f /usr/local/bin/rke2 ] || [ -f /usr/bin/rke2 ]; then
             echo "✓ RKE2 installed"
@@ -328,17 +334,7 @@ modules:
             echo "○ RKE2 not installed"
         fi
       - test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service configured" || echo "○ rke2-server.service not found"
-      - |
-        if [ "${enable_rke2:-false}" = "true" ]; then
-          rpm -q \
-            curl \
-            iptables \
-            container-selinux \
-            policycoreutils-python-utils \
-            cryptsetup \
-            python3
-        fi
-      - echo "composefs=true" >> /etc/ostree/repo.config || true
+      - rpm -q curl iptables container-selinux policycoreutils-python-utils cryptsetup python3
 
   # Post-installation notes
   - type: script
