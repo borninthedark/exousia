@@ -335,13 +335,29 @@ class ContainerfileGenerator:
 
         self.lines.append(f"RUN {set_command}; \\")
 
+        in_heredoc = False
+
         for i, line in enumerate(lines):
+            stripped = line.strip()
             # Check if line already ends with backslash (line continuation)
             has_continuation = line.rstrip().endswith('\\')
 
             # Check if line ends with a shell keyword
             last_word = line.split()[-1] if line.split() else ""
             is_last_line = i >= len(lines) - 1
+
+            if in_heredoc:
+                # Preserve heredoc contents verbatim
+                self.lines.append(f"    {line}")
+                if stripped == "EOF":
+                    in_heredoc = False
+                continue
+
+            if "<<" in stripped:
+                # Start of heredoc: emit as-is and switch to heredoc mode
+                self.lines.append(f"    {line}")
+                in_heredoc = True
+                continue
 
             if has_continuation:
                 # Line already has backslash continuation, don't add semicolon
