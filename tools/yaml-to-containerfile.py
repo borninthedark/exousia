@@ -337,6 +337,15 @@ class ContainerfileGenerator:
 
         in_heredoc = False
 
+        def has_next_command(idx: int) -> bool:
+            """Return True if there is another non-comment line after idx."""
+
+            for next_line in lines[idx + 1:]:
+                stripped_next = next_line.strip()
+                if stripped_next and not stripped_next.startswith("#"):
+                    return True
+            return False
+
         for i, line in enumerate(lines):
             stripped = line.strip()
             # Check if line already ends with backslash (line continuation)
@@ -344,7 +353,7 @@ class ContainerfileGenerator:
 
             # Check if line ends with a shell keyword
             last_word = line.split()[-1] if line.split() else ""
-            is_last_line = i >= len(lines) - 1
+            has_more_commands = has_next_command(i)
 
             if in_heredoc:
                 # Preserve heredoc contents verbatim
@@ -359,16 +368,22 @@ class ContainerfileGenerator:
                 in_heredoc = True
                 continue
 
+            # Comment lines should not influence line continuations because build
+            # tools may strip them before sending commands to the shell.
+            if stripped.startswith("#"):
+                self.lines.append(f"    {line}")
+                continue
+
             if has_continuation:
                 # Line already has backslash continuation, don't add semicolon
                 self.lines.append(f"    {line}")
-            elif last_word in COMPOUND_ENDERS and not is_last_line:
+            elif last_word in COMPOUND_ENDERS and has_more_commands:
                 # Compound statement enders (fi, done, esac) need semicolon before next command
                 self.lines.append(f"    {line}; \\")
-            elif last_word in COMPOUND_STARTERS and not is_last_line:
+            elif last_word in COMPOUND_STARTERS and has_more_commands:
                 # Compound statement starters/middles don't need semicolon
                 self.lines.append(f"    {line} \\")
-            elif not is_last_line:
+            elif has_more_commands:
                 # Regular commands need semicolon
                 self.lines.append(f"    {line}; \\")
             else:
