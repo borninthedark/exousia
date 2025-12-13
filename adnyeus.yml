@@ -86,25 +86,12 @@ modules:
         dst: /usr/share/plymouth/themes/bgrt-better-luks/
         mode: "0644"
 
-  # Custom repositories
+  # Custom repositories (includes kubernetes.repo)
   - type: files
     files:
       - src: custom-repos/
         dst: /etc/yum.repos.d/
         mode: "0644"
-
-  # Kubernetes repository for kubectl (overwrites any existing config)
-  - type: script
-    scripts:
-      - |
-        cat <<'EOF' > /etc/yum.repos.d/kubernetes.repo
-        [kubernetes]
-        name=Kubernetes
-        baseurl=https://pkgs.k8s.io/core:/stable:/v1.34/rpm/
-        enabled=1
-        gpgcheck=1
-        gpgkey=https://pkgs.k8s.io/core:/stable:/v1.34/rpm/repodata/repomd.xml.key
-        EOF
 
   # Custom configurations
   - type: files
