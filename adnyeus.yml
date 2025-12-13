@@ -142,7 +142,7 @@ modules:
       - |
         dnf install -y 'dnf5-command(copr)'
         dnf copr enable -y bieszczaders/kernel-cachyos
-        dnf install -y --allowerasing kernel-cachyos kernel-cachyos-headers kernel-cachyos-devel
+        dnf install -y --allowerasing kernel-cachyos kernel-cachyos-devel
         dnf clean all
 
   # Package management using new YAML-based loader
