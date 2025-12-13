@@ -20,6 +20,12 @@ core_utilities:
   - fastfetch
   - glances
   - kubectl
+  - curl
+  - iptables
+  - container-selinux
+  - policycoreutils-python-utils
+  - cryptsetup
+  - python3
 
 # Audio and media
 audio_media:
