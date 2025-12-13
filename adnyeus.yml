@@ -135,16 +135,14 @@ modules:
   # See: docs/KERNEL_OPTIONS.md for details
   # ============================================================================
 
-  # Enable CachyOS COPR repository
+  # Enable CachyOS COPR repository and install kernel
+  # Combined to ensure proper cleanup
   - type: script
     scripts:
-      - dnf copr enable -y bieszczaders/kernel-cachyos
-
-  # Install CachyOS kernel (replaces Fedora kernel)
-  # --allowerasing allows replacing the base kernel
-  - type: script
-    scripts:
-      - dnf install -y --allowerasing kernel-cachyos kernel-cachyos-headers kernel-cachyos-devel
+      - |
+        dnf copr enable -y bieszczaders/kernel-cachyos
+        dnf install -y --allowerasing kernel-cachyos kernel-cachyos-headers kernel-cachyos-devel
+        dnf clean all
 
   # Package management using new YAML-based loader
   # Automatically loads packages based on desktop.window_manager or desktop.desktop_environment
