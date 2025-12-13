@@ -753,6 +753,16 @@ is_rke2_enabled() {
     done
 }
 
+@test "Kubernetes repository should be configured when enabled" {
+    if ! is_rke2_enabled; then
+        skip "RKE2 is disabled (ENABLE_RKE2=false)"
+    fi
+
+    assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/kubernetes.repo"
+    run grep -q "pkgs.k8s.io" "$MOUNT_POINT/etc/yum.repos.d/kubernetes.repo"
+    assert_success "kubernetes.repo should contain k8s package repository URL"
+}
+
 # --- Final validation ---
 
 @test "BUILD_IMAGE_TYPE environment variable should be set correctly" {
