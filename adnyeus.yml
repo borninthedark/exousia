@@ -291,13 +291,10 @@ modules:
         - greetd.service
     default-target: graphical.target
 
-  # RKE2 Server service - Step 2: Enable rke2-server.service
-  # The service will start on first boot and subsequent reboots
-  - type: systemd
-    condition: enable_rke2 == true
-    system:
-      enabled:
-        - rke2-server.service
+  # RKE2 Server service configuration
+  # Note: rke2-server.service is INSTALLED but NOT ENABLED by default
+  # Users must manually enable it with: systemctl enable rke2-server.service
+  # Or it can be enabled at VM deployment time via cloud-init
 
   # Ensure /var layout matches bootc lint expectations
   - type: script
