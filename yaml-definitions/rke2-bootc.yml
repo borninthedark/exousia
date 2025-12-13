@@ -175,12 +175,7 @@ modules:
   # RKE2 firewall configuration
   - type: script
     scripts:
-      - |
-        # Open required RKE2 ports
-        firewall-offline-cmd --add-port=6443/tcp    # Kubernetes API
-        firewall-offline-cmd --add-port=9345/tcp    # RKE2 supervisor API
-        firewall-offline-cmd --add-port=10250/tcp   # Kubelet
-        firewall-offline-cmd --add-port=2379-2380/tcp  # etcd
+      - /usr/local/bin/rke2-configure-firewall
 
   # Note: /mnt/host/* mount points are created at runtime by cloud-init
   # See: k8s/rke2/cloud-init.yaml for runtime directory creation

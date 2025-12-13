@@ -233,12 +233,7 @@ modules:
   - type: script
     condition: enable_rke2 == true
     scripts:
-      - |
-        # Open required RKE2 server ports
-        firewall-offline-cmd --add-port=6443/tcp      # Kubernetes API server
-        firewall-offline-cmd --add-port=9345/tcp      # RKE2 supervisor API (for agent registration)
-        firewall-offline-cmd --add-port=10250/tcp     # Kubelet metrics
-        firewall-offline-cmd --add-port=2379-2380/tcp # etcd client/peer communication
+      - /usr/local/bin/rke2-configure-firewall
 
   # RKE2 data directories and paths
   - type: script
