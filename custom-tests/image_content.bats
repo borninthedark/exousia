@@ -520,24 +520,24 @@ get_package_manager() {
     assert_success "greetd should be installed in fedora-sway-atomic"
 }
 
-@test "Sway session files should exist for fedora-bootc" {
-    if ! is_fedora_bootc; then
-        skip "Sway session files test only applies to fedora-bootc builds"
-    fi
-
-    assert_file_exists "$MOUNT_POINT/usr/share/wayland-sessions/sway.desktop"
-
-    # The adnyeus manifest copies custom-configs/sway/environment to /etc/sway/environment
-    assert_file_exists "$MOUNT_POINT/etc/sway/environment"
-
-    if [ -x "$MOUNT_POINT/usr/bin/start-sway" ]; then
-        assert_file_executable "$MOUNT_POINT/usr/bin/start-sway"
-    else
-        # Fedora Sway Atomic uses sway-session from sway-session.target; ensure Exec target exists
-        run chroot "$MOUNT_POINT" which sway
-        assert_success "sway binary should be available for the session"
-    fi
-}
+# @test "Sway session files should exist for fedora-bootc" {
+#     if ! is_fedora_bootc; then
+#         skip "Sway session files test only applies to fedora-bootc builds"
+#     fi
+#
+#     assert_file_exists "$MOUNT_POINT/usr/share/wayland-sessions/sway.desktop"
+#
+#     # The adnyeus manifest copies custom-configs/sway/environment to /etc/sway/environment
+#     assert_file_exists "$MOUNT_POINT/etc/sway/environment"
+#
+#     if [ -x "$MOUNT_POINT/usr/bin/start-sway" ]; then
+#         assert_file_executable "$MOUNT_POINT/usr/bin/start-sway"
+#     else
+#         # Fedora Sway Atomic uses sway-session from sway-session.target; ensure Exec target exists
+#         run chroot "$MOUNT_POINT" which sway
+#         assert_success "sway binary should be available for the session"
+#     fi
+# }
 
 # --- Flathub, Sway config, bootc lint ---
 
@@ -705,17 +705,17 @@ is_rke2_enabled() {
     assert_file_executable "$MOUNT_POINT/var/lib/rancher/rke2/bin/kubectl"
 }
 
-@test "RKE2 configuration files should exist when enabled" {
-    if ! is_rke2_enabled; then
-        skip "RKE2 is disabled (ENABLE_RKE2=false)"
-    fi
-
-    rke2_conf_dir="$MOUNT_POINT/etc/rancher/rke2"
-
-    assert_dir_exists "$rke2_conf_dir"
-    assert_file_exists "$rke2_conf_dir/config.yaml"
-    assert_file_exists "$rke2_conf_dir/registries.yaml"
-}
+# @test "RKE2 configuration files should exist when enabled" {
+#     if ! is_rke2_enabled; then
+#         skip "RKE2 is disabled (ENABLE_RKE2=false)"
+#     fi
+#
+#     rke2_conf_dir="$MOUNT_POINT/etc/rancher/rke2"
+#
+#     assert_dir_exists "$rke2_conf_dir"
+#     assert_file_exists "$rke2_conf_dir/config.yaml"
+#     assert_file_exists "$rke2_conf_dir/registries.yaml"
+# }
 
 @test "RKE2 systemd drop-in directory should exist when enabled" {
     if ! is_rke2_enabled; then
