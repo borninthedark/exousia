@@ -106,8 +106,31 @@ modules:
     scripts:
       - |
         # Install RKE2 using official install script
-        # Binaries go to /usr/local/bin, data to /var/lib/rancher/rke2
-        curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -
+        # Binaries go to /var/lib/rancher/rke2/bin for canonical access
+        INSTALL_RKE2_BIN_DIR=/var/lib/rancher/rke2/bin \
+          curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -
+
+        # Ensure canonical RKE2 binary path exists for tests
+        if [ -x /var/lib/rancher/rke2/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
+          ln -s /var/lib/rancher/rke2/bin/rke2 /usr/local/bin/rke2
+        elif [ -x /usr/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
+          ln -s /usr/bin/rke2 /usr/local/bin/rke2
+        fi
+
+        if [ ! -x /usr/local/bin/rke2 ]; then
+          echo "✗ RKE2 binary missing after install" >&2
+          exit 1
+        fi
+
+        # Ensure kubectl from the RKE2 bundle is present and easy to use
+        if [ -x /var/lib/rancher/rke2/bin/kubectl ] && [ ! -e /usr/local/bin/kubectl ]; then
+          ln -s /var/lib/rancher/rke2/bin/kubectl /usr/local/bin/kubectl
+        fi
+
+        if [ ! -x /var/lib/rancher/rke2/bin/kubectl ]; then
+          echo "✗ RKE2 kubectl not found after install" >&2
+          exit 1
+        fi
 
         # Ensure canonical RKE2 binary path exists for tests
         if [ -x /usr/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then

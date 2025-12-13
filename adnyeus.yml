@@ -145,14 +145,6 @@ modules:
         dst: /usr/local/bin/rke2_ops
         mode: "0755"
 
-  # RKE2 management CLI (Python)
-  - type: files
-    condition: enable_rke2 == true
-    files:
-      - src: tools/rke2_ops.py
-        dst: /usr/local/bin/rke2_ops
-        mode: "0755"
-
   # RKE2 Server installation - Step 1: Run the installer
   # This installs rke2-server service and rke2 binary
   - type: script
@@ -161,7 +153,30 @@ modules:
       - |
         # Install RKE2 server using official install script
         # Default INSTALL_RKE2_TYPE is "server" so we don't need to specify it
-        curl -sfL https://get.rke2.io | sh -
+        INSTALL_RKE2_BIN_DIR=/var/lib/rancher/rke2/bin \
+          curl -sfL https://get.rke2.io | sh -
+
+        # Ensure the RKE2 binary is in the expected location for tests
+        if [ -x /var/lib/rancher/rke2/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
+          ln -s /var/lib/rancher/rke2/bin/rke2 /usr/local/bin/rke2
+        elif [ -x /usr/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
+          ln -s /usr/bin/rke2 /usr/local/bin/rke2
+        fi
+
+        if [ ! -x /usr/local/bin/rke2 ]; then
+          echo "✗ RKE2 binary missing after install" >&2
+          exit 1
+        fi
+
+        # Ensure kubectl from the RKE2 bundle is present
+        if [ -x /var/lib/rancher/rke2/bin/kubectl ] && [ ! -e /usr/local/bin/kubectl ]; then
+          ln -s /var/lib/rancher/rke2/bin/kubectl /usr/local/bin/kubectl
+        fi
+
+        if [ ! -x /var/lib/rancher/rke2/bin/kubectl ]; then
+          echo "✗ RKE2 kubectl not found after install" >&2
+          exit 1
+        fi
 
         # Ensure the RKE2 binary is in the expected location for tests
         if [ -x /usr/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
