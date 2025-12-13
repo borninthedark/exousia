@@ -747,7 +747,8 @@ is_rke2_enabled() {
         skip "RKE2 is disabled (ENABLE_RKE2=false)"
     fi
 
-    for pkg in curl iptables container-selinux policycoreutils-python-utils cryptsetup python3; do
+    # Note: iptables-nft is the modern replacement for iptables on Fedora
+    for pkg in curl iptables-nft container-selinux policycoreutils-python-utils cryptsetup python3; do
         run buildah run "$CONTAINER" -- rpm -q "$pkg"
         assert_success "$pkg should be installed"
     done

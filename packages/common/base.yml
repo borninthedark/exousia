@@ -21,7 +21,7 @@ core_utilities:
   - glances
   - kubectl
   - curl
-  - iptables
+  - iptables-nft  # Modern replacement for iptables on Fedora
   - container-selinux
   - policycoreutils-python-utils
   - cryptsetup
