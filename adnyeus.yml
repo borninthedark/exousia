@@ -134,8 +134,32 @@ modules:
     scripts:
       - |
         set -euo pipefail
-        install -Dm0644 /etc/sway/sway.desktop /usr/share/wayland-sessions/sway.desktop
-        install -Dm0755 /etc/sway/start-sway /usr/bin/start-sway
+        session_dir=/usr/share/wayland-sessions
+
+        mkdir -p "$session_dir"
+
+        if [ ! -f "$session_dir/sway.desktop" ]; then
+          if [ -f /etc/sway/sway.desktop ]; then
+            install -Dm0644 /etc/sway/sway.desktop "$session_dir/sway.desktop"
+          elif [ -f /usr/share/applications/sway.desktop ]; then
+            # Fallback to upstream sway.desktop if the custom config was not staged
+            install -Dm0644 /usr/share/applications/sway.desktop "$session_dir/sway.desktop"
+          else
+            cat >"$session_dir/sway.desktop" <<'EOF'
+[Desktop Entry]
+Name=Sway
+Comment=Start the Sway Wayland compositor
+Exec=/usr/bin/start-sway
+Type=Application
+DesktopNames=sway
+EOF
+            chmod 0644 "$session_dir/sway.desktop"
+          fi
+        fi
+
+        if [ ! -x /usr/bin/start-sway ] && [ -f /etc/sway/start-sway ]; then
+          install -Dm0755 /etc/sway/start-sway /usr/bin/start-sway
+        fi
 
   # Validate that critical Sway session assets landed in the image
   - type: script
