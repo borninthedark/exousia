@@ -133,6 +133,21 @@ modules:
         dst: /usr/libexec/sway/volume-helper
         mode: "0755"
 
+  # Validate that the Sway session launcher files are present
+  - type: script
+    scripts:
+      - |
+        set -euo pipefail
+        for path in \
+          /usr/share/wayland-sessions/sway.desktop \
+          /etc/sway/environment \
+          /usr/bin/start-sway; do
+          if [ ! -e "$path" ]; then
+            echo "Missing required Sway session file: $path" >&2
+            exit 1
+          fi
+        done
+
   # Package management with new loader
   - type: package-loader
     window_manager: sway
