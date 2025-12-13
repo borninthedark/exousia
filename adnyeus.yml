@@ -135,7 +135,6 @@ modules:
       - |
         set -euo pipefail
         install -Dm0644 /etc/sway/sway.desktop /usr/share/wayland-sessions/sway.desktop
-        install -Dm0644 /etc/sway/environment /etc/sway/environment
         install -Dm0755 /etc/sway/start-sway /usr/bin/start-sway
 
   # Validate that critical Sway session assets landed in the image
