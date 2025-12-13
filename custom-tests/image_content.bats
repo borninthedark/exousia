@@ -527,23 +527,8 @@ get_package_manager() {
 
     assert_file_exists "$MOUNT_POINT/usr/share/wayland-sessions/sway.desktop"
 
-    env_found=false
-    for env_path in \
-        "$MOUNT_POINT/etc/sway/environment" \
-        "$MOUNT_POINT/usr/etc/sway/environment" \
-        "$MOUNT_POINT/usr/share/sway/environment" \
-        "$MOUNT_POINT/etc/environment.d"/*sway*.conf \
-        "$MOUNT_POINT/usr/lib/environment.d"/*sway*.conf; do
-        if [ -f "$env_path" ]; then
-            env_found=true
-            break
-        fi
-    done
-
-    if [ "$env_found" != true ]; then
-        echo "Missing Sway environment configuration in /etc/sway or /usr/etc/sway" >&2
-        false
-    fi
+    # The adnyeus manifest copies custom-configs/sway/environment to /etc/sway/environment
+    assert_file_exists "$MOUNT_POINT/etc/sway/environment"
 
     if [ -x "$MOUNT_POINT/usr/bin/start-sway" ]; then
         assert_file_executable "$MOUNT_POINT/usr/bin/start-sway"
@@ -702,13 +687,13 @@ is_rke2_enabled() {
         skip "RKE2 is disabled (ENABLE_RKE2=false)"
     fi
 
-    if [ -x "$MOUNT_POINT/usr/bin/rke2" ]; then
+    # Installer in adnyeus.yml creates a /usr/local/bin/rke2 symlink to the installed binary
+    if [ -x "$MOUNT_POINT/usr/local/bin/rke2" ]; then
+        assert_file_executable "$MOUNT_POINT/usr/local/bin/rke2"
+    elif [ -x "$MOUNT_POINT/usr/bin/rke2" ]; then
         assert_file_executable "$MOUNT_POINT/usr/bin/rke2"
-    elif [ -x "$MOUNT_POINT/var/lib/rancher/rke2/bin/rke2" ]; then
-        assert_file_executable "$MOUNT_POINT/var/lib/rancher/rke2/bin/rke2"
     else
-        run buildah run "$CONTAINER" -- rpm -q rke2-server
-        assert_success "rke2-server package should be installed via dnf"
+        assert_file_executable "$MOUNT_POINT/var/lib/rancher/rke2/bin/rke2"
     fi
 }
 
@@ -725,16 +710,11 @@ is_rke2_enabled() {
         skip "RKE2 is disabled (ENABLE_RKE2=false)"
     fi
 
-    assert_dir_exists "$MOUNT_POINT/etc/rancher/rke2"
-    assert_file_exists "$MOUNT_POINT/etc/rancher/rke2/config.yaml"
+    rke2_conf_dir="$MOUNT_POINT/etc/rancher/rke2"
 
-    if ls "$MOUNT_POINT/etc/rancher/rke2"/registries*.yaml >/dev/null 2>&1; then
-        for reg_file in "$MOUNT_POINT/etc/rancher/rke2"/registries*.yaml; do
-            assert_file_exists "$reg_file"
-        done
-    else
-        echo "registries.yaml not present; assuming default registries" >&2
-    fi
+    assert_dir_exists "$rke2_conf_dir"
+    assert_file_exists "$rke2_conf_dir/config.yaml"
+    assert_file_exists "$rke2_conf_dir/registries.yaml"
 }
 
 @test "RKE2 systemd drop-in directory should exist when enabled" {
