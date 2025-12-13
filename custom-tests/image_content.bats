@@ -532,8 +532,8 @@ get_package_manager() {
         "$MOUNT_POINT/etc/sway/environment" \
         "$MOUNT_POINT/usr/etc/sway/environment" \
         "$MOUNT_POINT/usr/share/sway/environment" \
-        "$MOUNT_POINT/etc/environment.d"/sway*.conf \
-        "$MOUNT_POINT/usr/lib/environment.d"/sway*.conf; do
+        "$MOUNT_POINT/etc/environment.d"/*sway*.conf \
+        "$MOUNT_POINT/usr/lib/environment.d"/*sway*.conf; do
         if [ -f "$env_path" ]; then
             env_found=true
             break
@@ -728,8 +728,10 @@ is_rke2_enabled() {
     assert_dir_exists "$MOUNT_POINT/etc/rancher/rke2"
     assert_file_exists "$MOUNT_POINT/etc/rancher/rke2/config.yaml"
 
-    if [ -f "$MOUNT_POINT/etc/rancher/rke2/registries.yaml" ]; then
-        assert_file_exists "$MOUNT_POINT/etc/rancher/rke2/registries.yaml"
+    if ls "$MOUNT_POINT/etc/rancher/rke2"/registries*.yaml >/dev/null 2>&1; then
+        for reg_file in "$MOUNT_POINT/etc/rancher/rke2"/registries*.yaml; do
+            assert_file_exists "$reg_file"
+        done
     else
         echo "registries.yaml not present; assuming default registries" >&2
     fi
