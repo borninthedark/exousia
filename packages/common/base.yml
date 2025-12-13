@@ -19,6 +19,7 @@ core_utilities:
   - etckeeper
   - fastfetch
   - glances
+  - kubectl
 
 # Audio and media
 audio_media:
