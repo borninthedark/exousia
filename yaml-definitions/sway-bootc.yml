@@ -133,16 +133,16 @@ modules:
         dst: /usr/libexec/sway/volume-helper
         mode: "0755"
 
-  # Re-stage and validate the Sway session assets via a dedicated helper
-  # instead of inline shell.
-  - type: script
-    scripts:
-      - /usr/local/bin/ensure-sway-session
-
   # Package management with new loader
   - type: package-loader
     window_manager: sway
     include_common: true
+
+  # Re-stage and validate the Sway session assets via a dedicated helper
+  # instead of inline shell, after package installation.
+  - type: script
+    scripts:
+      - /usr/local/bin/ensure-sway-session
 
   # Flatpak setup
   - type: script

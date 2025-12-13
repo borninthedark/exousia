@@ -25,9 +25,18 @@ custom_desktop=/etc/sway/sway.desktop
 upstream_desktop=/usr/share/applications/sway.desktop
 start_sway_src=/etc/sway/start-sway
 start_sway_dst=/usr/bin/start-sway
+env_file=/etc/sway/environment
 
 if [[ "$mode" != "verify" ]]; then
   mkdir -p "$session_dir"
+
+  if [[ ! -f "$env_file" ]]; then
+    install -Dm0644 /dev/stdin "$env_file" <<'EOF'
+# Default Sway environment overrides
+XDG_CURRENT_DESKTOP=sway
+MOZ_ENABLE_WAYLAND=1
+EOF
+  fi
 
   if [[ ! -f "$session_desktop" ]]; then
     if [[ -f "$custom_desktop" ]]; then
@@ -52,7 +61,7 @@ fi
 
 for path in \
   "$session_desktop" \
-  /etc/sway/environment \
+  "$env_file" \
   "$start_sway_dst"; do
   if [[ ! -e "$path" ]]; then
     echo "Missing required Sway session file: $path" >&2
