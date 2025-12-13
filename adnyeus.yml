@@ -298,6 +298,7 @@ modules:
     system:
       enabled:
         - libvirtd.service
+        - seatd.service
         - systemd-resolved.service
         - NetworkManager.service
         - greetd.service
