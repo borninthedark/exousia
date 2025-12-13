@@ -76,6 +76,19 @@ modules:
         dst: /etc/yum.repos.d/
         mode: "0644"
 
+  # Kubernetes repository for kubectl (overwrites any existing config)
+  - type: script
+    scripts:
+      - |
+        cat <<'EOF' > /etc/yum.repos.d/kubernetes.repo
+        [kubernetes]
+        name=Kubernetes
+        baseurl=https://pkgs.k8s.io/core:/stable:/v1.34/rpm/
+        enabled=1
+        gpgcheck=1
+        gpgkey=https://pkgs.k8s.io/core:/stable:/v1.34/rpm/repodata/repomd.xml.key
+        EOF
+
   # RKE2 configuration files
   - type: files
     files:
@@ -89,6 +102,13 @@ modules:
       - src: custom-scripts/
         dst: /usr/local/bin/
         mode: "0755"
+
+  # Install kubectl from the Kubernetes repository
+  - type: script
+    scripts:
+      - |
+        dnf install -y kubectl
+        dnf clean all --enablerepo='*'
 
   # RKE2 management CLI (Python)
   - type: files
@@ -110,6 +130,21 @@ modules:
         INSTALL_RKE2_BIN_DIR=/var/lib/rancher/rke2/bin \
           curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -
 
+        # Ensure kubectl is staged even if the installer omitted it
+        mkdir -p /var/lib/rancher/rke2/bin
+        if [ ! -x /var/lib/rancher/rke2/bin/kubectl ] && [ -x /usr/bin/kubectl ]; then
+          install -m 0755 /usr/bin/kubectl /var/lib/rancher/rke2/bin/kubectl
+        fi
+
+        if [ -x /var/lib/rancher/rke2/bin/kubectl ] && [ ! -e /usr/local/bin/kubectl ]; then
+          ln -s /var/lib/rancher/rke2/bin/kubectl /usr/local/bin/kubectl
+        fi
+
+        if [ ! -x /var/lib/rancher/rke2/bin/kubectl ]; then
+          echo "✗ RKE2 kubectl not found after install" >&2
+          exit 1
+        fi
+
         # Ensure canonical RKE2 binary path exists for tests
         if [ -x /var/lib/rancher/rke2/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
           ln -s /var/lib/rancher/rke2/bin/rke2 /usr/local/bin/rke2
@@ -128,31 +163,6 @@ modules:
         fi
 
         if [ ! -x /var/lib/rancher/rke2/bin/kubectl ]; then
-          echo "✗ RKE2 kubectl not found after install" >&2
-          exit 1
-        fi
-
-        # Ensure canonical RKE2 binary path exists for tests
-        if [ -x /usr/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
-          ln -s /usr/bin/rke2 /usr/local/bin/rke2
-        fi
-
-        if [ ! -x /usr/local/bin/rke2 ]; then
-          echo "✗ RKE2 binary missing after install" >&2
-          exit 1
-        fi
-
-        # Ensure kubectl from the RKE2 bundle is present
-        mkdir -p /var/lib/rancher/rke2/bin
-        if [ -x /var/lib/rancher/rke2/bin/kubectl ]; then
-          :
-        elif [ -x /usr/bin/kubectl.rke2 ]; then
-          install -m 0755 /usr/bin/kubectl.rke2 /var/lib/rancher/rke2/bin/kubectl
-        elif [ -x /usr/bin/kubectl ]; then
-          install -m 0755 /usr/bin/kubectl /var/lib/rancher/rke2/bin/kubectl
-        elif [ -x /usr/local/bin/kubectl ]; then
-          install -m 0755 /usr/local/bin/kubectl /var/lib/rancher/rke2/bin/kubectl
-        else
           echo "✗ RKE2 kubectl not found after install" >&2
           exit 1
         fi
