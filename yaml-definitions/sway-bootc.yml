@@ -133,35 +133,16 @@ modules:
         dst: /usr/libexec/sway/volume-helper
         mode: "0755"
 
-  # Re-stage the Sway session assets from the copied custom-configs tree
-  # to guarantee they land in the final image even if the files module is
-  # skipped or upstream packaging changes.
-  - type: script
-    scripts:
-      - |
-        set -euo pipefail
-        install -Dm0644 /etc/sway/sway.desktop /usr/share/wayland-sessions/sway.desktop
-        install -Dm0755 /etc/sway/start-sway /usr/bin/start-sway
-
-  # Validate that the Sway session launcher files are present
-  - type: script
-    scripts:
-      - |
-        set -euo pipefail
-        for path in \
-          /usr/share/wayland-sessions/sway.desktop \
-          /etc/sway/environment \
-          /usr/bin/start-sway; do
-          if [ ! -e "$path" ]; then
-            echo "Missing required Sway session file: $path" >&2
-            exit 1
-          fi
-        done
-
   # Package management with new loader
   - type: package-loader
     window_manager: sway
     include_common: true
+
+  # Re-stage and validate the Sway session assets via a dedicated helper
+  # instead of inline shell, after package installation.
+  - type: script
+    scripts:
+      - /usr/local/bin/ensure-sway-session
 
   # Flatpak setup
   - type: script

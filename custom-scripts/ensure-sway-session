@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: ensure-sway-session [verify]
+
+Without arguments, ensures the Sway session desktop file and launcher
+are present by preferring the custom Exousia assets under /etc/sway and
+falling back to upstream defaults when necessary. The "verify" mode only
+checks for the required artifacts without staging them.
+USAGE
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+mode="${1:-ensure}"
+
+session_dir=/usr/share/wayland-sessions
+session_desktop="$session_dir/sway.desktop"
+custom_desktop=/etc/sway/sway.desktop
+upstream_desktop=/usr/share/applications/sway.desktop
+start_sway_src=/etc/sway/start-sway
+start_sway_dst=/usr/bin/start-sway
+env_file=/etc/sway/environment
+
+if [[ "$mode" != "verify" ]]; then
+  mkdir -p "$session_dir"
+
+  if [[ ! -f "$env_file" ]]; then
+    install -Dm0644 /dev/stdin "$env_file" <<'EOF'
+# Default Sway environment overrides
+XDG_CURRENT_DESKTOP=sway
+MOZ_ENABLE_WAYLAND=1
+EOF
+  fi
+
+  if [[ ! -f "$session_desktop" ]]; then
+    if [[ -f "$custom_desktop" ]]; then
+      install -Dm0644 "$custom_desktop" "$session_desktop"
+    elif [[ -f "$upstream_desktop" ]]; then
+      install -Dm0644 "$upstream_desktop" "$session_desktop"
+    else
+      printf '%s\n' \
+        '[Desktop Entry]' \
+        'Name=Sway' \
+        'Comment=Start the Sway Wayland compositor' \
+        'Exec=/usr/bin/start-sway' \
+        'Type=Application' \
+        'DesktopNames=sway' | install -m0644 /dev/stdin "$session_desktop"
+    fi
+  fi
+
+  if [[ ! -x "$start_sway_dst" ]] && [[ -f "$start_sway_src" ]]; then
+    install -Dm0755 "$start_sway_src" "$start_sway_dst"
+  fi
+fi
+
+for path in \
+  "$session_desktop" \
+  "$env_file" \
+  "$start_sway_dst"; do
+  if [[ ! -e "$path" ]]; then
+    echo "Missing required Sway session file: $path" >&2
+    exit 1
+  fi
+done
