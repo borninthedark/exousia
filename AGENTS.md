@@ -684,7 +684,7 @@ $ ai-docs update-readme --auto-link
     "shellscript": true
   },
   "claude.apiKey": "${CLAUDE_API_KEY}",
-  "claude.model": "claude-3-5-sonnet-20241022",
+  "claude.model": "claude-sonnet-4-5-20250929",
   "openai.apiKey": "${OPENAI_API_KEY}"
 }
 ```
@@ -718,7 +718,7 @@ jobs:
       - name: AI Security Scan
         uses: anthropic/claude-action@v1
         with:
-          model: claude-3-5-sonnet-20241022
+          model: claude-sonnet-4-5-20250929
           task: security-review
           files: "**/*.{py,js,sh,go}"
           
@@ -749,7 +749,7 @@ client = anthropic.Anthropic(api_key=os.environ.get("CLAUDE_API_KEY"))
 def generate_tests(source_code: str, language: str) -> str:
     """Generate comprehensive test suite using Claude."""
     message = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-sonnet-4-5-20250929",
         max_tokens=4096,
         messages=[{
             "role": "user",
@@ -856,7 +856,7 @@ This config loader needs to:
 
 #### Code Comments
 ```python
-# AI-generated with Claude 3.5 Sonnet (2025-01-15)
+# AI-generated with Claude Sonnet 4.5 (2025-12-13)
 # Prompt: "Create async function to fetch and parse remote YAML configs"
 # Human modifications: Added retry logic and custom timeout handling
 async def fetch_remote_config(url: str, timeout: int = 10) -> dict:
@@ -880,10 +880,10 @@ Co-authored-by: Claude <ai@anthropic.com>"
 ## AI Development Notes
 
 This module was developed with AI assistance:
-- Initial architecture: Claude 3.5 Sonnet
+- Initial architecture: Claude Sonnet 4.5
 - Implementation: GitHub Copilot + GPT-4
-- Test generation: Claude 3.5 Sonnet
-- Documentation: Claude 3.5 Sonnet
+- Test generation: Claude Sonnet 4.5
+- Documentation: Claude Sonnet 4.5
 
 All AI-generated code was reviewed and modified by human maintainers.
 ```
@@ -1020,7 +1020,7 @@ AI-generated contributions are subject to the same MIT License as the rest of th
 
 ## Acknowledgments
 
-- **Claude 3.5 Sonnet** (Anthropic) - Architecture design, documentation, and complex reasoning
+- **Claude Sonnet 4.5** & **Claude Opus 4.5** (Anthropic) - Architecture design, documentation, and complex reasoning
 - **GPT-4** (OpenAI) - Code generation and debugging assistance
 - **GitHub Copilot** - Real-time coding assistance and productivity enhancement
 - The broader AI developer tools community for advancing AI-assisted development practices
@@ -1029,7 +1029,7 @@ AI-generated contributions are subject to the same MIT License as the rest of th
 
 **AI-Augmented Development**
 
-*This AGENTS.md was initially generated with Claude 3.5 Sonnet and human oversight on 2025-12-01*
-*Last updated: 2025-12-13 - Added yaml-to-containerfile transpiler scenario, common pitfalls, RKE2 test updates, and corrected model version references*
+*This AGENTS.md was initially generated with Claude Sonnet 4.5 and human oversight on 2025-12-01*
+*Last updated: 2025-12-13 - Added yaml-to-containerfile transpiler scenario, common pitfalls, RKE2 test updates, and corrected model version references to Claude Sonnet 4.5*
 
 *For questions about AI workflows, open an issue or contact the maintainers*
