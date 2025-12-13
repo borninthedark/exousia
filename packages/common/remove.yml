@@ -14,7 +14,8 @@ packages:
   - foot  # Using kitty/alacritty instead
   - dunst  # Using mako/swaync instead
   - swaylock  # Using swaylock-effects from COPR instead
-  - sway-config-upstream  # Remove upstream config, use sway-config-minimal for headless/container use
+  - sway-config-upstream  # Remove, building from sway-config-minimal
+  - sway-config-fedora  # Remove, building from sway-config-minimal
   - rofi-wayland  # Conflicts with rofi
 
 
