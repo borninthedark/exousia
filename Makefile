@@ -126,48 +126,37 @@ rke2-push: ## Push RKE2 image to local registry
 	podman push localhost:5000/exousia-rke2:latest
 
 rke2-registry-start: ## Start local container registry for RKE2
-	./tools/setup-rke2-registry.sh start
+	python3 tools/rke2_ops.py registry start
 
 rke2-registry-stop: ## Stop local container registry
-	./tools/setup-rke2-registry.sh stop
+	python3 tools/rke2_ops.py registry stop
 
 rke2-registry-info: ## Show registry connection information
-	./tools/setup-rke2-registry.sh info
+	python3 tools/rke2_ops.py registry info
 
 rke2-vm-build: ## Build RKE2 VM disk image
-	./tools/rke2-vm-manager.sh build
+	python3 tools/rke2_ops.py vm build
 
 rke2-vm-create: ## Create RKE2 VM
-	./tools/rke2-vm-manager.sh create
+	python3 tools/rke2_ops.py vm create
 
 rke2-vm-start: ## Start RKE2 VM
-	./tools/rke2-vm-manager.sh start
+	python3 tools/rke2_ops.py vm start
 
 rke2-vm-stop: ## Stop RKE2 VM
-	./tools/rke2-vm-manager.sh stop
+	python3 tools/rke2_ops.py vm stop
 
 rke2-vm-status: ## Show RKE2 VM status
-	./tools/rke2-vm-manager.sh status
+	python3 tools/rke2_ops.py vm status
+
+rke2-vm-destroy: ## Destroy RKE2 VM (keeps disk)
+	python3 tools/rke2_ops.py vm destroy
+
+rke2-vm-purge: ## Completely remove RKE2 VM and all data
+	python3 tools/rke2_ops.py vm purge
 
 rke2-kubeconfig: ## Get kubeconfig from RKE2 VM
-	./tools/rke2-vm-manager.sh kubeconfig
+	python3 tools/rke2_ops.py kubeconfig
 
 rke2-quickstart: ## Quick start RKE2 setup (all steps)
-	@echo "==> Starting RKE2 Quick Start..."
-	@echo "==> Step 1: Starting registry..."
-	./tools/setup-rke2-registry.sh start
-	@echo "==> Step 2: Building RKE2 bootc image..."
-	$(MAKE) rke2-build
-	@echo "==> Step 3: Pushing to local registry..."
-	$(MAKE) rke2-push
-	@echo "==> Step 4: Building VM disk image..."
-	./tools/rke2-vm-manager.sh build
-	@echo "==> Step 5: Creating VM..."
-	./tools/rke2-vm-manager.sh create
-	@echo "==> Step 6: Starting VM..."
-	./tools/rke2-vm-manager.sh start
-	@echo "==> Step 7: Waiting for RKE2 to start (120s)..."
-	sleep 120
-	@echo "==> Step 8: Getting kubeconfig..."
-	./tools/rke2-vm-manager.sh kubeconfig
-	@echo "==> RKE2 cluster ready! Use: export KUBECONFIG=~/.kube/rke2-config"
+	python3 tools/rke2_ops.py quickstart

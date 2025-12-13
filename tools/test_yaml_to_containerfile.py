@@ -44,6 +44,8 @@ def test_generator_is_stateless():
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=False,
+        enable_rke2=False,
+        use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-sway-atomic:43",
         distro="fedora"
     )
@@ -91,6 +93,8 @@ def test_rpm_module_includes_common_remove_packages():
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=False,
+        enable_rke2=False,
+        use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-sway-atomic:43",
         distro="fedora",
     )
@@ -127,6 +131,8 @@ def test_generator_with_different_contexts():
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=False,
+        enable_rke2=False,
+        use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-sway-atomic:43",
         distro="fedora"
     )
@@ -139,6 +145,8 @@ def test_generator_with_different_contexts():
         image_type="fedora-bootc",
         fedora_version="43",
         enable_plymouth=True,
+        enable_rke2=False,
+        use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-bootc:43",
         distro="fedora"
     )
@@ -204,6 +212,59 @@ def test_custom_bases_without_tags_are_versioned():
     print("✓ Untagged custom bases are pinned to the requested version")
 
 
+def test_script_comments_do_not_chain_into_next_run():
+    """Comments inside scripts should not accidentally continue into the next RUN."""
+
+    config = {
+        "name": "comment-breaks",
+        "description": "Ensure comments don't extend RUN",
+        "modules": [
+            {
+                "type": "script",
+                "scripts": [
+                    """
+                    echo 'first'
+                    # trailing comment
+                    # another comment
+                    """
+                ],
+            },
+            {
+                "type": "script",
+                "scripts": ["echo 'second'"]
+            },
+        ],
+    }
+
+    context = BuildContext(
+        image_type="fedora-sway-atomic",
+        fedora_version="43",
+        enable_plymouth=False,
+        enable_rke2=False,
+        use_upstream_sway_config=False,
+        base_image="quay.io/fedora/fedora-sway-atomic:43",
+        distro="fedora",
+    )
+
+    generator = ContainerfileGenerator(config, context)
+    output = generator.generate()
+    lines = output.splitlines()
+
+    first_echo_idx = next(i for i, line in enumerate(lines) if "echo 'first'" in line)
+
+    # The line running the first command should not end with a continuation, even
+    # though comments follow. This prevents the next RUN from being merged when
+    # builders strip comment-only lines.
+    assert not lines[first_echo_idx].rstrip().endswith("\\"), "First command should not have trailing backslash"
+
+    next_run_idx = next(i for i, line in enumerate(lines[first_echo_idx + 1:], start=first_echo_idx + 1) if line.startswith("RUN"))
+    snippet = " ".join(lines[first_echo_idx:next_run_idx + 1])
+
+    assert "echo 'first'; RUN" not in snippet, "Comments should not chain into the following RUN instruction"
+
+    print("✓ Script comments do not leak into subsequent RUN commands")
+
+
 def test_linux_bootc_alias_requires_base_image():
     """The linux-bootc alias should not silently default to Fedora bases."""
 
@@ -251,6 +312,8 @@ def test_linux_bootc_distro_support():
         image_type="arch",
         fedora_version="",
         enable_plymouth=False,
+        enable_rke2=False,
+        use_upstream_sway_config=False,
         base_image="docker.io/archlinux/archlinux:latest",
         distro="arch"
     )
@@ -285,6 +348,8 @@ def test_distro_detection():
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=True,
+        enable_rke2=False,
+        use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-sway-atomic:43",
         distro="fedora"
     )
@@ -295,6 +360,8 @@ def test_distro_detection():
         image_type="arch",
         fedora_version="",
         enable_plymouth=False,
+        enable_rke2=False,
+        use_upstream_sway_config=False,
         base_image="docker.io/archlinux/archlinux:latest",
         distro="arch"
     )
@@ -315,6 +382,8 @@ def test_enable_plymouth_generates_env():
         image_type="fedora-bootc",
         fedora_version="43",
         enable_plymouth=True,
+        enable_rke2=False,
+        use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-bootc:43",
         distro="fedora"
     )
@@ -355,6 +424,8 @@ def test_package_loader_module():
         image_type="fedora-bootc",
         fedora_version="43",
         enable_plymouth=True,
+        enable_rke2=False,
+        use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-bootc:43",
         distro="fedora"
     )
@@ -386,6 +457,8 @@ def test_plymouth_not_generated_for_sway_atomic():
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=True,  # Even if enabled
+        enable_rke2=False,
+        use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-sway-atomic:43",
         distro="fedora"
     )
@@ -419,6 +492,8 @@ def test_group_install_on_fedora_distros():
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=False,
+        enable_rke2=False,
+        use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-sway-atomic:43",
         distro="fedora"
     )
@@ -454,6 +529,8 @@ def test_group_install_not_on_non_fedora():
         image_type="arch",
         fedora_version="",
         enable_plymouth=False,
+        enable_rke2=False,
+        use_upstream_sway_config=False,
         base_image="docker.io/archlinux/archlinux:latest",
         distro="arch"
     )

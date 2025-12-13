@@ -10,7 +10,7 @@ metadata:
 # Core Sway components
 core:
   - sway
-  - swaylock
+  - swaylock-effects  # Enhanced swaylock from COPR (pheeef/swaylock-effects)
   - swayidle
   - swaybg
   - waybar
@@ -41,7 +41,7 @@ wayland:
 
 # Session and authentication
 session:
-  - xfce-polkit
+  - lxqt-policykit  # Using lxqt-polkit instead of xfce-polkit
   - xdg-utils
   - xdg-user-dirs
   - xdg-dbus-proxy

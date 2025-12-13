@@ -130,6 +130,8 @@ class BuildContext:
     image_type: str
     fedora_version: str  # For Fedora-based images; can be empty for Linux bootc
     enable_plymouth: bool
+    enable_rke2: bool
+    use_upstream_sway_config: bool
     base_image: str
     distro: str = "fedora"  # fedora, arch, gentoo, debian, ubuntu, opensuse, proxmox
     desktop_environment: str = ""  # kde, gnome, mate, etc.
@@ -192,6 +194,8 @@ class ContainerfileGenerator:
         if self.context.image_type == "fedora-bootc":
             self.lines.append(f"ARG ENABLE_PLYMOUTH={str(self.context.enable_plymouth).lower()}")
 
+        self.lines.append(f"ARG ENABLE_RKE2={str(self.context.enable_rke2).lower()}")
+
         self.lines.append("")
 
     def _add_from(self):
@@ -230,6 +234,8 @@ class ContainerfileGenerator:
             "# Environment",
             "# " + "-" * 30,
             f"ENV BUILD_IMAGE_TYPE={self.context.image_type}",
+            f"ENV ENABLE_RKE2={str(self.context.enable_rke2).lower()}",
+            f"ENV enable_rke2={str(self.context.enable_rke2).lower()}",
         ])
 
         if self.context.image_type == "fedora-bootc":
@@ -241,13 +247,25 @@ class ContainerfileGenerator:
                 f'>> /etc/environment && \\'
             )
             self.lines.append(
-                f'    echo "ENABLE_PLYMOUTH={plymouth_val}" >> /etc/environment'
+                f'    echo "ENABLE_PLYMOUTH={plymouth_val}" >> /etc/environment && \\'
+            )
+            self.lines.append(
+                f'    echo "ENABLE_RKE2={str(self.context.enable_rke2).lower()}" >> /etc/environment && \\'
+            )
+            self.lines.append(
+                f'    echo "enable_rke2={str(self.context.enable_rke2).lower()}" >> /etc/environment'
             )
         else:
             self.lines.append("")
             self.lines.append(
                 f'RUN echo "BUILD_IMAGE_TYPE={self.context.image_type}" '
-                f'>> /etc/environment'
+                f'>> /etc/environment && \\'
+            )
+            self.lines.append(
+                f'    echo "ENABLE_RKE2={str(self.context.enable_rke2).lower()}" >> /etc/environment && \\'
+            )
+            self.lines.append(
+                f'    echo "enable_rke2={str(self.context.enable_rke2).lower()}" >> /etc/environment'
             )
 
         self.lines.append("")
@@ -310,20 +328,66 @@ class ContainerfileGenerator:
     def _render_script_lines(self, lines: List[str], set_command: str):
         """Render a sequence of shell lines as a single RUN instruction."""
 
-        SHELL_KEYWORDS = {'if', 'then', 'else', 'elif', 'fi', 'do', 'done', 'case', 'esac'}
+        # Keywords that start or are in the middle of compound statements (no semicolon needed)
+        COMPOUND_STARTERS = {'if', 'then', 'else', 'elif', 'do', 'case'}
+        # Keywords that end compound statements (need semicolon before next command)
+        COMPOUND_ENDERS = {'fi', 'done', 'esac'}
 
         self.lines.append(f"RUN {set_command}; \\")
 
+        in_heredoc = False
+
+        def has_next_command(idx: int) -> bool:
+            """Return True if there is another non-comment line after idx."""
+
+            for next_line in lines[idx + 1:]:
+                stripped_next = next_line.strip()
+                if stripped_next and not stripped_next.startswith("#"):
+                    return True
+            return False
+
         for i, line in enumerate(lines):
+            stripped = line.strip()
+            # Check if line already ends with backslash (line continuation)
+            has_continuation = line.rstrip().endswith('\\')
+
             # Check if line ends with a shell keyword
             last_word = line.split()[-1] if line.split() else ""
-            needs_semicolon = last_word not in SHELL_KEYWORDS and i < len(lines) - 1
+            has_more_commands = has_next_command(i)
 
-            if needs_semicolon:
+            if in_heredoc:
+                # Preserve heredoc contents verbatim
+                self.lines.append(f"    {line}")
+                if stripped == "EOF":
+                    in_heredoc = False
+                continue
+
+            if "<<" in stripped:
+                # Start of heredoc: emit as-is and switch to heredoc mode
+                self.lines.append(f"    {line}")
+                in_heredoc = True
+                continue
+
+            # Comment lines should not influence line continuations because build
+            # tools may strip them before sending commands to the shell.
+            if stripped.startswith("#"):
+                self.lines.append(f"    {line}")
+                continue
+
+            if has_continuation:
+                # Line already has backslash continuation, don't add semicolon
+                self.lines.append(f"    {line}")
+            elif last_word in COMPOUND_ENDERS and has_more_commands:
+                # Compound statement enders (fi, done, esac) need semicolon before next command
                 self.lines.append(f"    {line}; \\")
-            elif i < len(lines) - 1:
+            elif last_word in COMPOUND_STARTERS and has_more_commands:
+                # Compound statement starters/middles don't need semicolon
                 self.lines.append(f"    {line} \\")
+            elif has_more_commands:
+                # Regular commands need semicolon
+                self.lines.append(f"    {line}; \\")
             else:
+                # Last line
                 self.lines.append(f"    {line}")
 
     def _process_script_module(self, module: Dict[str, Any]):
@@ -478,6 +542,12 @@ class ContainerfileGenerator:
             for group in groups:
                 self.lines.append(f"    dnf install -y @{group}; \\")
 
+        # Remove conflicting packages FIRST (before installation)
+        # This is critical for packages like swaylock that conflict with replacements (swaylock-effects)
+        if remove_packages:
+            packages_str = " ".join(remove_packages)
+            self.lines.append(f"    dnf remove -y {packages_str} || true; \\")
+
         # Install individual packages
         if install_packages:
             # Build exclude flags for packages that need to be removed
@@ -492,16 +562,7 @@ class ContainerfileGenerator:
 
             for i, chunk in enumerate(chunks):
                 packages_str = " ".join(chunk)
-                if i == len(chunks) - 1 and not remove_packages:
-                    # Last chunk, no remove packages
-                    self.lines.append(f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\")
-                else:
-                    self.lines.append(f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\")
-
-        # Remove packages
-        if remove_packages:
-            packages_str = " ".join(remove_packages)
-            self.lines.append(f"    dnf remove -y {packages_str} || true; \\")
+                self.lines.append(f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\")
 
         # Upgrade and cleanup
         self.lines.append("    dnf upgrade -y; \\")
@@ -822,7 +883,8 @@ class ContainerfileGenerator:
     def _evaluate_condition(self, condition: str) -> bool:
         """Evaluate a condition string against current context."""
         # Simple condition evaluation
-        # Supports: image-type == "value", enable_plymouth == true/false, distro == "value",
+        # Supports: image-type == "value", enable_plymouth == true/false, enable_rke2 == true/false,
+        #          use_upstream_sway_config == true/false, distro == "value",
         #          desktop_environment == "value", window_manager == "value"
 
         condition = condition.strip()
@@ -848,6 +910,10 @@ class ContainerfileGenerator:
                 return self.context.distro == right
             if left == "enable_plymouth":
                 return self.context.enable_plymouth == (right.lower() == "true")
+            if left == "enable_rke2":
+                return self.context.enable_rke2 == (right.lower() == "true")
+            if left == "use_upstream_sway_config":
+                return self.context.use_upstream_sway_config == (right.lower() == "true")
             if left == "desktop_environment":
                 return self.context.desktop_environment == right
             if left == "window_manager":
@@ -1001,6 +1067,12 @@ Examples:
     image_type = args.image_type or config.get("image-type", "fedora-sway-atomic")
     fedora_version = args.fedora_version or str(config.get("image-version", "43"))
     enable_plymouth = args.enable_plymouth and not args.disable_plymouth
+
+    # Extract build configuration
+    build_config = config.get("build", {})
+    enable_rke2 = build_config.get("enable_rke2", False)
+    use_upstream_sway_config = build_config.get("use_upstream_sway_config", False)
+
     try:
         base_image = determine_base_image(config, image_type, fedora_version)
     except ValueError as exc:
@@ -1028,6 +1100,8 @@ Examples:
         print(f"  Distro: {distro}")
         print(f"  Fedora version: {fedora_version}")
         print(f"  Plymouth: {enable_plymouth}")
+        print(f"  RKE2: {enable_rke2}")
+        print(f"  Sway Config: {'upstream' if use_upstream_sway_config else 'custom'}")
         print(f"  Base image: {base_image}")
         print(f"  Desktop Environment: {desktop_environment}")
         print(f"  Window Manager: {window_manager}")
@@ -1036,6 +1110,8 @@ Examples:
         image_type=image_type,
         fedora_version=fedora_version,
         enable_plymouth=enable_plymouth,
+        enable_rke2=enable_rke2,
+        use_upstream_sway_config=use_upstream_sway_config,
         base_image=base_image,
         distro=distro,
         desktop_environment=desktop_environment,

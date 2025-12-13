@@ -30,6 +30,22 @@ build:
   enable_plymouth: true
   enable_rke2: true  # Enable RKE2 Kubernetes for immutable k8s infrastructure
 
+  # Sway Configuration Source Selection
+  # See: https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/
+  #
+  # false (default): Use custom Exousia configs from custom-configs/sway/
+  #   - Copies custom sway.desktop, environment, and start-sway script
+  #   - Overrides Fedora Sway SIG configurations
+  #
+  # true: Keep upstream Fedora Sway configurations
+  #   - Preserves sway-config-fedora or sway-config-upstream from base image
+  #   - Fedora uses layered config system:
+  #     * /usr/share/sway/config.d/*.conf (packaged configs)
+  #     * /etc/sway/config.d/*.conf (system overrides)
+  #     * ~/.config/sway/config.d/*.conf (user overrides)
+  #   - Swap profiles with: dnf swap sway-config sway-config-upstream
+  use_upstream_sway_config: false
+
 # Modules define the build steps
 modules:
   # System users configuration
@@ -70,7 +86,7 @@ modules:
         dst: /usr/share/plymouth/themes/bgrt-better-luks/
         mode: "0644"
 
-  # Custom repositories
+  # Custom repositories (includes kubernetes.repo)
   - type: files
     files:
       - src: custom-repos/
@@ -91,8 +107,9 @@ modules:
         dst: /usr/local/bin/
         mode: "0755"
 
-  # Sway session files
+  # Sway session files (custom configs - skipped if use_upstream_sway_config == true)
   - type: files
+    condition: use_upstream_sway_config == false
     files:
       - src: custom-configs/sway/sway.desktop
         dst: /usr/share/wayland-sessions/sway.desktop
@@ -120,19 +137,13 @@ modules:
   # Follows official quickstart: https://docs.rke2.io/install/quickstart
   # ============================================================================
 
-  # RKE2 dependencies
-  - type: script
+  # RKE2 management CLI (Python)
+  - type: files
     condition: enable_rke2 == true
-    scripts:
-      - |
-        dnf install -y \
-          curl \
-          iptables \
-          container-selinux \
-          policycoreutils-python-utils \
-          cryptsetup \
-          python3 \
-          && dnf clean all
+    files:
+      - src: tools/rke2_ops.py
+        dst: /usr/local/bin/rke2_ops
+        mode: "0755"
 
   # RKE2 Server installation - Step 1: Run the installer
   # This installs rke2-server service and rke2 binary
@@ -142,10 +153,43 @@ modules:
       - |
         # Install RKE2 server using official install script
         # Default INSTALL_RKE2_TYPE is "server" so we don't need to specify it
-        curl -sfL https://get.rke2.io | sh -
-        
+        INSTALL_RKE2_BIN_DIR=/var/lib/rancher/rke2/bin \
+          curl -sfL https://get.rke2.io | sh -
+
+        # Ensure kubectl is staged even if the installer omitted it
+        mkdir -p /var/lib/rancher/rke2/bin
+        if [ ! -x /var/lib/rancher/rke2/bin/kubectl ] && [ -x /usr/bin/kubectl ]; then
+          install -m 0755 /usr/bin/kubectl /var/lib/rancher/rke2/bin/kubectl
+        fi
+
+        if [ -x /var/lib/rancher/rke2/bin/kubectl ] && [ ! -e /usr/local/bin/kubectl ]; then
+          ln -s /var/lib/rancher/rke2/bin/kubectl /usr/local/bin/kubectl
+        fi
+
+        if [ ! -x /var/lib/rancher/rke2/bin/kubectl ]; then
+          echo "✗ RKE2 kubectl not found after install" >&2
+          exit 1
+        fi
+
+        # Ensure the RKE2 binary is in the expected location for tests
+        if [ -x /var/lib/rancher/rke2/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
+          ln -s /var/lib/rancher/rke2/bin/rke2 /usr/local/bin/rke2
+        elif [ -x /usr/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
+          ln -s /usr/bin/rke2 /usr/local/bin/rke2
+        fi
+
+        if [ ! -x /usr/local/bin/rke2 ]; then
+          echo "✗ RKE2 binary missing after install" >&2
+          exit 1
+        fi
+
         # Verify installation
-        test -f /usr/local/bin/rke2 && echo "✓ RKE2 binary installed at /usr/local/bin/rke2" || echo "✗ RKE2 installation failed"
+        # Note: RKE2 binary location may vary (RPM installs to /usr/bin, script installs to /usr/local/bin)
+        if [ -f /usr/local/bin/rke2 ] || [ -f /usr/bin/rke2 ]; then
+            echo "✓ RKE2 binary installed"
+        else
+            echo "✗ RKE2 binary not found"
+        fi
         test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service installed" || echo "✗ rke2-server.service not found"
 
   # RKE2 configuration directory
@@ -189,18 +233,16 @@ modules:
     condition: enable_rke2 == true
     scripts:
       - |
-        # Create required directories
+        # Create required directories for RKE2
         mkdir -p /var/lib/rancher/rke2
         mkdir -p /var/lib/rancher/rke2/bin
         mkdir -p /var/lib/rancher/rke2/server
-        
-        # Create shared volumes for host integration
-        mkdir -p /mnt/host/kubeconfig
-        mkdir -p /mnt/host/storage
-        
-        # Symlink kubectl and other tools to a standard location
-        # These will be available after first boot when RKE2 runs
         mkdir -p /usr/local/bin
+
+        # Note: /mnt/host/* directories are created at runtime by cloud-init
+        # See: k8s/rke2/cloud-init.yaml (lines 124-125)
+        # They serve as mount points for 9p virtio shares and don't need to be
+        # baked into the image
 
   # RKE2 SELinux contexts
   - type: script
@@ -249,13 +291,27 @@ modules:
         - greetd.service
     default-target: graphical.target
 
-  # RKE2 Server service - Step 2: Enable rke2-server.service
-  # The service will start on first boot and subsequent reboots
-  - type: systemd
-    condition: enable_rke2 == true
-    system:
-      enabled:
-        - rke2-server.service
+  # RKE2 Server service configuration
+  # Note: rke2-server.service is INSTALLED but NOT ENABLED by default
+  # Users must manually enable it with: systemctl enable rke2-server.service
+  # Or it can be enabled at VM deployment time via cloud-init
+
+  # Ensure /var layout matches bootc lint expectations
+  - type: script
+    scripts:
+      - |
+        set -euxo pipefail
+
+        # /var/run should be a symlink to /run for bootc lint
+        if [ ! -L /var/run ]; then
+          rm -rf /var/run
+          ln -s ../run /var/run
+        fi
+
+        # Drop build-time cache/log artifacts so tmpfiles can own /var
+        rm -f /var/log/dnf5.log /var/log/dnf5.log.[0-9]* || true
+        rm -rf /var/cache/dnf /var/cache/libdnf5 /var/cache/etckeeper || true
+        rm -rf /var/lib/dnf || true
 
   # Validation and finalization
   - type: script
@@ -264,9 +320,21 @@ modules:
       - restorecon -vv /usr/local/bin/tuigreet || true
       - restorecon -vv /usr/local/bin/rke2_ops || true
       - restorecon -vv /usr/local/bin/rke2-kubectl || true
-      - test -f /usr/local/bin/rke2 && echo "✓ RKE2 installed" || echo "○ RKE2 not installed"
-      - test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service configured" || echo "○ rke2-server.service not found"
       - echo "composefs=true" >> /etc/ostree/repo.config || true
+
+  # RKE2 validation (only when enabled)
+  # Note: Dependencies (curl, iptables, container-selinux, etc.) are installed via packages/common/base.yml
+  - type: script
+    condition: enable_rke2 == true
+    scripts:
+      - |
+        # Check RKE2 installation (binary may be in /usr/bin or /usr/local/bin)
+        if [ -f /usr/local/bin/rke2 ] || [ -f /usr/bin/rke2 ]; then
+            echo "✓ RKE2 installed"
+        else
+            echo "○ RKE2 not installed"
+        fi
+      - test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service configured" || echo "○ rke2-server.service not found"
 
   # Post-installation notes
   - type: script

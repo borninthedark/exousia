@@ -8,10 +8,11 @@ metadata:
 
 # Packages to remove
 packages:
-  - firefox-langpacks  
+  - firefox-langpacks
   - firefox
   - sddm
   - foot  # Using kitty/alacritty instead
   - dunst  # Using mako/swaync instead
+  - swaylock  # Using swaylock-effects from COPR instead
 
 

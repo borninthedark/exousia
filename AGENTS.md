@@ -48,6 +48,26 @@ Exousia embraces AI as a collaborative development partner rather than a replace
 - **Maintain Control**: Keep humans in the decision-making loop for architecture and critical logic
 - **Preserve Transparency**: Document AI contributions and maintain clear attribution
 
+### Test-Driven Development (TDD) - Core Principle
+
+**ALL development work in Exousia MUST follow test-driven development practices:**
+
+1. **Write Tests First**: Before implementing any feature or fix, write the test that validates the expected behavior
+2. **Red-Green-Refactor**: Follow the TDD cycle:
+   - **Red**: Write a failing test that defines the desired behavior
+   - **Green**: Implement the minimal code needed to make the test pass
+   - **Refactor**: Clean up the code while keeping tests passing
+3. **No Untested Code**: Every new function, class, or feature must have corresponding tests
+4. **Test Coverage**: Maintain minimum coverage thresholds (80% for API, 75% for tools)
+5. **Integration Tests**: Complex features require both unit tests and integration tests
+
+**Why TDD is mandatory:**
+- Prevents regressions and ensures code correctness
+- Provides living documentation of expected behavior
+- Enables confident refactoring and continuous improvement
+- Catches bugs early in the development cycle
+- Facilitates AI-assisted development by providing clear validation criteria
+
 ## 🔴 HIGH PRIORITY: Continuous Quality Requirements
 
 **These requirements MUST be met on EVERY branch before merging, regardless of the feature or fix being implemented.**
@@ -205,6 +225,200 @@ When modifying this logic:
 - Update tests in `api/tests/test_resolve_build_config.py`
 - Ensure path traversal protection remains intact
 - Document changes in `docs/WEBHOOK_API.md`
+
+### Scenario 6: Modifying yaml-to-containerfile Transpiler
+
+The YAML-to-Containerfile transpiler (`tools/yaml-to-containerfile.py`) is a critical component that converts BlueBuild-style YAML definitions into Dockerfile/Containerfile format:
+
+```bash
+# Step 1: Understand the transpiler architecture
+# Key components:
+# - BuildContext: Holds build configuration (image_type, fedora_version, enable_plymouth, enable_rke2, etc.)
+# - ContainerfileGenerator: Main transpiler class
+# - Module processors: _process_script_module, _process_files_module, _process_package_loader_module, etc.
+
+# Step 2: Test existing functionality before changes
+python3 tools/test_yaml_to_containerfile.py
+
+# Step 3: When adding new conditionals:
+# - Add to BuildContext dataclass
+# - Extract from build config in main()
+# - Implement evaluation in _evaluate_condition()
+# - Update tests
+
+# Example: Adding enable_feature conditional
+# 1. Add to BuildContext:
+@dataclass
+class BuildContext:
+    enable_feature: bool  # New field
+
+# 2. Extract from config:
+enable_feature = build_config.get("enable_feature", False)
+
+# 3. Add evaluation:
+if left == "enable_feature":
+    return self.context.enable_feature == (right.lower() == "true")
+
+# Step 4: Script rendering best practices:
+# - Backslash continuations: _render_script_lines handles automatic semicolon insertion
+# - Compound statements: Keywords like fi/done/esac get proper semicolons before next command
+# - Heredocs: Supported but avoid when static files can be used (Hadolint compatibility)
+# - Comments: Preserved verbatim in generated Containerfile
+
+# Step 5: Required validations:
+# - Generate test Containerfile: python3 tools/yaml-to-containerfile.py -c adnyeus.yml -o /tmp/test.txt
+# - Run hadolint: hadolint /tmp/test.txt
+# - Verify build: buildah build -f /tmp/test.txt
+# - Run unit tests: python3 tools/test_yaml_to_containerfile.py
+# - Test with conditions: Verify modules skip/include based on conditionals
+
+# Step 6: Update documentation
+# - Add examples to tools/README.md
+# - Document new conditionals in YAML schema
+```
+
+**Important Transpiler Development Principles:**
+- **Static files over heredocs**: Prefer COPY instructions with static files over RUN + heredoc
+- **Hadolint validation**: All generated Containerfiles must pass Hadolint linting
+- **Conditional evaluation**: Support image_type, enable_plymouth, enable_rke2, use_upstream_sway_config
+- **Shell syntax**: Properly handle backslash continuations, compound statements, and quoted strings
+- **Test coverage**: Add unit tests for any new module processors or conditionals
+- **Error messages**: Provide clear error messages for invalid YAML or unsupported features
+
+### Scenario 7: Working with RKE2 Integration
+
+RKE2 (Rancher Kubernetes Engine 2) is integrated into Exousia as an optional bootc feature. When working with RKE2:
+
+```bash
+# Step 1: Enable RKE2 in your YAML definition
+# Set enable_rke2: true in adnyeus.yml or your custom YAML
+
+# Step 2: Use the rke2_ops Python module for all operations
+# Located at tools/rke2_ops.py - DO NOT create shell scripts
+
+# Available operations:
+python3 tools/rke2_ops.py registry start    # Start local registry
+python3 tools/rke2_ops.py vm build          # Build bootc disk image
+python3 tools/rke2_ops.py vm create         # Create VM
+python3 tools/rke2_ops.py vm start          # Start VM
+python3 tools/rke2_ops.py vm status         # Check status
+python3 tools/rke2_ops.py kubeconfig        # Get kubeconfig
+python3 tools/rke2_ops.py quickstart        # Run all steps
+
+# Or use Makefile targets:
+make rke2-quickstart                        # Complete automated setup
+make rke2-registry-start                    # Start registry
+make rke2-vm-build                          # Build VM image
+make rke2-vm-status                         # Check VM status
+
+# Step 3: Test RKE2 integration
+# Run the integration tests (now enabled by default)
+ENABLE_RKE2=true bats custom-tests/image_content.bats
+
+# Step 4: Required validations when modifying RKE2:
+# - All 10 RKE2 integration tests must pass:
+#   1. RKE2 binary installation
+#   2. kubectl installation
+#   3. Configuration files (registries.yaml, config.yaml)
+#   4. Systemd drop-in directory
+#   5. rke2_ops management tool
+#   6. bootc kargs configuration
+#   7. Data directory creation
+#   8. MOTD configuration
+#   9. Dependencies installation
+#   10. Kubernetes repository configuration
+# - Verify installation follows official RKE2 docs:
+#   https://docs.rke2.io/install/methods
+#   https://docs.rke2.io/install/quickstart
+# - Test registry connectivity (192.168.122.1:5000)
+# - Verify kubeconfig export works
+# - Check systemd integration (rke2-server.service)
+
+# Step 5: Update documentation
+# - docs/RKE2_INTEGRATION.md for feature changes
+# - docs/RKE2_BOOTC_SETUP.md for setup procedures
+# - k8s/rke2/QUICKSTART.md for quick reference
+# - README.md acknowledgements section
+```
+
+**Important RKE2 Development Principles:**
+- **No shell scripts**: Use `tools/rke2_ops.py` for all RKE2 operations
+- **Follow official docs**: Reference https://docs.rke2.io for installation methods
+- **Test thoroughly**: RKE2 integration tests verify binary, config, systemd, and networking
+- **Default enabled**: `enable_rke2` defaults to `true` in GitHub Actions and should remain so
+- **Registry-first**: RKE2 uses local Podman registry on libvirt bridge (192.168.122.1:5000)
+- **Bootc integration**: RKE2 is deployed via bootc image with proper kernel args and SELinux contexts
+- **Prefer static files**: Use static repository files (custom-repos/*.repo) over dynamically generated heredocs
+- **Hadolint compatibility**: Avoid shell heredocs in Containerfile generation; they confuse Hadolint's parser
+
+## Common Pitfalls & Lessons Learned
+
+### Containerfile Generation
+
+**Issue**: Hadolint fails with "unexpected '[' expecting Dockerfile directive"
+**Cause**: Shell heredocs in RUN commands confuse Hadolint's parser
+**Solution**: Use static files (COPY) instead of heredocs. Example:
+```yaml
+# ❌ BAD: Heredoc in RUN command
+- type: script
+  scripts:
+    - |
+      cat <<'EOF' > /etc/yum.repos.d/kubernetes.repo
+      [kubernetes]
+      name=Kubernetes
+      baseurl=https://pkgs.k8s.io/core:/stable:/v1.34/rpm/
+      EOF
+
+# ✅ GOOD: Static file with COPY
+- type: files
+  files:
+    - src: custom-repos/kubernetes.repo
+      dst: /etc/yum.repos.d/
+      mode: "0644"
+```
+
+**Issue**: "RUN: command not found" errors in generated Containerfile
+**Cause**: Multiple RUN commands being incorrectly merged into a single command
+**Solution**: Verify each script module generates a separate RUN instruction. Check module separation in YAML.
+
+**Issue**: Backslash continuation syntax errors (`\;`)
+**Cause**: Script renderer adding semicolons after backslash continuations
+**Solution**: The transpiler now detects lines ending with `\` and skips semicolon insertion
+
+**Issue**: "unexpected tokens after compound command" (SC1141)
+**Cause**: Missing semicolons after fi/done/esac before next command
+**Solution**: The transpiler now adds semicolons after compound statement enders (fi, done, esac)
+
+### Directory Creation in Images
+
+**Issue**: `/mnt` directory creation failures in bootc images
+**Cause**: Attempting to create system directories that are guaranteed to exist
+**Solution**: Don't create standard system directories (/mnt, /tmp, /var, etc.). Only create application-specific subdirectories if needed at build time.
+
+**Best Practice**: For mount points and runtime directories, let cloud-init or systemd tmpfiles.d handle creation at runtime.
+
+### Package Management
+
+**Issue**: Package file conflicts (e.g., swaylock vs swaylock-effects)
+**Cause**: Not removing conflicting packages before installation
+**Solution**: Use packages/common/remove.yml to remove conflicting packages. The package-loader module processes removals BEFORE installations.
+
+**Issue**: Missing COPR repositories for specialized packages
+**Cause**: Repository not added to custom-repos/ or not configured in tools/copr_manager.py
+**Solution**:
+1. Add `.repo` file to custom-repos/
+2. Register in tools/copr_manager.py COPR_REPOS dict
+3. Test with package-loader module
+
+### Testing
+
+**Issue**: Tests pass locally but fail in CI
+**Cause**: Different default values for build flags (enable_rke2, enable_plymouth, etc.)
+**Solution**: Check .github/workflows/build.yml for default input values. Ensure tests account for both enabled and disabled states.
+
+**Issue**: Bats tests skip unexpectedly
+**Cause**: Helper functions like is_rke2_enabled() checking environment variables
+**Solution**: Set ENABLE_RKE2=true when running tests that depend on RKE2 features
 
 ## Key Project Features
 
@@ -470,7 +684,7 @@ $ ai-docs update-readme --auto-link
     "shellscript": true
   },
   "claude.apiKey": "${CLAUDE_API_KEY}",
-  "claude.model": "claude-sonnet-4-20250514",
+  "claude.model": "claude-sonnet-4-5-20250929",
   "openai.apiKey": "${OPENAI_API_KEY}"
 }
 ```
@@ -504,7 +718,7 @@ jobs:
       - name: AI Security Scan
         uses: anthropic/claude-action@v1
         with:
-          model: claude-sonnet-4
+          model: claude-sonnet-4-5-20250929
           task: security-review
           files: "**/*.{py,js,sh,go}"
           
@@ -535,7 +749,7 @@ client = anthropic.Anthropic(api_key=os.environ.get("CLAUDE_API_KEY"))
 def generate_tests(source_code: str, language: str) -> str:
     """Generate comprehensive test suite using Claude."""
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-5-20250929",
         max_tokens=4096,
         messages=[{
             "role": "user",
@@ -642,7 +856,7 @@ This config loader needs to:
 
 #### Code Comments
 ```python
-# AI-generated with Claude Sonnet 4 (2025-01-15)
+# AI-generated with Claude Sonnet 4.5 (2025-12-13)
 # Prompt: "Create async function to fetch and parse remote YAML configs"
 # Human modifications: Added retry logic and custom timeout handling
 async def fetch_remote_config(url: str, timeout: int = 10) -> dict:
@@ -666,10 +880,10 @@ Co-authored-by: Claude <ai@anthropic.com>"
 ## AI Development Notes
 
 This module was developed with AI assistance:
-- Initial architecture: Claude Sonnet 4
+- Initial architecture: Claude Sonnet 4.5
 - Implementation: GitHub Copilot + GPT-4
-- Test generation: Claude Sonnet 4
-- Documentation: Claude Sonnet 4
+- Test generation: Claude Sonnet 4.5
+- Documentation: Claude Sonnet 4.5
 
 All AI-generated code was reviewed and modified by human maintainers.
 ```
@@ -806,7 +1020,7 @@ AI-generated contributions are subject to the same MIT License as the rest of th
 
 ## Acknowledgments
 
-- **Claude** (Anthropic) - Architecture design, documentation, and complex reasoning
+- **Claude Sonnet 4.5** & **Claude Opus 4.5** (Anthropic) - Architecture design, documentation, and complex reasoning
 - **GPT-4** (OpenAI) - Code generation and debugging assistance
 - **GitHub Copilot** - Real-time coding assistance and productivity enhancement
 - The broader AI developer tools community for advancing AI-assisted development practices
@@ -815,6 +1029,7 @@ AI-generated contributions are subject to the same MIT License as the rest of th
 
 **AI-Augmented Development**
 
-*This AGENTS.md was generated with Claude Sonnet 4 and human oversight on 2025-12-01*
+*This AGENTS.md was initially generated with Claude Sonnet 4.5 and human oversight on 2025-12-01*
+*Last updated: 2025-12-13 - Added yaml-to-containerfile transpiler scenario, common pitfalls, RKE2 test updates, and corrected model version references to Claude Sonnet 4.5*
 
 *For questions about AI workflows, open an issue or contact the maintainers*

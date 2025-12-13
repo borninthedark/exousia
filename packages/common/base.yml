@@ -19,6 +19,13 @@ core_utilities:
   - etckeeper
   - fastfetch
   - glances
+  - kubectl
+  - curl
+  - iptables-nft  # Modern replacement for iptables on Fedora
+  - container-selinux
+  - policycoreutils-python-utils
+  - cryptsetup
+  - python3
 
 # Audio and media
 audio_media:
