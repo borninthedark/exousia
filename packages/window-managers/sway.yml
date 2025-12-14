@@ -47,7 +47,7 @@ session:
   - flatpak-xdg-utils
   - xdg-desktop-portal
   - xdg-desktop-portal-wlr
-  - xdg-desktop-portal-gtk
+  - xdg-desktop-portal-lxqt
 
 # Audio stack (PipeWire)
 audio:
