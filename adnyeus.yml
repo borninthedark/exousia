@@ -128,21 +128,20 @@ modules:
         mode: "0755"
 
   # ============================================================================
-  # CachyOS Kernel Configuration
-  # Performance-optimized kernel with BORE scheduler and sched-ext support
-  # Better performance than both Fedora stable and vanilla mainline
-  # Requires: x86-64-v3 minimum CPU (Intel Haswell 2013+ / AMD Excavator 2015+)
+  # Rawhide Kernel Configuration
+  # WARNING: Development kernel with debug options enabled
+  # - Very unstable, breaks often
+  # - Slower performance (debug enabled)
+  # - Daily bleeding-edge updates
+  # - For testing/development only, NOT production
   # See: docs/KERNEL_OPTIONS.md for details
   # ============================================================================
 
-  # Enable CachyOS COPR repository and install kernel
-  # Combined to ensure proper cleanup
+  # Enable Rawhide repository and install kernel
   - type: script
     scripts:
       - |
-        dnf install -y 'dnf5-command(copr)'
-        dnf copr enable -y bieszczaders/kernel-cachyos
-        dnf install -y --allowerasing kernel-cachyos
+        dnf install -y --enablerepo=rawhide --allowerasing kernel kernel-core kernel-modules kernel-modules-core kernel-modules-extra
         dnf clean all
 
   # Package management using new YAML-based loader
