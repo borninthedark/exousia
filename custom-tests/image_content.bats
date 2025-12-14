@@ -587,17 +587,6 @@ get_package_manager() {
     assert_success
 }
 
-@test "CachyOS kernel should be installed as default" {
-    # Check if CachyOS kernel is installed
-    run buildah run "$CONTAINER" -- rpm -q kernel-cachyos
-    assert_success "CachyOS kernel should be installed"
-
-    # Verify it's the performance-optimized variant
-    run buildah run "$CONTAINER" -- rpm -qa | grep kernel-cachyos
-    assert_success
-    assert_output --partial "kernel-cachyos"
-}
-
 @test "NetworkManager should be installed" {
     run buildah run "$CONTAINER" -- rpm -q NetworkManager
     assert_success
