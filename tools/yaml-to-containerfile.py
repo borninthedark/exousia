@@ -555,7 +555,7 @@ class ContainerfileGenerator:
                 self.lines.append(f"    dnf install -y @{group}; \\")
 
         # Remove conflicting packages FIRST (before installation)
-        # This is critical for packages like swaylock that conflict with replacements (swaylock-effects)
+        # This is critical for packages like swaylock when switching between variants
         if remove_packages:
             packages_str = " ".join(remove_packages)
             self.lines.append(f"    dnf remove -y {packages_str} || true; \\")

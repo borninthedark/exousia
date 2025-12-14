@@ -38,12 +38,6 @@ COPR_REPOS = {
         'packages': ['wallust'],
         'description': 'Wallpaper color scheme generator'
     },
-    'swaylock-effects': {
-        'owner': 'pheeef',
-        'repo': 'swaylock-effects',
-        'packages': ['swaylock-effects'],
-        'description': 'Enhanced swaylock with effects and features'
-    },
 }
 
 
