@@ -10,7 +10,7 @@ metadata:
 # Core Sway components
 core:
   - sway
-  - swaylock  # Enhanced swaylock from COPR (pheeef/swaylock-effects)
+  - swaylock-effects  # Enhanced swaylock from COPR (pheeef/swaylock-effects)
   - swayidle
   - swaybg
   - waybar
@@ -21,8 +21,7 @@ terminals:
 
 # Application launchers and notifications
 launchers:
-  - rofi
-  - rofi-wayland
+  - rofi  # Modern rofi has built-in Wayland support
   
 notifications:
   - mako

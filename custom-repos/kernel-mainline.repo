@@ -1,0 +1,10 @@
+[copr:copr.fedorainfracloud.org:group_kernel-vanilla:mainline]
+name=Copr repo for mainline kernels owned by @kernel-vanilla
+baseurl=https://download.copr.fedorainfracloud.org/results/@kernel-vanilla/mainline/fedora-$releasever-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/@kernel-vanilla/mainline/pubkey.gpg
+repo_gpgcheck=0
+enabled=0
+enabled_metadata=1

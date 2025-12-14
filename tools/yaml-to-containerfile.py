@@ -253,7 +253,13 @@ class ContainerfileGenerator:
                 f'    echo "ENABLE_RKE2={str(self.context.enable_rke2).lower()}" >> /etc/environment && \\'
             )
             self.lines.append(
-                f'    echo "enable_rke2={str(self.context.enable_rke2).lower()}" >> /etc/environment'
+                f'    echo "enable_rke2={str(self.context.enable_rke2).lower()}" >> /etc/environment && \\'
+            )
+            self.lines.append(
+                f'    echo "LANG=en_US.UTF-8" >> /etc/environment && \\'
+            )
+            self.lines.append(
+                f'    echo "LC_ALL=en_US.UTF-8" >> /etc/environment'
             )
         else:
             self.lines.append("")
@@ -265,7 +271,13 @@ class ContainerfileGenerator:
                 f'    echo "ENABLE_RKE2={str(self.context.enable_rke2).lower()}" >> /etc/environment && \\'
             )
             self.lines.append(
-                f'    echo "enable_rke2={str(self.context.enable_rke2).lower()}" >> /etc/environment'
+                f'    echo "enable_rke2={str(self.context.enable_rke2).lower()}" >> /etc/environment && \\'
+            )
+            self.lines.append(
+                f'    echo "LANG=en_US.UTF-8" >> /etc/environment && \\'
+            )
+            self.lines.append(
+                f'    echo "LC_ALL=en_US.UTF-8" >> /etc/environment'
             )
 
         self.lines.append("")
