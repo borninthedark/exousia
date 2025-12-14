@@ -10,7 +10,6 @@ metadata:
 # Core Sway components
 core:
   - sway
-  - sway-config-fedora
   - swaylock-effects  # Enhanced swaylock from COPR (pheeef/swaylock-effects)
   - swayidle
   - swaybg
