@@ -127,34 +127,6 @@ modules:
         dst: /usr/libexec/sway/volume-helper
         mode: "0755"
 
-  # ============================================================================
-  # CachyOS Kernel Configuration (Default)
-  # Performance-optimized kernel with BORE scheduler and sched-ext support
-  # Better performance than both Fedora stable and vanilla mainline
-  # Requires: x86-64-v3 minimum CPU (Intel Haswell 2013+ / AMD Excavator 2015+)
-  # See: docs/KERNEL_OPTIONS.md for alternative kernels (Rawhide, mainline, etc.)
-  # ============================================================================
-
-  # Enable CachyOS COPR repository and install kernel
-  - type: script
-    scripts:
-      - |
-        dnf install -y 'dnf5-command(copr)'
-        dnf copr enable -y bieszczaders/kernel-cachyos
-        dnf install -y --allowerasing kernel-cachyos
-        dnf clean all
-
-  # ============================================================================
-  # Alternative: Rawhide Kernel (Commented Out)
-  # Uncomment below and comment out CachyOS section above to use Rawhide
-  # WARNING: Development kernel - very unstable, slower, breaks often
-  # ============================================================================
-  # - type: script
-  #   scripts:
-  #     - |
-  #       dnf install -y --enablerepo=rawhide --allowerasing kernel kernel-core kernel-modules kernel-modules-core kernel-modules-extra
-  #       dnf clean all
-
   # Package management using new YAML-based loader
   # Automatically loads packages based on desktop.window_manager or desktop.desktop_environment
   - type: package-loader
