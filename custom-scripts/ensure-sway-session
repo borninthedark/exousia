@@ -35,6 +35,8 @@ if [[ "$mode" != "verify" ]]; then
 # Default Sway environment overrides
 XDG_CURRENT_DESKTOP=sway
 MOZ_ENABLE_WAYLAND=1
+LANG=en_US.UTF-8
+LC_ALL=en_US.UTF-8
 EOF
   fi
 
