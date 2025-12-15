@@ -1,67 +1,77 @@
 # Swaylock configuration
-# Kripton GTK Dark Theme
+# Kripton GTK Dark Theme (image + dark fallback)
 
-# Background image
-# image=~/.local/share/wallpapers/default.jpg
+# --------------------------------------------------------------------
+# Background
+# --------------------------------------------------------------------
+# NOTE: swaylock configs often DO NOT expand "~" reliably.
+# If the image doesn't load, either:
+#   1) replace "~" with your full /home/<user>/ path, or
+#   2) launch with: swaylock --image "$HOME/.local/share/wallpapers/default.jpg"
+image=~/.local/share/wallpapers/default.jpg
 scaling=fill
 
+# Fallback solid fill color (used when no image / image fails)
+color=131519
+
+# --------------------------------------------------------------------
 # Behavior
+# --------------------------------------------------------------------
 daemonize
 ignore-empty-password
 show-failed-attempts
 show-keyboard-layout
 indicator-caps-lock
-
-# Disable separator line (use ring only)
 line-uses-ring
 
 # --------------------------------------------------------------------
-# Colors (Kripton Dark - Refined)
+# Inside colors (indicator fill)
 # --------------------------------------------------------------------
+inside-color=0F1013
+inside-clear-color=0F1013
+inside-caps-lock-color=0F1013
+inside-ver-color=0F1013
+inside-wrong-color=0F1013
 
-# Base background (theme_base_color)
-color=131519
+# --------------------------------------------------------------------
+# Ring colors (state)
+# --------------------------------------------------------------------
+ring-color=7CABAB            # accent-soft
+ring-clear-color=70AF5A      # success
+ring-caps-lock-color=AA4B1A  # warning
+ring-ver-color=9BBFBF        # accent
+ring-wrong-color=B72F1D      # critical
 
-# Inside colors (lockscreen states)
-inside-color=171A1F          # theme_bg_color (darker idle state)
-inside-clear-color=8EC07C    # success:        #8ec07c (suggested-action)
-inside-caps-lock-color=D79920# warning:        #d79920 (banana-500)
-inside-ver-color=9BBFBF      # accent:         #9bbfbf (selected_bg_color)
-inside-wrong-color=CD3520    # error:          #cd3520 (destructive hover)
+# --------------------------------------------------------------------
+# Ring layout
+# --------------------------------------------------------------------
+indicator-radius=100
+indicator-thickness=10
 
-# Ring colors (visual feedback)
-ring-color=7CABAB            # accent-soft:    #7cabab (visible idle ring)
-ring-clear-color=8EC07C      # success
-ring-caps-lock-color=D79920  # warning
-ring-ver-color=9BBFBF        # accent (verifying)
-ring-wrong-color=CD3520      # error
-
-# Line colors (transparent - using ring only)
+# --------------------------------------------------------------------
+# Lines & separators (disabled / transparent)
+# --------------------------------------------------------------------
 line-color=00000000
 line-clear-color=00000000
 line-caps-lock-color=00000000
 line-ver-color=00000000
 line-wrong-color=00000000
-
-# Text colors
-text-color=E0E0E0            # theme_fg_color: #E0E0E0
-text-clear-color=B7B8B9      # placeholder:    #b7b8b9
-text-caps-lock-color=F9C440  # banana-500:     #f9c440 (more visible)
-text-ver-color=000000        # black on accent (readability)
-text-wrong-color=FFFFFF      # white on error  (high contrast)
-
-# Separator (transparent)
 separator-color=00000000
 
-# Keyboard layout indicator
+# --------------------------------------------------------------------
+# Text
+# --------------------------------------------------------------------
+text-color=E0E0E0
+text-clear-color=7C7D80
+text-caps-lock-color=AA4B1A
+text-ver-color=9BBFBF
+text-wrong-color=B72F1D
+
+# Layout / keyboard indicator
 layout-text-color=E0E0E0
-layout-bg-color=171A1F80     # semi-transparent bg
-layout-border-color=08090B
+layout-bg-color=00000000
+layout-border-color=00000000
 
-# Key hint text
-key-hl-color=9BBFBF          # accent highlight
-bs-hl-color=CD3520           # backspace highlight (destructive)
-
-# Indicator position and size
-indicator-radius=100
-indicator-thickness=10
+# Key highlight
+key-hl-color=9BBFBF
+bs-hl-color=B72F1D
