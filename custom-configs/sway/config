@@ -34,7 +34,7 @@ set $menu fuzzel
 #
 # Default wallpaper None
 # Requires: desktop-backgrounds-compat, swaybg, jxl-pixbuf-loader
-# output * bg /usr/share/backgrounds/default.jxl fill
+output * bg ~/.local/share/wallpapers/default.jpg fill
 #
 # Example configuration:
 #
