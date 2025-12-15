@@ -21,7 +21,7 @@ terminals:
 
 # Application launchers and notifications
 launchers:
-  - rofi  # Modern rofi has built-in Wayland support
+  - fuzzel 
   
 notifications:
   - mako
