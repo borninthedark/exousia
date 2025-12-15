@@ -1,5 +1,9 @@
 # Swaylock configuration
-# Adapted from openSUSEway and Fedora Sway SIG
+# Kripton GTK palette refit
+
+# Background image
+image=~/.local/share/wallpapers/default.jpg
+scaling=fill
 
 # Detach from the controlling terminal after locking
 daemonize
@@ -19,24 +23,28 @@ line-uses-ring
 # Show caps lock indicator
 indicator-caps-lock
 
-# Colors (Nord-inspired)
-color=2E3440
+# --------------------------------------------------------------------
+# Colors (Kripton)
+# --------------------------------------------------------------------
+
+# Base/background (theme_base_color: #131519)
+color=131519
 
 # Inside colors
-inside-color=3B4252
-inside-clear-color=81A1C1
-inside-caps-lock-color=FAE3B0
-inside-ver-color=B48EAD
-inside-wrong-color=BF616A
+inside-color=171A1F          # theme_bg_color: #171a1f
+inside-clear-color=70AF5A    # success:        #70af5a
+inside-caps-lock-color=AA4B1A# warning:        #aa4b1a
+inside-ver-color=9BBFBF      # accent:         #9bbfbf
+inside-wrong-color=B72F1D    # critical:       #b72f1d
 
 # Ring colors
-ring-color=4C566A
-ring-clear-color=88C0D0
-ring-caps-lock-color=EBCB8B
-ring-ver-color=D08770
-ring-wrong-color=D08770
+ring-color=7CABAB            # accent-soft:    #7cabab
+ring-clear-color=70AF5A      # success
+ring-caps-lock-color=AA4B1A  # warning
+ring-ver-color=8BB5B5        # accent-dark:    #8bb5b5
+ring-wrong-color=B72F1D      # critical
 
-# Line color
+# Line color (keep invisible)
 line-color=00000000
 line-clear-color=00000000
 line-caps-lock-color=00000000
@@ -44,16 +52,16 @@ line-ver-color=00000000
 line-wrong-color=00000000
 
 # Text colors
-text-color=ECEFF4
-text-clear-color=3B4252
-text-caps-lock-color=3B4252
-text-ver-color=3B4252
-text-wrong-color=3B4252
+text-color=E0E0E0            # theme_fg_color: #E0E0E0
+text-clear-color=7C7D80      # muted:          #7c7d80
+text-caps-lock-color=AA4B1A  # warning
+text-ver-color=9BBFBF        # accent
+text-wrong-color=B72F1D      # critical
 
 # Separator color
 separator-color=00000000
 
 # Layout text and background
-layout-text-color=ECEFF4
+layout-text-color=E0E0E0
 layout-bg-color=00000000
 layout-border-color=00000000
