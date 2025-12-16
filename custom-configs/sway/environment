@@ -20,4 +20,11 @@ export LC_ALL=en_US.UTF-8
 #WLR_NO_HARDWARE_CURSORS=1
 
 # Application compatibility
-_JAVA_AWT_WM_NONREPARENTING=1
+# _JAVA_AWT_WM_NONREPARENTING=1
+
+# Wayland/Sway environment variables
+export MOZ_ENABLE_WAYLAND=1
+export QT_QPA_PLATFORM=wayland
+export QT_QPA_PLATFORMTHEME=qt6ct
+export SDL_VIDEODRIVER=wayland
+export _JAVA_AWT_WM_NONREPARENTING=1
