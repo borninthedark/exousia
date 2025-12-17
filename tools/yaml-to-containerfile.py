@@ -38,89 +38,10 @@ class DistroConfig:
     bootc_build_deps: List[str]
 
 
-# Fedora Atomic Desktop variants
+# Fedora Atomic Desktop variants (only Sway and LXQt are supported)
 FEDORA_ATOMIC_VARIANTS = {
-    "fedora-silverblue": "quay.io/fedora/fedora-silverblue",
-    "fedora-kinoite": "quay.io/fedora/fedora-kinoite",
     "fedora-sway-atomic": "quay.io/fedora/fedora-sway-atomic",
-    "fedora-onyx": "quay.io/fedora-ostree-desktops/onyx",
-    "fedora-budgie": "quay.io/fedora-ostree-desktops/budgie",
-    "fedora-cinnamon": "quay.io/fedora-ostree-desktops/cinnamon",
-    "fedora-cosmic": "quay.io/fedora-ostree-desktops/cosmic",
-    "fedora-deepin": "quay.io/fedora-ostree-desktops/deepin",
     "fedora-lxqt": "quay.io/fedora-ostree-desktops/lxqt",
-    "fedora-mate": "quay.io/fedora-ostree-desktops/mate",
-    "fedora-xfce": "quay.io/fedora-ostree-desktops/xfce",
-}
-
-# Distro configurations for Linux bootc images (formerly called bootcrew)
-LINUX_BOOTC_DISTROS = {
-    "arch": DistroConfig(
-        name="arch",
-        base_image_template="docker.io/archlinux/archlinux:latest",
-        package_manager="pacman",
-        update_command="pacman -Sy",
-        install_command="pacman -S --noconfirm",
-        clean_command="pacman -S --clean --noconfirm",
-        build_deps_install="pacman -S --noconfirm",
-        build_deps_remove="pacman -Rns --noconfirm",
-        bootc_build_deps=["make", "git", "rust"],
-    ),
-    "gentoo": DistroConfig(
-        name="gentoo",
-        base_image_template="docker.io/gentoo/stage3:latest",
-        package_manager="emerge",
-        update_command="emerge --sync --quiet",
-        install_command="emerge --verbose",
-        clean_command="rm -rf /var/db",
-        build_deps_install="emerge --verbose",
-        build_deps_remove="",  # Gentoo doesn't remove build deps in single-stage build
-        bootc_build_deps=[],  # Build deps installed with system deps in Gentoo
-    ),
-    "debian": DistroConfig(
-        name="debian",
-        base_image_template="debian:unstable",
-        package_manager="apt",
-        update_command="apt update -y",
-        install_command="apt install -y",
-        clean_command="rm -rf /var/lib/apt/lists/* && apt clean -y",
-        build_deps_install="apt install -y",
-        build_deps_remove="apt purge -y",
-        bootc_build_deps=["libzstd-dev", "libssl-dev", "pkg-config", "curl", "git", "build-essential", "meson", "libfuse3-dev", "go-md2man", "dracut"],
-    ),
-    "ubuntu": DistroConfig(
-        name="ubuntu",
-        base_image_template="ubuntu:mantic",
-        package_manager="apt",
-        update_command="apt update -y",
-        install_command="apt install -y",
-        clean_command="rm -rf /var/lib/apt/lists/* && apt clean -y",
-        build_deps_install="apt install -y",
-        build_deps_remove="apt purge -y",
-        bootc_build_deps=["libzstd-dev", "libssl-dev", "pkg-config", "curl", "git", "build-essential", "meson", "libfuse3-dev", "go-md2man", "dracut"],
-    ),
-    "opensuse": DistroConfig(
-        name="opensuse",
-        base_image_template="registry.opensuse.org/opensuse/tumbleweed:latest",
-        package_manager="zypper",
-        update_command="zypper refresh",
-        install_command="zypper install -y",
-        clean_command="zypper clean -a",
-        build_deps_install="zypper install -y",
-        build_deps_remove="zypper remove -y",
-        bootc_build_deps=["git", "rust", "make", "cargo", "gcc-devel", "glib2-devel", "libzstd-devel", "openssl-devel", "ostree-devel"],
-    ),
-    "proxmox": DistroConfig(
-        name="proxmox",
-        base_image_template="debian:unstable",
-        package_manager="apt",
-        update_command="apt-get update",
-        install_command="apt-get install -y --no-install-recommends",
-        clean_command="apt-get clean && rm -rf /var/lib/apt/lists/*",
-        build_deps_install="apt-get install -y --no-install-recommends",
-        build_deps_remove="apt-get purge -y",
-        bootc_build_deps=["git", "cargo", "rustc", "make", "gcc", "pkg-config", "libssl-dev"],
-    ),
 }
 
 
@@ -314,8 +235,6 @@ class ContainerfileGenerator:
                 self._process_systemd_module(module)
             elif module_type == "sddm-themes":
                 self._process_sddm_themes_module(module)
-            elif module_type == "bootcrew-setup":
-                self._process_bootcrew_setup_module(module)
             else:
                 self.lines.append(f"# WARNING: Unknown module type: {module_type}")
 
@@ -658,240 +577,6 @@ class ContainerfileGenerator:
             "    echo '==> SDDM theme setup complete'"
         ])
 
-    def _process_bootcrew_setup_module(self, module: Dict[str, Any]):
-        """Process bootcrew-setup module (build bootc from source and configure for bootcrew distros)."""
-        if self.context.distro not in LINUX_BOOTC_DISTROS:
-            self.lines.append(f"# WARNING: bootcrew-setup not applicable for {self.context.distro}")
-            return
-
-        distro = self.context.distro
-
-        # Call distro-specific implementation
-        if distro == "arch":
-            self._process_bootcrew_arch(module)
-        elif distro in ["debian", "ubuntu"]:
-            self._process_bootcrew_debian(module)
-        elif distro == "gentoo":
-            self._process_bootcrew_gentoo(module)
-        elif distro == "opensuse":
-            self._process_bootcrew_opensuse(module)
-        elif distro == "proxmox":
-            self._process_bootcrew_debian(module)  # Proxmox uses Debian-based setup
-        else:
-            self.lines.append(f"# WARNING: No bootcrew-setup implementation for {distro}")
-
-    def _process_bootcrew_arch(self, module: Dict[str, Any]):
-        """Arch Linux bootc setup following bootcrew/arch-bootc pattern."""
-        # Step 1: Move /var to /usr/lib/sysimage for pacman compatibility
-        self.lines.append("# Move everything from `/var` to `/usr/lib/sysimage` so behavior around pacman remains the same on `bootc usroverlay`'d systems")
-        self.lines.append('RUN grep "= */var" /etc/pacman.conf | sed "/= *\\/var/s/.*=// ; s/ //" | xargs -n1 sh -c \'mkdir -p "/usr/lib/sysimage/$(dirname $(echo $1 | sed "s@/var/@@"))" && mv -v "$1" "/usr/lib/sysimage/$(echo "$1" | sed "s@/var/@@")"\' \'\' && \\')
-        self.lines.append('    sed -i -e "/= *\\/var/ s/^#//" -e "s@= */var@= /usr/lib/sysimage@g" -e "/DownloadUser/d" /etc/pacman.conf')
-        self.lines.append("")
-
-        # Step 2: Install system dependencies
-        deps = module.get("system-deps", [])
-        if deps:
-            self.lines.append("# Install system dependencies")
-            deps_str = " ".join(deps)
-            self.lines.append(f"RUN pacman -Sy --noconfirm {deps_str} && pacman -S --clean --noconfirm")
-            self.lines.append("")
-
-        # Step 3: Build bootc from source (with tmpfs mounts)
-        self.lines.append("# https://github.com/bootc-dev/bootc/issues/1801")
-        self.lines.append("RUN --mount=type=tmpfs,dst=/tmp --mount=type=tmpfs,dst=/root \\")
-        self.lines.append("    pacman -S --noconfirm make git rust && \\")
-        self.lines.append('    git clone "https://github.com/bootc-dev/bootc.git" /tmp/bootc && \\')
-        self.lines.append('    make -C /tmp/bootc bin install-all && \\')
-        self.lines.append('    printf "systemdsystemconfdir=/etc/systemd/system\\nsystemdsystemunitdir=/usr/lib/systemd/system\\n" | tee /usr/lib/dracut/dracut.conf.d/30-bootcrew-fix-bootc-module.conf && \\')
-        self.lines.append('    printf \'reproducible=yes\\nhostonly=no\\ncompress=zstd\\nadd_dracutmodules+=" ostree bootc "\' | tee "/usr/lib/dracut/dracut.conf.d/30-bootcrew-bootc-container-build.conf" && \\')
-        self.lines.append('    dracut --force "$(find /usr/lib/modules -maxdepth 1 -type d | grep -v -E "*.img" | tail -n 1)/initramfs.img" && \\')
-        self.lines.append('    pacman -Rns --noconfirm make git rust && \\')
-        self.lines.append('    pacman -S --clean --noconfirm')
-        self.lines.append("")
-
-        # Step 4: Restructure filesystem for ostree/bootc
-        self.lines.append("# Necessary for general behavior expected by image-based systems")
-        self.lines.append('RUN sed -i \'s|^HOME=.*|HOME=/var/home|\' "/etc/default/useradd" && \\')
-        self.lines.append('    rm -rf /boot /home /root /usr/local /srv /var /usr/lib/sysimage/log /usr/lib/sysimage/cache/pacman/pkg && \\')
-        self.lines.append('    mkdir -p /sysroot /boot /usr/lib/ostree /var && \\')
-        self.lines.append('    ln -s sysroot/ostree /ostree && ln -s var/roothome /root && ln -s var/srv /srv && ln -s var/opt /opt && ln -s var/mnt /mnt && ln -s var/home /home && \\')
-        self.lines.append('    echo "$(for dir in opt home srv mnt usrlocal ; do echo "d /var/$dir 0755 root root -" ; done)" | tee -a "/usr/lib/tmpfiles.d/bootc-base-dirs.conf" && \\')
-        self.lines.append('    printf "d /var/roothome 0700 root root -\\nd /run/media 0755 root root -" | tee -a "/usr/lib/tmpfiles.d/bootc-base-dirs.conf" && \\')
-        self.lines.append('    printf \'[composefs]\\nenabled = yes\\n[sysroot]\\nreadonly = true\\n\' | tee "/usr/lib/ostree/prepare-root.conf"')
-        self.lines.append("")
-
-        # Step 5: Validate
-        self.lines.append("RUN bootc container lint")
-        self.lines.append("")
-        self.lines.append("LABEL containers.bootc 1")
-
-    def _process_bootcrew_debian(self, module: Dict[str, Any]):
-        """Debian/Ubuntu bootc setup following bootcrew/debian-bootc pattern."""
-        # Step 1: Set DEBIAN_FRONTEND
-        self.lines.append("ARG DEBIAN_FRONTEND=noninteractive")
-        self.lines.append("")
-
-        # Step 2: Install system dependencies
-        deps = module.get("system-deps", [])
-        if deps:
-            self.lines.append("# Install system dependencies")
-            deps_str = " ".join(deps)
-            self.lines.append(f"RUN apt update -y && \\")
-            self.lines.append(f"    apt install -y {deps_str} && \\")
-            self.lines.append("    rm -rf /var/lib/apt/lists/* && \\")
-            self.lines.append("    apt clean -y")
-            self.lines.append("")
-
-        # Step 3: Fix dracut regression
-        self.lines.append("# Regression with newer dracut broke this")
-        self.lines.append("RUN mkdir -p /etc/dracut.conf.d && \\")
-        self.lines.append('    printf "systemdsystemconfdir=/etc/systemd/system\\nsystemdsystemunitdir=/usr/lib/systemd/system\\n" | tee /etc/dracut.conf.d/fix-bootc.conf')
-        self.lines.append("")
-
-        # Step 4: Build bootc from source with Rustup
-        self.lines.append("# Build bootc from source with Rustup")
-        self.lines.append("ENV CARGO_HOME=/tmp/rust")
-        self.lines.append("ENV RUSTUP_HOME=/tmp/rust")
-        self.lines.append('ENV DEV_DEPS="libzstd-dev libssl-dev pkg-config curl git build-essential meson libfuse3-dev go-md2man dracut"')
-        self.lines.append("RUN --mount=type=tmpfs,dst=/tmp \\")
-        self.lines.append("    apt update -y && \\")
-        self.lines.append("    apt install -y $DEV_DEPS libostree-dev ostree && \\")
-        self.lines.append('    curl --proto \'=https\' --tlsv1.2 -sSf "https://sh.rustup.rs" | sh -s -- --profile minimal -y && \\')
-        self.lines.append('    git clone "https://github.com/bootc-dev/bootc.git" /tmp/bootc && \\')
-        self.lines.append('    sh -c ". ${RUSTUP_HOME}/env ; make -C /tmp/bootc bin install-all install-initramfs-dracut" && \\')
-        self.lines.append('    sh -c \'export KERNEL_VERSION="$(basename "$(find /usr/lib/modules -maxdepth 1 -type d | grep -v -E "*.img" | tail -n 1)")" && dracut --force --no-hostonly --reproducible --zstd --verbose --kver "$KERNEL_VERSION"  "/usr/lib/modules/$KERNEL_VERSION/initramfs.img" && cp /boot/vmlinuz-$KERNEL_VERSION "/usr/lib/modules/$KERNEL_VERSION/vmlinuz"\' && \\')
-        self.lines.append("    apt purge -y $DEV_DEPS && \\")
-        self.lines.append("    apt autoremove -y && \\")
-        self.lines.append("    rm -rf /var/lib/apt/lists/* && \\")
-        self.lines.append("    apt clean -y")
-        self.lines.append("")
-
-        # Step 5: Restructure filesystem
-        self.lines.append("# Necessary for general behavior expected by image-based systems")
-        self.lines.append('RUN echo "HOME=/var/home" | tee -a "/etc/default/useradd" && \\')
-        self.lines.append('    rm -rf /boot /home /root /usr/local /srv && \\')
-        self.lines.append('    mkdir -p /var /sysroot /boot /usr/lib/ostree && \\')
-        self.lines.append('    ln -s var/opt /opt && \\')
-        self.lines.append('    ln -s var/roothome /root && \\')
-        self.lines.append('    ln -s var/home /home && \\')
-        self.lines.append('    ln -s sysroot/ostree /ostree && \\')
-        self.lines.append('    echo "$(for dir in opt usrlocal home srv mnt ; do echo "d /var/$dir 0755 root root -" ; done)" | tee -a /usr/lib/tmpfiles.d/bootc-base-dirs.conf && \\')
-        self.lines.append('    echo "d /var/roothome 0700 root root -" | tee -a /usr/lib/tmpfiles.d/bootc-base-dirs.conf && \\')
-        self.lines.append('    echo "d /run/media 0755 root root -" | tee -a /usr/lib/tmpfiles.d/bootc-base-dirs.conf && \\')
-        self.lines.append('    printf "[composefs]\\nenabled = yes\\n[sysroot]\\nreadonly = true\\n" | tee "/usr/lib/ostree/prepare-root.conf"')
-        self.lines.append("")
-
-        # Step 6: Validate
-        self.lines.append("RUN bootc container lint")
-        self.lines.append("")
-        self.lines.append("LABEL containers.bootc 1")
-
-    def _process_bootcrew_gentoo(self, module: Dict[str, Any]):
-        """Gentoo bootc setup following bootcrew/gentoo-bootc pattern."""
-        # Step 1: Sync sources and select systemd-based profile
-        self.lines.append("# Sync sources and select systemd-based profile")
-        self.lines.append("RUN --mount=type=tmpfs,dst=/tmp emerge --sync --quiet && \\")
-        self.lines.append('    eselect profile list | grep -E -e "default.*[[:digit:]]/systemd" | grep -v 32  | awk \'{ print $1 }\' | grep -o [[:digit:]] | xargs eselect profile set && \\')
-        self.lines.append('    echo -e \'FEATURES="-ipc-sandbox -network-sandbox -pid-sandbox"\\nACCEPT_LICENSE="*"\\nUSE="dracut nftables"\' | tee -a /etc/portage/make.conf && \\')
-        self.lines.append('    echo "sys-apps/systemd boot" | tee -a /etc/portage/package.use/systemd && \\')
-
-        # Step 2: Install system dependencies + build bootc
-        deps = module.get("system-deps", [])
-        if deps:
-            deps_str = " ".join(deps)
-            self.lines.append(f"    emerge --verbose --deep --newuse @world && \\")
-            self.lines.append(f"    emerge --verbose {deps_str} && \\")
-        else:
-            self.lines.append("    emerge --verbose --deep --newuse @world && \\")
-            self.lines.append("    emerge --verbose app-arch/cpio btrfs-progs dev-vcs/git dosfstools linux-firmware rust skopeo sys-kernel/gentoo-kernel-bin systemd && \\")
-
-        # Step 3: Build custom ostree and bootc
-        self.lines.append('    git clone https://github.com/EWouters/gentoo gentoo -b ostree --depth 1 --single-branch && \\')
-        self.lines.append('    cd gentoo && ebuild --debug dev-util/ostree/ostree-2025.6.ebuild clean install merge && \\')
-        self.lines.append('    git clone "https://github.com/bootc-dev/bootc.git" /tmp/bootc && \\')
-        self.lines.append('    make -C /tmp/bootc bin install-all install-initramfs-dracut && \\')
-        self.lines.append('    rm -rf /var/db')
-        self.lines.append("")
-
-        # Step 4: Generate initramfs and copy vmlinuz
-        self.lines.append("# Generate initramfs and copy vmlinuz from kernel sources")
-        self.lines.append('RUN echo "$(basename "$(find /usr/lib/modules -maxdepth 1 -type d | grep -v -E "*.img" | tail -n 1)")" > kernel_version.txt && \\')
-        self.lines.append('    dracut --force --no-hostonly --reproducible --zstd --verbose --kver "$(cat kernel_version.txt)"  "/usr/lib/modules/$(cat kernel_version.txt)/initramfs.img" && \\')
-        self.lines.append('    rm "/usr/lib/modules/$(cat kernel_version.txt)/vmlinuz" && \\')
-        self.lines.append('    cp -f /usr/src/linux-$(cat kernel_version.txt)/arch/*/boot/bzImage "/usr/lib/modules/$(cat kernel_version.txt)/vmlinuz" && \\')
-        self.lines.append('    rm kernel_version.txt')
-        self.lines.append("")
-
-        # Step 5: Restructure filesystem
-        self.lines.append("# Necessary for general behavior expected by image-based systems")
-        self.lines.append('RUN sed -i \'s|^HOME=.*|HOME=/var/home|\' "/etc/default/useradd" && \\')
-        self.lines.append('    rm -rf /boot /home /root /usr/local /srv && \\')
-        self.lines.append('    mkdir -p /var /sysroot /boot /usr/lib/ostree && \\')
-        self.lines.append('    ln -s var/opt /opt && \\')
-        self.lines.append('    ln -s var/roothome /root && \\')
-        self.lines.append('    ln -s var/home /home && \\')
-        self.lines.append('    ln -s sysroot/ostree /ostree && \\')
-        self.lines.append('    echo "$(for dir in opt usrlocal home srv mnt ; do echo "d /var/$dir 0755 root root -" ; done)" | tee -a /usr/lib/tmpfiles.d/bootc-base-dirs.conf && \\')
-        self.lines.append('    echo "d /var/roothome 0700 root root -" | tee -a /usr/lib/tmpfiles.d/bootc-base-dirs.conf && \\')
-        self.lines.append('    echo "d /run/media 0755 root root -" | tee -a /usr/lib/tmpfiles.d/bootc-base-dirs.conf && \\')
-        self.lines.append('    printf "[composefs]\\nenabled = yes\\n[sysroot]\\nreadonly = true\\n" | tee "/usr/lib/ostree/prepare-root.conf"')
-        self.lines.append("")
-
-        # Step 6: Validate
-        self.lines.append("RUN bootc container lint")
-        self.lines.append("")
-        self.lines.append("LABEL containers.bootc 1")
-
-    def _process_bootcrew_opensuse(self, module: Dict[str, Any]):
-        """OpenSUSE Tumbleweed bootc setup following bootcrew/opensuse-bootc pattern."""
-        # Step 1: Install system dependencies
-        deps = module.get("system-deps", [])
-        if deps:
-            self.lines.append("# Install system dependencies")
-            deps_str = " ".join(deps)
-            self.lines.append(f"RUN zypper install -y \\")
-            # Format as multi-line for readability
-            deps_list = deps_str.split()
-            for i, dep in enumerate(deps_list):
-                if i < len(deps_list) - 1:
-                    self.lines.append(f"      {dep} \\")
-                else:
-                    self.lines.append(f"      {dep} && \\")
-            self.lines.append("    zypper clean -a")
-            self.lines.append("")
-
-        # Step 2: Build bootc from source
-        self.lines.append("# Build bootc from source")
-        self.lines.append('ENV DEV_DEPS="git rust make cargo gcc-devel glib2-devel libzstd-devel openssl-devel ostree-devel"')
-        self.lines.append("RUN --mount=type=tmpfs,dst=/tmp --mount=type=tmpfs,dst=/root \\")
-        self.lines.append("    zypper install -y ${DEV_DEPS} && \\")
-        self.lines.append('    git clone "https://github.com/bootc-dev/bootc.git" /tmp/bootc && \\')
-        self.lines.append('    make -C /tmp/bootc bin install-all install-initramfs-dracut && \\')
-        self.lines.append('    sh -c \'export KERNEL_VERSION="$(basename "$(find /usr/lib/modules -maxdepth 1 -type d | grep -v -E "*.img" | tail -n 1)")" && \\')
-        self.lines.append('    dracut --force --no-hostonly --force-drivers erofs --reproducible --zstd --verbose --kver "$KERNEL_VERSION"  "/usr/lib/modules/$KERNEL_VERSION/initramfs.img"\' && \\')
-        self.lines.append("    zypper remove -y ${DEV_DEPS} && \\")
-        self.lines.append("    zypper clean -a")
-        self.lines.append('ENV DEV_DEPS=""')
-        self.lines.append("")
-
-        # Step 3: Restructure filesystem
-        self.lines.append("# Necessary for general behavior expected by image-based systems")
-        self.lines.append('RUN echo "HOME=/var/home" | tee "/etc/default/useradd" && \\')
-        self.lines.append('    rm -rf /boot /home /root /usr/local /srv && \\')
-        self.lines.append('    mkdir -p /var /sysroot /boot /usr/lib/ostree && \\')
-        self.lines.append('    ln -s var/opt /opt && \\')
-        self.lines.append('    ln -s var/roothome /root && \\')
-        self.lines.append('    ln -s var/home /home && \\')
-        self.lines.append('    ln -s sysroot/ostree /ostree && \\')
-        self.lines.append('    echo "$(for dir in opt usrlocal home srv mnt ; do echo "d /var/$dir 0755 root root -" ; done)" | tee -a /usr/lib/tmpfiles.d/bootc-base-dirs.conf && \\')
-        self.lines.append('    echo "d /var/roothome 0700 root root -" | tee -a /usr/lib/tmpfiles.d/bootc-base-dirs.conf && \\')
-        self.lines.append('    echo "d /run/media 0755 root root -" | tee -a /usr/lib/tmpfiles.d/bootc-base-dirs.conf && \\')
-        self.lines.append('    printf "[composefs]\\nenabled = yes\\n[sysroot]\\nreadonly = true\\n" | tee "/usr/lib/ostree/prepare-root.conf"')
-        self.lines.append("")
-
-        # Step 4: Necessary labels
-        self.lines.append("LABEL containers.bootc 1")
-
     def _evaluate_condition(self, condition: str) -> bool:
         """Evaluate a condition string against current context."""
         # Simple condition evaluation
@@ -980,28 +665,6 @@ def determine_base_image(config: Dict[str, Any], image_type: str, version: str) 
     if image_type in FEDORA_ATOMIC_VARIANTS:
         return f"{FEDORA_ATOMIC_VARIANTS[image_type]}:{version}"
 
-    # The legacy 'bootcrew' alias referred to non-Fedora bootc builds and is
-    # now deprecated. Require callers to migrate to linux-bootc so we don't
-    # silently fall back to Fedora defaults.
-    if image_type == "bootcrew":
-        raise ValueError(
-            "image-type 'bootcrew' is deprecated; use 'linux-bootc' with an explicit base-image"
-        )
-
-    # Linux bootc distros are explicitly supplied FROM images, not a standalone
-    # distro family. Require the caller to set base-image when using the
-    # linux-bootc alias to avoid silently falling back to Fedora defaults.
-    if image_type == "linux-bootc":
-        if not preferred_base:
-            raise ValueError(
-                "image-type 'linux-bootc' requires base-image to reference the desired bootc distro"
-            )
-        return ensure_version_tag(preferred_base)
-
-    # Linux bootc distros - use distro configs
-    if image_type in LINUX_BOOTC_DISTROS:
-        return LINUX_BOOTC_DISTROS[image_type].base_image_template
-
     # Use config default
     return preferred_base or f"quay.io/fedora/fedora-bootc:{version}"
 
@@ -1041,11 +704,7 @@ Examples:
     parser.add_argument("-o", "--output", type=Path,
                         help="Output Containerfile path (default: stdout)")
     # Build the list of all supported image types dynamically
-    all_image_types = (
-        ["fedora-bootc", "linux-bootc", "bootcrew"] +
-        list(FEDORA_ATOMIC_VARIANTS.keys()) +
-        list(LINUX_BOOTC_DISTROS.keys())
-    )
+    all_image_types = ["fedora-bootc", *FEDORA_ATOMIC_VARIANTS.keys()]
 
     parser.add_argument("--image-type", choices=all_image_types,
                         help="Base image type (default: from config)")
@@ -1091,15 +750,8 @@ Examples:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    # Determine distro based on image_type
-    if image_type in LINUX_BOOTC_DISTROS:
-        distro = image_type
-    elif image_type == "linux-bootc":
-        distro = config.get("distro", "linux-bootc")
-    elif image_type == "fedora-bootc" or image_type in FEDORA_ATOMIC_VARIANTS:
-        distro = "fedora"
-    else:
-        distro = config.get("distro", "fedora")
+    # Only Fedora-based images are supported
+    distro = "fedora"
 
     # Extract desktop configuration
     desktop_config = config.get("desktop", {})

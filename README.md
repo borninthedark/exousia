@@ -126,8 +126,8 @@ python api/webhook_trigger.py --yaml sway-bootc.yml --distro-version 44
 # Build with combined DE+WM (e.g., LXQt with Sway)
 python api/webhook_trigger.py --de lxqt --wm sway --distro-version 43
 
-# Build with Debian
-python api/webhook_trigger.py --os debian --image-type debian-bootc --wm sway --distro-version 12
+# Build Fedora LXQt (fedora-lxqt)
+python api/webhook_trigger.py --os fedora --image-type fedora-lxqt --de lxqt --distro-version 44
 
 # Disable Plymouth
 python api/webhook_trigger.py --yaml sway-atomic.yml --disable-plymouth --verbose

@@ -182,13 +182,5 @@ To switch between different desktop environments or window managers:
 
 ## Distro Support
 
-The package loader supports multiple distributions through the transpiler:
-
-- Fedora (fedora-bootc, fedora-sway-atomic, fedora-kinoite, etc.)
-- Arch (via bootcrew)
-- Debian (via bootcrew)
-- Ubuntu (via bootcrew)
-- openSUSE (via bootcrew)
-- Gentoo (via bootcrew)
-
-Different package managers are automatically selected based on the distro.
+The package loader targets Fedora images, with configurations focused on Sway and LXQt builds.
+Different package managers are automatically selected based on the distro, though Fedora is the only supported target today.

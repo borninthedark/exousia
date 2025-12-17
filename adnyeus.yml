@@ -131,7 +131,7 @@ modules:
   # Automatically loads packages based on desktop.window_manager or desktop.desktop_environment
   - type: package-loader
     window_manager: sway  # Loaded from packages/window-managers/sway.yml
-    include_common: true  # Also loads packages/common/base.yml
+    include_common: true  # Also loads packages/common/base.yml including Fedora Wayland build deps
 
   # Ensure custom Sway session assets are staged and verified without
   # relying on inline scripts, after packages have been applied.

@@ -44,6 +44,13 @@ development:
   - wireguard-tools
   - ripgrep
   - zoxide
+  - meson
+  - ninja-build
+  - pkg-config
+  - rust
+  - wayland-devel
+  - wayland-protocols-devel
+  - libxkbcommon-devel
 
 # Virtualization
 virtualization:

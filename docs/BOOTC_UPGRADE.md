@@ -285,7 +285,6 @@ sudo cp ~/.config/containers/auth.json /etc/ostree/auth.json
 - `quay.io/fedora/fedora-bootc`
 - `quay.io/fedora/fedora-sway-atomic`
 - `quay.io/fedora-ostree-desktops/*-atomic`
-- `ghcr.io/bootcrew/*`
 
 Always pin these bases to a specific OS or desktop environment version. When a
 supported image reference is untagged, the tooling will automatically append
