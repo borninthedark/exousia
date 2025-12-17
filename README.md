@@ -10,15 +10,17 @@ Build custom, container-based immutable operating systems using the [**bootc pro
 
 **Note:** The "Reiatsu" badge is inspired by *BLEACH* by **Tite Kubo** — used as a playful status indicator with full acknowledgment.
 
+Exousia builds custom, container-based immutable operating systems using [bootc](https://github.com/bootc-dev/bootc) and GitHub Actions. It focuses on reproducible, security-conscious laptop images with fast iteration cycles.
+
 ## Table of Contents
 
 - [Highly Experimental Disclaimer](#highly-experimental-disclaimer)
-- [Philosophy: Exousia](#philosophy-exousia)
-- [CI/CD Workflow](#cicd-workflow-fedora-bootc-devsec-ci)
-- [Triggering Builds Remotely](#triggering-builds-remotely)
+- [Project Snapshot](#project-snapshot)
+- [Build & Release Workflow](#build--release-workflow)
 - [Getting Started](#getting-started)
-- [Customization](#customization)
-- [Package Validation](#package-validation-and-dependency-tooling)
+- [Triggering Builds Remotely](#triggering-builds-remotely)
+- [Customizing Builds](#customizing-builds)
+- [Package Validation & Dependency Tooling](#package-validation--dependency-tooling)
 - [Required Secrets](#required-secrets)
 - [Documentation](#documentation)
 - [External Resources](#external-resources)
@@ -34,24 +36,55 @@ Build custom, container-based immutable operating systems using the [**bootc pro
 
 ---
 
-## Philosophy: Exousia
+## Project Snapshot
 
-Exousia (ἐξουσία) is Greek for "authority" and "power."
-
-A personal DevSecOps-hardened laptop OS project using bootc. Supports both bootc and atomic base images with automated testing.
+- **Purpose:** Declarative laptop images with a DevSecOps-friendly workflow.
+- **Outputs:** bootc base images and atomic desktops (e.g., Sway, KDE) published to GHCR and Docker Hub.
+- **Tooling:** FastAPI webhook entrypoint, Python helpers in `tools/`, and YAML-based blueprints.
+- **Security/Quality:** Linting, scanning, signing, and automated tests baked into CI.
 
 ---
 
-## CI/CD Workflow: Fedora Bootc DevSec CI
+## Build & Release Workflow
 
-Triggered on: pushes to `main`, PRs, nightly schedule (`10 3 * * *` UTC), manual dispatch, and `repository_dispatch` events.
+**Triggers:** pushes to `main`, pull requests, nightly schedule (`10 3 * * *` UTC), manual dispatch, and `repository_dispatch` events.
 
-| Stage | Description |
-|-------|-------------|
-| **Build** | Hadolint linting, dynamic tagging, Buildah build |
+| Stage | What happens |
+|-------|--------------|
+| **Build** | Hadolint linting, dynamic tagging, Buildah image build |
 | **Test** | Bats integration tests, ShellCheck, `bootc container lint` |
 | **Scan** | Trivy vulnerability scan, Semgrep static analysis |
-| **Push & Sign** | Push to GHCR/Docker Hub, Cosign signing |
+| **Push & Sign** | Push to GHCR/Docker Hub and sign with Cosign |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Fedora system (Atomic variant recommended)
+- Access to Docker Hub or GHCR
+- Basic familiarity with bootc/container workflows
+
+### Use a Published Image
+
+```bash
+# From Docker Hub (recommended)
+sudo bootc switch docker.io/borninthedark/exousia:latest
+sudo bootc upgrade && sudo systemctl reboot
+
+# From GHCR
+sudo bootc switch ghcr.io/borninthedark/exousia:latest
+sudo bootc upgrade && sudo systemctl reboot
+```
+
+### Build Locally
+
+```bash
+git clone https://github.com/borninthedark/exousia.git
+cd exousia
+make build
+```
 
 ---
 
@@ -147,39 +180,9 @@ View builds: **https://github.com/borninthedark/exousia/actions** | 📚 [Webhoo
 
 ---
 
-## Getting Started
+## Customizing Builds
 
-### Prerequisites
-
-- Fedora system (preferably Atomic variant)
-- Docker Hub or GHCR access
-- Basic bootc/container knowledge
-
-### Using Pre-built Images
-
-```bash
-# From Docker Hub (recommended)
-sudo bootc switch docker.io/borninthedark/exousia:latest
-sudo bootc upgrade && sudo systemctl reboot
-
-# From GHCR
-sudo bootc switch ghcr.io/borninthedark/exousia:latest
-sudo bootc upgrade && sudo systemctl reboot
-```
-
-### Building Locally
-
-```bash
-git clone https://github.com/borninthedark/exousia.git
-cd exousia
-make build
-```
-
----
-
-## Customization
-
-### Switching Versions
+### Switch Blueprint Versions
 
 ```bash
 # Via webhook API
@@ -189,10 +192,10 @@ python api/webhook_trigger.py --image-type fedora-sway-atomic --distro-version 4
 
 Or use **Actions → Fedora Bootc DevSec CI → Run workflow** in the GitHub UI.
 
-### Modifying Packages
+### Adjust Packages
 
-| Image Type | Location | Example |
-|------------|----------|---------|
+| Image Type | Where to edit | What to change |
+|------------|---------------|----------------|
 | bootc | `packages/window-managers/*.yml` | Add to `utilities:` list |
 | atomic | `yaml-definitions/*.yml` | Add to `install:` list |
 
@@ -211,7 +214,7 @@ sudo dnf update --refresh
 Note: `wallust` requires Hyprland COPR; `nwg-displays` requires nwg-shell COPR.
 </details>
 
-### Custom Configuration
+### Configuration Files
 
 | Directory | Purpose |
 |-----------|---------|
@@ -222,24 +225,19 @@ Note: `wallust` requires Hyprland COPR; `nwg-displays` requires nwg-shell COPR.
 | `custom-configs/rancher/rke2/` | RKE2 Kubernetes config |
 | `custom-scripts/` | Scripts copied to `/usr/local/bin/` |
 
-### Sway Configuration
+### Desktop & Boot Experience
 
-Uses `sway-config-minimal` for compatibility with headless/container builds. Follows Fedora's layered config system:
-
-- `/usr/share/sway/config.d/*.conf` — Packaged configs
-- `/etc/sway/config.d/*.conf` — System overrides
-- `~/.config/sway/config.d/*.conf` — User overrides
-
-See [Fedora Sericea Configuration Guide](https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/).
-
-### Plymouth & Display Managers
-
-- **Plymouth**: Set `enable_plymouth: true` in YAML, themes in `custom-configs/plymouth/themes/`
-- **Display Manager**: bootc uses greetd, atomic uses SDDM
+- **Sway** uses `sway-config-minimal` for headless/container compatibility.
+  - `/usr/share/sway/config.d/*.conf` — Packaged configs
+  - `/etc/sway/config.d/*.conf` — System overrides
+  - `~/.config/sway/config.d/*.conf` — User overrides
+  - See [Fedora Sericea Configuration Guide](https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/).
+- **Plymouth**: Set `enable_plymouth: true` in YAML; themes live in `custom-configs/plymouth/themes/`.
+- **Display managers**: bootc images use greetd; atomic images use SDDM.
 
 ---
 
-## Package Validation and Dependency Tooling
+## Package Validation & Dependency Tooling
 
 ### Package Dependency Checker
 
@@ -360,4 +358,4 @@ MIT License — see LICENSE file.
 
 **Built with bootc**
 
-*Generated on 2025-12-13 15:20:39 UTC*
+*Generated on 2025-12-16 05:13:20 UTC*
