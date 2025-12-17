@@ -30,28 +30,18 @@ class YamlSelectorService:
     DISTRO_DEFINITIONS = {
         "fedora-bootc": "sway-bootc.yml",
         "fedora-atomic": "sway-atomic.yml",
-        "fedora-kinoite": "fedora-kinoite.yml",
-        "arch": "arch-bootc.yml",
-        "debian": "debian-bootc.yml",
-        "ubuntu": "ubuntu-bootc.yml",
-        "opensuse": "opensuse-bootc.yml",
+        "fedora-sway-atomic": "sway-atomic.yml",
     }
 
     # Mapping of desktop environments to their preferred definitions
     DE_DEFINITIONS = {
-        "kde": "fedora-kinoite.yml",
-        "mate": "fedora-mate.yml",
-        "lxqt": "sway-bootc.yml",  # LXQt can use bootc base, packages defined separately
+        "lxqt": "sway-bootc.yml",  # LXQt leverages the bootc base with LXQt packages
     }
 
     # Mapping of window managers to their preferred definitions
     WM_DEFINITIONS = {
         "sway": {
             "bootc": "sway-bootc.yml",
-            "atomic": "sway-atomic.yml",
-        },
-        "hyprland": {
-            "bootc": "sway-bootc.yml",  # Can be customized for hyprland
             "atomic": "sway-atomic.yml",
         },
     }
@@ -123,15 +113,6 @@ class YamlSelectorService:
         Returns:
             Filename of the selected YAML definition
         """
-        # The linux-bootc alias represents non-Fedora bootc builds that rely on
-        # per-distro definitions. If the caller provides an OS/distro, prefer
-        # that mapping immediately instead of attempting image-type heuristics
-        # that only apply to Fedora variants.
-        if image_type == "linux-bootc" and os and os in self.DISTRO_DEFINITIONS:
-            distro_def = self.DISTRO_DEFINITIONS[os]
-            if (self.definitions_dir / distro_def).exists():
-                return distro_def
-
         # Priority 1: Desktop environment
         if desktop_environment:
             de_def = self.DE_DEFINITIONS.get(desktop_environment.lower())

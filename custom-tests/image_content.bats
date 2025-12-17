@@ -79,11 +79,6 @@ is_fedora() {
     [[ "$OS_ID" == "fedora" ]] || [[ "$BUILD_TYPE" =~ ^fedora- ]]
 }
 
-# Helper function to check if running bootcrew distro
-is_bootcrew() {
-    [[ "$BUILD_TYPE" =~ ^(arch|gentoo|debian|ubuntu|opensuse|proxmox)$ ]]
-}
-
 # Helper function to check if Plymouth is enabled
 is_plymouth_enabled() {
     [[ "${ENABLE_PLYMOUTH:-true}" == "true" ]]
@@ -107,14 +102,6 @@ assert_config_present() {
 get_package_manager() {
     if is_fedora; then
         echo "rpm"
-    elif [[ "$OS_ID" == "arch" ]]; then
-        echo "pacman"
-    elif [[ "$OS_ID" =~ ^(debian|ubuntu)$ ]]; then
-        echo "dpkg"
-    elif [[ "$OS_ID" =~ ^(opensuse|suse)$ ]]; then
-        echo "rpm"
-    elif [[ "$OS_ID" == "gentoo" ]]; then
-        echo "portage"
     else
         echo "unknown"
     fi
@@ -153,12 +140,11 @@ get_package_manager() {
     fi
 
     # OS-specific version validation
-    if is_fedora; then
-        [[ "$OS_VERSION_ID" =~ ^(41|42|43|44|rawhide)$ ]]
-    else
-        # For bootcrew distros, just check it's not empty
-        [[ -n "$OS_VERSION_ID" ]]
+    if ! is_fedora; then
+        skip "Test only applies to Fedora-based images"
     fi
+
+    [[ "$OS_VERSION_ID" =~ ^(41|42|43|44|rawhide)$ ]]
 }
 
 # --- CI container auth config checks ---

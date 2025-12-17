@@ -21,7 +21,6 @@ ContainerfileGenerator = yaml_to_containerfile.ContainerfileGenerator
 BuildContext = yaml_to_containerfile.BuildContext
 determine_base_image = yaml_to_containerfile.determine_base_image
 FEDORA_ATOMIC_VARIANTS = yaml_to_containerfile.FEDORA_ATOMIC_VARIANTS
-LINUX_BOOTC_DISTROS = yaml_to_containerfile.LINUX_BOOTC_DISTROS
 
 
 def test_generator_is_stateless():
@@ -170,11 +169,11 @@ def test_custom_base_image_sources_are_respected():
     config = {
         "name": "custom-base",
         "description": "Custom base image test",
-        "base-image": "ghcr.io/bootcrew/sericea-atomic:43",
+        "base-image": "quay.io/fedora/fedora-lxqt:43",
     }
 
-    base = determine_base_image(config, "linux-bootc", "43")
-    assert base == "ghcr.io/bootcrew/sericea-atomic:43"
+    base = determine_base_image(config, "fedora-lxqt", "43")
+    assert base == "quay.io/fedora/fedora-lxqt:43"
 
     sway_config = {
         "name": "fedora-sway",
@@ -191,15 +190,6 @@ def test_custom_base_image_sources_are_respected():
 def test_custom_bases_without_tags_are_versioned():
     """Custom bases should pick up the requested version when untagged."""
 
-    untagged_bootcrew = {
-        "name": "bootcrew-no-tag",
-        "description": "Missing tag should be appended",
-        "base-image": "ghcr.io/bootcrew/sericea-atomic",
-    }
-
-    base = determine_base_image(untagged_bootcrew, "linux-bootc", "43")
-    assert base == "ghcr.io/bootcrew/sericea-atomic:43"
-
     untagged_sway = {
         "name": "fedora-sway-no-tag",
         "description": "Sway atomic images also require explicit tags",
@@ -208,6 +198,15 @@ def test_custom_bases_without_tags_are_versioned():
 
     sway_base = determine_base_image(untagged_sway, "fedora-sway-atomic", "43")
     assert sway_base == "quay.io/fedora/fedora-sway-atomic:43"
+
+    untagged_lxqt = {
+        "name": "fedora-lxqt-no-tag",
+        "description": "LXQt atomic images also require explicit tags",
+        "base-image": "quay.io/fedora/fedora-lxqt",
+    }
+
+    lxqt_base = determine_base_image(untagged_lxqt, "fedora-lxqt", "43")
+    assert lxqt_base == "quay.io/fedora/fedora-lxqt:43"
 
     print("✓ Untagged custom bases are pinned to the requested version")
 
@@ -263,70 +262,6 @@ def test_script_comments_do_not_chain_into_next_run():
     assert "echo 'first'; RUN" not in snippet, "Comments should not chain into the following RUN instruction"
 
     print("✓ Script comments do not leak into subsequent RUN commands")
-
-
-def test_linux_bootc_alias_requires_base_image():
-    """The linux-bootc alias should not silently default to Fedora bases."""
-
-    config = {
-        "name": "linux-bootc-alias-without-base",
-        "description": "Missing base-image should be rejected",
-    }
-
-    with pytest.raises(ValueError):
-        determine_base_image(config, "linux-bootc", "43")
-
-    print("✓ linux-bootc alias enforces explicit base-image selection")
-
-
-def test_bootcrew_alias_is_deprecated():
-    """Calling the old bootcrew alias should surface a deprecation error."""
-
-    config = {
-        "name": "bootcrew-deprecated",
-        "description": "Deprecated alias should fail fast",
-    }
-
-    with pytest.raises(ValueError):
-        determine_base_image(config, "bootcrew", "43")
-
-    print("✓ bootcrew alias is blocked with a deprecation notice")
-
-
-def test_linux_bootc_distro_support():
-    """Test that Linux bootc distros are properly supported."""
-    config = {
-        "name": "arch-bootc",
-        "description": "Arch bootc test",
-        "image-type": "arch",
-        "base-image": "docker.io/archlinux/archlinux:latest",
-        "modules": [
-            {
-                "type": "bootcrew-setup",
-                "system-deps": ["base", "linux", "ostree"]
-            }
-        ]
-    }
-
-    context = BuildContext(
-        image_type="arch",
-        fedora_version="",
-        enable_plymouth=False,
-        enable_rke2=False,
-        use_upstream_sway_config=False,
-        base_image="docker.io/archlinux/archlinux:latest",
-        distro="arch"
-    )
-
-    generator = ContainerfileGenerator(config, context)
-    output = generator.generate()
-
-    assert "FROM docker.io/archlinux/archlinux:latest" in output
-    assert "bootc" in output.lower()  # Should mention bootc
-    assert "ostree" in output.lower()  # Should mention ostree
-    assert "pacman" in output  # Arch package manager
-
-    print("✓ Linux bootc distros are supported correctly")
 
 
 def test_fedora_atomic_variants():

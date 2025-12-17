@@ -36,16 +36,16 @@ def resolve_yaml_config(
 
     Args:
         input_yaml_config: Explicit path or "auto" for auto-selection
-        target_image_type: Image type (e.g., "fedora-bootc", "fedora-atomic")
-        os_name: OS name for selection (e.g., "fedora", "arch")
-        window_manager: Window manager for selection (e.g., "sway", "hyprland")
-        desktop_environment: Desktop environment for selection (e.g., "kde", "mate")
+        target_image_type: Image type (e.g., "fedora-bootc", "fedora-sway-atomic")
+        os_name: OS name for selection (Fedora only)
+        window_manager: Window manager for selection (e.g., "sway")
+        desktop_environment: Desktop environment for selection (e.g., "lxqt")
 
     Returns:
         Resolved Path to YAML config file
     """
-    if target_image_type == "linux-bootc" and not os_name:
-        print("::error::INPUT_OS must be set for linux-bootc builds to select the distro definition")
+    if target_image_type == "linux-bootc":
+        print("::error::linux-bootc builds are no longer supported; use Fedora image types instead")
         sys.exit(1)
 
     if input_yaml_config != "auto":
@@ -129,12 +129,6 @@ def resolve_yaml_config(
         except Exception as e:
             print(f"::warning::YamlSelectorService failed: {e}")
 
-    if target_image_type == "linux-bootc" and os_name:
-        distro_candidate = Path(f"yaml-definitions/{os_name}-bootc.yml")
-        if distro_candidate.exists():
-            print(f"Fallback: using {distro_candidate}")
-            return distro_candidate.resolve()
-
     # Fallback logic if YamlSelectorService unavailable or failed
     candidate = Path(f"yaml-definitions/{target_image_type}.yml")
     if candidate.exists():
@@ -146,7 +140,6 @@ def resolve_yaml_config(
         "fedora-bootc": "sway-bootc.yml",
         "fedora-sway-atomic": "sway-atomic.yml",
         "fedora-atomic": "sway-atomic.yml",
-        "fedora-kinoite": "fedora-kinoite.yml",
     }
 
     if target_image_type in fallback_map:
@@ -249,15 +242,7 @@ def main() -> None:
     enable_plymouth = input_enable_plymouth == "true"
     enable_rke2 = input_enable_rke2 == "true"
 
-    # Extract OS name from image type if not explicitly provided
     os_name = input_os
-    if not os_name and target_image_type:
-        # Extract OS from image type (e.g., "fedora-bootc" -> "fedora")
-        os_name = target_image_type.split("-")[0] if "-" in target_image_type else target_image_type
-
-    if target_image_type == "linux-bootc" and not os_name:
-        print("::error::INPUT_OS is required for linux-bootc builds")
-        sys.exit(1)
 
     print(f"Resolved target: {target_image_type} version {target_version}")
     print(f"Plymouth enabled: {enable_plymouth}")
