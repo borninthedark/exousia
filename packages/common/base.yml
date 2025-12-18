@@ -39,7 +39,11 @@ development:
   - wf-recorder
   - lsd
   - fzf
-  - direnv
+  - direnv 
+  - libxml2 
+  - libxslt
+  - libxml2-devel 
+  - libxslt-devel
   - distrobox
   - wireguard-tools
   - ripgrep
