@@ -51,6 +51,12 @@ development:
   - wayland-devel
   - wayland-protocols-devel
   - libxkbcommon-devel
+  - mesa-libEGL
+  - mesa-libEGL-devel
+  - mesa-libwayland-egl
+  - mesa-libwayland-egl-devel
+  - mesa-libGLES
+  - mesa-libGLES-devel
 
 # Virtualization
 virtualization:
