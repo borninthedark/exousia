@@ -15,7 +15,6 @@ core_utilities:
   - cargo
   - git
   - htop
-  - btop
   - etckeeper
   - fastfetch
   - glances
