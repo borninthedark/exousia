@@ -78,7 +78,7 @@ def trigger_build(
             - Full YAML content (will be base64 encoded)
             - If None, auto-selected based on OS/DE/WM inputs
         os: Operating system (e.g., 'fedora', 'arch', 'debian') for auto-selection
-        window_manager: Window manager (e.g., 'sway', 'hyprland') - can be combined with desktop_environment
+        window_manager: Window manager (e.g., 'sway') - can be combined with desktop_environment
         desktop_environment: Desktop environment (e.g., 'kde', 'mate', 'lxqt') - can be combined with window_manager
         verbose: Print detailed information
 
@@ -226,7 +226,7 @@ Examples:
   python webhook_trigger.py --token ghp_xxxxx --yaml /path/to/my-config.yml
 
   # Combine options
-  python webhook_trigger.py --token ghp_xxxxx --yaml sway-bootc.yml --wm hyprland --distro-version 44
+  python webhook_trigger.py --token ghp_xxxxx --yaml sway-bootc.yml --wm sway --distro-version 44
 
   # Use environment variable for token
   export GITHUB_TOKEN=ghp_xxxxx
@@ -294,8 +294,8 @@ Security Notes:
         "--window-manager",
         "--wm",
         dest="window_manager",
-        choices=['sway', 'hyprland'],
-        help="Window manager (e.g., 'sway', 'hyprland') - can be combined with --de"
+        choices=['sway'],
+        help="Window manager (e.g., 'sway') - can be combined with --de"
     )
     parser.add_argument(
         "--desktop-environment",

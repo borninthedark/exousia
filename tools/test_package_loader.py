@@ -39,20 +39,6 @@ def test_load_sway_packages():
     print("✓ Sway packages load correctly")
 
 
-def test_load_hyprland_packages():
-    """Test loading Hyprland window manager packages."""
-    loader = PackageLoader()
-
-    packages = loader.load_wm("hyprland")
-
-    assert isinstance(packages, list), "Should return a list of packages"
-    assert len(packages) > 0, "Should have packages"
-    assert "hyprland" in packages, "Should include hyprland package"
-    assert "waybar" in packages, "Should include waybar package"
-
-    print("✓ Hyprland packages load correctly")
-
-
 def test_load_common_packages():
     """Test loading common base packages."""
     loader = PackageLoader()
@@ -152,7 +138,6 @@ def test_list_available_wms():
 
     assert isinstance(wms, list), "Should return a list"
     assert "sway" in wms, "Should include sway"
-    assert "hyprland" in wms, "Should include hyprland"
 
     print("✓ Listing available WMs works correctly")
 
@@ -187,7 +172,6 @@ def test_no_duplicate_packages():
 if __name__ == "__main__":
     test_package_loader_initialization()
     test_load_sway_packages()
-    test_load_hyprland_packages()
     test_load_common_packages()
     test_load_remove_packages()
     test_get_package_list_with_wm()

@@ -184,7 +184,7 @@ Examples:
   python3 validate_installed_packages.py --yaml adnyeus.yml --distro fedora --json
 
   # Verbose output
-  python3 validate_installed_packages.py --wm hyprland --verbose
+  python3 validate_installed_packages.py --wm sway --verbose
         """
     )
 

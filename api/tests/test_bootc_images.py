@@ -49,37 +49,6 @@ class TestFedoraBootcImages:
                 assert data["fedora_version"] == "43"
 
     @patch("api.routers.build.GitHubService")
-    async def test_fedora_bootc_hyprland(self, mock_github_service, client: AsyncClient):
-        """Test Fedora bootc with Hyprland window manager."""
-        mock_workflow_run = AsyncMock()
-        mock_workflow_run.id = 10002
-        mock_github = AsyncMock()
-        mock_github.trigger_workflow = AsyncMock(return_value=mock_workflow_run)
-        mock_github_service.return_value = mock_github
-
-        with patch("api.routers.build.settings") as mock_settings:
-            mock_settings.GITHUB_TOKEN = "fake_token"
-            mock_settings.GITHUB_REPO = "test/repo"
-            mock_settings.GITHUB_WORKFLOW_FILE = "build.yml"
-            mock_settings.BUILD_STATUS_POLLING_ENABLED = False
-            mock_settings.YAML_DEFINITIONS_DIR = __import__("pathlib").Path("yaml-definitions")
-
-            response = await client.post(
-                "/api/build/trigger",
-                json={
-                    "image_type": "fedora-bootc",
-                    "fedora_version": "43",
-                    "window_manager": "hyprland",
-                    "enable_plymouth": True,
-                    "ref": "main",
-                },
-            )
-
-            if response.status_code == 202:
-                data = response.json()
-                assert data["image_type"] == "fedora-bootc"
-
-    @patch("api.routers.build.GitHubService")
     async def test_fedora_bootc_kde(self, mock_github_service, client: AsyncClient):
         """Test Fedora bootc with KDE desktop environment."""
         mock_workflow_run = AsyncMock()

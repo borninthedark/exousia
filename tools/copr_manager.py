@@ -14,12 +14,6 @@ import subprocess
 
 # COPR repositories needed for specific packages
 COPR_REPOS = {
-    'hyprland': {
-        'owner': 'solopasha',
-        'repo': 'hyprland',
-        'packages': ['hyprland', 'hyprlock', 'hypridle', 'hyprpaper', 'hyprsunset', 'hyprpolkitagent'],
-        'description': 'Hyprland compositor and utilities'
-    },
     'swaync': {
         'owner': 'erikreider',
         'repo': 'SwayNotificationCenter',
@@ -252,17 +246,14 @@ Examples:
   # Check Fedora version
   python3 copr_manager.py --check-version
 
-  # List COPR repos needed for Hyprland
-  python3 copr_manager.py --packages hyprland hyprlock hypridle
-
   # Enable COPR repos for packages
-  sudo python3 copr_manager.py --packages hyprland swaync --enable
+  sudo python3 copr_manager.py --packages swaync --enable
 
   # Enable specific COPR
-  sudo python3 copr_manager.py --enable-copr solopasha hyprland
+  sudo python3 copr_manager.py --enable-copr erikreider SwayNotificationCenter
 
   # Dry run (don't actually enable)
-  python3 copr_manager.py --packages hyprland --enable --dry-run
+  python3 copr_manager.py --packages swaync --enable --dry-run
         """
     )
 

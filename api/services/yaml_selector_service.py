@@ -108,7 +108,7 @@ class YamlSelectorService:
             os: Operating system/distro (e.g., "fedora", "arch", "debian")
             image_type: Image type (e.g., "fedora-bootc", "fedora-atomic")
             desktop_environment: Desktop environment (e.g., "kde", "mate")
-            window_manager: Window manager (e.g., "sway", "hyprland")
+            window_manager: Window manager (e.g., "sway")
 
         Returns:
             Filename of the selected YAML definition
