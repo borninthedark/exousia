@@ -5,7 +5,7 @@ Validate Installed Packages
 
 This script validates that packages from a YAML definition are actually installed
 in the container. It uses the package dependency checker to verify installation
-across different distros.
+for Fedora-based images.
 
 This is intended to be run inside the built container as part of the build workflow.
 """
@@ -26,16 +26,6 @@ except ImportError:
         """Fallback distro mapper."""
         if 'fedora' in image_type.lower():
             return 'fedora'
-        elif 'arch' in image_type.lower():
-            return 'arch'
-        elif 'debian' in image_type.lower() or 'proxmox' in image_type.lower():
-            return 'debian'
-        elif 'ubuntu' in image_type.lower():
-            return 'ubuntu'
-        elif 'opensuse' in image_type.lower():
-            return 'opensuse'
-        elif 'gentoo' in image_type.lower():
-            return 'gentoo'
         return None
 
 
@@ -195,8 +185,8 @@ Examples:
     parser.add_argument("--wm", type=str,
                        help="Window manager name to validate")
     parser.add_argument("--image-type", type=str,
-                       help="Image type (e.g., fedora-bootc, arch) - auto-maps to distro")
-    parser.add_argument("--distro", choices=["fedora", "arch", "debian", "ubuntu", "opensuse", "gentoo", "freebsd"],
+                       help="Image type (e.g., fedora-bootc) - auto-maps to distro")
+    parser.add_argument("--distro", choices=["fedora"],
                        help="Force specific distro (overrides --image-type)")
     parser.add_argument("--json", action="store_true",
                        help="Output results as JSON")

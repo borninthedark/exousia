@@ -291,19 +291,9 @@ def main() -> None:
 
     os_family = "unknown"
     os_version = "latest"
-    family_map = {
-        "arch": ("arch", "latest"),
-        "gentoo": ("gentoo", "latest"),
-        "debian": ("debian", "unstable"),
-        "ubuntu": ("ubuntu", "mantic"),
-        "opensuse": ("opensuse", "tumbleweed"),
-        "proxmox": ("proxmox", "unstable"),
-    }
 
     if target_image_type.startswith("fedora-"):
         os_family, os_version = "fedora", target_version
-    elif target_image_type in family_map:
-        os_family, os_version = family_map[target_image_type]
 
     github_output = os.environ.get("GITHUB_OUTPUT")
     if not github_output:

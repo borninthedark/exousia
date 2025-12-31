@@ -48,9 +48,8 @@ another_category:
 Package groups provide a convenient way to install sets of related packages on Fedora-based systems:
 
 - **Fedora distros**: Groups are installed via `dnf install -y @group-name`
-- **Other distros**: Groups are ignored, only individual packages are installed
-- **Supported on**: fedora-bootc, fedora-sway-atomic, fedora-kinoite, and all Fedora Atomic variants
-- **Not supported on**: Arch, Debian, Ubuntu, openSUSE, Gentoo
+- **Scope**: fedora-bootc, fedora-sway-atomic, fedora-kinoite, and all Fedora Atomic variants
+- **Other distros**: Previously listed options (Arch, Debian, Ubuntu, openSUSE, Gentoo) have been removed from the toolchain for now and will be revisited later.
 
 Example groups:
 - `@kde-desktop-environment` - Full KDE Plasma desktop

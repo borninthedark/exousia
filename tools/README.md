@@ -213,9 +213,9 @@ Conditions can be combined with `&&` (AND) and `||` (OR) operators.
 **Example:**
 ```yaml
 - type: script
-  condition: distro == "arch"
+  condition: distro == "fedora"
   scripts:
-    - pacman -Syu --noconfirm
+    - dnf update -y
 ```
 
 ## CI/CD Integration

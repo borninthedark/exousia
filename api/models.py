@@ -24,12 +24,6 @@ class ImageType(str, Enum):
     FEDORA_LXQT = "fedora-lxqt"
     FEDORA_MATE = "fedora-mate"
     FEDORA_XFCE = "fedora-xfce"
-    ARCH = "arch"
-    GENTOO = "gentoo"
-    DEBIAN = "debian"
-    UBUNTU = "ubuntu"
-    OPENSUSE = "opensuse"
-    PROXMOX = "proxmox"
 
 
 class BuildStatus(str, Enum):
@@ -133,7 +127,7 @@ class BuildTriggerRequest(BaseModel):
     config_id: Optional[int] = Field(None, description="Config ID to build (or use yaml_content/definition_filename)")
     yaml_content: Optional[str] = Field(None, description="YAML content to build (ad-hoc)")
     definition_filename: Optional[str] = Field(None, description="YAML definition filename from yaml-definitions/")
-    os: Optional[str] = Field(None, description="Operating system/distro (e.g., 'fedora', 'arch', 'debian') - used for auto-selection")
+    os: Optional[str] = Field(None, description="Operating system/distro (fedora only) - used for auto-selection")
     image_type: ImageType = Field(ImageType.FEDORA_SWAY_ATOMIC)
     fedora_version: str = Field("43")
     enable_plymouth: bool = Field(True)

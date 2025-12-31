@@ -191,13 +191,7 @@ Path traversal protection is enforced (e.g., `../../../etc/passwd` will be rejec
 - `fedora-mate` - Fedora MATE Atomic
 - `fedora-xfce` - Fedora Xfce Atomic
 
-**Bootcrew Distros:**
-- `arch` - Arch Linux bootc
-- `gentoo` - Gentoo bootc
-- `debian` - Debian bootc
-- `ubuntu` - Ubuntu bootc
-- `opensuse` - openSUSE bootc
-- `proxmox` - Proxmox bootc
+> **Note:** References to non-Fedora bootc distros have been shelved for a future iteration; the webhook now targets Fedora variants exclusively.
 
 ### Supported Distro Versions
 

@@ -19,12 +19,6 @@ def test_all_image_types_have_distro_mapping():
 def test_package_manager_resolution_matches_distro():
     expected_managers = {
         "fedora": "dnf",
-        "arch": "pacman",
-        "debian": "apt",
-        "ubuntu": "apt",
-        "opensuse": "zypper",
-        "gentoo": "emerge",
-        "freebsd": "pkg",
     }
 
     for image_type in ImageType:

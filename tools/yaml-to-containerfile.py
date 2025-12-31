@@ -54,7 +54,7 @@ class BuildContext:
     enable_rke2: bool
     use_upstream_sway_config: bool
     base_image: str
-    distro: str = "fedora"  # fedora, arch, gentoo, debian, ubuntu, opensuse, proxmox
+    distro: str = "fedora"  # fedora-only
     desktop_environment: str = ""  # kde, gnome, mate, etc.
     window_manager: str = ""  # sway, kwin, etc.
 

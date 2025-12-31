@@ -190,7 +190,7 @@ python api/webhook_trigger.py --image-type fedora-bootc --distro-version 44
 python api/webhook_trigger.py --image-type fedora-sway-atomic --distro-version 43
 ```
 
-Or use **Actions → Fedora Bootc DevSec CI → Run workflow** in the GitHub UI.
+Or use **Actions → Bootc DevSecOps Pipeline → Run workflow** in the GitHub UI.
 
 ### Adjust Packages
 
@@ -226,7 +226,7 @@ Or use **Actions → Fedora Bootc DevSec CI → Run workflow** in the GitHub UI.
 
 ### Package Dependency Checker
 
-Cross-distro package dependency translation and verification.
+Fedora-focused package dependency validation.
 
 ```bash
 python3 tools/package_dependency_checker.py --packages python3-requests neovim

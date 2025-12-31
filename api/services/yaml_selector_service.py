@@ -105,7 +105,7 @@ class YamlSelectorService:
         5. Default (sway-bootc.yml)
 
         Args:
-            os: Operating system/distro (e.g., "fedora", "arch", "debian")
+            os: Operating system/distro (fedora only)
             image_type: Image type (e.g., "fedora-bootc", "fedora-atomic")
             desktop_environment: Desktop environment (e.g., "kde", "mate")
             window_manager: Window manager (e.g., "sway")

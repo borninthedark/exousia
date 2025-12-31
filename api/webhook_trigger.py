@@ -77,7 +77,7 @@ def trigger_build(
             - Any path (e.g., 'custom/my-config.yml', 'yaml-definitions/sway-bootc.yml')
             - Full YAML content (will be base64 encoded)
             - If None, auto-selected based on OS/DE/WM inputs
-        os: Operating system (e.g., 'fedora', 'arch', 'debian') for auto-selection
+        os: Operating system (fedora only) for auto-selection
         window_manager: Window manager (e.g., 'sway') - can be combined with desktop_environment
         desktop_environment: Desktop environment (e.g., 'kde', 'mate', 'lxqt') - can be combined with window_manager
         verbose: Print detailed information
@@ -257,7 +257,6 @@ Security Notes:
             'fedora-sway-atomic', 'fedora-onyx', 'fedora-budgie',
             'fedora-cinnamon', 'fedora-cosmic', 'fedora-deepin',
             'fedora-lxqt', 'fedora-mate', 'fedora-xfce',
-            'arch', 'gentoo', 'debian', 'ubuntu', 'opensuse', 'proxmox'
         ],
         help="Image type to build (default: fedora-sway-atomic)"
     )
@@ -288,7 +287,7 @@ Security Notes:
     )
     parser.add_argument(
         "--os",
-        help="Operating system (e.g., 'fedora', 'arch', 'debian') for auto-selection"
+        help="Operating system for auto-selection (fedora only)"
     )
     parser.add_argument(
         "--window-manager",
