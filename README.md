@@ -194,10 +194,13 @@ Or use **Actions → Bootc DevSecOps Pipeline → Run workflow** in the GitHub U
 
 ### Adjust Packages
 
-| Image Type | Where to edit | What to change |
-|------------|---------------|----------------|
-| bootc | `packages/window-managers/*.yml` | Add to `utilities:` list |
-| atomic | `yaml-definitions/*.yml` | Add to `install:` list |
+| Scope | Where to edit | What to change |
+|-------|---------------|----------------|
+| Base packages | `packages/common/*.yml` | Add/remove shared package sets |
+| Window managers | `packages/window-managers/*.yml` | Add to the relevant categories |
+| Desktop environments | `packages/desktop-environments/*.yml` | Add to the relevant categories |
+
+All package additions are managed from the `packages/` directory via the package loader; avoid editing YAML definitions for package lists.
 
 ### Configuration Files
 
@@ -218,7 +221,7 @@ Or use **Actions → Bootc DevSecOps Pipeline → Run workflow** in the GitHub U
   - `~/.config/sway/config.d/*.conf` — User overrides
   - See [Fedora Sericea Configuration Guide](https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/).
 - **Plymouth**: Set `enable_plymouth: true` in YAML; themes live in `custom-configs/plymouth/themes/`.
-- **Display managers**: bootc images use greetd; atomic images use SDDM.
+- **Display managers**: all images use greetd; SDDM is deprecated.
 
 ---
 
