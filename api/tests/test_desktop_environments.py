@@ -57,31 +57,6 @@ class TestWindowManagerPackages:
         found_wayland = [pkg for pkg in wayland_packages if any(wp in pkg for wp in packages)]
         assert len(found_wayland) > 0, "No Wayland support packages found"
 
-    def test_hyprland_packages_exist(self, loader):
-        """Test that Hyprland WM package definition exists and is valid."""
-        hyprland_file = loader.wm_dir / "hyprland.yml"
-        assert hyprland_file.exists(), "hyprland.yml package definition not found"
-
-        # Load packages
-        packages = loader.load_wm("hyprland")
-        assert len(packages) > 0, "Hyprland package list is empty"
-
-        # Check for essential Hyprland packages
-        essential_packages = ["hyprland"]
-        for pkg in essential_packages:
-            assert pkg in packages, f"Essential package '{pkg}' not found in Hyprland packages"
-
-    def test_hyprland_installation_verification(self, loader):
-        """Test that Hyprland WM can be verified after installation."""
-        packages = loader.load_wm("hyprland")
-
-        # Verify core Hyprland package
-        assert "hyprland" in packages, "Core hyprland package not found"
-
-        # Verify Wayland support (check for packages containing "wayland" or "wlroots")
-        found_wayland = [pkg for pkg in packages if "wayland" in pkg.lower() or "wlroots" in pkg.lower()]
-        assert len(found_wayland) > 0, f"No Wayland support packages found. Packages: {packages}"
-
 
 class TestDesktopEnvironmentPackages:
     """Test desktop environment package definitions."""
@@ -210,16 +185,6 @@ class TestPackageLoaderIntegration:
         assert len(result["install"]) > 0, "No install packages for Sway"
         assert isinstance(result["remove"], list), "Remove list is not a list"
 
-    def test_hyprland_wm_full_package_list(self, loader):
-        """Test getting full package list for Hyprland WM."""
-        result = loader.get_package_list(wm="hyprland", include_common=True)
-
-        assert "install" in result
-        assert "remove" in result
-        assert "groups" in result
-
-        assert len(result["install"]) > 0, "No install packages for Hyprland"
-
     def test_kde_de_full_package_list(self, loader):
         """Test getting full package list for KDE DE."""
         result = loader.get_package_list(de="kde", include_common=True)
@@ -248,7 +213,6 @@ class TestPackageLoaderIntegration:
         """Test listing available window managers."""
         wms = loader.list_available_wms()
         assert "sway" in wms, "Sway not in available WMs"
-        assert "hyprland" in wms, "Hyprland not in available WMs"
 
     def test_available_des_list(self, loader):
         """Test listing available desktop environments."""
@@ -295,49 +259,6 @@ class TestPackageDependencyValidation:
 
         except ImportError as e:
             pytest.fail(f"Failed to import dependency checker components: {e}")
-
-    @pytest.mark.skipif(
-        not Path('/usr/bin/dnf').exists() and not Path('/usr/bin/pacman').exists(),
-        reason="Requires dnf or pacman to be installed"
-    )
-    def test_hyprland_dependencies_validation(self, loader):
-        """
-        Test Hyprland dependency validation using native package manager.
-
-        This test will query the actual package manager to verify that
-        Hyprland's dependencies are correctly defined.
-        """
-        try:
-            from tools.package_dependency_checker import PackageDependencyTranspiler
-
-            # Skip if no supported package manager is available
-            try:
-                transpiler = PackageDependencyTranspiler()
-            except RuntimeError:
-                pytest.skip("No supported package manager found")
-
-            # Load Hyprland packages from our definition
-            packages = loader.load_wm("hyprland")
-            assert "hyprland" in packages, "Hyprland not in package list"
-
-            # Check that Hyprland package exists in repos
-            result = transpiler.check_package("hyprland")
-
-            # The package should be found in repositories
-            assert result.found, f"Hyprland not found in {result.distro} repositories"
-
-            # If we're on a system where Hyprland is available, verify it has dependencies
-            if result.found and len(result.dependencies) > 0:
-                # Hyprland should have Wayland-related dependencies
-                dep_names = [dep.name for dep in result.dependencies]
-                has_wayland_deps = any(
-                    'wayland' in dep.lower() or 'wlroots' in dep.lower()
-                    for dep in dep_names
-                )
-                assert has_wayland_deps, f"Hyprland missing Wayland dependencies on {result.distro}"
-
-        except ImportError as e:
-            pytest.skip(f"Dependency checker not available: {e}")
 
     @pytest.mark.skipif(
         not Path('/usr/bin/dnf').exists() and not Path('/usr/bin/pacman').exists(),
@@ -444,27 +365,23 @@ class TestDistroSpecificDependencyValidation:
         checker = GentooPortageChecker()
 
         def fake_get_package_info(name):
-            if name == "hyprland":
+            if name == "sway":
                 return PackageDependency(
-                    name="hyprland",
-                    dependencies=["wayland"],
+                    name="sway",
+                    dependencies=["wlroots"],
                     installed=True,
                     distro="gentoo",
                 )
-            if name == "wayland":
-                return PackageDependency(name="wayland", dependencies=[], installed=False, distro="gentoo")
+            if name == "wlroots":
+                return PackageDependency(name="wlroots", dependencies=[], installed=False, distro="gentoo")
             return None
 
         monkeypatch.setattr(checker, "get_package_info", fake_get_package_info)
 
-        hyprland_packages = loader.load_wm("hyprland")
-        assert "hyprland" in hyprland_packages
-
-        result = checker.check_dependencies_installed("hyprland")
+        result = checker.check_dependencies_installed("sway")
 
         assert result.found is True
-        assert "wayland" in result.missing_deps
-        assert any(dep.name == "wayland" for dep in result.dependencies)
+        assert "wlroots" in result.missing_deps
 
 
 if __name__ == "__main__":

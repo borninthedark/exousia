@@ -13,7 +13,7 @@ image-type: fedora-bootc  # or fedora-bootc
 # Desktop environment selection
 # Use either 'window_manager' or 'desktop_environment', not both
 desktop:
-  window_manager: sway  # Options: sway, hyprland
+  window_manager: sway
   # desktop_environment: kde  # Options: kde, mate
   include_common: true  # Include common base packages
 

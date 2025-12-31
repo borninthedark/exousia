@@ -81,7 +81,7 @@ class PackageLoader:
         """Load packages for a window manager.
 
         Args:
-            wm_name: Name of the window manager (e.g., 'sway', 'hyprland')
+            wm_name: Name of the window manager (e.g., 'sway')
 
         Returns:
             List of package names

@@ -137,7 +137,7 @@ class BuildTriggerRequest(BaseModel):
     image_type: ImageType = Field(ImageType.FEDORA_SWAY_ATOMIC)
     fedora_version: str = Field("43")
     enable_plymouth: bool = Field(True)
-    window_manager: Optional[str] = Field(None, description="Window manager (e.g., 'sway', 'hyprland') - can be combined with desktop_environment")
+    window_manager: Optional[str] = Field(None, description="Window manager (e.g., 'sway') - can be combined with desktop_environment")
     desktop_environment: Optional[str] = Field(None, description="Desktop environment (e.g., 'kde', 'mate', 'lxqt') - can be combined with window_manager")
     ref: str = Field("main", description="Git ref to build from")
 

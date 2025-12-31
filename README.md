@@ -199,21 +199,6 @@ Or use **Actions → Fedora Bootc DevSec CI → Run workflow** in the GitHub UI.
 | bootc | `packages/window-managers/*.yml` | Add to `utilities:` list |
 | atomic | `yaml-definitions/*.yml` | Add to `install:` list |
 
-<details>
-<summary>Hyprland COPR setup</summary>
-
-Enable required COPRs before building Hyprland:
-
-```bash
-sudo dnf copr enable lionheartp/Hyprland
-sudo dnf copr enable erikreider/SwayNotificationCenter  # for SwayNC
-sudo dnf copr enable tofik/nwg-shell  # for nwg-displays
-sudo dnf update --refresh
-```
-
-Note: `wallust` requires Hyprland COPR; `nwg-displays` requires nwg-shell COPR.
-</details>
-
 ### Configuration Files
 
 | Directory | Purpose |
@@ -256,7 +241,7 @@ python3 tools/package_dependency_checker.py --verify-only --json
 python3 tools/package_dependency_checker.py --packages python3-requests neovim
 
 # Arch Linux
-python3 tools/package_dependency_checker.py --distro arch --packages python-requests hyprland
+python3 tools/package_dependency_checker.py --distro arch --packages python-requests sway
 
 # Debian/Ubuntu
 python3 tools/package_dependency_checker.py --distro debian --packages python3-requests sway
@@ -276,7 +261,7 @@ python3 tools/package_dependency_checker.py --distro freebsd --packages py311-re
 
 ```bash
 python3 tools/validate_installed_packages.py --yaml adnyeus.yml --image-type fedora-bootc
-python3 tools/validate_installed_packages.py --wm hyprland --distro arch
+python3 tools/validate_installed_packages.py --wm sway --distro arch
 ```
 
 **Package naming equivalents:**

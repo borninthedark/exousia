@@ -7,8 +7,7 @@ This directory contains YAML-based package definitions for different desktop env
 ```
 packages/
 ├── window-managers/    # Tiling window managers
-│   ├── sway.yml       # Sway WM packages
-│   └── hyprland.yml   # Hyprland WM packages
+│   └── sway.yml       # Sway WM packages
 ├── desktop-environments/  # Full desktop environments
 │   ├── kde.yml        # KDE Plasma DE packages
 │   └── mate.yml       # MATE DE packages
@@ -67,7 +66,7 @@ To use a window manager or desktop environment in your build configuration:
 ```yaml
 # Desktop environment selection
 desktop:
-  window_manager: sway  # Options: sway, hyprland
+  window_manager: sway
   # OR
   # desktop_environment: kde  # Options: kde, mate
   include_common: true  # Include common base packages
@@ -164,7 +163,7 @@ To switch between different desktop environments or window managers:
 1. **Update your build configuration YAML:**
    ```yaml
    desktop:
-     window_manager: hyprland  # Change from 'sway' to 'hyprland'
+     window_manager: sway  # Or set desktop_environment: kde
    ```
 
 2. **Generate a new Containerfile:**

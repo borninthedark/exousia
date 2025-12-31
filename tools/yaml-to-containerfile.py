@@ -56,7 +56,7 @@ class BuildContext:
     base_image: str
     distro: str = "fedora"  # fedora, arch, gentoo, debian, ubuntu, opensuse, proxmox
     desktop_environment: str = ""  # kde, gnome, mate, etc.
-    window_manager: str = ""  # sway, hyprland, kwin, etc.
+    window_manager: str = ""  # sway, kwin, etc.
 
 
 class ContainerfileGenerator:

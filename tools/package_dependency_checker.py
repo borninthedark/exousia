@@ -853,17 +853,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Check Hyprland and its dependencies
-  python3 package_dependency_checker.py hyprland
-
   # Check multiple packages
   python3 package_dependency_checker.py sway waybar
 
   # Force a specific distro
-  python3 package_dependency_checker.py --distro fedora hyprland
+  python3 package_dependency_checker.py --distro fedora sway
 
   # Output as JSON
-  python3 package_dependency_checker.py --json hyprland
+  python3 package_dependency_checker.py --json sway
         """
     )
 
