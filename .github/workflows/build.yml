@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       image_type:
-        description: 'Distro/Image type to build'
+        description: 'Fedora image type to build'
         required: true
         type: choice
         options:
@@ -28,16 +28,9 @@ on:
           - 'fedora-lxqt'
           - 'fedora-mate'
           - 'fedora-xfce'
-          # Other distros
-          - 'arch'
-          - 'gentoo'
-          - 'debian'
-          - 'ubuntu'
-          - 'opensuse'
-          - 'proxmox'
         default: 'fedora-sway-atomic'
       distro_version:
-        description: 'Distro version (Fedora 42-44/rawhide, version-specific for other distros)'
+        description: 'Fedora version (42-44/rawhide)'
         required: true
         type: choice
         options:

@@ -10,9 +10,8 @@ This ensures package validation uses the correct package manager for each build.
 from typing import Optional
 
 
-# ImageType to distro mapping
+# ImageType to distro mapping (Fedora only)
 IMAGE_TYPE_TO_DISTRO = {
-    # Fedora variants
     'fedora-bootc': 'fedora',
     'fedora-sway-atomic': 'fedora',
     'fedora-kinoite': 'fedora',
@@ -24,22 +23,6 @@ IMAGE_TYPE_TO_DISTRO = {
     'fedora-lxqt': 'fedora',
     'fedora-mate': 'fedora',
     'fedora-xfce': 'fedora',
-
-    # Arch Linux
-    'arch': 'arch',
-
-    # Gentoo
-    'gentoo': 'gentoo',
-
-    # Debian/Ubuntu
-    'debian': 'debian',
-    'ubuntu': 'ubuntu',
-
-    # OpenSUSE
-    'opensuse': 'opensuse',
-
-    # Proxmox (Debian-based)
-    'proxmox': 'debian',
 }
 
 
@@ -48,11 +31,11 @@ def get_distro_for_image_type(image_type: str) -> Optional[str]:
     Get the distro identifier for package validation based on image type.
 
     Args:
-        image_type: The image type (e.g., 'fedora-bootc', 'arch')
+        image_type: The image type (e.g., 'fedora-bootc')
 
     Returns:
-        Distro identifier for package transpiler (fedora, arch, debian, etc.)
-        Returns None if image type is unknown.
+        Distro identifier for package transpiler (fedora only).
+        Returns None if image type is unknown or unsupported.
     """
     return IMAGE_TYPE_TO_DISTRO.get(image_type.lower())
 
@@ -62,7 +45,7 @@ def get_package_manager_for_image_type(image_type: str) -> Optional[str]:
     Get the package manager name for an image type.
 
     Args:
-        image_type: The image type (e.g., 'fedora-bootc', 'arch')
+        image_type: The image type (e.g., 'fedora-bootc')
 
     Returns:
         Package manager name (dnf, pacman, apt, zypper, emerge, pkg)
@@ -74,12 +57,6 @@ def get_package_manager_for_image_type(image_type: str) -> Optional[str]:
 
     package_manager_map = {
         'fedora': 'dnf',
-        'arch': 'pacman',
-        'debian': 'apt',
-        'ubuntu': 'apt',
-        'opensuse': 'zypper',
-        'gentoo': 'emerge',
-        'freebsd': 'pkg',
     }
 
     return package_manager_map.get(distro)

@@ -3,12 +3,11 @@
 Package Dependency Checker (Transpiler)
 ========================================
 
-Cross-distro package dependency validation system that queries native package
-managers to verify package installation and dependencies.
+Fedora-focused package dependency validation system that queries the native
+package manager to verify package installation and dependencies.
 
 This acts as a "transpiler" for package management, translating package queries
-across different distros (Fedora/dnf, Arch/pacman) and returning standardized
-dependency information.
+on Fedora (dnf) into standardized dependency information.
 """
 
 import subprocess
@@ -748,16 +747,10 @@ class PackageDependencyTranspiler:
         Initialize the transpiler.
 
         Args:
-            distro: Force a specific distro checker (fedora, arch). If None, auto-detect.
+            distro: Force a specific distro checker (fedora). If None, auto-detect.
         """
         self.checkers: Dict[str, PackageManagerInterface] = {
             'fedora': FedoraDnfChecker(),
-            'arch': ArchPacmanChecker(),
-            'debian': DebianAptChecker(),
-            'ubuntu': DebianAptChecker(),  # Ubuntu uses apt too
-            'opensuse': OpenSUSEZypperChecker(),
-            'gentoo': GentooPortageChecker(),
-            'freebsd': FreeBSDPkgChecker(),
         }
 
         if distro:
@@ -775,16 +768,6 @@ class PackageDependencyTranspiler:
                 content = f.read().lower()
                 if 'fedora' in content or 'rhel' in content or 'centos' in content:
                     return self.checkers['fedora']
-                elif 'arch' in content:
-                    return self.checkers['arch']
-                elif 'debian' in content:
-                    return self.checkers['debian']
-                elif 'ubuntu' in content:
-                    return self.checkers['ubuntu']
-                elif 'opensuse' in content or 'suse' in content:
-                    return self.checkers['opensuse']
-                elif 'gentoo' in content:
-                    return self.checkers['gentoo']
         except FileNotFoundError:
             pass
 
@@ -849,7 +832,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Cross-distro package dependency checker",
+        description="Fedora package dependency checker",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -865,7 +848,7 @@ Examples:
     )
 
     parser.add_argument("packages", nargs="+", help="Package names to check")
-    parser.add_argument("--distro", choices=["fedora", "arch", "debian", "ubuntu", "opensuse", "gentoo", "freebsd"],
+    parser.add_argument("--distro", choices=["fedora"],
                        help="Force specific distro (auto-detect if not specified)")
     parser.add_argument("--json", action="store_true",
                        help="Output results as JSON")

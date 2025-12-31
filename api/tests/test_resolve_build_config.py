@@ -102,7 +102,7 @@ def test_resolve_yaml_config_rejects_linux_bootc(tmp_workspace: Path):
     """linux-bootc builds are no longer supported and should fail fast."""
 
     with pytest.raises(SystemExit):
-        resolve_build_config.resolve_yaml_config("auto", "linux-bootc", os_name="arch")
+        resolve_build_config.resolve_yaml_config("auto", "linux-bootc", os_name="fedora")
 
 
 def test_resolve_yaml_config_falls_back_to_default(tmp_workspace: Path, monkeypatch: pytest.MonkeyPatch):

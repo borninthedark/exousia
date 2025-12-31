@@ -290,18 +290,6 @@ def test_distro_detection():
     )
     assert fedora_context.distro == "fedora"
 
-    # Linux bootc distro
-    arch_context = BuildContext(
-        image_type="arch",
-        fedora_version="",
-        enable_plymouth=False,
-        enable_rke2=False,
-        use_upstream_sway_config=False,
-        base_image="docker.io/archlinux/archlinux:latest",
-        distro="arch"
-    )
-    assert arch_context.distro == "arch"
-
     print("✓ Distro detection works correctly")
 
 
@@ -445,56 +433,15 @@ def test_group_install_on_fedora_distros():
     print("✓ Group installs work on all Fedora distros")
 
 
-def test_group_install_not_on_non_fedora():
-    """Test that package groups are NOT used on non-Fedora distros."""
-    config = {
-        "name": "kde-arch-test",
-        "description": "Test KDE on Arch (no groups)",
-        "modules": [
-            {
-                "type": "package-loader",
-                "desktop_environment": "kde",
-                "include_common": False
-            }
-        ]
-    }
-
-    # Test with Arch (should not use groups)
-    context = BuildContext(
-        image_type="arch",
-        fedora_version="",
-        enable_plymouth=False,
-        enable_rke2=False,
-        use_upstream_sway_config=False,
-        base_image="docker.io/archlinux/archlinux:latest",
-        distro="arch"
-    )
-
-    generator = ContainerfileGenerator(config, context)
-    output = generator.generate()
-
-    # Should NOT have group install syntax
-    assert "@kde-desktop-environment" not in output, \
-        "Group syntax should not be used on non-Fedora distros"
-
-    # Should still install individual packages
-    assert "pacman" in output.lower() or "install" in output.lower(), \
-        "Should still install packages individually"
-
-    print("✓ Groups not used on non-Fedora distros")
-
-
 if __name__ == "__main__":
     test_generator_is_stateless()
     test_generator_with_different_contexts()
     test_custom_base_image_sources_are_respected()
     test_custom_bases_without_tags_are_versioned()
-    test_linux_bootc_distro_support()
     test_fedora_atomic_variants()
     test_distro_detection()
     test_enable_plymouth_generates_env()
     test_package_loader_module()
     test_plymouth_not_generated_for_sway_atomic()
     test_group_install_on_fedora_distros()
-    test_group_install_not_on_non_fedora()
     print("\n✅ All tests passed!")
