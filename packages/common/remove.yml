@@ -8,6 +8,8 @@ metadata:
 
 # Packages to remove
 packages:
+  - firefox  # Using org.mozilla.firefox flatpak instead
+  - firefox-langpacks  # Part of firefox RPM package
   - sddm
   - foot  # Using kitty/alacritty instead
   - dunst  # Using mako/swaync instead
