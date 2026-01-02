@@ -524,7 +524,43 @@ get_package_manager() {
 
 @test "Flathub remote should be added" {
     run buildah run "$CONTAINER" -- flatpak remotes --show-details
+    assert_success
     assert_output --partial 'flathub'
+    assert_output --partial 'flathub.flatpakrepo'
+}
+
+@test "Core Flatpak applications should be installed" {
+    local apps=(
+        com.bitwarden.desktop
+        org.mozilla.firefox
+        org.videolan.VLC
+        org.libreoffice.LibreOffice
+        us.zoom.Zoom
+    )
+
+    run buildah run "$CONTAINER" -- flatpak list --app --columns=application
+    assert_success
+
+    for app in "${apps[@]}"; do
+        assert_output --partial "$app"
+    done
+}
+
+@test "Flatpak runtimes should be installed" {
+    local runtimes=(
+        org.freedesktop.Platform
+        org.freedesktop.Platform.GL.default
+        org.freedesktop.Platform.ffmpeg-full
+        org.gnome.Platform
+        org.kde.Platform
+    )
+
+    run buildah run "$CONTAINER" -- flatpak list --runtime --columns=application,branch
+    assert_success
+
+    for runtime in "${runtimes[@]}"; do
+        assert_output --partial "$runtime"
+    done
 }
 
 @test "/var/run should be a symlink to /run" {
