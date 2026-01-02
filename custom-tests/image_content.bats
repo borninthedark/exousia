@@ -522,23 +522,27 @@ get_package_manager() {
 
 # --- Flathub, Sway config, bootc lint ---
 
-@test "Default-flatpaks systemd service should be configured" {
+@test "Default-flatpaks systemd service should be enabled" {
     # The default-flatpaks module creates systemd services that run on boot
-    # Check for the service files created by the module
-    local service_found=false
+    # Verify the service is enabled
+    local service_name="bluebuild-default-flatpaks-system.service"
 
-    # Check for BlueBuild's default-flatpaks service
-    if [ -f "$MOUNT_POINT/usr/lib/systemd/system/bluebuild-default-flatpaks-system.service" ] || \
-       [ -f "$MOUNT_POINT/etc/systemd/system/bluebuild-default-flatpaks-system.service" ] || \
-       [ -f "$MOUNT_POINT/usr/lib/systemd/user/bluebuild-default-flatpaks-user.service" ]; then
-        service_found=true
-    fi
+    # Check if service file exists
+    if [ -f "$MOUNT_POINT/usr/lib/systemd/system/$service_name" ] || \
+       [ -f "$MOUNT_POINT/etc/systemd/system/$service_name" ]; then
 
-    if [ "$service_found" = true ]; then
-        # Service files found - module is configured correctly
-        return 0
+        # Check if service is enabled (symlink in wants directory)
+        if [ -L "$MOUNT_POINT/etc/systemd/system/default.target.wants/$service_name" ] || \
+           [ -L "$MOUNT_POINT/etc/systemd/system/multi-user.target.wants/$service_name" ] || \
+           [ -L "$MOUNT_POINT/usr/lib/systemd/system/default.target.wants/$service_name" ] || \
+           [ -L "$MOUNT_POINT/usr/lib/systemd/system/multi-user.target.wants/$service_name" ]; then
+            # Service is enabled
+            return 0
+        else
+            fail "$service_name exists but is not enabled"
+        fi
     else
-        skip "default-flatpaks service files not found (will be created on first boot)"
+        skip "default-flatpaks service file not found (module may use different service name)"
     fi
 }
 

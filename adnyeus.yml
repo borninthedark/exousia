@@ -302,6 +302,7 @@ modules:
         - systemd-resolved.service
         - NetworkManager.service
         - greetd.service
+        - bluebuild-default-flatpaks-system.service
     default-target: graphical.target
 
   # RKE2 Server service configuration
