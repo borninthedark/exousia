@@ -1,0 +1,230 @@
+#!/bin/bash
+# Flatpak Installation Verification Script
+# This script verifies that flatpaks were installed correctly on boot
+
+set -euo pipefail
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Log file
+LOG_FILE="/var/log/flatpak-installation-verification.log"
+
+# Function to log and print
+log_and_print() {
+    local level=$1
+    shift
+    local message="$*"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+
+    echo "[$timestamp] [$level] $message" | tee -a "$LOG_FILE"
+}
+
+# Function to check if running as root
+check_root() {
+    if [ "$EUID" -eq 0 ]; then
+        log_and_print "INFO" "Running with root privileges"
+        return 0
+    else
+        log_and_print "WARN" "Not running as root, some checks may fail"
+        return 1
+    fi
+}
+
+# Function to verify Flathub remote
+verify_remote() {
+    log_and_print "INFO" "Checking Flathub remote configuration..."
+
+    if flatpak remotes | grep -q flathub; then
+        echo -e "${GREEN}✓${NC} Flathub remote is configured"
+        log_and_print "SUCCESS" "Flathub remote is configured"
+        return 0
+    else
+        echo -e "${RED}✗${NC} Flathub remote is NOT configured"
+        log_and_print "ERROR" "Flathub remote is NOT configured"
+        return 1
+    fi
+}
+
+# Function to count installed apps
+count_installed_apps() {
+    local scope=$1
+    local count
+
+    if [ "$scope" = "system" ]; then
+        count=$(flatpak list --system --app 2>/dev/null | wc -l)
+    else
+        count=$(flatpak list --user --app 2>/dev/null | wc -l)
+    fi
+
+    echo "$count"
+}
+
+# Function to verify installed applications
+verify_apps() {
+    log_and_print "INFO" "Checking installed flatpak applications..."
+
+    local system_apps=$(count_installed_apps "system")
+    local user_apps=$(count_installed_apps "user")
+
+    echo ""
+    echo "Installed Applications:"
+    echo "  System: $system_apps apps"
+    echo "  User: $user_apps apps"
+
+    log_and_print "INFO" "System apps: $system_apps, User apps: $user_apps"
+
+    if [ "$system_apps" -gt 0 ] || [ "$user_apps" -gt 0 ]; then
+        echo -e "${GREEN}✓${NC} Flatpak applications are installed"
+        log_and_print "SUCCESS" "Flatpak applications are installed"
+
+        # List core applications
+        echo ""
+        echo "Core applications:"
+        local core_apps=(
+            "com.bitwarden.desktop"
+            "org.mozilla.firefox"
+            "org.videolan.VLC"
+            "org.libreoffice.LibreOffice"
+            "us.zoom.Zoom"
+        )
+
+        for app in "${core_apps[@]}"; do
+            if flatpak list --app | grep -q "$app"; then
+                echo -e "  ${GREEN}✓${NC} $app"
+            else
+                echo -e "  ${YELLOW}○${NC} $app (not installed)"
+            fi
+        done
+
+        return 0
+    else
+        echo -e "${YELLOW}!${NC} No flatpak applications installed yet"
+        log_and_print "WARN" "No flatpak applications installed"
+        echo ""
+        echo "This is normal immediately after deployment."
+        echo "Flatpaks are installed on first boot by the default-flatpaks service."
+        echo ""
+        echo "To check service status, run:"
+        echo "  systemctl status bluebuild-default-flatpaks.service"
+        echo ""
+        return 1
+    fi
+}
+
+# Function to verify runtimes
+verify_runtimes() {
+    log_and_print "INFO" "Checking installed flatpak runtimes..."
+
+    local runtime_count=$(flatpak list --runtime 2>/dev/null | wc -l)
+
+    echo ""
+    echo "Installed Runtimes: $runtime_count"
+
+    if [ "$runtime_count" -gt 0 ]; then
+        echo -e "${GREEN}✓${NC} Flatpak runtimes are installed"
+        log_and_print "SUCCESS" "$runtime_count runtimes installed"
+
+        # List some key runtimes
+        echo ""
+        echo "Key runtimes:"
+        local runtimes=(
+            "org.freedesktop.Platform"
+            "org.gnome.Platform"
+            "org.kde.Platform"
+        )
+
+        for runtime in "${runtimes[@]}"; do
+            if flatpak list --runtime | grep -q "$runtime"; then
+                echo -e "  ${GREEN}✓${NC} $runtime"
+            else
+                echo -e "  ${YELLOW}○${NC} $runtime (not installed)"
+            fi
+        done
+
+        return 0
+    else
+        echo -e "${YELLOW}!${NC} No flatpak runtimes installed yet"
+        log_and_print "WARN" "No flatpak runtimes installed"
+        return 1
+    fi
+}
+
+# Function to check default-flatpaks service
+check_service() {
+    log_and_print "INFO" "Checking default-flatpaks service status..."
+
+    local service_name="bluebuild-default-flatpaks.service"
+
+    if systemctl list-unit-files | grep -q "$service_name"; then
+        echo ""
+        echo "Default-flatpaks service:"
+
+        if systemctl is-enabled "$service_name" &>/dev/null; then
+            echo -e "  ${GREEN}✓${NC} Service is enabled"
+            log_and_print "INFO" "Service is enabled"
+        else
+            echo -e "  ${YELLOW}○${NC} Service is not enabled"
+            log_and_print "WARN" "Service is not enabled"
+        fi
+
+        if systemctl is-active "$service_name" &>/dev/null; then
+            echo -e "  ${GREEN}✓${NC} Service is active"
+            log_and_print "INFO" "Service is active"
+        else
+            echo -e "  ${YELLOW}○${NC} Service is not currently active"
+            log_and_print "INFO" "Service is not active"
+        fi
+
+        echo ""
+        echo "To view service logs, run:"
+        echo "  journalctl -u $service_name"
+    else
+        echo -e "${YELLOW}!${NC} default-flatpaks service not found"
+        log_and_print "WARN" "Service not found"
+        echo ""
+        echo "The system may use a different installation method."
+    fi
+}
+
+# Main execution
+main() {
+    echo "========================================="
+    echo "Flatpak Installation Verification"
+    echo "========================================="
+    echo ""
+
+    log_and_print "INFO" "Starting flatpak installation verification"
+
+    check_root || true
+
+    local status=0
+
+    verify_remote || status=$?
+    verify_apps || status=$?
+    verify_runtimes || status=$?
+    check_service || true
+
+    echo ""
+    echo "========================================="
+    if [ $status -eq 0 ]; then
+        echo -e "${GREEN}All checks passed!${NC}"
+        log_and_print "SUCCESS" "Verification completed successfully"
+    else
+        echo -e "${YELLOW}Some checks did not pass${NC}"
+        log_and_print "WARN" "Verification completed with warnings"
+        echo ""
+        echo "If this is a fresh deployment, flatpaks may still be installing."
+        echo "Check back in a few minutes or check the service logs."
+    fi
+    echo "========================================="
+    echo ""
+    echo "Log file: $LOG_FILE"
+
+    exit $status
+}
+
+main "$@"

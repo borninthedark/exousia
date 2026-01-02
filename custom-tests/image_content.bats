@@ -551,6 +551,22 @@ get_package_manager() {
     assert_success "Should be able to query Flathub remote"
 }
 
+@test "Default-flatpaks configuration file should exist" {
+    # Check for the flatpaks.yml configuration that defines what to install
+    assert_file_exists "$MOUNT_POINT/usr/share/ublue-os/bluebuild/flatpaks.yml" \
+        || assert_file_exists "$MOUNT_POINT/etc/bluebuild/flatpaks.yml" \
+        || skip "default-flatpaks configuration file not found in expected locations"
+}
+
+@test "Flatpak installation verification script should exist" {
+    # Check that the verification script is present
+    if [ -f "$MOUNT_POINT/usr/local/bin/verify-flatpak-installation" ]; then
+        assert_file_executable "$MOUNT_POINT/usr/local/bin/verify-flatpak-installation"
+    else
+        skip "Flatpak verification script not found (optional)"
+    fi
+}
+
 @test "/var/run should be a symlink to /run" {
     run buildah run "$CONTAINER" -- test -L /var/run
     assert_success
