@@ -522,28 +522,33 @@ get_package_manager() {
 
 # --- Flathub, Sway config, bootc lint ---
 
-@test "Flatpak configuration should be present for boot-time installation" {
-    # Flatpaks are installed at boot time via default-flatpaks module, not during build
-    # Check that the configuration file exists
-    assert_file_exists "$MOUNT_POINT/usr/etc/bluebuild/default-flatpaks/config.toml" \
-        || skip "default-flatpaks configuration not found (module may use different path)"
+@test "Flathub remote should be added" {
+    # Check that Flathub remote is configured at build time
+    run buildah run "$CONTAINER" -- flatpak remotes --show-details
+    assert_success
+    assert_output --partial 'flathub'
 }
 
-@test "Flathub flatpakrepo file should be configured" {
-    # Check that Flathub repository configuration is in place
-    if [ -f "$MOUNT_POINT/etc/flatpak/remotes.d/flathub.flatpakrepo" ] || \
-       [ -f "$MOUNT_POINT/usr/etc/flatpak/remotes.d/flathub.flatpakrepo" ]; then
-        # Flathub repo file is present
-        return 0
-    else
-        skip "Flathub configuration will be added at boot time by default-flatpaks module"
-    fi
+@test "Flathub flatpakrepo file should exist" {
+    # Verify the flathub.flatpakrepo file was created during build
+    assert_file_exists "$MOUNT_POINT/etc/flatpak/remotes.d/flathub.flatpakrepo"
 }
 
-@test "Flatpak support should be available in the image" {
-    # Verify flatpak binary is present
+@test "Core Flatpak applications will be installed on first boot" {
+    # Flatpaks are installed at boot time via default-flatpaks module
+    # Verify that flatpak is available for installation
     run buildah run "$CONTAINER" -- which flatpak
-    assert_success "flatpak command should be available"
+    assert_success "flatpak command should be available for boot-time installation"
+
+    # Note: The actual packages will be installed by the default-flatpaks
+    # systemd service on first boot. The packages/common/flatpaks.yml file
+    # contains the list of packages to install.
+}
+
+@test "Flatpak runtimes will be installed on first boot" {
+    # Verify flatpak can query the remote (even though no packages installed yet)
+    run buildah run "$CONTAINER" -- flatpak remote-ls flathub --app --columns=application
+    assert_success "Should be able to query Flathub remote"
 }
 
 @test "/var/run should be a symlink to /run" {
