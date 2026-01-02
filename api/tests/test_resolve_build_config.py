@@ -12,9 +12,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOLS_PATH = REPO_ROOT.parent / "tools" / "resolve_build_config.py"
 
 _spec = importlib.util.spec_from_file_location("resolve_build_config", TOOLS_PATH)
-resolve_build_config = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
-assert _spec and _spec.loader
-_spec.loader.exec_module(resolve_build_config)  # type: ignore[arg-type]
+if _spec is None or _spec.loader is None:
+    raise RuntimeError("Unable to load resolve_build_config module specification")
+
+resolve_build_config = importlib.util.module_from_spec(_spec)
+assert _spec.loader
+_spec.loader.exec_module(resolve_build_config)
 
 
 @pytest.fixture()

@@ -10,6 +10,7 @@ fastapi-users[sqlalchemy]==12.1.2
 
 # YAML Processing
 pyyaml==6.0.1
+types-PyYAML==6.0.12.20240917
 
 # GitHub API
 PyGithub==2.1.1

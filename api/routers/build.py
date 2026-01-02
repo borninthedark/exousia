@@ -1,14 +1,12 @@
-"""
-Build Router
-============
+"""Endpoints for triggering builds and tracking build status."""
 
-Endpoints for triggering builds and tracking build status.
-"""
+from __future__ import annotations
 
 import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 
 import yaml
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -83,10 +81,10 @@ def apply_desktop_override(
 
     config["desktop"] = desktop
 
-    return yaml.safe_dump(config)
+    return cast(str, yaml.safe_dump(config))
 
 
-async def poll_build_status(build_id: int, workflow_run_id: int, max_polls: int = 120):
+async def poll_build_status(build_id: int, workflow_run_id: int, max_polls: int = 120) -> None:
     """
     Background task to poll GitHub workflow status and update build.
 
@@ -172,7 +170,7 @@ async def trigger_build(
     request: BuildTriggerRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
-):
+ ) -> BuildResponse:
     """
     Trigger a new build via GitHub Actions (direct integration).
 
@@ -185,7 +183,10 @@ async def trigger_build(
     The build is triggered directly via GitHub API and a background task
     polls for status updates.
     """
-    yaml_content = None
+    yaml_content: str | None = None
+    image_type: str | None = None
+    fedora_version: str | None = None
+    enable_plymouth: bool | None = None
     config_id = request.config_id
     yaml_selector = YamlSelectorService()
 
@@ -288,6 +289,19 @@ async def trigger_build(
         fedora_version = request.fedora_version
         enable_plymouth = request.enable_plymouth
 
+    if any(value is None for value in (yaml_content, image_type, fedora_version, enable_plymouth)):
+        raise HTTPException(
+            status_code=400,
+            detail="Unable to resolve build configuration from provided inputs",
+        )
+
+    assert (
+        yaml_content is not None
+        and image_type is not None
+        and fedora_version is not None
+        and enable_plymouth is not None
+    )
+
     yaml_content = apply_desktop_override(
         yaml_content=yaml_content,
         image_type=str(image_type),
@@ -309,8 +323,8 @@ async def trigger_build(
     build = BuildModel(
         config_id=config_id,
         status=BuildStatus.QUEUED,
-        image_type=image_type,
-        fedora_version=fedora_version,
+        image_type=str(image_type),
+        fedora_version=str(fedora_version),
         ref=request.ref
     )
 
@@ -329,11 +343,11 @@ async def trigger_build(
             )
 
         github = GitHubService(token, settings.GITHUB_REPO)
-        workflow_inputs = {
-            "image_type": image_type,
-            "distro_version": fedora_version,
+        workflow_inputs: dict[str, str] = {
+            "image_type": str(image_type),
+            "distro_version": str(fedora_version),
             "enable_plymouth": str(enable_plymouth).lower(),
-            "yaml_content": yaml_content
+            "yaml_content": yaml_content,
         }
 
         if request.window_manager:
@@ -388,11 +402,11 @@ async def trigger_build(
             detail=f"Failed to trigger GitHub workflow: {str(e)}"
         ) from e
 
-    return build
+    return BuildResponse.model_validate(build)
 
 
 @router.get("/{build_id}/status", response_model=BuildStatusResponse)
-async def get_build_status(build_id: int, db: AsyncSession = Depends(get_db)):
+async def get_build_status(build_id: int, db: AsyncSession = Depends(get_db)) -> BuildStatusResponse:
     """
     Get detailed build status including GitHub workflow status.
     """
@@ -411,11 +425,12 @@ async def get_build_status(build_id: int, db: AsyncSession = Depends(get_db)):
     logs_url = None
 
     token = get_github_token(settings)
+    workflow_run_id = build.workflow_run_id
 
-    if build.workflow_run_id and token:
+    if workflow_run_id is not None and token:
         try:
             github_service = GitHubService(token, settings.GITHUB_REPO)
-            workflow_run = await github_service.get_workflow_run(build.workflow_run_id)
+            workflow_run = await github_service.get_workflow_run(workflow_run_id)
 
             workflow_status = workflow_run.status
             workflow_url = workflow_run.html_url
@@ -437,8 +452,10 @@ async def get_build_status(build_id: int, db: AsyncSession = Depends(get_db)):
             # Log error but don't fail the request
             pass
 
+    build_response = BuildResponse.model_validate(build)
+
     return BuildStatusResponse(
-        build=build,
+        build=build_response,
         workflow_status=workflow_status,
         workflow_url=workflow_url,
         conclusion=conclusion,
@@ -450,10 +467,10 @@ async def get_build_status(build_id: int, db: AsyncSession = Depends(get_db)):
 async def list_builds(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    status: BuildStatus = None,
-    config_id: int = None,
+    status: BuildStatus | None = None,
+    config_id: int | None = None,
     db: AsyncSession = Depends(get_db)
-):
+ ) -> BuildListResponse:
     """
     List builds with pagination and filtering.
     """
@@ -474,7 +491,7 @@ async def list_builds(
         count_query = count_query.where(BuildModel.config_id == config_id)
 
     count_result = await db.execute(count_query)
-    total = count_result.scalar()
+    total = count_result.scalar_one()
 
     # Get paginated builds
     offset = (page - 1) * page_size
@@ -485,9 +502,10 @@ async def list_builds(
         .limit(page_size)
     )
     builds = result.scalars().all()
+    build_responses = [BuildResponse.model_validate(build) for build in builds]
 
     return BuildListResponse(
-        builds=builds,
+        builds=build_responses,
         total=total,
         page=page,
         page_size=page_size
@@ -495,7 +513,7 @@ async def list_builds(
 
 
 @router.post("/{build_id}/cancel", response_model=BuildResponse)
-async def cancel_build(build_id: int, db: AsyncSession = Depends(get_db)):
+async def cancel_build(build_id: int, db: AsyncSession = Depends(get_db)) -> BuildResponse:
     """
     Cancel a running build.
     """
@@ -515,11 +533,12 @@ async def cancel_build(build_id: int, db: AsyncSession = Depends(get_db)):
 
     # Cancel GitHub workflow if available
     token = get_github_token(settings)
+    workflow_run_id = build.workflow_run_id
 
-    if build.workflow_run_id and token:
+    if workflow_run_id is not None and token:
         try:
             github_service = GitHubService(token, settings.GITHUB_REPO)
-            await github_service.cancel_workflow_run(build.workflow_run_id)
+            await github_service.cancel_workflow_run(workflow_run_id)
         except Exception as e:
             raise HTTPException(
                 status_code=500,
@@ -532,4 +551,4 @@ async def cancel_build(build_id: int, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(build)
 
-    return build
+    return BuildResponse.model_validate(build)
