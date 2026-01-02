@@ -1,0 +1,55 @@
+# Default Flatpaks (Common)
+# Centrally managed default-flatpaks configuration for all builds
+
+# This file is imported by the build configuration via the default-flatpaks module.
+# See: https://blue-build.org/reference/modules/default-flatpaks/
+
+type: default-flatpaks
+configurations:
+  - notify: true
+    scope: system
+    install:
+      - com.bitwarden.desktop//stable
+      - com.github.tchx84.Flatseal//stable
+      - com.google.Chrome//stable
+      - com.ntrack.n-track//stable
+      - com.obsproject.Studio//stable
+      - com.transmissionbt.Transmission//stable
+      - io.github.giantpinkrobots.flatsweep//stable
+      - io.github.ungoogled_software.ungoogled_chromium//stable
+      - org.audacityteam.Audacity//stable
+      - org.audacityteam.Audacity.Codecs//stable
+      - org.blender.Blender//stable
+      - org.blender.Blender.Codecs//stable
+      - org.filezillaproject.Filezilla//stable
+      - org.flameshot.Flameshot//stable
+      - org.freedesktop.Platform//24.08
+      - org.freedesktop.Platform//25.08
+      - org.freedesktop.Platform.GL.default//24.08
+      - org.freedesktop.Platform.GL.default//24.08extra
+      - org.freedesktop.Platform.GL.default//25.08
+      - org.freedesktop.Platform.GL.default//25.08-extra
+      - org.freedesktop.Platform.codecs-extra//25.08-extra
+      - org.freedesktop.Platform.ffmpeg-full//24.08
+      - org.freedesktop.Platform.openh264//2.4.1
+      - org.freedesktop.Platform.openh264//2.5.1
+      - org.freedesktop.Sdk//24.08
+      - org.freedesktop.Sdk//25.08
+      - org.gimp.GIMP//stable
+      - org.gnome.Platform//48
+      - org.gnome.Platform//49
+      - org.kde.Platform//5.15-24.08
+      - org.kde.Platform//6.8
+      - org.kde.Platform//6.9
+      - org.kde.Platform//6.10
+      - org.kde.haruna//stable
+      - org.kde.kate//stable
+      - org.libreoffice.LibreOffice//stable
+      - org.mixxx.Mixxx//stable
+      - org.mozilla.firefox//stable
+      - org.quassel_irc.QuasselClient//stable
+      - org.remmina.Remmina//stable
+      - org.videolan.VLC//stable
+      - org.zotero.Zotero//stable
+      - us.zoom.Zoom//stable
+  - scope: user
