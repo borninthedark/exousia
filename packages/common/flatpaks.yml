@@ -8,8 +8,9 @@ type: default-flatpaks
 configurations:
   - notify: true
     scope: system
-    repo-name: flathub
-    repo-url: https://flathub.org/repo/flathub.flatpakrepo
+    repo:
+      name: flathub
+      url: https://flathub.org/repo/flathub.flatpakrepo
     install:
       - com.bitwarden.desktop//stable
       - com.github.tchx84.Flatseal//stable
@@ -55,5 +56,6 @@ configurations:
       - org.zotero.Zotero//stable
       - us.zoom.Zoom//stable
   - scope: user
-    repo-name: flathub
-    repo-url: https://flathub.org/repo/flathub.flatpakrepo
+    repo:
+      name: flathub
+      url: https://flathub.org/repo/flathub.flatpakrepo

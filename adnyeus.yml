@@ -133,12 +133,8 @@ modules:
     window_manager: sway  # Loaded from packages/window-managers/sway.yml
     include_common: true  # Also loads packages/common/base.yml including Fedora Wayland build deps
 
-  # Flatpak setup
-  - type: script
-    scripts:
-      - flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
   # Centrally managed default Flatpak set (see packages/common/flatpaks.yml)
+  # The default-flatpaks module automatically sets up the Flathub remote and installs packages
   - from-file: packages/common/flatpaks.yml
 
   # Ensure custom Sway session assets are staged and verified without
