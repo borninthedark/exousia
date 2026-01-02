@@ -144,6 +144,18 @@ modules:
     scripts:
       - flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
+  # Default Flatpaks
+  - type: default-flatpaks
+    configurations:
+      - notify: true
+        scope: system
+        install:
+          - org.mozilla.firefox
+      - scope: user
+
+  # Enable image signing support
+  - type: signing
+
   # ============================================================================
   # RKE2 Kubernetes Integration (optional, enabled via build.enable_rke2)
   # Follows official quickstart: https://docs.rke2.io/install/quickstart
