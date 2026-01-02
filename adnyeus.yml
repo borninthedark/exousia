@@ -133,28 +133,11 @@ modules:
     window_manager: sway  # Loaded from packages/window-managers/sway.yml
     include_common: true  # Also loads packages/common/base.yml including Fedora Wayland build deps
 
-  # Flatpak setup - Configure remote at build time, install packages at boot
-  # Add Flathub remote during build so it's present for tests
-  - type: script
-    scripts:
-      - |
-        set -euxo pipefail
-
-        # Create flatpak remotes directory
-        mkdir -p /etc/flatpak/remotes.d
-
-        # Download Flathub repository configuration
-        curl --retry 3 -Lo /etc/flatpak/remotes.d/flathub.flatpakrepo \
-          https://dl.flathub.org/repo/flathub.flatpakrepo
-
-        # Also add the remote to system flatpak config
-        flatpak remote-add --if-not-exists --system flathub \
-          https://flathub.org/repo/flathub.flatpakrepo || true
-
-        echo "✓ Flathub remote configured"
-
-  # Install flatpaks at boot time via default-flatpaks module
-  # This creates systemd services that install packages on first boot
+  # Flatpak setup - Boot-time installation via default-flatpaks module
+  # The module creates systemd services that automatically:
+  # 1. Set up the Flathub remote on first boot
+  # 2. Install all configured flatpak applications
+  # See: https://blue-build.org/reference/modules/default-flatpaks/
   - from-file: packages/common/flatpaks.yml
 
   # Ensure custom Sway session assets are staged and verified without
