@@ -133,80 +133,10 @@ modules:
     window_manager: sway  # Loaded from packages/window-managers/sway.yml
     include_common: true  # Also loads packages/common/base.yml including Fedora Wayland build deps
 
-  # Flatpak setup - Build-time installation
-  # Note: Installing flatpaks at build time increases image size but ensures they're
-  # present for testing. For production, consider using default-flatpaks module for
-  # boot-time installation instead.
-  - type: script
-    scripts:
-      - |
-        set -euxo pipefail
-
-        # Add Flathub remote for system-wide installation
-        flatpak remote-add --if-not-exists --system flathub https://flathub.org/repo/flathub.flatpakrepo
-
-        # Add Flathub remote for user installation
-        flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
-        # Install flatpak applications at build time
-        # Core applications
-        flatpak install --system -y flathub com.bitwarden.desktop//stable
-        flatpak install --system -y flathub com.github.tchx84.Flatseal//stable
-        flatpak install --system -y flathub com.google.Chrome//stable
-        flatpak install --system -y flathub com.ntrack.n-track//stable
-        flatpak install --system -y flathub com.obsproject.Studio//stable
-        flatpak install --system -y flathub com.transmissionbt.Transmission//stable
-        flatpak install --system -y flathub io.github.giantpinkrobots.flatsweep//stable
-        flatpak install --system -y flathub io.github.ungoogled_software.ungoogled_chromium//stable
-
-        # Media applications
-        flatpak install --system -y flathub org.audacityteam.Audacity//stable
-        flatpak install --system -y flathub org.audacityteam.Audacity.Codecs//stable
-        flatpak install --system -y flathub org.blender.Blender//stable
-        flatpak install --system -y flathub org.blender.Blender.Codecs//stable
-        flatpak install --system -y flathub org.gimp.GIMP//stable
-        flatpak install --system -y flathub org.mixxx.Mixxx//stable
-        flatpak install --system -y flathub org.videolan.VLC//stable
-
-        # Productivity applications
-        flatpak install --system -y flathub org.filezillaproject.Filezilla//stable
-        flatpak install --system -y flathub org.flameshot.Flameshot//stable
-        flatpak install --system -y flathub org.kde.haruna//stable
-        flatpak install --system -y flathub org.kde.kate//stable
-        flatpak install --system -y flathub org.libreoffice.LibreOffice//stable
-        flatpak install --system -y flathub org.mozilla.firefox//stable
-        flatpak install --system -y flathub org.quassel_irc.QuasselClient//stable
-        flatpak install --system -y flathub org.remmina.Remmina//stable
-        flatpak install --system -y flathub org.zotero.Zotero//stable
-        flatpak install --system -y flathub us.zoom.Zoom//stable
-
-        # Runtimes - Platform packages (automatically pulled as dependencies, but explicit for clarity)
-        flatpak install --system -y flathub org.freedesktop.Platform//24.08
-        flatpak install --system -y flathub org.freedesktop.Platform//25.08
-        flatpak install --system -y flathub org.freedesktop.Sdk//24.08
-        flatpak install --system -y flathub org.freedesktop.Sdk//25.08
-
-        # Platform extensions
-        flatpak install --system -y flathub org.freedesktop.Platform.GL.default//24.08
-        flatpak install --system -y flathub org.freedesktop.Platform.GL.default//24.08-extra
-        flatpak install --system -y flathub org.freedesktop.Platform.GL.default//25.08
-        flatpak install --system -y flathub org.freedesktop.Platform.GL.default//25.08-extra
-        flatpak install --system -y flathub org.freedesktop.Platform.codecs-extra//25.08-extra
-        flatpak install --system -y flathub org.freedesktop.Platform.ffmpeg-full//24.08
-        flatpak install --system -y flathub org.freedesktop.Platform.openh264//2.4.1
-        flatpak install --system -y flathub org.freedesktop.Platform.openh264//2.5.1
-
-        # GNOME Platform
-        flatpak install --system -y flathub org.gnome.Platform//48
-        flatpak install --system -y flathub org.gnome.Platform//49
-
-        # KDE Platform
-        flatpak install --system -y flathub org.kde.Platform//5.15-24.08
-        flatpak install --system -y flathub org.kde.Platform//6.8
-        flatpak install --system -y flathub org.kde.Platform//6.9
-        flatpak install --system -y flathub org.kde.Platform//6.10
-
-        echo "✓ Flatpaks installed successfully"
+  # Flatpak setup - Boot-time installation via default-flatpaks module
+  # Note: Flatpaks are installed on first boot, not during container build,
+  # due to sandboxing restrictions in the build environment.
+  - from-file: packages/common/flatpaks.yml
 
   # Ensure custom Sway session assets are staged and verified without
   # relying on inline scripts, after packages have been applied.
