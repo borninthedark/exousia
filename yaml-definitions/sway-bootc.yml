@@ -168,6 +168,12 @@ modules:
         rm -rf "$TEMP_DIR"
         echo "✓ Dotfiles applied to /etc/skel"
 
+        # Set zsh as default shell for new users
+        if command -v zsh &> /dev/null; then
+          sed -i 's|SHELL=/bin/bash|SHELL=/bin/zsh|g' /etc/default/useradd || true
+          echo "✓ Default shell set to zsh"
+        fi
+
   # Enable systemd services
   - type: systemd
     system:
