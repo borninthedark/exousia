@@ -187,14 +187,28 @@ modules:
       - zsh
       - zsh-autosuggestions
       - zsh-syntax-highlighting
+      # Desktop Applications (native DNF/RPM packages)
+      - firefox
+      - chromium
+      - kate
+      - filezilla
+      - obs-studio
+      - audacity
+      - blender
+      - gimp
+      - vlc
+      - mixxx
+      - transmission
+      - remmina
+      - flameshot
+      - libreoffice
+      - quassel-client
+      - haruna
 
     remove:
       - firefox-langpacks
 
     upgrade: true
-
-  # Install desktop applications from native DNF/RPM packages
-  - from-file: packages/common/applications.yml
 
   # Apply dotfiles at build time
   - type: script

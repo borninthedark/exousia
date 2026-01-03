@@ -139,7 +139,28 @@ modules:
     include_common: true
 
   # Install desktop applications from native DNF/RPM packages
-  - from-file: packages/common/applications.yml
+  - type: rpm-ostree
+    install:
+      # Browsers
+      - firefox
+      - chromium
+      # Development Tools
+      - kate
+      - filezilla
+      # Media & Graphics
+      - obs-studio
+      - audacity
+      - blender
+      - gimp
+      - vlc
+      - mixxx
+      # Utilities
+      - transmission
+      - remmina
+      - flameshot
+      - libreoffice
+      - quassel-client
+      - haruna
 
   # Re-stage and validate the Sway session assets via a dedicated helper
   # instead of inline shell, after package installation.

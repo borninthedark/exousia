@@ -135,7 +135,28 @@ modules:
 
   # Install common applications from DNF packages
   # This replaces flatpak-based installations with native RPM packages
-  - from-file: packages/common/applications.yml
+  - type: rpm-ostree
+    install:
+      # Browsers
+      - firefox
+      - chromium
+      # Development Tools
+      - kate
+      - filezilla
+      # Media & Graphics
+      - obs-studio
+      - audacity
+      - blender
+      - gimp
+      - vlc
+      - mixxx
+      # Utilities
+      - transmission
+      - remmina
+      - flameshot
+      - libreoffice
+      - quassel-client
+      - haruna
 
   # Apply dotfiles at build time
   # Bakes dotfiles into the image for all users via /etc/skel
