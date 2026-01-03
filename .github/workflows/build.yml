@@ -212,6 +212,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -260,10 +262,27 @@ jobs:
           mypy api/ || echo "::warning::Type checking issues found"
           echo "::endgroup::"
 
+      - name: Get Codecov ATS (Automated Test Selection)
+        id: ats
+        uses: codecov/codecov-ats@v0
+        continue-on-error: true
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
+
       - name: Run pytest with coverage
         run: |
           echo "::group::Running Tests"
-          pytest api/tests/ -v --tb=short --cov=api --cov-branch --cov-report=term --cov-report=xml
+          if [ -f codecov_ats/tests_to_run.txt ] && [ -s codecov_ats/tests_to_run.txt ]; then
+            echo "Running ATS-selected tests from codecov_ats/tests_to_run.txt"
+            cat codecov_ats/tests_to_run.txt
+            # Convert test file paths to pytest format
+            TEST_FILES=$(cat codecov_ats/tests_to_run.txt | tr '\n' ' ')
+            pytest $TEST_FILES -v --tb=short --cov=api --cov-branch --cov-report=term --cov-report=xml --cov-report=json
+          else
+            echo "No ATS data available - running all tests"
+            pytest api/tests/ tools/ -v --tb=short --cov=api --cov-branch --cov-report=term --cov-report=xml --cov-report=json
+          fi
           echo "::endgroup::"
 
       - name: Upload coverage reports
@@ -273,6 +292,9 @@ jobs:
           files: ./coverage.xml
           flags: api
           name: api-coverage
+          use_oidc: true
+          plugin: pycoverage
+          plugins: pycoverage
 
       - name: Python quality summary
         if: always()
