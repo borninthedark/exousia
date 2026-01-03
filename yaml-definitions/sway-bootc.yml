@@ -149,6 +149,14 @@ modules:
     scripts:
       - flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
+  # Chezmoi dotfiles management
+  - type: chezmoi
+    repository: "https://github.com/borninthedark/dotfiles"
+    all-users: true
+    file-conflict-policy: skip
+    run-every: "1d"
+    wait-after-boot: "5m"
+
   # Plymouth configuration (all images when enabled)
   - type: script
     condition: enable_plymouth == true
