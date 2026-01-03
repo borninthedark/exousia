@@ -193,6 +193,9 @@ modules:
 
     upgrade: true
 
+  # Install desktop applications from native DNF/RPM packages
+  - from-file: packages/common/applications.yml
+
   # Apply dotfiles at build time
   - type: script
     scripts:
@@ -210,6 +213,7 @@ modules:
         git clone "$DOTFILES_REPO" "$TEMP_DIR"
 
         mkdir -p /etc/skel
+        mkdir -p /etc/skel/.config
         export HOME=/etc/skel
         chezmoi init --apply --source="$TEMP_DIR" || echo "Dotfiles application failed, continuing..."
         unset HOME

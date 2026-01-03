@@ -138,6 +138,9 @@ modules:
     window_manager: sway
     include_common: true
 
+  # Install desktop applications from native DNF/RPM packages
+  - from-file: packages/common/applications.yml
+
   # Re-stage and validate the Sway session assets via a dedicated helper
   # instead of inline shell, after package installation.
   - type: script
@@ -161,6 +164,7 @@ modules:
         git clone "$DOTFILES_REPO" "$TEMP_DIR"
 
         mkdir -p /etc/skel
+        mkdir -p /etc/skel/.config
         export HOME=/etc/skel
         chezmoi init --apply --source="$TEMP_DIR" || echo "Dotfiles application failed, continuing..."
         unset HOME
