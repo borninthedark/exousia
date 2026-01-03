@@ -351,6 +351,156 @@ ENABLE_RKE2=true bats custom-tests/image_content.bats
 - **Prefer static files**: Use static repository files (custom-repos/*.repo) over dynamically generated heredocs
 - **Hadolint compatibility**: Avoid shell heredocs in Containerfile generation; they confuse Hadolint's parser
 
+### Scenario 8: Flatpak and Flathub Configuration
+
+Exousia uses Flatpak for application distribution and the Flathub remote for package sources. The project uses BlueBuild's `default-flatpaks` module for boot-time installation.
+
+```bash
+# Step 1: Configure Flathub remote at build time
+# The remote is added via script module in adnyeus.yml (and other image definitions)
+# Command: flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+# Step 2: Define flatpaks in packages/common/flatpaks.yml
+# This file uses the BlueBuild default-flatpaks module format
+# Example:
+---
+type: default-flatpaks
+notify: true
+system:
+  install:
+    - com.visualstudio.code
+    - org.mozilla.firefox
+    - io.github.zen_browser.zen
+
+# Step 3: Include flatpaks module in image definition
+# Add to modules section:
+- from-file: packages/common/flatpaks.yml
+
+# Step 4: Verify flatpak configuration
+# At build time (in tests):
+buildah run $CONTAINER -- flatpak remote-list
+buildah run $CONTAINER -- flatpak remote-list | grep -i flathub
+
+# At runtime:
+flatpak remote-list
+flatpak list  # List installed applications
+flatpak update  # Update all flatpaks
+
+# Step 5: Test flatpak installation
+# Run integration tests:
+bats custom-tests/image_content.bats -f "Flathub remote"
+```
+
+**Important Flatpak Development Principles:**
+- **Build-time remote setup**: Add Flathub remote at build time for testing verification
+- **Boot-time installation**: Use `default-flatpaks` module for actual package installation
+- **Correct URL**: Use `https://dl.flathub.org/repo/flathub.flatpakrepo` (not https://flathub.org/repo/)
+- **System-level install**: Use `--system` flag for system-wide availability
+- **No RPM duplicates**: Remove RPM versions of packages that will be installed as flatpaks (e.g., Firefox)
+- **Service enablement**: The `default-flatpaks` module automatically creates and enables systemd services
+- **Test coverage**: Verify remote configuration and service enablement in tests
+
+**Key Files:**
+- `adnyeus.yml:136-155` - Flathub remote setup and flatpaks module inclusion
+- `packages/common/flatpaks.yml` - Flatpak package definitions
+- `custom-tests/image_content.bats` - Flatpak integration tests
+
+**References:**
+- [BlueBuild default-flatpaks Module](https://blue-build.org/reference/modules/default-flatpaks/)
+- [Flathub Setup Guide](https://flathub.org/setup)
+
+### Scenario 9: Chezmoi Dotfiles Management
+
+Exousia uses the BlueBuild `chezmoi` module for automated dotfiles management. The module handles binary installation, systemd service creation, and automatic updates.
+
+```bash
+# Step 1: Add chezmoi module to image definition
+# Add to modules section in YAML:
+- type: chezmoi
+  repository: "https://github.com/borninthedark/dotfiles"
+  all-users: true
+  file-conflict-policy: skip
+  run-every: "1d"
+  wait-after-boot: "5m"
+
+# Step 2: Enable chezmoi systemd user services
+# Add to systemd module:
+- type: systemd
+  user:
+    enabled:
+      - chezmoi-init.service
+      - chezmoi-update.timer
+
+# Step 3: DO NOT add chezmoi to package lists
+# The BlueBuild module downloads and installs the binary automatically
+# Never add chezmoi to packages/common/base.yml or other package lists
+
+# Step 4: Verify chezmoi installation
+# Check binary installation:
+which chezmoi  # Should be /usr/bin/chezmoi
+chezmoi --version
+
+# Check systemd services:
+systemctl --user status chezmoi-init.service
+systemctl --user status chezmoi-update.timer
+
+# Step 5: Test chezmoi integration
+# Run the 7 chezmoi-specific tests:
+bats custom-tests/image_content.bats -f "chezmoi"
+
+# Expected tests:
+# 1. chezmoi binary is installed at /usr/bin/chezmoi
+# 2. chezmoi is executable
+# 3. chezmoi --version works
+# 4. chezmoi-init.service exists
+# 5. chezmoi-update.service exists
+# 6. chezmoi-update.timer exists
+# 7. chezmoi is NOT installed as RPM package
+
+# Step 6: Manual operations (runtime)
+# Initialize dotfiles manually:
+chezmoi init --apply https://github.com/borninthedark/dotfiles
+
+# Update dotfiles:
+chezmoi update
+
+# Check managed files:
+chezmoi managed
+
+# View what would be applied:
+chezmoi diff
+```
+
+**Important Chezmoi Development Principles:**
+- **Module-based installation**: Never install chezmoi as RPM package - the BlueBuild module handles it
+- **Binary location**: chezmoi is installed to `/usr/bin/chezmoi` by the module
+- **Systemd services**: The module creates `chezmoi-init.service` and `chezmoi-update.timer` user services
+- **Global enablement**: Use `systemctl --global enable` via BlueBuild systemd module for all users
+- **Conflict policy**: Use `skip` to allow local changes, or `replace` to always sync with repository
+- **Test coverage**: Verify binary installation, service creation, and absence of RPM package
+- **Documentation**: See `docs/CHEZMOI_INTEGRATION.md` for comprehensive guide
+
+**Key Files:**
+- `adnyeus.yml:157-165` - Chezmoi module configuration
+- `adnyeus.yml:330-333` - Systemd user service enablement
+- `yaml-definitions/sway-atomic.yml` - Chezmoi configuration for Sway Atomic
+- `yaml-definitions/sway-bootc.yml` - Chezmoi configuration for Sway Bootc
+- `yaml-definitions/fedora-kinoite.yml` - Chezmoi configuration for Fedora Kinoite
+- `docs/CHEZMOI_INTEGRATION.md` - Comprehensive chezmoi documentation
+- `custom-tests/image_content.bats` - Chezmoi integration tests
+
+**Images with Chezmoi:**
+- ✅ Adnyeus (`adnyeus.yml`)
+- ✅ Sway Atomic (`yaml-definitions/sway-atomic.yml`)
+- ✅ Sway Bootc (`yaml-definitions/sway-bootc.yml`)
+- ✅ Fedora Kinoite (`yaml-definitions/fedora-kinoite.yml`)
+- ❌ RKE2 bootc (minimal server image, no desktop environment)
+
+**References:**
+- [BlueBuild chezmoi Module](https://blue-build.org/reference/modules/chezmoi/)
+- [chezmoi Official Documentation](https://www.chezmoi.io/)
+- [Exousia Dotfiles Repository](https://github.com/borninthedark/dotfiles)
+
 ## Common Pitfalls & Lessons Learned
 
 ### Containerfile Generation
@@ -1104,6 +1254,6 @@ AI-generated contributions are subject to the same MIT License as the rest of th
 **AI-Augmented Development**
 
 *This AGENTS.md was initially generated with Claude Sonnet 4.5 and human oversight on 2025-12-01*
-*Last updated: 2025-12-13 - Added sway-config-minimal documentation, RKE2 config path fix, GPT Codex assistant role, and test updates*
+*Last updated: 2026-01-03 - Added Flatpak/Flathub configuration scenario (Scenario 8) and Chezmoi dotfiles management scenario (Scenario 9) with current project state*
 
 *For questions about AI workflows, open an issue or contact the maintainers*

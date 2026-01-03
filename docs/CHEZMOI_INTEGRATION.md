@@ -41,6 +41,7 @@ After initialization:
 ## Configuration
 
 The chezmoi module is configured in the following files:
+- `adnyeus.yml:157-165`
 - `yaml-definitions/sway-atomic.yml:202-208`
 - `yaml-definitions/sway-bootc.yml:152-158`
 - `yaml-definitions/fedora-kinoite.yml:60-66`
@@ -446,6 +447,7 @@ dotfiles/
 ## Images Using Chezmoi
 
 The chezmoi module is enabled in:
+- ✅ **Adnyeus** (`adnyeus.yml`) - DevSecOps-hardened Fedora bootc image with Sway
 - ✅ **Sway Atomic** (`yaml-definitions/sway-atomic.yml`)
 - ✅ **Sway Bootc** (`yaml-definitions/sway-bootc.yml`)
 - ✅ **Fedora Kinoite** (`yaml-definitions/fedora-kinoite.yml`)

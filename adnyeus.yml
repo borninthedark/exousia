@@ -143,7 +143,7 @@ modules:
         # Add Flathub remote at build time (safe, no package installation)
         # This allows tests to verify the remote is configured
         flatpak remote-add --if-not-exists --system flathub \
-          https://flathub.org/repo/flathub.flatpakrepo
+          https://dl.flathub.org/repo/flathub.flatpakrepo
 
         echo "✓ Flathub remote configured at build time"
 
@@ -153,6 +153,16 @@ modules:
   # 2. Install all configured flatpak applications
   # See: https://blue-build.org/reference/modules/default-flatpaks/
   - from-file: packages/common/flatpaks.yml
+
+  # Chezmoi dotfiles management
+  # Automatically manages dotfiles from the configured repository
+  # See: https://blue-build.org/reference/modules/chezmoi/
+  - type: chezmoi
+    repository: "https://github.com/borninthedark/dotfiles"
+    all-users: true
+    file-conflict-policy: skip
+    run-every: "1d"
+    wait-after-boot: "5m"
 
   # Ensure custom Sway session assets are staged and verified without
   # relying on inline scripts, after packages have been applied.
@@ -316,6 +326,11 @@ modules:
         - systemd-resolved.service
         - NetworkManager.service
         - greetd.service
+        - bootc-fetch-apply-updates.timer
+    user:
+      enabled:
+        - chezmoi-init.service
+        - chezmoi-update.timer
     default-target: graphical.target
 
   # Note: bluebuild-default-flatpaks-system.service is automatically enabled
