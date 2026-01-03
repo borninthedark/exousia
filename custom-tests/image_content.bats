@@ -814,6 +814,136 @@ is_rke2_enabled() {
     assert_success "kubernetes.repo should contain k8s package repository URL"
 }
 
+# --- Chezmoi dotfiles management ---
+
+# Helper function to check if chezmoi should be enabled for this image
+is_chezmoi_enabled() {
+    # RKE2 minimal server image doesn't include chezmoi
+    if is_rke2_enabled; then
+        return 1
+    fi
+    # All desktop images include chezmoi
+    return 0
+}
+
+@test "Chezmoi binary should be installed" {
+    if ! is_chezmoi_enabled; then
+        skip "Chezmoi not enabled for this image type"
+    fi
+
+    # Verify chezmoi binary exists in /usr/bin
+    assert_file_exists "$MOUNT_POINT/usr/bin/chezmoi"
+}
+
+@test "Chezmoi binary should be executable" {
+    if ! is_chezmoi_enabled; then
+        skip "Chezmoi not enabled for this image type"
+    fi
+
+    # Check file permissions
+    run test -x "$MOUNT_POINT/usr/bin/chezmoi"
+    assert_success "chezmoi should have execute permissions"
+}
+
+@test "Chezmoi version command should work" {
+    if ! is_chezmoi_enabled; then
+        skip "Chezmoi not enabled for this image type"
+    fi
+
+    # Run chezmoi --version to verify it's functional
+    run buildah run "$CONTAINER" -- /usr/bin/chezmoi --version
+    assert_success "chezmoi --version should execute successfully"
+    assert_output --partial "chezmoi"
+}
+
+@test "Chezmoi systemd init service should be installed" {
+    if ! is_chezmoi_enabled; then
+        skip "Chezmoi not enabled for this image type"
+    fi
+
+    # The chezmoi module installs user services
+    # Check for the init service that runs on first login
+    local service_paths=(
+        "$MOUNT_POINT/usr/lib/systemd/user/chezmoi-init.service"
+        "$MOUNT_POINT/etc/systemd/user/chezmoi-init.service"
+    )
+
+    local found=false
+    for path in "${service_paths[@]}"; do
+        if [ -f "$path" ]; then
+            found=true
+            break
+        fi
+    done
+
+    if [ "$found" = false ]; then
+        echo "chezmoi-init.service not found in any expected location" >&2
+        return 1
+    fi
+}
+
+@test "Chezmoi systemd update service should be installed" {
+    if ! is_chezmoi_enabled; then
+        skip "Chezmoi not enabled for this image type"
+    fi
+
+    # Check for the update service
+    local service_paths=(
+        "$MOUNT_POINT/usr/lib/systemd/user/chezmoi-update.service"
+        "$MOUNT_POINT/etc/systemd/user/chezmoi-update.service"
+    )
+
+    local found=false
+    for path in "${service_paths[@]}"; do
+        if [ -f "$path" ]; then
+            found=true
+            break
+        fi
+    done
+
+    if [ "$found" = false ]; then
+        echo "chezmoi-update.service not found in any expected location" >&2
+        return 1
+    fi
+}
+
+@test "Chezmoi systemd update timer should be installed" {
+    if ! is_chezmoi_enabled; then
+        skip "Chezmoi not enabled for this image type"
+    fi
+
+    # Check for the update timer that runs periodically
+    local timer_paths=(
+        "$MOUNT_POINT/usr/lib/systemd/user/chezmoi-update.timer"
+        "$MOUNT_POINT/etc/systemd/user/chezmoi-update.timer"
+    )
+
+    local found=false
+    for path in "${timer_paths[@]}"; do
+        if [ -f "$path" ]; then
+            found=true
+            break
+        fi
+    done
+
+    if [ "$found" = false ]; then
+        echo "chezmoi-update.timer not found in any expected location" >&2
+        return 1
+    fi
+}
+
+@test "Chezmoi should not be installed as RPM package" {
+    if ! is_chezmoi_enabled; then
+        skip "Chezmoi not enabled for this image type"
+    fi
+
+    # The BlueBuild chezmoi module installs the binary directly
+    # It should NOT be installed as an RPM package
+    # This test verifies we removed it from package lists
+    run buildah run "$CONTAINER" -- rpm -q chezmoi
+    assert_failure "chezmoi should not be installed as RPM (module handles installation)"
+}
+
 # --- Final validation ---
 
 @test "BUILD_IMAGE_TYPE environment variable should be set correctly" {

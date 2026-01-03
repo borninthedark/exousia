@@ -202,7 +202,7 @@ modules:
   - type: chezmoi
     repository: "https://github.com/borninthedark/dotfiles"
     all-users: true
-    file-conflict-policy: replace
+    file-conflict-policy: skip
     run-every: "1d"
     wait-after-boot: "5m"
 
