@@ -65,8 +65,11 @@ modules:
     run-every: "1d"
     wait-after-boot: "5m"
 
-  # Enable chezmoi systemd user services for all users
+  # Enable systemd services
   - type: systemd
+    system:
+      enabled:
+        - bootc-fetch-apply-updates.timer
     user:
       enabled:
         - chezmoi-init.service

@@ -159,6 +159,9 @@ modules:
 
   # Enable chezmoi systemd user services for all users
   - type: systemd
+    system:
+      enabled:
+        - bootc-fetch-apply-updates.timer
     user:
       enabled:
         - chezmoi-init.service
