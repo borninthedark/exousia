@@ -193,23 +193,35 @@ modules:
 
     upgrade: true
 
-  # Chezmoi dotfiles management
-  - type: chezmoi
-    repository: "https://github.com/borninthedark/dotfiles"
-    all-users: true
-    file-conflict-policy: skip
-    run-every: "1d"
-    wait-after-boot: "5m"
+  # Apply dotfiles at build time
+  - type: script
+    scripts:
+      - |
+        set -euxo pipefail
+
+        if ! command -v chezmoi &> /dev/null; then
+          dnf install -y chezmoi
+        fi
+
+        DOTFILES_REPO="https://github.com/borninthedark/dotfiles"
+        TEMP_DIR="/tmp/dotfiles-build"
+
+        rm -rf "$TEMP_DIR"
+        git clone "$DOTFILES_REPO" "$TEMP_DIR"
+
+        mkdir -p /etc/skel
+        export HOME=/etc/skel
+        chezmoi init --apply --source="$TEMP_DIR" || echo "Dotfiles application failed, continuing..."
+        unset HOME
+
+        rm -rf "$TEMP_DIR"
+        echo "✓ Dotfiles applied to /etc/skel"
 
   # Enable systemd services
   - type: systemd
     system:
       enabled:
         - bootc-fetch-apply-updates.timer
-    user:
-      enabled:
-        - chezmoi-init.service
-        - chezmoi-update.timer
 
   # Plymouth configuration (all images when enabled)
   - type: script
