@@ -944,6 +944,30 @@ is_chezmoi_enabled() {
     assert_failure "chezmoi should not be installed as RPM (module handles installation)"
 }
 
+# --- Systemd services enablement ---
+
+@test "bootc-fetch-apply-updates.timer should be installed" {
+    # This timer enables automatic bootc updates
+    # Check that the timer unit file exists
+    local timer_paths=(
+        "$MOUNT_POINT/usr/lib/systemd/system/bootc-fetch-apply-updates.timer"
+        "$MOUNT_POINT/lib/systemd/system/bootc-fetch-apply-updates.timer"
+    )
+
+    local found=false
+    for path in "${timer_paths[@]}"; do
+        if [ -f "$path" ]; then
+            found=true
+            break
+        fi
+    done
+
+    if [ "$found" = false ]; then
+        echo "bootc-fetch-apply-updates.timer not found in any expected location" >&2
+        return 1
+    fi
+}
+
 # --- Final validation ---
 
 @test "BUILD_IMAGE_TYPE environment variable should be set correctly" {

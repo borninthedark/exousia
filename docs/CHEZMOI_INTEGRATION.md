@@ -20,6 +20,7 @@ During image build, the chezmoi module:
 - ✅ Installs it to `/usr/bin/chezmoi`
 - ✅ Creates systemd user services for initialization and updates
 - ✅ Configures the repository URL and update policy
+- ✅ Enables services globally for all users via `systemctl --global enable`
 
 ### Phase 2: First User Login
 
@@ -391,6 +392,7 @@ The repository includes automated tests in `custom-tests/image_content.bats` tha
 4. **Systemd init service exists** - Checks `chezmoi-init.service` is installed
 5. **Systemd update service exists** - Checks `chezmoi-update.service` is installed
 6. **Systemd update timer exists** - Checks `chezmoi-update.timer` is installed
+7. **Not installed as RPM package** - Verifies chezmoi isn't installed via RPM (module handles it)
 
 These tests run during CI/CD builds to ensure the module installed correctly.
 
