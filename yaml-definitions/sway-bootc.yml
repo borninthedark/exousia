@@ -152,7 +152,7 @@ modules:
 
         # Add Flathub remote at build time (safe, no package installation)
         # This allows tests to verify the remote is configured
-        flatpak remote-add --if-not-exists --system flathub \
+        flatpak remote-add --if-not-exists flathub \
           https://dl.flathub.org/repo/flathub.flatpakrepo
 
         echo "✓ Flathub remote configured at build time"
