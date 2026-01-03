@@ -932,16 +932,15 @@ is_chezmoi_enabled() {
     fi
 }
 
-@test "Chezmoi should not be installed as RPM package" {
+@test "Chezmoi should be installed as RPM package" {
     if ! is_chezmoi_enabled; then
         skip "Chezmoi not enabled for this image type"
     fi
 
-    # The BlueBuild chezmoi module installs the binary directly
-    # It should NOT be installed as an RPM package
-    # This test verifies we removed it from package lists
+    # Chezmoi is now explicitly installed as an RPM package via base packages
+    # This test verifies it's properly installed from Fedora repos
     run buildah run "$CONTAINER" -- rpm -q chezmoi
-    assert_failure "chezmoi should not be installed as RPM (module handles installation)"
+    assert_success "chezmoi should be installed as RPM from base packages"
 }
 
 # --- Systemd services enablement ---

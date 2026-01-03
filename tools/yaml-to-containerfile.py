@@ -38,8 +38,9 @@ class DistroConfig:
     bootc_build_deps: List[str]
 
 
-# Fedora Atomic Desktop variants (only Sway and LXQt are supported)
+# Fedora Atomic Desktop variants
 FEDORA_ATOMIC_VARIANTS = {
+    "fedora-kinoite": "quay.io/fedora-ostree-desktops/kinoite",
     "fedora-sway-atomic": "quay.io/fedora/fedora-sway-atomic",
     "fedora-lxqt": "quay.io/fedora-ostree-desktops/lxqt",
 }

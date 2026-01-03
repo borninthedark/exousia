@@ -25,6 +25,7 @@ core_utilities:
   - policycoreutils-python-utils
   - cryptsetup
   - python3
+  - chezmoi
 
 # Audio and media
 audio_media:

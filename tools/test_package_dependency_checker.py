@@ -170,24 +170,24 @@ def test_freebsd_get_package_info_reads_dependencies(monkeypatch):
 
 
 def test_transpiler_check_packages_uses_checker(monkeypatch):
-    transpiler = PackageDependencyTranspiler(distro="debian")
+    transpiler = PackageDependencyTranspiler(distro="fedora")
     mock_result = DependencyCheckResult(
         package="hello",
         found=True,
         installed=True,
         dependencies=[],
-        distro="debian",
+        distro="fedora",
     )
     monkeypatch.setattr(transpiler.checker, "check_dependencies_installed", lambda pkg: mock_result)
 
     results = transpiler.check_packages(["hello"])
 
     assert "hello" in results
-    assert results["hello"].distro == "debian"
+    assert results["hello"].distro == "fedora"
 
 
 def test_transpiler_verify_installation_reports_missing(monkeypatch):
-    transpiler = PackageDependencyTranspiler(distro="debian")
+    transpiler = PackageDependencyTranspiler(distro="fedora")
     monkeypatch.setattr(transpiler.checker, "is_installed", lambda pkg: pkg == "present")
 
     all_installed, missing = transpiler.verify_installation(["present", "absent"])
