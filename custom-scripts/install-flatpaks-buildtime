@@ -1,0 +1,119 @@
+#!/bin/bash
+# Install flatpaks at build time from packages/common/flatpaks.yml
+# This replaces the boot-time default-flatpaks service with build-time installation
+
+set -euo pipefail
+
+FLATPAKS_CONFIG="/tmp/flatpaks-list.txt"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+log() {
+    echo "[install-flatpaks-buildtime] $*"
+}
+
+error() {
+    echo "[ERROR] $*" >&2
+}
+
+# Parse flatpaks.yml and extract package IDs
+parse_flatpaks_yml() {
+    local yml_file="$1"
+
+    if [[ ! -f "$yml_file" ]]; then
+        error "Flatpaks config file not found: $yml_file"
+        return 1
+    fi
+
+    log "Parsing flatpaks from: $yml_file"
+
+    # Extract flatpak IDs from the YAML (lines starting with "      -" under install:)
+    # This is a simple parser - assumes the format from flatpaks.yml
+    grep -A 1000 "install:" "$yml_file" | \
+        grep "^      - " | \
+        sed 's/^      - //' | \
+        grep -v "^scope:" | \
+        sort -u > "$FLATPAKS_CONFIG"
+
+    local count=$(wc -l < "$FLATPAKS_CONFIG")
+    log "Found $count flatpaks to install"
+}
+
+# Install a single flatpak with error handling
+install_flatpak() {
+    local flatpak_id="$1"
+
+    # Skip empty lines
+    [[ -z "$flatpak_id" ]] && return 0
+
+    log "Installing: $flatpak_id"
+
+    # Install with --assumeyes and --noninteractive for CI
+    if flatpak install --assumeyes --noninteractive flathub "$flatpak_id" 2>&1; then
+        log "✓ Installed: $flatpak_id"
+        return 0
+    else
+        # Don't fail the entire build for one failed flatpak
+        error "✗ Failed to install: $flatpak_id (continuing anyway)"
+        return 0
+    fi
+}
+
+# Main installation process
+main() {
+    log "Starting build-time flatpak installation"
+
+    # Path to flatpaks.yml in the build context
+    local flatpaks_yml="${1:-/tmp/build-context/packages/common/flatpaks.yml}"
+
+    # Alternative paths to try
+    if [[ ! -f "$flatpaks_yml" ]]; then
+        flatpaks_yml="/packages/common/flatpaks.yml"
+    fi
+
+    if [[ ! -f "$flatpaks_yml" ]]; then
+        error "Could not find flatpaks.yml at expected locations"
+        log "Tried:"
+        log "  - /tmp/build-context/packages/common/flatpaks.yml"
+        log "  - /packages/common/flatpaks.yml"
+        exit 1
+    fi
+
+    # Ensure flathub remote exists
+    if ! flatpak remote-list | grep -q flathub; then
+        error "Flathub remote not configured. Run flatpak remote-add first."
+        exit 1
+    fi
+
+    # Parse the YAML file
+    parse_flatpaks_yml "$flatpaks_yml"
+
+    # Install each flatpak
+    local installed=0
+    local failed=0
+
+    while IFS= read -r flatpak_id; do
+        if install_flatpak "$flatpak_id"; then
+            ((installed++))
+        else
+            ((failed++))
+        fi
+    done < "$FLATPAKS_CONFIG"
+
+    log "Installation complete: $installed succeeded, $failed failed"
+
+    # Clean up
+    rm -f "$FLATPAKS_CONFIG"
+
+    # List installed flatpaks for verification
+    log "Installed flatpaks:"
+    flatpak list --app --columns=application | head -20
+
+    if [[ $failed -gt 0 ]]; then
+        log "Warning: $failed flatpaks failed to install"
+        # Don't exit with error - some flatpaks may not be available
+    fi
+
+    log "Build-time flatpak installation finished"
+}
+
+main "$@"

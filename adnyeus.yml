@@ -147,12 +147,18 @@ modules:
 
         echo "✓ Flathub remote configured at build time"
 
-  # Flatpak setup - Boot-time installation via default-flatpaks module
-  # The module creates systemd services that automatically:
-  # 1. Set up the Flathub remote on first boot (if not already present)
-  # 2. Install all configured flatpak applications
-  # See: https://blue-build.org/reference/modules/default-flatpaks/
-  - from-file: packages/common/flatpaks.yml
+  # Flatpak setup - Build-time installation
+  # Install flatpak runtimes and essential apps during image build
+  # This makes apps available immediately without waiting for first-boot services
+  # Note: Full app list from packages/common/flatpaks.yml can be installed later
+  - type: script
+    scripts:
+      - /usr/local/bin/install-flatpak-runtimes
+      - /usr/local/bin/install-essential-flatpaks || echo "Some essential flatpaks failed to install"
+
+  # Alternative: Boot-time installation via default-flatpaks module (currently disabled)
+  # Uncomment to use default-flatpaks service instead of build-time installation:
+  # - from-file: packages/common/flatpaks.yml
 
   # Chezmoi dotfiles management
   # Automatically manages dotfiles from the configured repository
