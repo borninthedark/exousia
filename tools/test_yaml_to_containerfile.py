@@ -267,11 +267,12 @@ def test_script_comments_do_not_chain_into_next_run():
 def test_fedora_atomic_variants():
     """Test that all Fedora Atomic variants are recognized."""
     assert "fedora-kinoite" in FEDORA_ATOMIC_VARIANTS
-    assert "fedora-silverblue" in FEDORA_ATOMIC_VARIANTS
     assert "fedora-sway-atomic" in FEDORA_ATOMIC_VARIANTS
+    assert "fedora-lxqt" in FEDORA_ATOMIC_VARIANTS
 
     base_kinoite = determine_base_image({}, "fedora-kinoite", "43")
-    assert "fedora-kinoite:43" in base_kinoite
+    assert "kinoite:43" in base_kinoite
+    assert base_kinoite.startswith("quay.io/")
 
     print("✓ Fedora Atomic variants are recognized")
 
