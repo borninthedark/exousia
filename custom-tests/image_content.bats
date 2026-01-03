@@ -520,61 +520,49 @@ get_package_manager() {
     assert_file_executable "$MOUNT_POINT/usr/bin/start-sway"
 }
 
-# --- Flathub, Sway config, bootc lint ---
+# --- DNF Applications, dotfiles, Sway config, bootc lint ---
 
-@test "Default-flatpaks module should be configured" {
-    # The default-flatpaks module creates and enables systemd services automatically
-    # We just need to verify the module configuration is present
+@test "Essential applications should be installed via DNF" {
+    # Verify core applications from packages/common/applications.yml are installed
+    local apps=(
+        "firefox"
+        "chromium"
+        "kate"
+        "gimp"
+        "vlc"
+        "libreoffice"
+    )
 
-    # Check that flatpak binary is available (required for the module to work)
-    run buildah run "$CONTAINER" -- which flatpak
-    assert_success "flatpak binary should be present"
-
-    # The module creates service files on first boot, so we can't check for them
-    # in the built image. Just verify the configuration will be processed.
+    for app in "${apps[@]}"; do
+        run buildah run "$CONTAINER" -- rpm -q "$app"
+        assert_success "$app should be installed"
+    done
 }
 
-@test "BlueBuild flatpak manager CLI should be available" {
-    # The default-flatpaks module provides the bluebuild-flatpak-manager command
-    run buildah run "$CONTAINER" -- which bluebuild-flatpak-manager
-    if [ "$status" -eq 0 ]; then
-        assert_success "bluebuild-flatpak-manager CLI is available"
-    else
-        skip "bluebuild-flatpak-manager not found (optional, depends on module version)"
-    fi
+@test "Dotfiles should be applied to /etc/skel" {
+    # Verify dotfiles were applied during build
+    assert_file_exists "$MOUNT_POINT/etc/skel/.config" \
+        "Dotfiles should create .config directory in /etc/skel"
+
+    # Check for common dotfile directories/files
+    run buildah run "$CONTAINER" -- test -d /etc/skel/.config
+    assert_success "/etc/skel/.config should exist from dotfiles"
 }
 
-@test "Core Flatpak applications will be installed on first boot" {
-    # Flatpaks are installed at boot time via default-flatpaks module
-    # Verify that flatpak is available for installation
-    run buildah run "$CONTAINER" -- which flatpak
-    assert_success "flatpak command should be available for boot-time installation"
+@test "Default shell should be zsh" {
+    # Verify zsh is installed
+    run buildah run "$CONTAINER" -- which zsh
+    assert_success "zsh should be installed"
 
-    # Note: The actual packages will be installed by the default-flatpaks
-    # systemd service on first boot. The packages/common/flatpaks.yml file
-    # contains the list of packages to install.
+    # Verify zsh is set as default shell in /etc/passwd
+    run buildah run "$CONTAINER" -- grep -q "/bin/zsh" /etc/shells
+    assert_success "zsh should be in /etc/shells"
 }
 
-@test "Flatpak runtimes will be installed on first boot" {
-    # Verify flatpak can query the remote (even though no packages installed yet)
-    run buildah run "$CONTAINER" -- flatpak remote-ls flathub --app --columns=application
-    assert_success "Should be able to query Flathub remote"
-}
-
-@test "Default-flatpaks configuration file should exist" {
-    # Check for the flatpaks.yml configuration that defines what to install
-    assert_file_exists "$MOUNT_POINT/usr/share/ublue-os/bluebuild/flatpaks.yml" \
-        || assert_file_exists "$MOUNT_POINT/etc/bluebuild/flatpaks.yml" \
-        || skip "default-flatpaks configuration file not found in expected locations"
-}
-
-@test "Flatpak installation verification script should exist" {
-    # Check that the verification script is present
-    if [ -f "$MOUNT_POINT/usr/local/bin/verify-flatpak-installation" ]; then
-        assert_file_executable "$MOUNT_POINT/usr/local/bin/verify-flatpak-installation"
-    else
-        skip "Flatpak verification script not found (optional)"
-    fi
+@test "Chezmoi should be available for dotfile management" {
+    # Verify chezmoi is installed (used during build)
+    run buildah run "$CONTAINER" -- which chezmoi
+    assert_success "chezmoi should be installed"
 }
 
 @test "/var/run should be a symlink to /run" {

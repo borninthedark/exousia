@@ -1,96 +1,97 @@
 # Chezmoi Integration
 
-This guide explains how Exousia integrates chezmoi for automated dotfiles management using the BlueBuild chezmoi module.
+This guide explains how Exousia integrates chezmoi for automated dotfiles management using build-time application.
 
 ## Overview
 
-Exousia uses the [BlueBuild chezmoi module](https://blue-build.org/reference/modules/chezmoi/) to provide automated dotfiles management across all desktop images. This integration handles:
+Exousia applies dotfiles during the CI build process, baking them into `/etc/skel` so they're immediately available for all new users. This provides:
 
-- **Build-time installation**: chezmoi binary is installed to `/usr/bin/chezmoi` during image build
-- **Automatic initialization**: Dotfiles repository is cloned on first user login
-- **Automatic updates**: Dotfiles are updated daily via systemd timer
-- **Conflict resolution**: Configured to replace local changes with repository version
+- **Build-time application**: Dotfiles are applied during image build, not on first login
+- **Immediate availability**: All new users get dotfiles from their first login
+- **No boot delays**: No waiting for first-boot services
+- **Consistent setup**: All users get identical dotfiles from the built image
 
 ## How It Works
 
-### Phase 1: Build Time
+### Build Time (CI)
 
-During image build, the chezmoi module:
-- ✅ Downloads the latest chezmoi binary from GitHub releases (amd64)
-- ✅ Installs it to `/usr/bin/chezmoi`
-- ✅ Creates systemd user services for initialization and updates
-- ✅ Configures the repository URL and update policy
-- ✅ Enables services globally for all users via `systemctl --global enable`
+During image build:
+- ✅ Chezmoi is installed via DNF
+- ✅ Dotfiles repository is cloned from GitHub
+- ✅ Dotfiles are applied to `/etc/skel`
+- ✅ Default shell is set to zsh for new users
+- ✅ Temporary files are cleaned up
 
-### Phase 2: First User Login
+### First User Login
 
-When a user logs in for the first time:
-- 🚀 The `chezmoi-init.service` runs automatically
-- 🚀 Dotfiles repository is cloned to `~/.local/share/chezmoi`
-- 🚀 Initial dotfiles are applied to the home directory
-- 🚀 The service marks itself complete and won't run again
-
-### Phase 3: Automatic Updates
-
-After initialization:
-- 🔄 The `chezmoi-update.timer` runs daily (configurable)
-- 🔄 Waits 5 minutes after boot before first update (configurable)
-- 🔄 Updates dotfiles from the repository
-- 🔄 Replaces local changes with repository version (configurable)
+When a new user is created:
+- 🚀 User home directory is created
+- 🚀 Dotfiles from `/etc/skel` are copied to `~/`
+- 🚀 User immediately has configured shell, configs, etc.
+- 🚀 Default shell is zsh (if user accepts default)
 
 ## Configuration
 
-The chezmoi module is configured in the following files:
-- `adnyeus.yml:157-165`
-- `yaml-definitions/sway-atomic.yml:202-208`
-- `yaml-definitions/sway-bootc.yml:152-158`
-- `yaml-definitions/fedora-kinoite.yml:60-66`
+The build-time chezmoi application is configured in:
+- `adnyeus.yml:140-171`
+- `yaml-definitions/sway-atomic.yml:196-218`
+- `yaml-definitions/sway-bootc.yml:147-169`
+- `yaml-definitions/fedora-kinoite.yml:59-81`
 
 ### Current Settings
 
 ```yaml
-type: chezmoi
-repository: "https://github.com/borninthedark/dotfiles"
-all-users: true                # Enabled for all users by default
-file-conflict-policy: skip     # Skip files with local changes
-run-every: "1d"                # Update once per day
-wait-after-boot: "5m"          # Wait 5 minutes after boot
+# Apply dotfiles at build time
+- type: script
+  scripts:
+    - |
+      set -euxo pipefail
+
+      # Install chezmoi if not present
+      if ! command -v chezmoi &> /dev/null; then
+        dnf install -y chezmoi
+      fi
+
+      # Apply dotfiles to /etc/skel for new users
+      DOTFILES_REPO="https://github.com/borninthedark/dotfiles"
+      TEMP_DIR="/tmp/dotfiles-build"
+
+      rm -rf "$TEMP_DIR"
+      git clone "$DOTFILES_REPO" "$TEMP_DIR"
+
+      mkdir -p /etc/skel
+      export HOME=/etc/skel
+      chezmoi init --apply --source="$TEMP_DIR" || echo "Dotfiles application failed, continuing..."
+      unset HOME
+
+      rm -rf "$TEMP_DIR"
+      echo "✓ Dotfiles applied to /etc/skel"
+
+      # Set zsh as default shell for new users
+      if command -v zsh &> /dev/null; then
+        sed -i 's|SHELL=/bin/bash|SHELL=/bin/zsh|g' /etc/default/useradd || true
+        echo "✓ Default shell set to zsh"
+      fi
 ```
-
-### Configuration Options
-
-| Option | Value | Description |
-|--------|-------|-------------|
-| `repository` | `https://github.com/borninthedark/dotfiles` | Git repository URL for dotfiles |
-| `all-users` | `true` | Enable services globally for all users |
-| `file-conflict-policy` | `skip` | Skip files with local changes |
-| `run-every` | `1d` | Update interval (1 day) |
-| `wait-after-boot` | `5m` | Delay before first update after boot |
-
-#### File Conflict Policy
-
-- **`skip`** (current): Skip files that have local changes
-  - Uses: `chezmoi update --no-tty --keep-going`
-  - Best for: Users who make local customizations and push changes to the repository
-  - **This is the default** - allows flexibility to modify dotfiles locally and commit to remote
-
-- **`replace`** (alternative): Overwrite changed files with repository version
-  - Uses: `chezmoi update --no-tty --force`
-  - Best for: Users who want dotfiles to always match the repository exactly
-
-#### Update Intervals
-
-You can customize update frequency using systemd time syntax:
-- `1d` - Once per day (default)
-- `6h` - Every 6 hours
-- `1w` - Once per week
-- `10m` - Every 10 minutes (for testing)
-
-See [systemd.time documentation](https://www.freedesktop.org/software/systemd/man/latest/systemd.time.html) for complete syntax.
 
 ## Verification Methods
 
-### Method 1: Check chezmoi Binary
+### Method 1: Check /etc/skel
+
+```bash
+# Verify dotfiles exist in /etc/skel
+ls -la /etc/skel
+
+# Check for common dotfile directories
+ls -la /etc/skel/.config
+ls -la /etc/skel/.local
+
+# View specific config files
+cat /etc/skel/.zshrc
+cat /etc/skel/.config/sway/config
+```
+
+### Method 2: Check chezmoi Binary
 
 ```bash
 # Verify chezmoi is installed
@@ -101,244 +102,154 @@ which chezmoi
 chezmoi --version
 ```
 
-### Method 2: Check Systemd Services
+### Method 3: Check Default Shell
 
 ```bash
-# Check if services are enabled for current user
-systemctl --user is-enabled chezmoi-init.service
-systemctl --user is-enabled chezmoi-update.timer
+# Check default shell for new users
+grep SHELL /etc/default/useradd
+# Expected: SHELL=/bin/zsh
 
-# Check service status
-systemctl --user status chezmoi-init.service
-systemctl --user status chezmoi-update.timer
-
-# Check when last update ran
-systemctl --user list-timers chezmoi-update.timer
+# Verify zsh is available
+which zsh
 ```
 
-### Method 3: Verify Repository
+### Method 4: Create Test User
 
 ```bash
-# Check if repository is initialized
-ls -la ~/.local/share/chezmoi
+# Create a test user to verify dotfiles
+sudo useradd -m testuser
+sudo ls -la /home/testuser
 
-# Show repository status
-chezmoi status
+# Check that dotfiles were copied
+sudo ls -la /home/testuser/.config
+sudo cat /home/testuser/.zshrc
 
-# Show repository source
-chezmoi source path
-```
-
-### Method 4: Check Applied Dotfiles
-
-```bash
-# List managed files
-chezmoi managed
-
-# Show what chezmoi would apply
-chezmoi diff
-
-# Verify files match repository
-chezmoi verify
+# Clean up
+sudo userdel -r testuser
 ```
 
 ## Manual Operations
 
-### Initialize Dotfiles Manually
+### Update Dotfiles in Running System
 
-If you disabled `all-users` or want to use a different repository:
+If you want to update dotfiles for existing users:
 
 ```bash
-# Initialize with default repository
-chezmoi init https://github.com/borninthedark/dotfiles
-
-# Initialize and apply
+# Update your own dotfiles
 chezmoi init --apply https://github.com/borninthedark/dotfiles
 
+# Or manually pull updates
+cd ~/.local/share/chezmoi
+git pull
+chezmoi apply
+```
+
+### Change Default Repository
+
+To use a different dotfiles repository:
+
+```bash
+# Initialize with different repository
+chezmoi init --apply https://github.com/YOUR_USERNAME/dotfiles
+
 # Use a specific branch
-chezmoi init --apply https://github.com/borninthedark/dotfiles --branch=laptop
+chezmoi init --apply https://github.com/YOUR_USERNAME/dotfiles --branch=laptop
 ```
 
-### Enable Services Manually
+### Manually Apply to /etc/skel
 
-If `all-users: false` is set, enable services per user:
-
-```bash
-# Enable services for current user
-systemctl --user enable chezmoi-init.service
-systemctl --user enable chezmoi-update.timer
-
-# Start services immediately
-systemctl --user start chezmoi-init.service
-systemctl --user start chezmoi-update.timer
-```
-
-### Enable Lingering (Advanced)
-
-Enable lingering to run user services at boot without login:
+If you need to update /etc/skel on a running system:
 
 ```bash
-# Enable lingering for current user
-sudo loginctl enable-linger $USER
+# Clone repository
+git clone https://github.com/borninthedark/dotfiles /tmp/dotfiles
 
-# Check lingering status
-loginctl show-user $USER | grep Linger
-```
+# Apply to /etc/skel
+sudo rm -rf /etc/skel/.* /etc/skel/*
+export HOME=/etc/skel
+sudo -E chezmoi init --apply --source=/tmp/dotfiles
+unset HOME
 
-**Note:** Only enable lingering if your dotfiles contain system-critical configurations. For cosmetic settings and aliases, lingering is not needed.
-
-### Force Update Dotfiles
-
-```bash
-# Update immediately
-chezmoi update
-
-# Update with force (replace local changes)
-chezmoi update --force
-
-# Update from specific branch
-chezmoi update --branch=main
-```
-
-### View Update Logs
-
-```bash
-# View initialization logs
-journalctl --user -u chezmoi-init.service
-
-# View update timer logs
-journalctl --user -u chezmoi-update.service
-
-# Follow logs in real-time
-journalctl --user -u chezmoi-update.service -f
+# Clean up
+rm -rf /tmp/dotfiles
 ```
 
 ## Troubleshooting
 
-### No Dotfiles After Login
+### No Dotfiles in /etc/skel
 
-**Symptom:** `~/.local/share/chezmoi` doesn't exist after login
+**Symptom:** `/etc/skel/.config` doesn't exist
 
 **Check:**
 ```bash
-# Is the service enabled?
-systemctl --user is-enabled chezmoi-init.service
+# View build logs for errors
+# Look for "Dotfiles application failed" message
 
-# Did the service run?
-systemctl --user status chezmoi-init.service
+# Check if dotfiles were applied
+ls -la /etc/skel
+```
 
-# Check for errors
-journalctl --user -u chezmoi-init.service
+**Cause:** Dotfiles repository may not have been cloned during build
+
+**Fix:** Rebuild image or manually apply dotfiles to /etc/skel
+
+### New Users Don't Get Dotfiles
+
+**Symptom:** New users have empty home directories
+
+**Check:**
+```bash
+# Verify /etc/skel has dotfiles
+ls -la /etc/skel/.config
+
+# Check if files are hidden (start with .)
+ls -latr /etc/skel
 ```
 
 **Fix:**
 ```bash
-# Manually start the service
-systemctl --user start chezmoi-init.service
-
-# Or initialize manually
-chezmoi init --apply https://github.com/borninthedark/dotfiles
+# Manually copy dotfiles to existing user
+sudo cp -r /etc/skel/. /home/username/
+sudo chown -R username:username /home/username
 ```
 
-### Repository Clone Failed
+### Wrong Shell for New Users
 
-**Symptom:** Service fails with git clone errors
+**Symptom:** New users get bash instead of zsh
 
 **Check:**
 ```bash
-# Check network connectivity
-ping github.com
-
-# Test repository access
-git ls-remote https://github.com/borninthedark/dotfiles
-
-# View detailed error
-journalctl --user -u chezmoi-init.service -n 50
+# Check default shell setting
+grep SHELL /etc/default/useradd
 ```
 
 **Fix:**
 ```bash
-# Try with different protocol (SSH)
-chezmoi init --apply git@github.com:borninthedark/dotfiles.git
+# Set default shell to zsh
+sudo sed -i 's|SHELL=/bin/bash|SHELL=/bin/zsh|g' /etc/default/useradd
 
-# Or use HTTPS with credentials
-chezmoi init --apply https://github.com/borninthedark/dotfiles
+# Change existing user's shell
+chsh -s /bin/zsh
 ```
 
-### Updates Not Running
+### Repository Clone Failed During Build
 
-**Symptom:** Dotfiles never update automatically
+**Symptom:** Build fails with git clone errors
 
-**Check:**
-```bash
-# Is the timer enabled?
-systemctl --user is-enabled chezmoi-update.timer
-
-# Is the timer active?
-systemctl --user is-active chezmoi-update.timer
-
-# When will it run next?
-systemctl --user list-timers chezmoi-update.timer
+**Check CI logs for:**
 ```
+fatal: unable to access 'https://github.com/...': ...
+Dotfiles application failed, continuing...
+```
+
+**Causes:**
+- Network issues during build
+- Repository is private (requires authentication)
+- Repository doesn't exist
 
 **Fix:**
-```bash
-# Enable and start the timer
-systemctl --user enable --now chezmoi-update.timer
-
-# Force an update immediately
-systemctl --user start chezmoi-update.service
-```
-
-### Local Changes Not Syncing
-
-**Symptom:** Local dotfile modifications don't update from repository
-
-**Explanation:** This is expected behavior with `file-conflict-policy: skip`
-
-**Workflow for local changes:**
-1. **Make changes locally** - Edit your dotfiles as needed
-2. **Commit to local repository**
-   ```bash
-   cd ~/.local/share/chezmoi
-   git add .
-   git commit -m "Local customizations"
-   git push
-   ```
-3. **Future updates** will pull these changes on other systems
-
-**To force update a specific file:**
-```bash
-# Re-apply from repository, overwriting local changes
-chezmoi apply --force ~/.config/specific-file
-```
-
-**To always override local changes:**
-Change the conflict policy in `yaml-definitions/*.yml`:
-```yaml
-file-conflict-policy: replace
-```
-
-### Services Not Found
-
-**Symptom:** `systemctl --user status chezmoi-init.service` shows "not found"
-
-**Check:**
-```bash
-# List all chezmoi services
-systemctl --user list-unit-files | grep chezmoi
-
-# Check if chezmoi binary exists
-which chezmoi
-ls -l /usr/bin/chezmoi
-```
-
-**Fix:**
-If services don't exist, the module may not have run during build. Check:
-```bash
-# View build logs for chezmoi module errors
-# In your CI/CD pipeline or local build logs
-```
+- Use a public repository for build-time application
+- Or fork the dotfiles repository to your own account
 
 ## Customization
 
@@ -349,53 +260,46 @@ To use your own dotfiles repository:
 1. Fork or create your dotfiles repository on GitHub
 2. Update the repository URL in YAML configurations:
    ```yaml
-   repository: "https://github.com/YOUR_USERNAME/dotfiles"
+   DOTFILES_REPO="https://github.com/YOUR_USERNAME/dotfiles"
    ```
 3. Rebuild the image
 
 ### Using a Specific Branch
 
-```yaml
-repository: "https://github.com/borninthedark/dotfiles"
-branch: "laptop"  # Add this line
-```
-
-### Disable Auto-Updates
-
-```yaml
-disable-update: true  # Disable the update timer
-```
-
-### Disable Auto-Initialization
-
-```yaml
-disable-init: true  # Disable automatic initialization
-```
-
-### Require Manual Enablement
-
-```yaml
-all-users: false  # Don't enable services by default
-```
-
-Users will need to manually enable services:
 ```bash
-systemctl --user enable chezmoi-init.service chezmoi-update.timer
+# Modify the git clone command in configs
+git clone --branch=laptop "$DOTFILES_REPO" "$TEMP_DIR"
+```
+
+### Disable Dotfiles Application
+
+Comment out the entire dotfiles script block in your YAML configuration:
+
+```yaml
+# # Apply dotfiles at build time
+# - type: script
+#   scripts:
+#     - |
+#       ...dotfiles script...
+```
+
+### Keep Bash as Default Shell
+
+Remove the default shell setting portion:
+
+```yaml
+# Don't include the "Set zsh as default shell" section
 ```
 
 ## Build-Time Tests
 
 The repository includes automated tests in `custom-tests/image_content.bats` that verify:
 
-1. **chezmoi binary is installed** - Verifies `/usr/bin/chezmoi` exists
-2. **chezmoi is executable** - Confirms binary has execute permissions
-3. **chezmoi version works** - Tests `chezmoi --version` command
-4. **Systemd init service exists** - Checks `chezmoi-init.service` is installed
-5. **Systemd update service exists** - Checks `chezmoi-update.service` is installed
-6. **Systemd update timer exists** - Checks `chezmoi-update.timer` is installed
-7. **Not installed as RPM package** - Verifies chezmoi isn't installed via RPM (module handles it)
+1. **Dotfiles applied to /etc/skel** - Checks `/etc/skel/.config` exists
+2. **Chezmoi is installed** - Verifies `chezmoi` command is available
+3. **Default shell is zsh** - Confirms zsh is installed and configured
 
-These tests run during CI/CD builds to ensure the module installed correctly.
+These tests run during CI/CD builds to ensure dotfiles were applied correctly.
 
 ## Best Practices
 
@@ -419,46 +323,70 @@ dotfiles/
 ### Security Considerations
 
 1. **Never commit secrets to dotfiles**
-   - Use `chezmoi edit --apply ~/.env` for encrypted secrets
-   - Use chezmoi's age encryption for sensitive files
+   - Secrets in /etc/skel are visible to all users
+   - Use environment-specific configs or encrypted secrets
 
-2. **Review repository before auto-apply**
-   - Malicious dotfiles could execute arbitrary code
-   - Only use trusted repositories with `all-users: true`
+2. **Review repository before baking in**
+   - Malicious dotfiles could affect all users
+   - Only use trusted repositories for build-time application
 
 3. **Use HTTPS for public repositories**
-   - SSH requires key setup on each system
+   - Build environment may not have SSH keys
    - HTTPS works immediately for public repos
 
 ### Performance Tips
 
 1. **Keep repository small**
-   - Avoid large binary files
-   - Use `.chezmoiignore` for generated content
+   - Large repositories slow down builds
+   - Avoid binary files in dotfiles
 
-2. **Adjust update frequency**
-   - Daily updates (`1d`) are usually sufficient
-   - Frequent updates (`10m`) increase network usage
+2. **Use shallow clone for builds**
+   ```bash
+   git clone --depth=1 "$DOTFILES_REPO" "$TEMP_DIR"
+   ```
 
-3. **Use `run_once` scripts**
-   - Scripts in `run_once_*.sh` only execute once
-   - Great for initial setup without slowing updates
+3. **Cache dotfiles between builds**
+   - Consider caching the cloned repository in CI
+   - Reduces build time and network usage
 
-## Images Using Chezmoi
+## Images Using Build-Time Dotfiles
 
-The chezmoi module is enabled in:
+Build-time dotfiles application is enabled in:
 - ✅ **Adnyeus** (`adnyeus.yml`) - DevSecOps-hardened Fedora bootc image with Sway
 - ✅ **Sway Atomic** (`yaml-definitions/sway-atomic.yml`)
 - ✅ **Sway Bootc** (`yaml-definitions/sway-bootc.yml`)
 - ✅ **Fedora Kinoite** (`yaml-definitions/fedora-kinoite.yml`)
 
-The RKE2 bootc image does **not** include chezmoi, as it's a minimal server image without desktop environments.
+The RKE2 bootc image does **not** include dotfiles, as it's a minimal server image without desktop environments.
+
+## Migration from Chezmoi Module
+
+**Previous Approach:** BlueBuild chezmoi module with first-boot services
+
+**Current Approach:** Build-time application to /etc/skel
+
+**Why the change:**
+- Dotfiles immediately available (no first-boot delay)
+- Simpler implementation (no systemd services)
+- No dependency on boot-time services
+- Consistent for all users
+- Easier to verify in CI
+
+**What you lose:**
+- No automatic dotfile updates
+- Can't have per-user repositories
+- Users must manually update dotfiles if needed
+
+**What you gain:**
+- Faster first login
+- No systemd service complexity
+- Smaller images (no service files)
+- Build-time verification
 
 ## References
 
-- [BlueBuild chezmoi Module Documentation](https://blue-build.org/reference/modules/chezmoi/)
 - [chezmoi Official Documentation](https://www.chezmoi.io/)
 - [chezmoi Quick Start](https://www.chezmoi.io/quick-start/)
 - [chezmoi User Guide](https://www.chezmoi.io/user-guide/setup/)
 - [Exousia Dotfiles Repository](https://github.com/borninthedark/dotfiles)
-- [systemd.time Documentation](https://www.freedesktop.org/software/systemd/man/latest/systemd.time.html)
+- [/etc/skel Documentation](https://www.pathname.com/fhs/pub/fhs-2.3.html#ETCSKELUSERDIRECTORYSKELETON)
