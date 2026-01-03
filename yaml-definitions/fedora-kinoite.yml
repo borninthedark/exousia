@@ -57,6 +57,14 @@ modules:
       - btop
       - fastfetch
 
+  # Chezmoi dotfiles management
+  - type: chezmoi
+    repository: "https://github.com/borninthedark/dotfiles"
+    all-users: true
+    file-conflict-policy: replace
+    run-every: "1d"
+    wait-after-boot: "5m"
+
   # Validation
   - type: script
     scripts:

@@ -33,7 +33,6 @@ audio_media:
 
 # Development and power user tools
 development:
-  - chezmoi
   - bat
   - wf-recorder
   - lsd

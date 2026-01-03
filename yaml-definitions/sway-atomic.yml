@@ -163,7 +163,6 @@ modules:
       - mpd
       - ranger
       # Tools
-      - chezmoi
       - bat
       - wf-recorder
       - lsd
@@ -198,6 +197,14 @@ modules:
   - type: script
     scripts:
       - flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+  # Chezmoi dotfiles management
+  - type: chezmoi
+    repository: "https://github.com/borninthedark/dotfiles"
+    all-users: true
+    file-conflict-policy: replace
+    run-every: "1d"
+    wait-after-boot: "5m"
 
   # Plymouth configuration (all images when enabled)
   - type: script
