@@ -196,7 +196,15 @@ modules:
   # Flatpak setup
   - type: script
     scripts:
-      - flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      - |
+        set -euxo pipefail
+
+        # Add Flathub remote at build time (safe, no package installation)
+        # This allows tests to verify the remote is configured
+        flatpak remote-add --if-not-exists --system flathub \
+          https://dl.flathub.org/repo/flathub.flatpakrepo
+
+        echo "✓ Flathub remote configured at build time"
 
   # Chezmoi dotfiles management
   - type: chezmoi
