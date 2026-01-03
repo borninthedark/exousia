@@ -133,32 +133,9 @@ modules:
     window_manager: sway  # Loaded from packages/window-managers/sway.yml
     include_common: true  # Also loads packages/common/base.yml including Fedora Wayland build deps
 
-  # Flatpak setup - Add Flathub remote at build time for testing
-  # The remote must be present for tests to verify configuration
-  - type: script
-    scripts:
-      - |
-        set -euxo pipefail
-
-        # Add Flathub remote at build time (safe, no package installation)
-        # This allows tests to verify the remote is configured
-        flatpak remote-add --if-not-exists --system flathub \
-          https://dl.flathub.org/repo/flathub.flatpakrepo
-
-        echo "✓ Flathub remote configured at build time"
-
-  # Flatpak setup - Build-time installation
-  # Install flatpak runtimes and essential apps during image build
-  # This makes apps available immediately without waiting for first-boot services
-  # Note: Full app list from packages/common/flatpaks.yml can be installed later
-  - type: script
-    scripts:
-      - /usr/local/bin/install-flatpak-runtimes
-      - /usr/local/bin/install-essential-flatpaks || echo "Some essential flatpaks failed to install"
-
-  # Alternative: Boot-time installation via default-flatpaks module (currently disabled)
-  # Uncomment to use default-flatpaks service instead of build-time installation:
-  # - from-file: packages/common/flatpaks.yml
+  # Install common applications from DNF packages
+  # This replaces flatpak-based installations with native RPM packages
+  - from-file: packages/common/applications.yml
 
   # Chezmoi dotfiles management
   # Automatically manages dotfiles from the configured repository

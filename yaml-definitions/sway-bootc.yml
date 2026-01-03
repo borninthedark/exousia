@@ -144,22 +144,6 @@ modules:
     scripts:
       - /usr/local/bin/ensure-sway-session
 
-  # Flatpak setup - Build-time installation
-  - type: script
-    scripts:
-      - |
-        set -euxo pipefail
-
-        # Add Flathub remote at build time
-        flatpak remote-add --if-not-exists flathub \
-          https://dl.flathub.org/repo/flathub.flatpakrepo
-
-        echo "✓ Flathub remote configured at build time"
-
-      # Install runtimes and essential apps at build time
-      - /usr/local/bin/install-flatpak-runtimes
-      - /usr/local/bin/install-essential-flatpaks || echo "Some essential flatpaks failed to install"
-
   # Chezmoi dotfiles management
   - type: chezmoi
     repository: "https://github.com/borninthedark/dotfiles"

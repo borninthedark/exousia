@@ -1,0 +1,46 @@
+# Common Applications (DNF packages)
+# Centrally managed application packages for all builds
+# These replace the flatpak-based installations with native RPM packages
+
+# This file is imported by the build configuration
+# Applications are installed from Fedora repos and RPMFusion
+
+type: rpm-ostree
+
+# Install applications
+install:
+  # Browsers
+  - firefox
+  - chromium
+
+  # Development Tools
+  - kate
+  - filezilla
+
+  # Media & Graphics
+  - obs-studio        # From RPMFusion
+  - audacity          # From RPMFusion
+  - blender           # From RPMFusion
+  - gimp
+  - vlc               # From RPMFusion
+  - mixxx             # From RPMFusion
+
+  # Utilities
+  - transmission
+  - remmina
+  - flameshot
+  - libreoffice
+  - quassel-client
+
+  # Optional KDE apps (if using KDE)
+  - haruna
+
+# Note: Some applications from the flatpak list are not available as RPM packages:
+# - Bitwarden: Use browser extension or install from bitwarden.com
+# - Flatseal: Not needed (flatpak manager)
+# - Flatsweep: Not needed (flatpak cleaner)
+# - Google Chrome: Would require Google's third-party repo
+# - N-Track Studio: Commercial software, not in repos
+# - Zotero: Use browser extension or install from zotero.org
+# - Zoom: Would require Zoom's third-party repo
+# Users can install these manually if needed
