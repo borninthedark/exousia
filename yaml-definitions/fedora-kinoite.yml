@@ -56,6 +56,9 @@ modules:
       - btop
       - fastfetch
 
+  # Install common applications from DNF packages
+  - from-file: packages/common/applications.yml
+
   # Apply dotfiles at build time
   - type: script
     scripts:
