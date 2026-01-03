@@ -108,8 +108,8 @@ modules:
                 call_args = mock_github.trigger_workflow.call_args
                 assert "yaml_content" in call_args.kwargs["inputs"]
             else:
-                # File not found is also acceptable in test environment
-                assert response.status_code == 404
+                # File not found (404) or path validation failed (400) are acceptable in test environment
+                assert response.status_code in (400, 404)
 
     @patch("api.routers.build.GitHubService")
     async def test_trigger_build_with_config_id(self, mock_github_service, client: AsyncClient, sample_config):
