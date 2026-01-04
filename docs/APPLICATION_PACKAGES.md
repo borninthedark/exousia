@@ -44,7 +44,6 @@ Applications are defined in `packages/common/applications.yml`:
 - **Transmission** - BitTorrent client
 - **Remmina** - Remote desktop client
 - **Flameshot** - Screenshot tool
-- **LibreOffice** - Office suite
 - **Quassel** - IRC client
 - **Haruna** - Video player (KDE)
 
@@ -57,10 +56,10 @@ Verify packages are installed:
 rpm -q firefox
 
 # List all installed applications
-rpm -qa | grep -E "firefox|chromium|gimp|vlc|libreoffice"
+rpm -qa | grep -E "firefox|chromium|gimp|vlc"
 
 # Verify from packages/common/applications.yml
-for app in firefox chromium kate gimp vlc libreoffice; do
+for app in firefox chromium kate gimp vlc; do
     rpm -q "$app" && echo "✓ $app" || echo "✗ $app missing"
 done
 ```
