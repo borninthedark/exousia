@@ -348,7 +348,7 @@ python3 tools/package_dependency_checker.py --distro freebsd --packages py311-re
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/{config.github_repo}/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/{config.github_repo}/actions/workflows/build.yml)
 [![Last Build: {config.os_name} {config.os_version} • {config.wm_de_label}](https://img.shields.io/badge/Last%20Build-{config.build_badge_text_uri}-{config.os_badge_color}?style=for-the-badge&logo={config.os_logo}&logoColor=white)](https://github.com/{config.github_repo}/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 [![Code Quality](https://img.shields.io/github/actions/workflow/status/{config.github_repo}/build.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Code%20Quality)](https://github.com/{config.github_repo}/actions/workflows/build.yml)
-[![codecov](https://codecov.io/gh/{config.github_repo}/graph/badge.svg?token=G8NS9O5HZB)](https://codecov.io/gh/{config.github_repo})
+[![Code Coverage](https://img.shields.io/codecov/c/github/{config.github_repo}?style=for-the-badge&logo=codecov&logoColor=white&label=Coverage&token=G8NS9O5HZB)](https://codecov.io/gh/{config.github_repo})
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 <img src=".github/blue-sparrow.svg" alt="Blue Sparrow" width="28" />
 
