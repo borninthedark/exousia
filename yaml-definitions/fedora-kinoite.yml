@@ -50,29 +50,23 @@ modules:
       - https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-43.noarch.rpm
 
     install:
+      # Base utilities
       - kitty
       - neovim
       - htop
       - btop
       - fastfetch
-
-  # Install common applications from DNF packages
-  - type: rpm-ostree
-    install:
-      # Browsers
+      # Desktop applications
       - firefox
       - chromium
-      # Development Tools
       - kate
       - filezilla
-      # Media & Graphics
       - obs-studio
       - audacity
       - blender
       - gimp
       - vlc
       - mixxx
-      # Utilities
       - transmission
       - remmina
       - flameshot

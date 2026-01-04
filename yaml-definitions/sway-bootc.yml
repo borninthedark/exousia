@@ -135,32 +135,8 @@ modules:
 
   # Package management with new loader
   - type: package-loader
-    window_manager: sway
+    window_manager: sway  # Loaded from packages/window-managers/sway.yml (includes desktop applications)
     include_common: true
-
-  # Install desktop applications from native DNF/RPM packages
-  - type: rpm-ostree
-    install:
-      # Browsers
-      - firefox
-      - chromium
-      # Development Tools
-      - kate
-      - filezilla
-      # Media & Graphics
-      - obs-studio
-      - audacity
-      - blender
-      - gimp
-      - vlc
-      - mixxx
-      # Utilities
-      - transmission
-      - remmina
-      - flameshot
-      - libreoffice
-      - quassel-client
-      - haruna
 
   # Re-stage and validate the Sway session assets via a dedicated helper
   # instead of inline shell, after package installation.

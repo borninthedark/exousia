@@ -130,33 +130,8 @@ modules:
   # Package management using new YAML-based loader
   # Automatically loads packages based on desktop.window_manager or desktop.desktop_environment
   - type: package-loader
-    window_manager: sway  # Loaded from packages/window-managers/sway.yml
+    window_manager: sway  # Loaded from packages/window-managers/sway.yml (includes desktop applications)
     include_common: true  # Also loads packages/common/base.yml including Fedora Wayland build deps
-
-  # Install common applications from DNF packages
-  # This replaces flatpak-based installations with native RPM packages
-  - type: rpm-ostree
-    install:
-      # Browsers
-      - firefox
-      - chromium
-      # Development Tools
-      - kate
-      - filezilla
-      # Media & Graphics
-      - obs-studio
-      - audacity
-      - blender
-      - gimp
-      - vlc
-      - mixxx
-      # Utilities
-      - transmission
-      - remmina
-      - flameshot
-      - libreoffice
-      - quassel-client
-      - haruna
 
   # Apply dotfiles at build time
   # Bakes dotfiles into the image for all users via /etc/skel
