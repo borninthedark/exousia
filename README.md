@@ -3,7 +3,7 @@
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
 [![Last Build: Fedora 43 • Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%E2%80%A2%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
 [![Code Quality](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Code%20Quality)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
-[![codecov](https://codecov.io/gh/borninthedark/exousia/graph/badge.svg?token=G8NS9O5HZB)](https://codecov.io/gh/borninthedark/exousia)
+[![Code Coverage](https://img.shields.io/codecov/c/github/borninthedark/exousia?style=for-the-badge&logo=codecov&logoColor=white&label=Coverage&token=G8NS9O5HZB)](https://codecov.io/gh/borninthedark/exousia)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 <img src=".github/blue-sparrow.svg" alt="Blue Sparrow" width="28" />
 
