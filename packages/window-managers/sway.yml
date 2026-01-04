@@ -133,29 +133,6 @@ system:
   - curl
   - ImageMagick
 
-# Desktop Applications
-desktop_applications:
-  # Browsers
-  - firefox
-  - chromium
-  # Development Tools
-  - kate
-  - filezilla
-  # Media & Graphics
-  - obs-studio
-  - audacity
-  - blender
-  - gimp
-  - vlc
-  - mixxx
-  # Utilities
-  - transmission
-  - remmina
-  - flameshot
-  - libreoffice
-  - quassel-client
-  - haruna
-
 # Boot splash (optional, for bootc images)
 boot_splash:
   - plymouth

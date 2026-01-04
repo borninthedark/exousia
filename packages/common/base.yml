@@ -83,3 +83,27 @@ shell:
 # Extra utilities
 extra:
   - cava
+
+# Desktop Applications
+# Common applications that work across all window managers and desktop environments
+desktop_applications:
+  # Browsers
+  - firefox
+  - chromium
+  # Development Tools
+  - kate
+  - filezilla
+  # Media & Graphics
+  - obs-studio
+  - audacity
+  - blender
+  - gimp
+  - vlc
+  - mixxx
+  # Utilities
+  - transmission
+  - remmina
+  - flameshot
+  - libreoffice
+  - quassel-client
+  - haruna
