@@ -29,7 +29,6 @@ install:
   - transmission
   - remmina
   - flameshot
-  - libreoffice
   - quassel-client
 
   # Optional KDE apps (if using KDE)

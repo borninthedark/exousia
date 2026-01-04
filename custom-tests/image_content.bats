@@ -530,13 +530,17 @@ get_package_manager() {
         "kate"
         "gimp"
         "vlc"
-        "libreoffice"
     )
 
     for app in "${apps[@]}"; do
         run buildah run "$CONTAINER" -- rpm -q "$app"
         assert_success "$app should be installed"
     done
+}
+
+@test "LibreOffice should not be installed by default" {
+    run buildah run "$CONTAINER" -- rpm -q libreoffice
+    assert_failure "LibreOffice should be excluded to reduce image size"
 }
 
 @test "Dotfiles should be applied to /etc/skel" {

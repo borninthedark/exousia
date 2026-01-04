@@ -44,7 +44,6 @@ configurations:
       - org.kde.Platform//6.10
       - org.kde.haruna//stable
       - org.kde.kate//stable
-      - org.libreoffice.LibreOffice//stable
       - org.mixxx.Mixxx//stable
       - org.mozilla.firefox//stable
       - org.quassel_irc.QuasselClient//stable

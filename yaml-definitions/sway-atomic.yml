@@ -201,7 +201,6 @@ modules:
       - transmission
       - remmina
       - flameshot
-      - libreoffice
       - quassel-client
       - haruna
 
