@@ -138,7 +138,6 @@ graph TD
 
 **Tests**:
 - autotiling script
-- config-authselect script
 - lid script
 - generate-readme script
 
@@ -255,7 +254,31 @@ graph TD
 }
 ```
 
-### 10. bootc Compliance
+### 10. PAM U2F Configuration
+
+**Purpose**: Validate YubiKey authentication setup
+
+**Tests**:
+- PAM U2F configuration files present (u2f-required, u2f-sufficient)
+- sudo configured with U2F support
+- pam-u2f package installed
+
+**Example**:
+```bash
+@test "PAM U2F configuration files should exist" {
+    run test -f "$MOUNT_POINT/etc/pam.d/u2f-required"
+    assert_success
+    run test -f "$MOUNT_POINT/etc/pam.d/u2f-sufficient"
+    assert_success
+}
+
+@test "PAM sudo configuration should include U2F" {
+    run grep -q "u2f-sufficient" "$MOUNT_POINT/etc/pam.d/sudo"
+    assert_success
+}
+```
+
+### 11. bootc Compliance
 
 **Purpose**: Ensure image meets bootc requirements
 
@@ -264,7 +287,7 @@ graph TD
 - ComposeFS enabled
 - OSTree configuration valid
 
-### 11. System Users and Groups
+### 12. System Users and Groups
 
 **Purpose**: Validate system user creation
 
@@ -285,7 +308,7 @@ graph TD
 }
 ```
 
-### 12. Conditional Tests (Image Type Specific)
+### 13. Conditional Tests (Image Type Specific)
 
 **Purpose**: Validate image-type-specific configurations
 
