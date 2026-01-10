@@ -377,11 +377,6 @@ get_package_manager() {
     assert_success
 }
 
-@test "Custom script 'config-authselect' should be executable" {
-    run test -x "$MOUNT_POINT/usr/local/bin/config-authselect"
-    assert_success
-}
-
 @test "Custom script 'lid' should be executable" {
     run test -x "$MOUNT_POINT/usr/local/bin/lid"
     assert_success
@@ -644,6 +639,22 @@ get_package_manager() {
     run buildah run "$CONTAINER" -- rpm -q pam-u2f
     assert_success
     run buildah run "$CONTAINER" -- rpm -q lynis
+    assert_success
+}
+
+# --- PAM U2F configuration ---
+
+@test "PAM U2F configuration files should exist" {
+    run test -f "$MOUNT_POINT/etc/pam.d/u2f-required"
+    assert_success
+    run test -f "$MOUNT_POINT/etc/pam.d/u2f-sufficient"
+    assert_success
+    run test -f "$MOUNT_POINT/etc/pam.d/sudo"
+    assert_success
+}
+
+@test "PAM sudo configuration should include U2F" {
+    run grep -q "u2f-sufficient" "$MOUNT_POINT/etc/pam.d/sudo"
     assert_success
 }
 

@@ -104,7 +104,6 @@ Ensures custom scripts are executable and functional.
 
 **Scripts tested:**
 - autotiling - Automatic tiling for Sway
-- config-authselect - U2F authentication setup
 - lid - Laptop lid state handler
 - generate-readme - Dynamic documentation
 
@@ -154,7 +153,16 @@ Validates Sway window manager setup.
 - Greetd configuration valid
 - Session files (conditional on fedora-bootc)
 
-### 10. bootc Compliance
+### 10. PAM U2F Configuration
+
+Validates YubiKey hardware authentication setup.
+
+**Tests:**
+- PAM U2F configuration files present (u2f-required, u2f-sufficient)
+- sudo configured with U2F support
+- pam-u2f package installed
+
+### 11. bootc Compliance
 
 Ensures image meets bootc requirements.
 
@@ -162,14 +170,14 @@ Ensures image meets bootc requirements.
 - bootc container lint passes
 - ComposeFS enabled
 
-### 11. System Components
+### 12. System Components
 
 Validates core system packages.
 
 **Tests:**
 - Systemd, kernel, NetworkManager, Podman present
 
-### 12. System Users and Groups
+### 13. System Users and Groups
 
 Validates system user creation.
 
@@ -179,7 +187,7 @@ Validates system user creation.
 - Proper home directories and shells
 - sysusers configuration valid
 
-### 13. Conditional Tests (Image Type Specific)
+### 14. Conditional Tests (Image Type Specific)
 
 **fedora-bootc only:**
 - Directory structure (/var/roothome, /var/opt, /opt symlink)
