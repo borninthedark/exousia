@@ -234,6 +234,7 @@ def generate_readme(config: Config) -> str:
         ("Getting Started", "getting-started", 2),
         ("Triggering Builds Remotely", "triggering-builds-remotely", 2),
         ("Customizing Builds", "customizing-builds", 2),
+        ("YubiKey Authentication (PAM U2F)", "yubikey-authentication-pam-u2f", 2),
         ("Package Validation & Dependency Tooling", "package-validation--dependency-tooling", 2),
         ("Required Secrets", "required-secrets", 2),
         ("Documentation", "documentation", 2),
@@ -473,6 +474,7 @@ All package additions are managed from the `packages/` directory via the package
 | `custom-configs/greetd/` | Display manager (bootc) |
 | `custom-configs/plymouth/` | Boot splash themes |
 | `custom-configs/rancher/rke2/` | RKE2 Kubernetes config |
+| `custom-configs/pam.d/` | PAM authentication (YubiKey U2F) |
 | `custom-scripts/` | Scripts copied to `/usr/local/bin/` |
 
 ### Desktop & Boot Experience
@@ -484,6 +486,41 @@ All package additions are managed from the `packages/` directory via the package
   - See [Fedora Sericea Configuration Guide](https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/).
 - **Plymouth**: Set `enable_plymouth: true` in YAML; themes live in `custom-configs/plymouth/themes/`.
 - **Display managers**: all images use greetd; SDDM is deprecated.
+
+---
+
+## YubiKey Authentication (PAM U2F)
+
+Exousia includes built-in support for YubiKey hardware authentication using PAM U2F. This allows you to use your YubiKey as a second factor or alternative authentication method for `sudo`, login, and other PAM-aware services.
+
+### Configuration
+
+The system includes pre-configured PAM modules in `custom-configs/pam.d/`:
+- `u2f-required` — YubiKey authentication is mandatory
+- `u2f-sufficient` — YubiKey OR password authentication (default for sudo)
+
+By default, `sudo` is configured to accept YubiKey authentication as an alternative to password authentication. If your YubiKey is present and registered, you can use it instead of entering your password.
+
+### Setup
+
+After deploying an Exousia image, register your YubiKey(s):
+
+```bash
+# Create credential directory
+mkdir -p ~/.config/Yubico
+
+# Register your primary YubiKey
+pamu2fcfg > ~/.config/Yubico/u2f_keys
+
+# Register backup YubiKey (recommended)
+pamu2fcfg -n >> ~/.config/Yubico/u2f_keys
+```
+
+### Usage
+
+Once registered, touch your YubiKey when prompted during `sudo` authentication. If the YubiKey is not present or registration fails, standard password authentication is used as a fallback.
+
+For more details, see the [Fedora YubiKey Quick Docs](https://docs.fedoraproject.org/en-US/quick-docs/using-yubikeys/).
 
 ---
 
