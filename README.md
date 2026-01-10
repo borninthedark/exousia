@@ -21,6 +21,7 @@ Exousia builds custom, container-based immutable operating systems using [bootc]
 - [Getting Started](#getting-started)
 - [Triggering Builds Remotely](#triggering-builds-remotely)
 - [Customizing Builds](#customizing-builds)
+- [YubiKey Authentication (PAM U2F)](#yubikey-authentication-pam-u2f)
 - [Package Validation & Dependency Tooling](#package-validation--dependency-tooling)
 - [Required Secrets](#required-secrets)
 - [Documentation](#documentation)
@@ -127,7 +128,7 @@ python api/webhook_trigger.py --yaml sway-bootc.yml --distro-version 44
 # Build with combined DE+WM (e.g., LXQt with Sway)
 python api/webhook_trigger.py --de lxqt --wm sway --distro-version 43
 
-# Build Fedora LXQt (fedora-lxqt)
+# Build with Debian
 python api/webhook_trigger.py --os fedora --image-type fedora-lxqt --de lxqt --distro-version 44
 
 # Disable Plymouth
@@ -191,7 +192,7 @@ python api/webhook_trigger.py --image-type fedora-bootc --distro-version 44
 python api/webhook_trigger.py --image-type fedora-sway-atomic --distro-version 43
 ```
 
-Or use **Actions → Bootc DevSecOps Pipeline → Run workflow** in the GitHub UI.
+Or use **Actions → Fedora Bootc DevSec CI → Run workflow** in the GitHub UI.
 
 ### Adjust Packages
 
@@ -212,6 +213,7 @@ All package additions are managed from the `packages/` directory via the package
 | `custom-configs/greetd/` | Display manager (bootc) |
 | `custom-configs/plymouth/` | Boot splash themes |
 | `custom-configs/rancher/rke2/` | RKE2 Kubernetes config |
+| `custom-configs/pam.d/` | PAM authentication (YubiKey U2F) |
 | `custom-scripts/` | Scripts copied to `/usr/local/bin/` |
 
 ### Desktop & Boot Experience
@@ -226,11 +228,46 @@ All package additions are managed from the `packages/` directory via the package
 
 ---
 
+## YubiKey Authentication (PAM U2F)
+
+Exousia includes built-in support for YubiKey hardware authentication using PAM U2F. This allows you to use your YubiKey as a second factor or alternative authentication method for `sudo`, login, and other PAM-aware services.
+
+### Configuration
+
+The system includes pre-configured PAM modules in `custom-configs/pam.d/`:
+- `u2f-required` — YubiKey authentication is mandatory
+- `u2f-sufficient` — YubiKey OR password authentication (default for sudo)
+
+By default, `sudo` is configured to accept YubiKey authentication as an alternative to password authentication. If your YubiKey is present and registered, you can use it instead of entering your password.
+
+### Setup
+
+After deploying an Exousia image, register your YubiKey(s):
+
+```bash
+# Create credential directory
+mkdir -p ~/.config/Yubico
+
+# Register your primary YubiKey
+pamu2fcfg > ~/.config/Yubico/u2f_keys
+
+# Register backup YubiKey (recommended)
+pamu2fcfg -n >> ~/.config/Yubico/u2f_keys
+```
+
+### Usage
+
+Once registered, touch your YubiKey when prompted during `sudo` authentication. If the YubiKey is not present or registration fails, standard password authentication is used as a fallback.
+
+For more details, see the [Fedora YubiKey Quick Docs](https://docs.fedoraproject.org/en-US/quick-docs/using-yubikeys/).
+
+---
+
 ## Package Validation & Dependency Tooling
 
 ### Package Dependency Checker
 
-Fedora-focused package dependency validation.
+Cross-distro package dependency translation and verification.
 
 ```bash
 python3 tools/package_dependency_checker.py --packages python3-requests neovim
@@ -347,4 +384,4 @@ MIT License — see LICENSE file.
 
 **Built with bootc**
 
-*Generated on 2025-12-16 05:13:20 UTC*
+*Generated on 2026-01-10 22:44:36 UTC*

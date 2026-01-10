@@ -1,0 +1,12 @@
+#%PAM-1.0
+# PAM configuration for sudo with YubiKey U2F support
+# If YubiKey authentication succeeds, password is not required
+# If YubiKey is not present, falls back to standard password authentication
+
+auth       include      u2f-sufficient
+auth       include      system-auth
+account    include      system-auth
+password   include      system-auth
+session    optional     pam_keyinit.so revoke
+session    required     pam_limits.so
+session    include      system-auth
