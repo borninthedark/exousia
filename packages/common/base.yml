@@ -17,6 +17,7 @@ core_utilities:
   - htop
   - etckeeper
   - fastfetch
+  - podman-compose
   - glances
   - kubectl
   - curl
