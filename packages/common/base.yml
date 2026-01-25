@@ -67,6 +67,8 @@ virtualization:
   - virt-manager
   - qemu-kvm
   - libvirt
+  - fuse
+  - fuse-libs
 
 # Security
 security:
