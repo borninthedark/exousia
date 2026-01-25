@@ -171,7 +171,6 @@ modules:
       - distrobox
       - wireguard-tools
       # Virtualization
-      - virt-manager
       - qemu-kvm
       - libvirt
       # Security

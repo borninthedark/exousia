@@ -155,7 +155,7 @@ buildah rm "$CONTAINER"
 - Desktop environment (Sway, waybar)
 - User applications (kitty, neovim, htop, btop, ranger)
 - Audio/media (mpd, pavucontrol)
-- Virtualization (virt-manager, qemu-kvm)
+- Virtualization (qemu-kvm, libvirt)
 - Security tools (pam-u2f, lynis)
 
 ### Configuration Files

@@ -629,9 +629,9 @@ get_package_manager() {
 }
 
 @test "Virtualization packages should be installed" {
-    run buildah run "$CONTAINER" -- rpm -q virt-manager
-    assert_success
     run buildah run "$CONTAINER" -- rpm -q qemu-kvm
+    assert_success
+    run buildah run "$CONTAINER" -- rpm -q libvirt
     assert_success
 }
 

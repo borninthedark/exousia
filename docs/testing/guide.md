@@ -124,7 +124,7 @@ Verifies all required packages are installed.
 - **Desktop:** Sway, waybar, swaylock
 - **Applications:** kitty, neovim, htop, btop, ranger
 - **Audio:** mpd, pavucontrol
-- **Virtualization:** virt-manager, qemu-kvm
+- **Virtualization:** qemu-kvm, libvirt
 - **Security:** pam-u2f, lynis
 
 ### 7. Package Removal Verification
