@@ -633,6 +633,20 @@ get_package_manager() {
     assert_success
     run buildah run "$CONTAINER" -- rpm -q qemu-kvm
     assert_success
+    run buildah run "$CONTAINER" -- rpm -q libvirt
+    assert_success
+}
+
+@test "Libvirt polkit rule should exist for wheel group" {
+    assert_file_exists "$MOUNT_POINT/etc/polkit-1/rules.d/50-libvirt.rules"
+    run grep -q "org.libvirt.unix.manage" "$MOUNT_POINT/etc/polkit-1/rules.d/50-libvirt.rules"
+    assert_success "polkit rule should allow libvirt management"
+}
+
+@test "Libvirt tmpfiles.d config should exist" {
+    assert_file_exists "$MOUNT_POINT/etc/tmpfiles.d/libvirt.conf"
+    run grep -q "/var/lib/libvirt" "$MOUNT_POINT/etc/tmpfiles.d/libvirt.conf"
+    assert_success "libvirt.conf should configure /var/lib/libvirt"
 }
 
 @test "Security packages should be installed" {
