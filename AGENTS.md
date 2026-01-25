@@ -501,6 +501,333 @@ chezmoi diff
 - [chezmoi Official Documentation](https://www.chezmoi.io/)
 - [Exousia Dotfiles Repository](https://github.com/borninthedark/dotfiles)
 
+### Scenario 10: Implementing ZFS Filesystem Support
+
+ZFS (OpenZFS) is a planned feature for Exousia that provides advanced filesystem capabilities including copy-on-write, snapshots, compression, and RAID-Z. This scenario documents the implementation plan.
+
+**Challenge**: ZFS requires kernel modules compiled against the exact running kernel. On Fedora, only DKMS packages are available (no pre-built kmods) because Fedora doesn't provide a stable kABI.
+
+#### ZFS Kernel Compatibility Matrix
+
+| ZFS Version | Max Kernel | Notes |
+|-------------|------------|-------|
+| 2.3.3 | 6.15.x | Current stable |
+| 2.3.2 | 6.14.x | Previous stable |
+| 2.3.0 | 6.12.x | Older stable |
+
+**Important**: Fedora's rapid kernel updates often outpace ZFS compatibility. Monitor [openzfs/zfs issues](https://github.com/openzfs/zfs/issues) for kernel support status.
+
+#### Implementation Approach: Build-Time DKMS Compilation
+
+```bash
+# Step 1: Create ZFS repository file
+# File: custom-repos/zfs.repo
+
+[zfs]
+name=OpenZFS for Fedora $releasever
+baseurl=https://zfsonlinux.org/fedora/$releasever/$basearch/
+enabled=1
+metadata_expire=7d
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-openzfs
+
+[zfs-testing]
+name=OpenZFS for Fedora $releasever - Testing
+baseurl=https://zfsonlinux.org/fedora/$releasever/testing/$basearch/
+enabled=0
+metadata_expire=1d
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-openzfs
+```
+
+#### Step 2: Create Package Definition
+
+```bash
+# File: packages/features/zfs.yml
+
+metadata:
+  name: zfs
+  type: feature
+  description: OpenZFS filesystem and volume manager support
+  kernel_module: true
+  requires_dkms: true
+
+# Build dependencies (removed after compilation to save ~500MB)
+build_dependencies:
+  - kernel-devel
+  - dkms
+  - gcc
+  - make
+  - autoconf
+  - automake
+  - libtool
+  - libtirpc-devel
+  - libblkid-devel
+  - libuuid-devel
+  - libudev-devel
+  - openssl-devel
+  - zlib-devel
+  - libaio-devel
+  - libattr-devel
+  - elfutils-libelf-devel
+  - python3-devel
+  - python3-cffi
+  - libffi-devel
+  - python3-packaging
+
+# ZFS packages (kept in image)
+core:
+  - zfs
+
+# Optional packages
+optional:
+  - zfs-dracut  # For ZFS in initramfs
+
+# Conflicts
+conflicts:
+  - zfs-fuse  # FUSE-based ZFS conflicts with kernel module
+```
+
+#### Step 3: Add Build Modules to adnyeus.yml
+
+```yaml
+# Build configuration - add enable_zfs flag
+build:
+  enable_plymouth: true
+  enable_rke2: true
+  enable_zfs: false  # NEW: ZFS filesystem support (default: disabled)
+
+modules:
+  # ... existing modules ...
+
+  # ============================================================================
+  # ZFS Filesystem Support (optional, enabled via build.enable_zfs)
+  # https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/
+  # ============================================================================
+
+  # ZFS Step 1: Add repository and import GPG key
+  - type: files
+    condition: enable_zfs == true
+    files:
+      - src: custom-repos/zfs.repo
+        dst: /etc/yum.repos.d/zfs.repo
+        mode: "0644"
+
+  - type: script
+    condition: enable_zfs == true
+    scripts:
+      - |
+        set -euxo pipefail
+        rpm --import https://zfsonlinux.org/fedora/RPM-GPG-KEY-openzfs
+        dnf remove -y zfs-fuse || true
+        echo "✓ ZFS repository configured"
+
+  # ZFS Step 2: Install build dependencies
+  - type: script
+    condition: enable_zfs == true
+    scripts:
+      - |
+        set -euxo pipefail
+        KVER=$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' | tail -1)
+        echo "Building ZFS for kernel: $KVER"
+        dnf install -y kernel-devel-${KVER} || dnf install -y kernel-devel
+        dnf install -y dkms gcc make autoconf automake libtool \
+          libtirpc-devel libblkid-devel libuuid-devel libudev-devel \
+          openssl-devel zlib-devel libaio-devel libattr-devel \
+          elfutils-libelf-devel python3-devel python3-cffi \
+          libffi-devel python3-packaging
+        echo "✓ ZFS build dependencies installed"
+
+  # ZFS Step 3: Install ZFS (triggers DKMS compilation)
+  - type: script
+    condition: enable_zfs == true
+    scripts:
+      - |
+        set -euxo pipefail
+        dnf install -y zfs
+        KVER=$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' | tail -1)
+        if dkms status | grep -q "zfs.*installed"; then
+          echo "✓ ZFS DKMS module built for kernel $KVER"
+        else
+          echo "⚠ ZFS DKMS build may have failed"
+          dkms status
+        fi
+
+  # ZFS Step 4: Configure services and rebuild initramfs
+  - type: script
+    condition: enable_zfs == true
+    scripts:
+      - |
+        set -euxo pipefail
+        # Enable ZFS services
+        systemctl enable zfs-import-cache.service || true
+        systemctl enable zfs-import-scan.service || true
+        systemctl enable zfs-mount.service || true
+        systemctl enable zfs.target || true
+        mkdir -p /etc/zfs
+
+        # Add ZFS to dracut
+        mkdir -p /usr/lib/dracut/dracut.conf.d
+        echo 'add_dracutmodules+=" zfs "' > /usr/lib/dracut/dracut.conf.d/zfs.conf
+
+        # Rebuild initramfs
+        KVER=$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' | tail -1)
+        dracut -f --kver ${KVER}
+        echo "✓ ZFS services enabled and initramfs rebuilt"
+
+  # ZFS Step 5: Remove build dependencies (saves ~500MB)
+  - type: script
+    condition: enable_zfs == true
+    scripts:
+      - |
+        set -euxo pipefail
+        dnf remove -y gcc make autoconf automake libtool \
+          libtirpc-devel libblkid-devel libuuid-devel libudev-devel \
+          openssl-devel zlib-devel libaio-devel libattr-devel \
+          elfutils-libelf-devel python3-devel python3-cffi \
+          libffi-devel python3-packaging || true
+        dnf clean all
+        echo "✓ Build dependencies removed"
+
+  # ZFS Step 6: Validation
+  - type: script
+    condition: enable_zfs == true
+    scripts:
+      - |
+        echo "=== ZFS Installation Summary ==="
+        rpm -q zfs && echo "✓ ZFS package installed" || echo "✗ ZFS package missing"
+        dkms status | grep zfs || echo "⚠ No ZFS DKMS modules found"
+        which zpool && echo "✓ zpool available" || echo "✗ zpool missing"
+        which zfs && echo "✓ zfs available" || echo "✗ zfs missing"
+        systemctl is-enabled zfs.target && echo "✓ zfs.target enabled" || true
+        echo "=== ZFS installation complete ==="
+```
+
+#### Step 4: Add Bats Tests
+
+```bash
+# File: custom-tests/zfs.bats
+
+#!/usr/bin/env bats
+
+load test_helper
+
+# Skip all tests if ZFS is not enabled
+setup() {
+    if [ "${ENABLE_ZFS:-false}" != "true" ]; then
+        skip "ZFS not enabled (set ENABLE_ZFS=true)"
+    fi
+}
+
+@test "ZFS package is installed" {
+    run buildah run $CONTAINER rpm -q zfs
+    assert_success
+}
+
+@test "zpool command is available" {
+    run buildah run $CONTAINER which zpool
+    assert_success
+}
+
+@test "zfs command is available" {
+    run buildah run $CONTAINER which zfs
+    assert_success
+}
+
+@test "ZFS DKMS module is built" {
+    run buildah run $CONTAINER dkms status
+    assert_output --partial "zfs"
+    assert_output --partial "installed"
+}
+
+@test "ZFS services are enabled" {
+    run buildah run $CONTAINER systemctl is-enabled zfs.target
+    assert_success
+}
+
+@test "ZFS dracut module is configured" {
+    run buildah run $CONTAINER test -f /usr/lib/dracut/dracut.conf.d/zfs.conf
+    assert_success
+}
+
+@test "zfs-fuse is NOT installed (conflicts)" {
+    run buildah run $CONTAINER rpm -q zfs-fuse
+    assert_failure
+}
+```
+
+#### Kernel Pinning for ZFS Stability
+
+To ensure ZFS compatibility with rapid Fedora kernel updates:
+
+**Option 1: Use LTS Kernel from COPR**
+```yaml
+- type: script
+  condition: enable_zfs == true
+  scripts:
+    - |
+      # Install LTS kernel for ZFS stability
+      dnf copr enable -y kwizart/kernel-longterm-6.12
+      dnf install -y --allowerasing kernel-longterm kernel-longterm-devel
+```
+
+**Option 2: Exclude Kernel from Updates**
+```bash
+# File: custom-configs/dnf/zfs-kernel-protect.conf
+# Prevent automatic kernel updates when ZFS is installed
+excludepkgs=kernel*
+```
+
+#### Important Considerations
+
+1. **Root on ZFS NOT recommended**: Conflicts with bootc's OSTree model. Use ZFS for data volumes only.
+
+2. **Kernel updates may break ZFS**: DKMS will attempt to rebuild, but new kernels may not be supported yet.
+
+3. **Image size impact**: ~200-500MB depending on whether build deps are removed.
+
+4. **Testing in VM required**: ZFS kernel modules cannot be tested in container builds.
+
+5. **ZFS with Podman storage**: Can use ZFS datasets for container storage:
+   ```bash
+   zfs create tank/containers
+   zfs set mountpoint=/var/lib/containers tank/containers
+   # Configure Podman: driver = "zfs" in /etc/containers/storage.conf
+   ```
+
+#### Development Workflow
+
+```bash
+# Step 1: Create feature files
+mkdir -p packages/features
+# Create zfs.yml and custom-repos/zfs.repo as shown above
+
+# Step 2: Add to adnyeus.yml with enable_zfs condition
+
+# Step 3: Test build locally
+python3 tools/yaml-to-containerfile.py -c adnyeus.yml \
+  --enable-zfs -o /tmp/Containerfile-zfs
+buildah build -f /tmp/Containerfile-zfs -t exousia-zfs:test
+
+# Step 4: Run tests
+ENABLE_ZFS=true bats custom-tests/zfs.bats
+
+# Step 5: Test in VM
+# Use bootc-image-builder to create disk image and test ZFS operations
+
+# Step 6: Document and commit
+git add packages/features/zfs.yml custom-repos/zfs.repo custom-tests/zfs.bats
+git commit -m "feat: Add ZFS filesystem support as optional feature"
+```
+
+#### References
+
+- [Building ZFS — OpenZFS Documentation](https://openzfs.github.io/openzfs-docs/Developer%20Resources/Building%20ZFS.html)
+- [Fedora — OpenZFS Documentation](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
+- [ZFS Kernel Compatibility Issues](https://github.com/openzfs/zfs/issues/17265)
+- [ZFS Autobuild for CoreOS](https://github.com/kainzilla/zfs-autobuild)
+- [DKMS vs kmod Guide](https://klarasystems.com/articles/dkms-vs-kmod-the-essential-guide-for-zfs-on-linux/)
+
 ## Common Pitfalls & Lessons Learned
 
 ### Containerfile Generation
@@ -1254,6 +1581,6 @@ AI-generated contributions are subject to the same MIT License as the rest of th
 **AI-Augmented Development**
 
 *This AGENTS.md was initially generated with Claude Sonnet 4.5 and human oversight on 2025-12-01*
-*Last updated: 2026-01-03 - Added Flatpak/Flathub configuration scenario (Scenario 8) and Chezmoi dotfiles management scenario (Scenario 9) with current project state*
+*Last updated: 2026-01-25 - Added ZFS filesystem support implementation plan (Scenario 10) with kernel compatibility matrix, DKMS build process, and testing strategy*
 
 *For questions about AI workflows, open an issue or contact the maintainers*

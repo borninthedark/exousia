@@ -401,6 +401,14 @@ Exousia builds custom, container-based immutable operating systems using [bootc]
 
 ### Use a Published Image
 
+> **Flathub Setup**
+>
+> Exousia installs applications like Firefox and VS Code via Flatpak. To use Flathub apps, set up the remote before switching images:
+>
+> ```bash
+> flatpak remote-add --if-not-exists --system flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+> ```
+
 ```bash
 # From Docker Hub (recommended)
 sudo bootc switch docker.io/{config.github_owner}/exousia:latest
@@ -614,6 +622,13 @@ MIT License — see LICENSE file.
 - [RKE2](https://docs.rke2.io/) / [Rancher by SUSE](https://www.rancher.com/) for Kubernetes
 - [Buildah](https://buildah.io/), [Skopeo](https://github.com/containers/skopeo), [Podman](https://podman.io/)
 - **Claude** (Anthropic) and **GPT Codex** (OpenAI) for AI-assisted development
+
+### ZFS Feature Planning
+
+- [Building ZFS — OpenZFS Documentation](https://openzfs.github.io/openzfs-docs/Developer%20Resources/Building%20ZFS.html)
+- [Fedora — OpenZFS Documentation](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
+- [ZFS Kernel Compatibility Issues](https://github.com/openzfs/zfs/issues/17265)
+- [ZFS Autobuild for CoreOS](https://github.com/kainzilla/zfs-autobuild)
 
 ### Creative Acknowledgments
 
