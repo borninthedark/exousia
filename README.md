@@ -70,6 +70,15 @@ Exousia builds custom, container-based immutable operating systems using [bootc]
 
 ### Use a Published Image
 
+> **Important: Flathub Setup Required Before Reboot**
+>
+> Exousia uses Flatpak for applications like Firefox and VS Code. Before switching to an Exousia image and rebooting, you **must** set up the Flathub remote on your current system. Otherwise, Flatpak applications will fail to install on first boot.
+>
+> ```bash
+> # Run this BEFORE switching images
+> flatpak remote-add --if-not-exists --system flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+> ```
+
 ```bash
 # From Docker Hub (recommended)
 sudo bootc switch docker.io/borninthedark/exousia:latest
