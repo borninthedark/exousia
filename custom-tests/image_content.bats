@@ -649,6 +649,12 @@ get_package_manager() {
     assert_success
 }
 
+@test "Libvirt tmpfiles.d config should exist" {
+    assert_file_exists "$MOUNT_POINT/etc/tmpfiles.d/libvirt.conf"
+    run grep -q "/var/lib/libvirt" "$MOUNT_POINT/etc/tmpfiles.d/libvirt.conf"
+    assert_success "libvirt.conf should configure /var/lib/libvirt"
+}
+
 @test "Security packages should be installed" {
     run buildah run "$CONTAINER" -- rpm -q pam-u2f
     assert_success
