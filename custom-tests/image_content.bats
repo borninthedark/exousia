@@ -644,9 +644,10 @@ get_package_manager() {
     assert_success "kvm group should exist"
 }
 
-@test "virt-group-setup script should be executable" {
-    run test -x "$MOUNT_POINT/usr/local/bin/virt-group-setup"
-    assert_success
+@test "Libvirt polkit rule should exist for wheel group" {
+    assert_file_exists "$MOUNT_POINT/etc/polkit-1/rules.d/50-libvirt.rules"
+    run grep -q "org.libvirt.unix.manage" "$MOUNT_POINT/etc/polkit-1/rules.d/50-libvirt.rules"
+    assert_success "polkit rule should allow libvirt management"
 }
 
 @test "Libvirt tmpfiles.d config should exist" {

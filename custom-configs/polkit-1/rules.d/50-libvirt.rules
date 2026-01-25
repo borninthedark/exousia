@@ -1,0 +1,7 @@
+/* Allow wheel group members to manage libvirt without authentication */
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.libvirt.unix.manage" &&
+        subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+    }
+});
