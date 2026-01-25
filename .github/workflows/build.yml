@@ -189,6 +189,13 @@ jobs:
         with:
           config: auto
 
+      - name: Upload generated Containerfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: containerfile-generated
+          path: Containerfile.generated
+          retention-days: 1
+
       - name: Lint summary
         if: always()
         run: |
@@ -428,15 +435,10 @@ jobs:
 
           python3 tools/resolve_build_config.py
 
-      - name: Generate Containerfile from YAML
-        run: |
-          echo "::group::Generating Containerfile"
-          python3 tools/yaml-to-containerfile.py \
-            --config adnyeus.yml \
-            --output Containerfile.generated \
-            --verbose
-          echo "Generated Containerfile.generated from adnyeus.yml"
-          echo "::endgroup::"
+      - name: Download generated Containerfile
+        uses: actions/download-artifact@v4
+        with:
+          name: containerfile-generated
 
       - name: Generate image tags and labels
         id: meta
@@ -661,7 +663,7 @@ jobs:
   # ══════════════════════════════════════════════════════════════════════════
   scan:
     name: Security Scan
-    needs: [build, test]
+    needs: [build]
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
