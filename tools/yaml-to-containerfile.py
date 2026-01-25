@@ -77,7 +77,8 @@ class ContainerfileGenerator:
         self._add_header()
         self._add_build_args()
         self._add_from()
-        self._add_shell()
+        # SHELL directive removed - not supported in OCI format
+        # RUN commands use explicit bash with pipefail instead
         self._add_labels()
         self._add_environment()
         self._process_modules()
@@ -131,12 +132,18 @@ class ContainerfileGenerator:
         ])
 
     def _add_shell(self):
-        """Ensure RUN commands use bash so pipefail is available."""
-        self.lines.extend([
-            "# Use bash for RUN instructions",
-            'SHELL ["/bin/bash", "-o", "pipefail", "-c"]',
-            "",
-        ])
+        """DEPRECATED: SHELL directive not supported in OCI image format.
+
+        This method is no longer used. RUN commands explicitly use bash with
+        pipefail via 'set -euxo pipefail' instead.
+
+        Note: If building with Docker format (not OCI), this directive could be
+        re-enabled, but it's not necessary since RUN commands already specify bash.
+        """
+        # SHELL directive removed - causes warnings with OCI format:
+        # "SHELL is not supported for OCI image format, [/bin/bash -o pipefail -c]
+        # will be ignored. Must use `docker` format"
+        pass
 
     def _add_labels(self):
         """Add LABEL instructions."""
