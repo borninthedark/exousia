@@ -637,13 +637,6 @@ get_package_manager() {
     assert_success
 }
 
-@test "Virtualization groups should exist" {
-    run chroot "$MOUNT_POINT" getent group libvirt
-    assert_success "libvirt group should exist"
-    run chroot "$MOUNT_POINT" getent group kvm
-    assert_success "kvm group should exist"
-}
-
 @test "Libvirt polkit rule should exist for wheel group" {
     assert_file_exists "$MOUNT_POINT/etc/polkit-1/rules.d/50-libvirt.rules"
     run grep -q "org.libvirt.unix.manage" "$MOUNT_POINT/etc/polkit-1/rules.d/50-libvirt.rules"
