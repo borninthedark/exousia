@@ -376,6 +376,13 @@ MIT License — see LICENSE file.
 - [Buildah](https://buildah.io/), [Skopeo](https://github.com/containers/skopeo), [Podman](https://podman.io/)
 - **Claude** (Anthropic) and **GPT Codex** (OpenAI) for AI-assisted development
 
+### ZFS Feature Planning
+
+- [Building ZFS — OpenZFS Documentation](https://openzfs.github.io/openzfs-docs/Developer%20Resources/Building%20ZFS.html)
+- [Fedora — OpenZFS Documentation](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
+- [ZFS Kernel Compatibility Issues](https://github.com/openzfs/zfs/issues/17265)
+- [ZFS Autobuild for CoreOS](https://github.com/kainzilla/zfs-autobuild)
+
 ### Creative Acknowledgments
 
 **Tite Kubo** — Creator of *BLEACH*. The "Reiatsu" status indicator is inspired by themes from BLEACH, used respectfully as a playful aesthetic. All rights belong to Tite Kubo and respective copyright holders.
