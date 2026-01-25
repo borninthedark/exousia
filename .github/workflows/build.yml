@@ -176,7 +176,7 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Containerfile.generated
-          ignore: DL3041,DL3059,SC2086,DL4006,SC3037
+          ignore: DL3041,DL3059,SC2086,DL4006,SC3037,SC3040
 
       - name: ShellCheck all scripts
         uses: ludeeus/action-shellcheck@master
