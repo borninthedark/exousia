@@ -1,0 +1,125 @@
+#!/bin/bash
+# virt-group-setup - Add user to virtualization groups
+# Usage: virt-group-setup [username]
+#
+# Adds the specified user (or current user) to libvirt, kvm, and plugdev groups
+# required for managing virtual machines with virt-manager/libvirt.
+
+set -euo pipefail
+
+print_usage() {
+    cat <<EOF
+Usage: $(basename "$0") [OPTIONS] [USERNAME]
+
+Add a user to virtualization groups (libvirt, kvm, plugdev).
+
+Arguments:
+  USERNAME    User to add to groups (default: current user)
+
+Options:
+  -h, --help  Show this help message
+  -c, --check Check group membership without making changes
+
+Examples:
+  $(basename "$0")           # Add current user to virt groups
+  $(basename "$0") alice     # Add user 'alice' to virt groups
+  $(basename "$0") -c        # Check current user's group membership
+EOF
+}
+
+check_groups() {
+    local user="${1:-$USER}"
+    echo "Checking virtualization group membership for: $user"
+    echo ""
+
+    for group in libvirt kvm plugdev; do
+        if getent group "$group" >/dev/null 2>&1; then
+            if id -nG "$user" 2>/dev/null | grep -qw "$group"; then
+                echo "  [OK] $user is in group: $group"
+            else
+                echo "  [--] $user is NOT in group: $group"
+            fi
+        else
+            echo "  [??] Group does not exist: $group"
+        fi
+    done
+}
+
+add_to_groups() {
+    local user="${1:-$USER}"
+
+    # Check if running as root
+    if [[ $EUID -ne 0 ]]; then
+        echo "Error: This script must be run as root (use sudo)" >&2
+        exit 1
+    fi
+
+    # Verify user exists
+    if ! id "$user" >/dev/null 2>&1; then
+        echo "Error: User '$user' does not exist" >&2
+        exit 1
+    fi
+
+    echo "Adding user '$user' to virtualization groups..."
+
+    local groups_added=()
+    for group in libvirt kvm plugdev; do
+        if getent group "$group" >/dev/null 2>&1; then
+            if ! id -nG "$user" | grep -qw "$group"; then
+                usermod -aG "$group" "$user"
+                groups_added+=("$group")
+                echo "  Added to: $group"
+            else
+                echo "  Already in: $group"
+            fi
+        else
+            echo "  Warning: Group '$group' does not exist, skipping" >&2
+        fi
+    done
+
+    if [[ ${#groups_added[@]} -gt 0 ]]; then
+        echo ""
+        echo "User '$user' added to groups: ${groups_added[*]}"
+        echo ""
+        echo "NOTE: Log out and back in for group changes to take effect,"
+        echo "      or run: newgrp libvirt"
+    else
+        echo ""
+        echo "No changes needed - user already in all groups."
+    fi
+}
+
+# Parse arguments
+CHECK_ONLY=false
+TARGET_USER=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            print_usage
+            exit 0
+            ;;
+        -c|--check)
+            CHECK_ONLY=true
+            shift
+            ;;
+        -*)
+            echo "Error: Unknown option: $1" >&2
+            print_usage >&2
+            exit 1
+            ;;
+        *)
+            TARGET_USER="$1"
+            shift
+            ;;
+    esac
+done
+
+# Default to current user if none specified
+TARGET_USER="${TARGET_USER:-$USER}"
+
+if $CHECK_ONLY; then
+    check_groups "$TARGET_USER"
+else
+    add_to_groups "$TARGET_USER"
+fi

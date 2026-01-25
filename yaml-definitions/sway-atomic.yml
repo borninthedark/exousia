@@ -171,6 +171,7 @@ modules:
       - distrobox
       - wireguard-tools
       # Virtualization
+      - virt-manager
       - qemu-kvm
       - libvirt
       # Security
@@ -218,6 +219,7 @@ modules:
     system:
       enabled:
         - bootc-fetch-apply-updates.timer
+        - libvirtd.service
     user:
       enabled:
         - chezmoi-init.service

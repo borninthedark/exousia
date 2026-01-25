@@ -194,6 +194,7 @@ graph TD
 - pavucontrol (Volume Control)
 
 #### Virtualization
+- virt-manager
 - qemu-kvm
 - libvirt
 

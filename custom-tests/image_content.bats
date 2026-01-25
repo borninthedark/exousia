@@ -629,9 +629,23 @@ get_package_manager() {
 }
 
 @test "Virtualization packages should be installed" {
+    run buildah run "$CONTAINER" -- rpm -q virt-manager
+    assert_success
     run buildah run "$CONTAINER" -- rpm -q qemu-kvm
     assert_success
     run buildah run "$CONTAINER" -- rpm -q libvirt
+    assert_success
+}
+
+@test "Virtualization groups should exist" {
+    run chroot "$MOUNT_POINT" getent group libvirt
+    assert_success "libvirt group should exist"
+    run chroot "$MOUNT_POINT" getent group kvm
+    assert_success "kvm group should exist"
+}
+
+@test "virt-group-setup script should be executable" {
+    run test -x "$MOUNT_POINT/usr/local/bin/virt-group-setup"
     assert_success
 }
 

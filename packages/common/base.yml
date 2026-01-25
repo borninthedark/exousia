@@ -64,6 +64,7 @@ development:
 
 # Virtualization
 virtualization:
+  - virt-manager
   - qemu-kvm
   - libvirt
   - fuse
