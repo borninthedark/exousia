@@ -21,11 +21,11 @@ Exousia uses three environments with semantic versioning:
 
 | Branch | Environment | Version | Purpose |
 |--------|-------------|---------|---------|
-| `develop` | DEV | `vX.Y.Z-dev.N` | Active development |
+| `dev` | DEV | `vX.Y.Z-dev.N` | Active development |
 | `uat` | UAT | `vX.Y.Z-rc.N` | User acceptance testing |
 | `main` | PROD | `vX.Y.Z` | Production releases |
 
-**Promotion:** `develop` → `uat` → `main`
+**Promotion:** `dev` → `uat` → `main`
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):
 - `feat:` → minor

@@ -52,7 +52,7 @@ jobs:
           case "${{ github.event.inputs.environment }}" in
             prod) BRANCH="main" ;;
             uat)  BRANCH="uat" ;;
-            dev)  BRANCH="develop" ;;
+            dev)  BRANCH="dev" ;;
           esac
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
           echo "Target branch: $BRANCH"
@@ -102,8 +102,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: ${{ github.event.inputs.version_bump }}
-          release_branches: main,uat,develop
-          pre_release_branches: develop,uat
+          release_branches: main,uat,dev
+          pre_release_branches: dev,uat
           append_to_pre_release_tag: ${{ steps.config.outputs.suffix }}
           create_annotated_tag: true
           tag_prefix: v

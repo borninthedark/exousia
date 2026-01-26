@@ -2,9 +2,9 @@ name: Bootc DevSecOps Pipeline
 
 on:
   push:
-    branches: ["main", "uat", "develop"]
+    branches: ["main", "uat", "dev"]
   pull_request:
-    branches: ["main", "uat", "develop"]
+    branches: ["main", "uat", "dev"]
   repository_dispatch:
     types: [api]
   workflow_dispatch:
@@ -453,7 +453,7 @@ jobs:
               echo "environment=uat" >> $GITHUB_OUTPUT
               echo "is_prod=false" >> $GITHUB_OUTPUT
               ;;
-            develop)
+            dev)
               echo "environment=dev" >> $GITHUB_OUTPUT
               echo "is_prod=false" >> $GITHUB_OUTPUT
               ;;
@@ -979,7 +979,7 @@ jobs:
     name: Generate Report
     needs: [build, test, scan, push-and-sign]
     runs-on: ubuntu-latest
-    if: always() && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/uat' || github.ref == 'refs/heads/develop')
+    if: always() && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/uat' || github.ref == 'refs/heads/dev')
 
     steps:
       - name: Checkout repository
@@ -1023,10 +1023,10 @@ jobs:
             echo ""
             echo "### Next Steps"
             case "${{ github.ref_name }}" in
-              develop)
+              dev)
                 echo "After dev testing, promote to UAT:"
                 echo '```bash'
-                echo "git checkout uat && git merge develop && git push origin uat"
+                echo "git checkout uat && git merge dev && git push origin uat"
                 echo '```'
                 ;;
               uat)

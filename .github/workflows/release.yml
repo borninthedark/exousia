@@ -2,9 +2,9 @@
 # Triggers after successful build pipeline to create versioned releases
 #
 # Branch Strategy:
-#   develop -> v1.2.3-dev.N  (pre-release, active development)
-#   uat     -> v1.2.3-rc.N   (release candidate, staging)
-#   main    -> v1.2.3        (production release)
+#   dev  -> v1.2.3-dev.N  (pre-release, active development)
+#   uat  -> v1.2.3-rc.N   (release candidate, staging)
+#   main -> v1.2.3        (production release)
 #
 # Conventional Commits:
 #   feat:  -> MINOR bump (new feature)
@@ -17,7 +17,7 @@ on:
   workflow_run:
     workflows: ["Bootc DevSecOps Pipeline"]
     types: [completed]
-    branches: [main, uat, develop]
+    branches: [main, uat, dev]
 
 permissions:
   contents: write
@@ -57,7 +57,7 @@ jobs:
               echo "prerelease=true" >> $GITHUB_OUTPUT
               echo "tag_suffix=-rc" >> $GITHUB_OUTPUT
               ;;
-            develop)
+            dev)
               echo "environment=dev" >> $GITHUB_OUTPUT
               echo "prerelease=true" >> $GITHUB_OUTPUT
               echo "tag_suffix=-dev" >> $GITHUB_OUTPUT
@@ -77,8 +77,8 @@ jobs:
         uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          release_branches: main,uat,develop
-          pre_release_branches: develop,uat
+          release_branches: main,uat,dev
+          pre_release_branches: dev,uat
           default_bump: patch
           default_prerelease_bump: prerelease
           append_to_pre_release_tag: ${{ steps.env.outputs.tag_suffix }}

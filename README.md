@@ -54,11 +54,11 @@ Exousia uses a three-environment branch model with semantic versioning:
 
 | Branch | Environment | Version Format | Purpose |
 |--------|-------------|----------------|---------|
-| `develop` | DEV | `vX.Y.Z-dev.N` | Active development |
+| `dev` | DEV | `vX.Y.Z-dev.N` | Active development |
 | `uat` | UAT | `vX.Y.Z-rc.N` | User acceptance testing |
 | `main` | PROD | `vX.Y.Z` | Production releases |
 
-**Promotion flow:** `develop` → `uat` → `main`
+**Promotion flow:** `dev` → `uat` → `main`
 
 Version bumps are determined automatically from [conventional commits](https://www.conventionalcommits.org/):
 - `feat:` → minor bump
@@ -406,4 +406,4 @@ MIT License — see LICENSE file.
 
 **Built with [bootc](https://github.com/bootc-dev/bootc)** | [Documentation](https://bootc-dev.github.io/bootc/) | [Fedora bootc](https://docs.fedoraproject.org/en-US/bootc/)
 
-*Generated on 2026-01-26 21:54:41 UTC*
+*Generated on 2026-01-26 23:07:21 UTC*
