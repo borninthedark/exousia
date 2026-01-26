@@ -240,6 +240,7 @@ def generate_readme(config: Config) -> str:
         ("Documentation", "documentation", 2),
         ("Contributing", "contributing", 2),
         ("License", "license", 2),
+        ("Acknowledgments", "acknowledgments", 2),
     ]
 
     toc = generate_toc(sections)
@@ -616,6 +617,17 @@ Contributions welcome! Submit PRs or open issues. Use [conventional commits](htt
 ## License
 
 MIT License — see LICENSE file.
+
+---
+
+## Acknowledgments
+
+- [bootc project](https://github.com/bootc-dev/bootc) maintainers and Fedora community
+- [Fedora Sway SIG](https://gitlab.com/fedora/sigs/sway/sway-config-fedora) for Sway configs
+- [Universal Blue](https://universal-blue.org/) and [BlueBuild](https://blue-build.org/) for container-native workflows
+- [RKE2](https://docs.rke2.io/) / [Rancher by SUSE](https://www.rancher.com/) for Kubernetes
+- [Buildah](https://buildah.io/), [Podman](https://podman.io/), [Cosign](https://docs.sigstore.dev/cosign/overview/)
+- **Tite Kubo** — Creator of *BLEACH*. The "Reiatsu" badge is inspired by BLEACH themes.
 
 ---
 
