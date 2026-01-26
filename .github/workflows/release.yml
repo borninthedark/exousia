@@ -1,0 +1,209 @@
+# Multi-Environment Release Workflow with Semantic Versioning
+# Triggers after successful build pipeline to create versioned releases
+#
+# Branch Strategy:
+#   develop -> v1.2.3-dev.N  (pre-release, active development)
+#   uat     -> v1.2.3-rc.N   (release candidate, staging)
+#   main    -> v1.2.3        (production release)
+#
+# Conventional Commits:
+#   feat:  -> MINOR bump (new feature)
+#   fix:   -> PATCH bump (bug fix)
+#   feat!: -> MAJOR bump (breaking change)
+
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["Bootc DevSecOps Pipeline"]
+    types: [completed]
+    branches: [main, uat, develop]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    outputs:
+      version: ${{ steps.version.outputs.new_tag }}
+      environment: ${{ steps.env.outputs.environment }}
+      changelog: ${{ steps.version.outputs.changelog }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      - name: Determine environment
+        id: env
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          echo "Branch: $BRANCH"
+
+          case "$BRANCH" in
+            main)
+              echo "environment=prod" >> $GITHUB_OUTPUT
+              echo "prerelease=false" >> $GITHUB_OUTPUT
+              echo "tag_suffix=" >> $GITHUB_OUTPUT
+              ;;
+            uat)
+              echo "environment=uat" >> $GITHUB_OUTPUT
+              echo "prerelease=true" >> $GITHUB_OUTPUT
+              echo "tag_suffix=-rc" >> $GITHUB_OUTPUT
+              ;;
+            develop)
+              echo "environment=dev" >> $GITHUB_OUTPUT
+              echo "prerelease=true" >> $GITHUB_OUTPUT
+              echo "tag_suffix=-dev" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "::notice::Branch $BRANCH not configured for releases, skipping"
+              echo "skip=true" >> $GITHUB_OUTPUT
+              exit 0
+              ;;
+          esac
+
+          echo "::notice::Environment: $(cat $GITHUB_OUTPUT | grep environment | cut -d= -f2)"
+
+      - name: Bump version and create tag
+        id: version
+        if: steps.env.outputs.skip != 'true'
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branches: main,uat,develop
+          pre_release_branches: develop,uat
+          default_bump: patch
+          default_prerelease_bump: prerelease
+          append_to_pre_release_tag: ${{ steps.env.outputs.tag_suffix }}
+          create_annotated_tag: true
+          tag_prefix: v
+
+      - name: Create GitHub Release
+        if: steps.env.outputs.skip != 'true' && steps.version.outputs.new_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.new_tag }}
+          name: Release ${{ steps.version.outputs.new_tag }} (${{ steps.env.outputs.environment }})
+          body: |
+            ## Exousia ${{ steps.version.outputs.new_tag }}
+
+            **Environment:** ${{ steps.env.outputs.environment }}
+            **Branch:** ${{ github.event.workflow_run.head_branch }}
+
+            ### Changes
+            ${{ steps.version.outputs.changelog }}
+
+            ### Docker Images
+
+            **Docker Hub (for bootc deployment):**
+            ```bash
+            sudo bootc switch docker.io/${{ github.repository_owner }}/exousia:${{ steps.version.outputs.new_tag }}
+            ```
+
+            **GitHub Container Registry:**
+            ```bash
+            docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.new_tag }}
+            ```
+          prerelease: ${{ steps.env.outputs.prerelease }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release summary
+        if: steps.env.outputs.skip != 'true'
+        run: |
+          {
+            echo "## Release Created"
+            echo ""
+            echo "- **Version:** ${{ steps.version.outputs.new_tag }}"
+            echo "- **Environment:** ${{ steps.env.outputs.environment }}"
+            echo "- **Pre-release:** ${{ steps.env.outputs.prerelease }}"
+            echo "- **Previous Tag:** ${{ steps.version.outputs.previous_tag }}"
+            echo ""
+            echo "### Changelog"
+            echo "${{ steps.version.outputs.changelog }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Retag Docker images with semantic version
+  tag-images:
+    name: Tag Images with Version
+    needs: release
+    runs-on: ubuntu-latest
+    if: needs.release.outputs.version != ''
+
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull and retag images
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+          ENVIRONMENT: ${{ needs.release.outputs.environment }}
+          GHCR_IMAGE: ghcr.io/${{ github.repository }}
+          DOCKERHUB_IMAGE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/exousia
+        run: |
+          echo "::group::Retagging images with version $VERSION"
+
+          # Pull the environment-tagged image (pushed by build pipeline)
+          docker pull "$GHCR_IMAGE:main" || docker pull "$GHCR_IMAGE:${{ github.event.workflow_run.head_branch }}"
+
+          # Tag with semantic version for GHCR
+          docker tag "$GHCR_IMAGE:main" "$GHCR_IMAGE:$VERSION"
+          docker tag "$GHCR_IMAGE:main" "$GHCR_IMAGE:$ENVIRONMENT"
+          docker push "$GHCR_IMAGE:$VERSION"
+          docker push "$GHCR_IMAGE:$ENVIRONMENT"
+
+          # Tag for Docker Hub if credentials exist
+          if [[ -n "${{ secrets.DOCKERHUB_USERNAME }}" ]]; then
+            docker pull "$DOCKERHUB_IMAGE:main" || true
+            if docker image inspect "$DOCKERHUB_IMAGE:main" >/dev/null 2>&1; then
+              docker tag "$DOCKERHUB_IMAGE:main" "$DOCKERHUB_IMAGE:$VERSION"
+              docker tag "$DOCKERHUB_IMAGE:main" "$DOCKERHUB_IMAGE:$ENVIRONMENT"
+              docker push "$DOCKERHUB_IMAGE:$VERSION"
+              docker push "$DOCKERHUB_IMAGE:$ENVIRONMENT"
+            fi
+          fi
+
+          # Add latest tag for production releases
+          if [[ "$ENVIRONMENT" == "prod" ]]; then
+            docker tag "$GHCR_IMAGE:main" "$GHCR_IMAGE:latest"
+            docker push "$GHCR_IMAGE:latest"
+            if docker image inspect "$DOCKERHUB_IMAGE:main" >/dev/null 2>&1; then
+              docker tag "$DOCKERHUB_IMAGE:main" "$DOCKERHUB_IMAGE:latest"
+              docker push "$DOCKERHUB_IMAGE:latest"
+            fi
+          fi
+
+          echo "::endgroup::"
+
+      - name: Image tagging summary
+        run: |
+          {
+            echo "## Docker Images Tagged"
+            echo ""
+            echo "Version: \`${{ needs.release.outputs.version }}\`"
+            echo ""
+            echo "### Tags Applied"
+            echo "- \`${{ needs.release.outputs.version }}\`"
+            echo "- \`${{ needs.release.outputs.environment }}\`"
+            if [[ "${{ needs.release.outputs.environment }}" == "prod" ]]; then
+              echo "- \`latest\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
