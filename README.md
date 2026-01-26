@@ -27,6 +27,7 @@ Exousia builds custom, container-based immutable operating systems using [bootc]
 - [Documentation](#documentation)
 - [Contributing](#contributing)
 - [License](#license)
+- [Acknowledgments](#acknowledgments)
 
 ---
 
@@ -380,6 +381,29 @@ MIT License — see LICENSE file.
 
 ---
 
+## Acknowledgments
+
+- [bootc project](https://github.com/bootc-dev/bootc) maintainers and Fedora community
+- [Fedora Sway SIG](https://gitlab.com/fedora/sigs/sway/sway-config-fedora) for Sway configs and QoL improvements
+- [openSUSEway](https://github.com/openSUSE/openSUSEway) for Sway enhancements
+- [Universal Blue](https://universal-blue.org/) and [BlueBuild](https://blue-build.org/) for container-native workflows
+- [RKE2](https://docs.rke2.io/) / [Rancher by SUSE](https://www.rancher.com/) for Kubernetes
+- [Buildah](https://buildah.io/), [Skopeo](https://github.com/containers/skopeo), [Podman](https://podman.io/)
+- **Claude** (Anthropic) and **GPT Codex** (OpenAI) for AI-assisted development
+
+### ZFS Feature Planning
+
+- [Building ZFS — OpenZFS Documentation](https://openzfs.github.io/openzfs-docs/Developer%20Resources/Building%20ZFS.html)
+- [Fedora — OpenZFS Documentation](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
+- [ZFS Kernel Compatibility Issues](https://github.com/openzfs/zfs/issues/17265)
+- [ZFS Autobuild for CoreOS](https://github.com/kainzilla/zfs-autobuild)
+
+### Creative Acknowledgments
+
+**Tite Kubo** — Creator of *BLEACH*. The "Reiatsu" status indicator is inspired by themes from BLEACH, used respectfully as a playful aesthetic. All rights belong to Tite Kubo and respective copyright holders.
+
+---
+
 **Built with [bootc](https://github.com/bootc-dev/bootc)** | [Documentation](https://bootc-dev.github.io/bootc/) | [Fedora bootc](https://docs.fedoraproject.org/en-US/bootc/)
 
-*Generated on 2026-01-26 20:30:11 UTC*
+*Generated on 2026-01-26 21:54:41 UTC*
