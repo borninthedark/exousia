@@ -2,9 +2,9 @@ name: Bootc DevSecOps Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "uat", "develop"]
   pull_request:
-    branches: ["main"]
+    branches: ["main", "uat", "develop"]
   repository_dispatch:
     types: [api]
   workflow_dispatch:
@@ -341,6 +341,7 @@ jobs:
       containerfile: ${{ steps.config.outputs.CONTAINERFILE }}
       enable_plymouth: ${{ steps.config.outputs.ENABLE_PLYMOUTH }}
       enable_rke2: ${{ steps.config.outputs.ENABLE_RKE2 }}
+      environment: ${{ steps.env.outputs.environment }}
 
     steps:
       - name: Checkout repository
@@ -440,6 +441,28 @@ jobs:
         with:
           name: containerfile-generated
 
+      - name: Determine environment from branch
+        id: env
+        run: |
+          case "${{ github.ref_name }}" in
+            main)
+              echo "environment=prod" >> $GITHUB_OUTPUT
+              echo "is_prod=true" >> $GITHUB_OUTPUT
+              ;;
+            uat)
+              echo "environment=uat" >> $GITHUB_OUTPUT
+              echo "is_prod=false" >> $GITHUB_OUTPUT
+              ;;
+            develop)
+              echo "environment=dev" >> $GITHUB_OUTPUT
+              echo "is_prod=false" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "environment=dev" >> $GITHUB_OUTPUT
+              echo "is_prod=false" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
       - name: Generate image tags and labels
         id: meta
         uses: docker/metadata-action@v5
@@ -449,11 +472,13 @@ jobs:
             ${{ env.DOCKERHUB_IMAGE_BASE }}
           tags: |
             type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ steps.env.outputs.environment }}
             type=raw,value=${{ steps.config.outputs.OS_FAMILY }}-${{ steps.config.outputs.OS_VERSION }}
             type=raw,value=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
             type=sha,format=long
             type=ref,event=branch
             type=schedule,pattern=nightly
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
           labels: |
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.description=Custom ${{ steps.config.outputs.BUILD_IMAGE_TYPE }} bootc image
@@ -461,6 +486,7 @@ jobs:
             distro=${{ steps.config.outputs.OS_FAMILY }}
             distro-version=${{ steps.config.outputs.OS_VERSION }}
             image-type=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
+            environment=${{ steps.env.outputs.environment }}
 
       - name: Extract first tag for testing
         id: first-tag
@@ -953,7 +979,7 @@ jobs:
     name: Generate Report
     needs: [build, test, scan, push-and-sign]
     runs-on: ubuntu-latest
-    if: always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: always() && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/uat' || github.ref == 'refs/heads/develop')
 
     steps:
       - name: Checkout repository
@@ -981,6 +1007,8 @@ jobs:
             echo "## 🎉 Pipeline Complete"
             echo ""
             echo "### Build Information"
+            echo "- **Environment:** ${{ needs.build.outputs.environment }}"
+            echo "- **Branch:** ${{ github.ref_name }}"
             echo "- **Version:** ${{ needs.build.outputs.build_version }}"
             echo "- **Type:** ${{ needs.build.outputs.build_type }}"
             echo "- **Image:** \`${{ needs.build.outputs.first_tag }}\`"
@@ -992,6 +1020,25 @@ jobs:
             echo "- Test: ${{ needs.test.result }}"
             echo "- Scan: ${{ needs.scan.result }}"
             echo "- Push & Sign: ${{ needs.push-and-sign.result }}"
+            echo ""
+            echo "### Next Steps"
+            case "${{ github.ref_name }}" in
+              develop)
+                echo "After dev testing, promote to UAT:"
+                echo '```bash'
+                echo "git checkout uat && git merge develop && git push origin uat"
+                echo '```'
+                ;;
+              uat)
+                echo "After UAT approval, promote to production:"
+                echo '```bash'
+                echo "git checkout main && git merge uat && git push origin main"
+                echo '```'
+                ;;
+              main)
+                echo "Production release complete. Semantic versioning will tag this release."
+                ;;
+            esac
             echo ""
             echo "### Resources"
             echo "- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)"
