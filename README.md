@@ -357,18 +357,14 @@ Configure in **Settings → Secrets and variables → Actions**:
 
 ## Documentation
 
-### Getting Started
-- [BOOTC_UPGRADE.md](docs/BOOTC_UPGRADE.md) — Upgrade and switch images
-- [BOOTC_IMAGE_BUILDER.md](docs/BOOTC_IMAGE_BUILDER.md) — Build disk images
+**[Full Documentation Index](docs/README.md)**
 
-### API
-- [API Overview](docs/api/README.md) | [Endpoints](docs/api/endpoints.md) | [Development](docs/api/development.md)
-
-### Testing
-- [Testing Guide](docs/testing/guide.md) | [Test Suite](docs/testing/test_suite.md) | [Writing Tests](docs/reference/writing-tests.md)
-
-### Reference
-- [Plymouth Usage](docs/reference/plymouth_usage_doc.md) | [Troubleshooting](docs/reference/troubleshooting.md)
+| Topic | Links |
+|-------|-------|
+| Getting Started | [Upgrade Guide](docs/BOOTC_UPGRADE.md) &#124; [Image Builder](docs/BOOTC_IMAGE_BUILDER.md) |
+| API | [Overview](docs/api/README.md) &#124; [Endpoints](docs/api/endpoints.md) |
+| Testing | [Guide](docs/testing/README.md) &#124; [Writing Tests](docs/reference/writing-tests.md) |
+| Reference | [Troubleshooting](docs/reference/troubleshooting.md) &#124; [Webhook API](docs/WEBHOOK_API.md) |
 
 ---
 
@@ -386,4 +382,4 @@ MIT License — see LICENSE file.
 
 **Built with [bootc](https://github.com/bootc-dev/bootc)** | [Documentation](https://bootc-dev.github.io/bootc/) | [Fedora bootc](https://docs.fedoraproject.org/en-US/bootc/)
 
-*Generated on 2026-01-26 20:25:21 UTC*
+*Generated on 2026-01-26 20:30:11 UTC*
