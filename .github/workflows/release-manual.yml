@@ -1,0 +1,168 @@
+# Manual Release Workflow
+# Use for emergency releases or manual version control
+#
+# Usage:
+#   1. Go to Actions tab in GitHub
+#   2. Select "Manual Release" workflow
+#   3. Click "Run workflow"
+#   4. Select environment and version bump type
+
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - dev
+          - uat
+          - prod
+        default: 'dev'
+      version_bump:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: 'patch'
+      dry_run:
+        description: 'Dry run (no actual release)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  manual-release:
+    name: Manual Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Determine target branch
+        id: branch
+        run: |
+          case "${{ github.event.inputs.environment }}" in
+            prod) BRANCH="main" ;;
+            uat)  BRANCH="uat" ;;
+            dev)  BRANCH="develop" ;;
+          esac
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "Target branch: $BRANCH"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.branch.outputs.branch }}
+          fetch-depth: 0
+
+      - name: Configure version suffix
+        id: config
+        run: |
+          case "${{ github.event.inputs.environment }}" in
+            prod)
+              echo "suffix=" >> $GITHUB_OUTPUT
+              echo "prerelease=false" >> $GITHUB_OUTPUT
+              ;;
+            uat)
+              echo "suffix=-rc" >> $GITHUB_OUTPUT
+              echo "prerelease=true" >> $GITHUB_OUTPUT
+              ;;
+            dev)
+              echo "suffix=-dev" >> $GITHUB_OUTPUT
+              echo "prerelease=true" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Preview version bump (dry run)
+        if: github.event.inputs.dry_run == 'true'
+        run: |
+          echo "::notice::DRY RUN - No actual release will be created"
+          echo ""
+          echo "Configuration:"
+          echo "  Environment: ${{ github.event.inputs.environment }}"
+          echo "  Branch: ${{ steps.branch.outputs.branch }}"
+          echo "  Version bump: ${{ github.event.inputs.version_bump }}"
+          echo "  Pre-release: ${{ steps.config.outputs.prerelease }}"
+          echo "  Suffix: ${{ steps.config.outputs.suffix }}"
+          echo ""
+          echo "Would create a ${{ github.event.inputs.version_bump }} release"
+
+      - name: Create release tag
+        id: version
+        if: github.event.inputs.dry_run != 'true'
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: ${{ github.event.inputs.version_bump }}
+          release_branches: main,uat,develop
+          pre_release_branches: develop,uat
+          append_to_pre_release_tag: ${{ steps.config.outputs.suffix }}
+          create_annotated_tag: true
+          tag_prefix: v
+
+      - name: Create GitHub Release
+        if: github.event.inputs.dry_run != 'true' && steps.version.outputs.new_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.new_tag }}
+          name: Manual Release ${{ steps.version.outputs.new_tag }} (${{ github.event.inputs.environment }})
+          body: |
+            ## Manual Release ${{ steps.version.outputs.new_tag }}
+
+            **Environment:** ${{ github.event.inputs.environment }}
+            **Branch:** ${{ steps.branch.outputs.branch }}
+            **Bump Type:** ${{ github.event.inputs.version_bump }}
+            **Triggered by:** @${{ github.actor }}
+
+            ### Changes
+            ${{ steps.version.outputs.changelog }}
+
+            ---
+            *This release was created manually via workflow dispatch.*
+          prerelease: ${{ steps.config.outputs.prerelease }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger build pipeline
+        if: github.event.inputs.dry_run != 'true' && steps.version.outputs.new_tag != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'build.yml',
+              ref: '${{ steps.branch.outputs.branch }}',
+              inputs: {
+                image_type: 'current',
+                distro_version: 'current'
+              }
+            });
+            console.log('Triggered build pipeline for ${{ steps.branch.outputs.branch }}');
+
+      - name: Release summary
+        run: |
+          {
+            echo "## Manual Release"
+            echo ""
+            if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
+              echo "**DRY RUN** - No release was created"
+            else
+              echo "- **Version:** ${{ steps.version.outputs.new_tag }}"
+              echo "- **Environment:** ${{ github.event.inputs.environment }}"
+              echo "- **Branch:** ${{ steps.branch.outputs.branch }}"
+              echo "- **Bump Type:** ${{ github.event.inputs.version_bump }}"
+              echo "- **Pre-release:** ${{ steps.config.outputs.prerelease }}"
+              echo ""
+              echo "Build pipeline has been triggered."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
