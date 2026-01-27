@@ -505,7 +505,7 @@ jobs:
       - name: Create auth.json secret for build
         run: |
           mkdir -p ./bootc-secrets
-          GHCR_AUTH=$(printf "%s:%s" "${{ github.actor }}" "${{ secrets.GHCR_PAT }}" | base64 -w0)
+          GHCR_AUTH=$(printf "%s:%s" "${{ github.actor }}" "${{ secrets.GITHUB_TOKEN }}" | base64 -w0)
           DOCKERHUB_AUTH=$(printf "%s:%s" "${{ secrets.DOCKERHUB_USERNAME }}" "${{ secrets.DOCKERHUB_TOKEN }}" | base64 -w0)
 
           cat > ./bootc-secrets/auth.json <<EOF
