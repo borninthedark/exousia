@@ -6,6 +6,9 @@
 #   2. Select "Manual Release" workflow
 #   3. Click "Run workflow"
 #   4. Select environment and version bump type
+#
+# Note: Only 'prod' (main branch) is currently available.
+# Other environments will fail if their branches don't exist.
 
 name: Manual Release
 
@@ -13,14 +16,12 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target environment'
+        description: 'Target environment (only prod/main exists currently)'
         required: true
         type: choice
         options:
-          - dev
-          - uat
           - prod
-        default: 'dev'
+        default: 'prod'
       version_bump:
         description: 'Version bump type'
         required: true
@@ -51,10 +52,14 @@ jobs:
       - name: Determine target branch
         id: branch
         run: |
+          # Only main branch exists currently
+          # Add additional mappings when new environment branches are created
           case "${{ github.event.inputs.environment }}" in
             prod) BRANCH="main" ;;
-            uat)  BRANCH="uat" ;;
-            dev)  BRANCH="develop" ;;
+            *)
+              echo "::error::Environment '${{ github.event.inputs.environment }}' is not configured. Only 'prod' (main) is available."
+              exit 1
+              ;;
           esac
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
           echo "Target branch: $BRANCH"
@@ -68,18 +73,11 @@ jobs:
       - name: Configure version suffix
         id: config
         run: |
+          # Only production releases are configured currently
           case "${{ github.event.inputs.environment }}" in
             prod)
               echo "suffix=" >> $GITHUB_OUTPUT
               echo "prerelease=false" >> $GITHUB_OUTPUT
-              ;;
-            uat)
-              echo "suffix=-rc" >> $GITHUB_OUTPUT
-              echo "prerelease=true" >> $GITHUB_OUTPUT
-              ;;
-            dev)
-              echo "suffix=-dev" >> $GITHUB_OUTPUT
-              echo "prerelease=true" >> $GITHUB_OUTPUT
               ;;
           esac
 
@@ -104,9 +102,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: ${{ github.event.inputs.version_bump }}
-          release_branches: main,uat,develop
-          pre_release_branches: develop,uat
-          append_to_pre_release_tag: ${{ steps.config.outputs.suffix }}
+          release_branches: main
           create_annotated_tag: true
           tag_prefix: v
 

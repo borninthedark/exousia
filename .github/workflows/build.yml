@@ -2,9 +2,9 @@ name: Bootc DevSecOps Pipeline
 
 on:
   push:
-    branches: ["main", "uat", "develop"]
+    branches: ["main"]
   pull_request:
-    branches: ["main", "uat", "develop"]
+    branches: ["main"]
   repository_dispatch:
     types: [api]
   workflow_dispatch:
@@ -444,24 +444,15 @@ jobs:
       - name: Determine environment from branch
         id: env
         run: |
-          case "${{ github.ref_name }}" in
-            main)
-              echo "environment=prod" >> $GITHUB_OUTPUT
-              echo "is_prod=true" >> $GITHUB_OUTPUT
-              ;;
-            uat)
-              echo "environment=uat" >> $GITHUB_OUTPUT
-              echo "is_prod=false" >> $GITHUB_OUTPUT
-              ;;
-            develop)
-              echo "environment=dev" >> $GITHUB_OUTPUT
-              echo "is_prod=false" >> $GITHUB_OUTPUT
-              ;;
-            *)
-              echo "environment=dev" >> $GITHUB_OUTPUT
-              echo "is_prod=false" >> $GITHUB_OUTPUT
-              ;;
-          esac
+          # Only main branch is configured for production
+          # Other branches default to dev environment
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+            echo "is_prod=true" >> $GITHUB_OUTPUT
+          else
+            echo "environment=dev" >> $GITHUB_OUTPUT
+            echo "is_prod=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Generate image tags and labels
         id: meta
@@ -979,7 +970,7 @@ jobs:
     name: Generate Report
     needs: [build, test, scan, push-and-sign]
     runs-on: ubuntu-latest
-    if: always() && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/uat' || github.ref == 'refs/heads/develop')
+    if: always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout repository
@@ -1022,23 +1013,7 @@ jobs:
             echo "- Push & Sign: ${{ needs.push-and-sign.result }}"
             echo ""
             echo "### Next Steps"
-            case "${{ github.ref_name }}" in
-              develop)
-                echo "After dev testing, promote to UAT:"
-                echo '```bash'
-                echo "git checkout uat && git merge develop && git push origin uat"
-                echo '```'
-                ;;
-              uat)
-                echo "After UAT approval, promote to production:"
-                echo '```bash'
-                echo "git checkout main && git merge uat && git push origin main"
-                echo '```'
-                ;;
-              main)
-                echo "Production release complete. Semantic versioning will tag this release."
-                ;;
-            esac
+            echo "Production release complete. Semantic versioning will tag this release."
             echo ""
             echo "### Resources"
             echo "- [Fedora bootc Documentation](https://docs.fedoraproject.org/en-US/bootc/)"
