@@ -13,6 +13,29 @@ This document defines the AI agent configurations, workflows, and best practices
 - **YAML-based configuration** (`yaml-definitions/`) for defining bootc images
 - **Comprehensive test suite** (52+ tests covering API, tools, and integration)
 
+### Branch and Environment Strategy
+
+**Current State (as of 2026-01-27):** Only the `main` branch exists, representing the production environment.
+
+| Environment | Branch | Status | Version Tags |
+|-------------|--------|--------|--------------|
+| **prod** | `main` | ✅ Active | `v1.2.3`, `latest` |
+| **uat** | `uat` | ❌ Not created | `v1.2.3-rc.N` (future) |
+| **dev** | `develop` | ❌ Not created | `v1.2.3-dev.N` (future) |
+
+**Workflow Behavior:**
+- **Build pipeline** (`build.yml`): Only triggers on `main` branch pushes and PRs
+- **Release workflow** (`release.yml`): Creates semantic version tags on `main` branch only
+- **Manual release** (`release-manual.yml`): Only allows `prod` environment selection
+
+**Future Plans:** When UAT and development branches are needed:
+1. Create `uat` and/or `develop` branches
+2. Update workflow triggers in `.github/workflows/*.yml`
+3. Update `release_branches` configuration in tag actions
+4. Re-enable environment options in manual release workflow
+
+**Note:** The workflows are designed to gracefully skip non-existent branches rather than fail.
+
 ### Project Structure
 
 ```
@@ -173,12 +196,24 @@ pytest --cov=api.routers.<module> --cov-report=term
 # - Environment variables are documented
 # - Fallback logic is tested
 
+# Current branch configuration (main-only):
+# - build.yml: triggers on push/PR to main only
+# - release.yml: triggers after successful build on main only
+# - release-manual.yml: only allows prod (main) environment
+
 # Step 4: Update documentation
 # - Document new workflow inputs
 # - Add examples to README.md and WEBHOOK_API.md
+# - Update AGENTS.md "Branch and Environment Strategy" if adding new branches
 
 # Step 5: Create PR with test plan
 ```
+
+**Note:** If adding support for new environment branches (`uat`, `develop`):
+1. Update `branches:` arrays in workflow triggers
+2. Update `release_branches:` in github-tag-action configurations
+3. Add environment options to release-manual.yml workflow_dispatch inputs
+4. Update branch-to-environment mapping logic in each workflow
 
 ### Scenario 3: Adding New Package Definition
 
@@ -1581,6 +1616,6 @@ AI-generated contributions are subject to the same MIT License as the rest of th
 **AI-Augmented Development**
 
 *This AGENTS.md was initially generated with Claude Sonnet 4.5 and human oversight on 2025-12-01*
-*Last updated: 2026-01-25 - Added ZFS filesystem support implementation plan (Scenario 10) with kernel compatibility matrix, DKMS build process, and testing strategy*
+*Last updated: 2026-01-27 - Updated Branch and Environment Strategy to reflect main-only configuration; workflows now only run on main branch (prod); documented future plans for adding uat/develop branches*
 
 *For questions about AI workflows, open an issue or contact the maintainers*
