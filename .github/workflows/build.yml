@@ -333,7 +333,7 @@ jobs:
       ghcr_tags: ${{ steps.tag-filters.outputs.ghcr_tags }}
       dockerhub_tags: ${{ steps.tag-filters.outputs.dockerhub_tags }}
       first_tag: ${{ steps.first-tag.outputs.tag }}
-      temp_image: ${{ steps.push-temp.outputs.temp_tag }}
+      temp_image: ${{ steps.push-temp.outputs.temp_tag || '' }}
       build_version: ${{ steps.config.outputs.BUILD_VERSION }}
       build_type: ${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
       os_family: ${{ steps.config.outputs.OS_FAMILY }}
@@ -342,6 +342,7 @@ jobs:
       enable_plymouth: ${{ steps.config.outputs.ENABLE_PLYMOUTH }}
       enable_rke2: ${{ steps.config.outputs.ENABLE_RKE2 }}
       environment: ${{ steps.env.outputs.environment }}
+      is_pr: ${{ github.event_name == 'pull_request' }}
 
     steps:
       - name: Checkout repository
@@ -550,11 +551,13 @@ jobs:
           echo "::endgroup::"
 
       - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
         run: |
-          echo "${{ secrets.GHCR_PAT }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
+          echo "${{ secrets.GITHUB_TOKEN }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
 
       - name: Push temporary image to GHCR for pipeline use
         id: push-temp
+        if: github.event_name != 'pull_request'
         run: |
           echo "::group::Pushing Temporary Image"
           FIRST_TAG="${{ steps.first-tag.outputs.tag }}"
@@ -565,6 +568,14 @@ jobs:
           echo "temp_tag=$TEMP_TAG" >> $GITHUB_OUTPUT
           echo "Temporary image pushed successfully"
           echo "::endgroup::"
+
+      - name: Set temp image output for PRs
+        id: push-temp-pr
+        if: github.event_name == 'pull_request'
+        run: |
+          # For PRs, we don't push temp images - downstream jobs will be skipped
+          echo "temp_tag=" >> $GITHUB_OUTPUT
+          echo "::notice::Skipping temp image push for pull request"
 
       - name: Build summary
         if: always()
@@ -594,6 +605,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Skip for PRs since we don't push temp images
+    if: github.event_name != 'pull_request'
 
     steps:
       - name: Checkout repository
@@ -601,7 +614,7 @@ jobs:
 
       - name: Login to GitHub Container Registry
         run: |
-          echo "${{ secrets.GHCR_PAT }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
+          echo "${{ secrets.GITHUB_TOKEN }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
 
       - name: Pull image from GHCR
         run: |
@@ -683,6 +696,8 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Skip for PRs since we don't push temp images
+    if: github.event_name != 'pull_request'
 
     steps:
       - name: Checkout repository
@@ -690,14 +705,14 @@ jobs:
 
       - name: Login to GitHub Container Registry
         run: |
-          echo "${{ secrets.GHCR_PAT }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
+          echo "${{ secrets.GITHUB_TOKEN }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
 
       - name: Login to GHCR with Docker (for Trivy)
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull image from GHCR
         run: |
@@ -787,7 +802,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to Docker Hub
         uses: redhat-actions/podman-login@v1
