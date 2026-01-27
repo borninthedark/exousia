@@ -509,13 +509,7 @@ jobs:
           DOCKERHUB_AUTH=$(printf "%s:%s" "${{ secrets.DOCKERHUB_USERNAME }}" "${{ secrets.DOCKERHUB_TOKEN }}" | base64 -w0)
 
           cat > ./bootc-secrets/auth.json <<EOF
-          {
-            "auths": {
-              "ghcr.io": {"auth": "${GHCR_AUTH}"},
-              "docker.io": {"auth": "${DOCKERHUB_AUTH}"},
-              "docker.io/1borninthedark/exousia": {"auth": "${DOCKERHUB_AUTH}"}
-            }
-          }
+          {"auths":{"ghcr.io":{"auth":"${GHCR_AUTH}"},"docker.io":{"auth":"${DOCKERHUB_AUTH}"}}}
           EOF
 
       - name: Build image with Buildah
@@ -552,8 +546,11 @@ jobs:
 
       - name: Login to GitHub Container Registry
         if: github.event_name != 'pull_request'
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push temporary image to GHCR for pipeline use
         id: push-temp
