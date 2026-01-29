@@ -546,11 +546,8 @@ jobs:
 
       - name: Login to GitHub Container Registry
         if: github.event_name != 'pull_request'
-        uses: redhat-actions/podman-login@v1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
 
       - name: Push temporary image to GHCR for pipeline use
         id: push-temp
