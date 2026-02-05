@@ -2,9 +2,9 @@ name: Bootc DevSecOps Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "uat", "dev"]
   pull_request:
-    branches: ["main"]
+    branches: ["main", "uat", "dev"]
   repository_dispatch:
     types: [api]
   workflow_dispatch:
