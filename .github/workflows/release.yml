@@ -1,10 +1,12 @@
-# Multi-Environment Release Workflow with Semantic Versioning
+# Release Workflow with Semantic Versioning
 # Triggers after successful build pipeline to create versioned releases
 #
 # Branch Strategy:
-#   dev  -> v1.2.3-dev.N  (pre-release, active development)
-#   uat  -> v1.2.3-rc.N   (release candidate, staging)
-#   main -> v1.2.3        (production release)
+#   main -> v1.2.3 (production release)
+#
+# Note: This workflow only runs on the main branch.
+# If additional environment branches (uat, develop) are added in the future,
+# update the triggers and configuration accordingly.
 #
 # Conventional Commits:
 #   feat:  -> MINOR bump (new feature)
@@ -17,11 +19,13 @@ on:
   workflow_run:
     workflows: ["Bootc DevSecOps Pipeline"]
     types: [completed]
-    branches: [main, uat, dev]
+    branches: [main]
 
 permissions:
   contents: write
   packages: write
+  id-token: write
+  pull-requests: write
 
 jobs:
   release:
@@ -46,30 +50,19 @@ jobs:
           BRANCH="${{ github.event.workflow_run.head_branch }}"
           echo "Branch: $BRANCH"
 
-          case "$BRANCH" in
-            main)
-              echo "environment=prod" >> $GITHUB_OUTPUT
-              echo "prerelease=false" >> $GITHUB_OUTPUT
-              echo "tag_suffix=" >> $GITHUB_OUTPUT
-              ;;
-            uat)
-              echo "environment=uat" >> $GITHUB_OUTPUT
-              echo "prerelease=true" >> $GITHUB_OUTPUT
-              echo "tag_suffix=-rc" >> $GITHUB_OUTPUT
-              ;;
-            dev)
-              echo "environment=dev" >> $GITHUB_OUTPUT
-              echo "prerelease=true" >> $GITHUB_OUTPUT
-              echo "tag_suffix=-dev" >> $GITHUB_OUTPUT
-              ;;
-            *)
-              echo "::notice::Branch $BRANCH not configured for releases, skipping"
-              echo "skip=true" >> $GITHUB_OUTPUT
-              exit 0
-              ;;
-          esac
+          # Only main branch is configured for releases
+          # Add additional branches here when they are created
+          if [[ "$BRANCH" == "main" ]]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+            echo "tag_suffix=" >> $GITHUB_OUTPUT
+          else
+            echo "::notice::Branch $BRANCH not configured for releases, skipping"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
-          echo "::notice::Environment: $(cat $GITHUB_OUTPUT | grep environment | cut -d= -f2)"
+          echo "::notice::Environment: prod (main branch)"
 
       - name: Bump version and create tag
         id: version
@@ -77,11 +70,8 @@ jobs:
         uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          release_branches: main,uat,dev
-          pre_release_branches: dev,uat
+          release_branches: main
           default_bump: patch
-          default_prerelease_bump: prerelease
-          append_to_pre_release_tag: ${{ steps.env.outputs.tag_suffix }}
           create_annotated_tag: true
           tag_prefix: v
 
@@ -156,37 +146,41 @@ jobs:
         env:
           VERSION: ${{ needs.release.outputs.version }}
           ENVIRONMENT: ${{ needs.release.outputs.environment }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
           GHCR_IMAGE: ghcr.io/${{ github.repository }}
           DOCKERHUB_IMAGE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/exousia
         run: |
           echo "::group::Retagging images with version $VERSION"
 
-          # Pull the environment-tagged image (pushed by build pipeline)
-          docker pull "$GHCR_IMAGE:main" || docker pull "$GHCR_IMAGE:${{ github.event.workflow_run.head_branch }}"
+          # Pull the branch-tagged image (pushed by build pipeline)
+          if ! docker pull "$GHCR_IMAGE:$BRANCH"; then
+            echo "::error::Failed to pull image $GHCR_IMAGE:$BRANCH"
+            exit 1
+          fi
 
           # Tag with semantic version for GHCR
-          docker tag "$GHCR_IMAGE:main" "$GHCR_IMAGE:$VERSION"
-          docker tag "$GHCR_IMAGE:main" "$GHCR_IMAGE:$ENVIRONMENT"
+          docker tag "$GHCR_IMAGE:$BRANCH" "$GHCR_IMAGE:$VERSION"
+          docker tag "$GHCR_IMAGE:$BRANCH" "$GHCR_IMAGE:$ENVIRONMENT"
           docker push "$GHCR_IMAGE:$VERSION"
           docker push "$GHCR_IMAGE:$ENVIRONMENT"
 
           # Tag for Docker Hub if credentials exist
           if [[ -n "${{ secrets.DOCKERHUB_USERNAME }}" ]]; then
-            docker pull "$DOCKERHUB_IMAGE:main" || true
-            if docker image inspect "$DOCKERHUB_IMAGE:main" >/dev/null 2>&1; then
-              docker tag "$DOCKERHUB_IMAGE:main" "$DOCKERHUB_IMAGE:$VERSION"
-              docker tag "$DOCKERHUB_IMAGE:main" "$DOCKERHUB_IMAGE:$ENVIRONMENT"
+            docker pull "$DOCKERHUB_IMAGE:$BRANCH" || true
+            if docker image inspect "$DOCKERHUB_IMAGE:$BRANCH" >/dev/null 2>&1; then
+              docker tag "$DOCKERHUB_IMAGE:$BRANCH" "$DOCKERHUB_IMAGE:$VERSION"
+              docker tag "$DOCKERHUB_IMAGE:$BRANCH" "$DOCKERHUB_IMAGE:$ENVIRONMENT"
               docker push "$DOCKERHUB_IMAGE:$VERSION"
               docker push "$DOCKERHUB_IMAGE:$ENVIRONMENT"
             fi
           fi
 
-          # Add latest tag for production releases
+          # Add latest tag for production releases (main branch)
           if [[ "$ENVIRONMENT" == "prod" ]]; then
-            docker tag "$GHCR_IMAGE:main" "$GHCR_IMAGE:latest"
+            docker tag "$GHCR_IMAGE:$BRANCH" "$GHCR_IMAGE:latest"
             docker push "$GHCR_IMAGE:latest"
-            if docker image inspect "$DOCKERHUB_IMAGE:main" >/dev/null 2>&1; then
-              docker tag "$DOCKERHUB_IMAGE:main" "$DOCKERHUB_IMAGE:latest"
+            if docker image inspect "$DOCKERHUB_IMAGE:$BRANCH" >/dev/null 2>&1; then
+              docker tag "$DOCKERHUB_IMAGE:$BRANCH" "$DOCKERHUB_IMAGE:latest"
               docker push "$DOCKERHUB_IMAGE:latest"
             fi
           fi
