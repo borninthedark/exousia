@@ -544,11 +544,6 @@ jobs:
           echo "IMAGE_SIZE_MB=${SIZE_MB}" >> $GITHUB_ENV
           echo "::endgroup::"
 
-      - name: Login to GitHub Container Registry
-        if: github.event_name != 'pull_request'
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | buildah login -u "${{ github.actor }}" --password-stdin ghcr.io
-
       - name: Push temporary image to GHCR for pipeline use
         id: push-temp
         if: github.event_name != 'pull_request'
@@ -558,7 +553,7 @@ jobs:
           TEMP_TAG="${{ env.IMAGE_BASE }}:sha-${{ github.sha }}-temp"
           echo "Pushing temporary image for pipeline: $TEMP_TAG"
           buildah tag "$FIRST_TAG" "$TEMP_TAG"
-          buildah push "$TEMP_TAG"
+          buildah push --creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" "$TEMP_TAG"
           echo "temp_tag=$TEMP_TAG" >> $GITHUB_OUTPUT
           echo "Temporary image pushed successfully"
           echo "::endgroup::"
