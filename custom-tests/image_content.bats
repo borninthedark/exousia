@@ -134,24 +134,12 @@ get_package_manager() {
 
 # --- CI container auth config checks ---
 
-@test "Container auth files should be correctly configured in CI" {
-    if [[ "${CI}" == "true" ]]; then
-        assert_file_exists "$MOUNT_POINT/usr/lib/tmpfiles.d/containers-auth.conf"
-        assert_file_exists "$MOUNT_POINT/usr/lib/container-auth.json"
-        run grep -q "ghcr.io" "$MOUNT_POINT/usr/lib/container-auth.json"
-        assert_success "/usr/lib/container-auth.json should contain ghcr.io"
+@test "Container auth tmpfiles config should be present" {
+    assert_file_exists "$MOUNT_POINT/usr/lib/tmpfiles.d/containers-auth.conf"
 
-        run grep -q "docker.io/1borninthedark/exousia" "$MOUNT_POINT/usr/lib/container-auth.json"
-        assert_success "/usr/lib/container-auth.json should contain Docker Hub credentials for docker.io/1borninthedark/exousia"
-
-        run test -L "$MOUNT_POINT/etc/ostree/auth.json"
-        assert_success "/etc/ostree/auth.json should be a symbolic link"
-
-        run readlink "$MOUNT_POINT/etc/ostree/auth.json"
-        assert_output --partial "/usr/lib/container-auth.json"
-    else
-        skip "Auth file test is skipped outside of CI environment"
-    fi
+    # No auth.json should be baked into the image -- credentials are injected at runtime
+    run test -e "$MOUNT_POINT/usr/lib/container-auth.json"
+    assert_failure "auth.json must not be baked into the image"
 }
 
 # --- Plymouth ---

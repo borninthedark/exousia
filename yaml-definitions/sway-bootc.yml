@@ -65,13 +65,6 @@ modules:
       - src: containers-auth.conf
         dst: /usr/lib/tmpfiles.d/containers-auth.conf
         mode: "0644"
-      - src: ./bootc-secrets/auth.json
-        dst: /usr/lib/container-auth.json
-        mode: "0600"
-
-  - type: script
-    scripts:
-      - ln -sfr /usr/lib/container-auth.json /etc/ostree/auth.json
 
   # Directory structure (bootc only)
   - type: script

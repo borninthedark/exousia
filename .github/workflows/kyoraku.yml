@@ -72,18 +72,6 @@ jobs:
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
           echo "nightly=$NIGHTLY" >> $GITHUB_OUTPUT
 
-      - name: Create auth.json secret for build
-        run: |
-          mkdir -p ./bootc-secrets
-          if [[ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]]; then
-            DH_AUTH=$(printf "%s:%s" "${{ vars.DOCKERHUB_USERNAME }}" "${{ secrets.DOCKERHUB_TOKEN }}" | base64 -w0)
-            cat > ./bootc-secrets/auth.json <<EOF
-          {"auths":{"${{ env.REGISTRY_URL }}":{"auth":"${DH_AUTH}"}}}
-          EOF
-          else
-            echo '{"auths":{}}' > ./bootc-secrets/auth.json
-          fi
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 

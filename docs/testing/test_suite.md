@@ -99,22 +99,16 @@ graph TD
 
 **Tests**:
 
-- Verifies auth.json presence and content
-- Checks ostree symlink configuration
-- Validates tmpfiles.d configuration
-
-**Conditional**: Only runs in CI environment
+- Verifies tmpfiles.d config is present
+- Ensures no auth.json is baked into the image (credentials injected at runtime)
 
 **Example**:
 
 ```bash
-@test "Container auth files should be correctly configured in CI" {
-    if [[ "${CI}" == "true" ]]; then
-        assert_file_exists "$MOUNT_POINT/usr/lib/container-auth.json"
-        # ... additional checks
-    else
-        skip "Auth file test is skipped outside of CI environment"
-    fi
+@test "Container auth tmpfiles config should be present" {
+    assert_file_exists "$MOUNT_POINT/usr/lib/tmpfiles.d/containers-auth.conf"
+    run test -e "$MOUNT_POINT/usr/lib/container-auth.json"
+    assert_failure "auth.json must not be baked into the image"
 }
 ```
 
