@@ -115,10 +115,7 @@ jobs:
 
       - name: Sign image by digest
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        env:
-          COSIGN_EXPERIMENTAL: "true"
         run: |
-          echo "Signing container image with cosign..."
           cosign sign --yes \
             --oidc-issuer=https://token.actions.githubusercontent.com \
             --oidc-client-id=sigstore \

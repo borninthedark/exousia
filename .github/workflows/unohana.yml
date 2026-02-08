@@ -13,6 +13,7 @@ env:
 permissions:
   contents: write
   packages: write
+  id-token: write
 
 jobs:
   release:
@@ -89,10 +90,11 @@ jobs:
 
       - name: Sign release image by digest
         if: steps.version.outputs.skip != 'true'
-        env:
-          COSIGN_EXPERIMENTAL: "true"
         run: |
-          cosign sign --yes "${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}@${{ steps.retag.outputs.digest }}"
+          cosign sign --yes \
+            --oidc-issuer=https://token.actions.githubusercontent.com \
+            --oidc-client-id=sigstore \
+            "${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}@${{ steps.retag.outputs.digest }}"
 
       - name: Create tag
         if: steps.version.outputs.skip != 'true'
