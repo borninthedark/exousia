@@ -122,10 +122,10 @@ modules:
         mode: "0755"
 
   # NOTE: git-clone module type is deprecated pending compilation support.
-  # Autotiling installed via uv pip (pure Python, no compilation needed)
+  # Autotiling installed via pip (pure Python, no compilation needed)
   - type: script
     scripts:
-      - uv pip install --system autotiling
+      - pip install --no-cache-dir autotiling
 
   # Sway session files (custom Exousia configs)
   - type: files
