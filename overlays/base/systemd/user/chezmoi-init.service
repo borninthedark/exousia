@@ -1,0 +1,7 @@
+[Unit]
+Description=Initialize chezmoi dotfiles
+ConditionPathExists=!%h/.local/share/chezmoi
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/chezmoi init --apply %CHEZMOI_REPO%

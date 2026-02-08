@@ -1,0 +1,23 @@
+---
+# User configuration via /tmp (transient)
+# Following bootc recommendation: injected code goes to /tmp
+# Scripts are deployed, executed, and cleaned up.
+
+- name: Deploy transient user scripts to /tmp
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/tmp/{{ item | basename }}"
+    mode: "0755"
+  loop: "{{ user_config_scripts | default([]) }}"
+
+- name: Execute transient user scripts
+  ansible.builtin.command:
+    cmd: "/tmp/{{ item | basename }}"
+  loop: "{{ user_config_scripts | default([]) }}"
+  changed_when: true
+
+- name: Clean up transient scripts
+  ansible.builtin.file:
+    path: "/tmp/{{ item | basename }}"
+    state: absent
+  loop: "{{ user_config_scripts | default([]) }}"

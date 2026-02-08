@@ -1,0 +1,21 @@
+---
+# Transient systemd service management
+# Uses systemctl edit --runtime for unit overrides (stored in /run)
+# All changes are lost on reboot.
+
+- name: Apply runtime service overrides
+  ansible.builtin.command:
+    cmd: >-
+      systemctl edit --runtime {{ item.name }}
+      --stdin <<< "{{ item.override }}"
+  loop: "{{ services_runtime_overrides }}"
+  when: services_runtime_overrides | length > 0
+  changed_when: true
+
+- name: Restart overridden services
+  ansible.builtin.systemd:
+    name: "{{ item.name }}"
+    state: restarted
+    daemon_reload: true
+  loop: "{{ services_runtime_overrides }}"
+  when: services_runtime_overrides | length > 0

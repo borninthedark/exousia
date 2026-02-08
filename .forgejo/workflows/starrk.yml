@@ -1,0 +1,53 @@
+---
+# Starrk - Primera Espada (#1) - Orchestrator
+# Mirrors Aizen (GitHub Actions). Calls Szayelaporro (CI) + Ulquiorra (security)
+# in parallel, then Harribel (build), then gate.
+#
+# Espada Pipeline (Forgejo Actions):
+#   Starrk        -> Orchestrator (the strongest, acts only when necessary)
+#   Szayelaporro  -> CI: lint + test (Octava, the scientist)
+#   Ulquiorra     -> Security scanning (Cuatro, cold logic)
+#   Harribel      -> Build & push (Tres, calm and decisive)
+
+name: "Starrk - Orchestrator"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  szayelaporro:
+    name: "Szayelaporro (CI)"
+    uses: ./.forgejo/workflows/szayelaporro.yml
+
+  ulquiorra:
+    name: "Ulquiorra (Security)"
+    uses: ./.forgejo/workflows/ulquiorra.yml
+
+  harribel:
+    name: "Harribel (Build)"
+    needs: [szayelaporro, ulquiorra]
+    uses: ./.forgejo/workflows/harribel.yml
+
+  gate:
+    name: "Gate (Summary)"
+    needs: [szayelaporro, ulquiorra, harribel]
+    runs-on: self-hosted
+    if: always()
+    steps:
+      - name: Pipeline summary
+        run: |
+          echo "Starrk Pipeline Summary"
+          echo "======================="
+          echo "Szayelaporro (CI):       ${{ needs.szayelaporro.result }}"
+          echo "Ulquiorra (Security):    ${{ needs.ulquiorra.result }}"
+          echo "Harribel (Build):        ${{ needs.harribel.result }}"
+
+      - name: Fail if any job failed
+        if: >-
+          needs.szayelaporro.result == 'failure' ||
+          needs.ulquiorra.result == 'failure' ||
+          needs.harribel.result == 'failure'
+        run: exit 1

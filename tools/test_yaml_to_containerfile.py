@@ -362,6 +362,331 @@ def test_plymouth_not_generated_for_sway_atomic():
     print("✓ ENABLE_PLYMOUTH not generated for non-bootc images")
 
 
+def _make_chezmoi_config(**overrides):
+    """Build a minimal config with a chezmoi module for testing."""
+    chezmoi_module = {
+        "type": "chezmoi",
+        "repository": "https://github.com/borninthedark/dotfiles",
+        "all-users": True,
+        "file-conflict-policy": "skip",
+        "run-every": "1d",
+        "wait-after-boot": "5m",
+    }
+    chezmoi_module.update(overrides)
+    return {
+        "name": "chezmoi-test",
+        "description": "Chezmoi module test",
+        "modules": [chezmoi_module],
+    }
+
+
+def _make_context():
+    """Build a standard BuildContext for chezmoi tests."""
+    return BuildContext(
+        image_type="fedora-bootc",
+        fedora_version="43",
+        enable_plymouth=False,
+        use_upstream_sway_config=False,
+        base_image="quay.io/fedora/fedora-bootc:43",
+        distro="fedora",
+    )
+
+
+def test_chezmoi_module_generates_copy_and_sed():
+    """Chezmoi module should emit COPY, sed, and systemctl commands."""
+    config = _make_chezmoi_config()
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "COPY --chmod=0644 overlays/base/systemd/user/ /usr/lib/systemd/user/" in output
+    assert "sed -i" in output
+    # sed commands should substitute placeholders with actual values
+    assert "borninthedark/dotfiles" in output
+    assert "systemctl --global enable chezmoi-init.service" in output
+    assert "systemctl --global enable chezmoi-update.timer" in output
+    assert "WARNING: Unknown module type: chezmoi" not in output
+
+    print("✓ Chezmoi module generates COPY, sed, and systemctl commands")
+
+
+def test_chezmoi_module_skip_policy():
+    """Skip conflict policy should produce --keep-going."""
+    config = _make_chezmoi_config(**{"file-conflict-policy": "skip"})
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "--keep-going" in output
+    assert "--force" not in output
+
+    print("✓ Chezmoi skip policy emits --keep-going")
+
+
+def test_chezmoi_module_replace_policy():
+    """Replace conflict policy should produce --force."""
+    config = _make_chezmoi_config(**{"file-conflict-policy": "replace"})
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "--force" in output
+    assert "--keep-going" not in output
+
+    print("✓ Chezmoi replace policy emits --force")
+
+
+def test_chezmoi_module_all_users_false():
+    """When all-users is false, no systemctl --global enable should appear."""
+    config = _make_chezmoi_config(**{"all-users": False})
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "systemctl --global enable" not in output
+
+    print("✓ Chezmoi all-users=false skips global enablement")
+
+
+def test_chezmoi_module_disable_init():
+    """When disable-init is true, init service should not be enabled."""
+    config = _make_chezmoi_config(**{"disable-init": True})
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "systemctl --global enable chezmoi-init.service" not in output
+    assert "systemctl --global enable chezmoi-update.timer" in output
+
+    print("✓ Chezmoi disable-init skips init enablement")
+
+
+def test_chezmoi_module_disable_update():
+    """When disable-update is true, update timer should not be enabled."""
+    config = _make_chezmoi_config(**{"disable-update": True})
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "systemctl --global enable chezmoi-init.service" in output
+    assert "systemctl --global enable chezmoi-update.timer" not in output
+
+    print("✓ Chezmoi disable-update skips timer enablement")
+
+
+def test_chezmoi_module_missing_repo():
+    """Missing repository with init enabled should emit an error comment."""
+    config = _make_chezmoi_config(repository="")
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "# ERROR: chezmoi module requires 'repository'" in output
+
+    print("✓ Chezmoi missing repo emits error comment")
+
+
+def test_chezmoi_module_with_branch():
+    """Branch option should appear in sed output for init service."""
+    config = _make_chezmoi_config(branch="main")
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "--branch main" in output
+
+    print("✓ Chezmoi branch option emitted in sed command")
+
+
+def test_systemd_module_user_services():
+    """Systemd module should process user.enabled with systemctl --global enable."""
+    config = {
+        "name": "systemd-user-test",
+        "description": "Test user services",
+        "modules": [
+            {
+                "type": "systemd",
+                "system": {"enabled": ["sshd.service"]},
+                "user": {"enabled": ["chezmoi-init.service", "chezmoi-update.timer"]},
+                "default-target": "graphical.target",
+            }
+        ],
+    }
+
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "systemctl enable sshd.service" in output
+    assert "systemctl --global enable chezmoi-init.service" in output
+    assert "systemctl --global enable chezmoi-update.timer" in output
+    assert "systemctl set-default graphical.target" in output
+
+    print("✓ Systemd module processes user services correctly")
+
+
+# --- git-clone module tests ---
+
+
+def _make_git_clone_config(**overrides):
+    """Build a minimal config with a git-clone module for testing."""
+    git_clone_module = {
+        "type": "git-clone",
+        "repos": [
+            {
+                "url": "https://github.com/nwg-piotr/autotiling",
+                "branch": "master",
+                "files": [
+                    {
+                        "src": "autotiling/main.py",
+                        "dst": "/usr/local/bin/autotiling",
+                        "mode": "0755",
+                    }
+                ],
+            }
+        ],
+    }
+    git_clone_module.update(overrides)
+    return {
+        "name": "git-clone-test",
+        "description": "Git clone module test",
+        "modules": [git_clone_module],
+    }
+
+
+def test_git_clone_module_generates_clone_and_install():
+    """Git-clone module should emit git clone, install, and rm commands."""
+    config = _make_git_clone_config()
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "git clone --depth 1" in output
+    assert "https://github.com/nwg-piotr/autotiling" in output
+    assert "install -m 0755" in output
+    assert "/usr/local/bin/autotiling" in output
+    assert "rm -rf /tmp/git-clone-0" in output  # nosec B108
+    assert "WARNING: Unknown module type: git-clone" not in output
+
+    print("✓ Git-clone module generates clone, install, and cleanup commands")
+
+
+def test_git_clone_module_with_branch():
+    """When branch is specified, --branch flag should appear in clone command."""
+    config = _make_git_clone_config()
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "--branch master" in output
+
+    print("✓ Git-clone module includes --branch flag")
+
+
+def test_git_clone_module_without_branch():
+    """When branch is omitted, no --branch flag should appear."""
+    config = _make_git_clone_config(
+        repos=[
+            {
+                "url": "https://github.com/nwg-piotr/autotiling",
+                "files": [
+                    {
+                        "src": "autotiling/main.py",
+                        "dst": "/usr/local/bin/autotiling",
+                        "mode": "0755",
+                    }
+                ],
+            }
+        ]
+    )
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "--branch" not in output
+    assert "git clone --depth 1 https://github.com/nwg-piotr/autotiling" in output
+
+    print("✓ Git-clone module omits --branch when not specified")
+
+
+def test_git_clone_module_multiple_repos():
+    """Multiple repos should produce multiple clone/install/cleanup sequences."""
+    config = _make_git_clone_config(
+        repos=[
+            {
+                "url": "https://github.com/user/repo-a",
+                "branch": "main",
+                "files": [{"src": "bin/tool-a", "dst": "/usr/local/bin/tool-a", "mode": "0755"}],
+            },
+            {
+                "url": "https://github.com/user/repo-b",
+                "files": [{"src": "bin/tool-b", "dst": "/usr/local/bin/tool-b", "mode": "0755"}],
+            },
+        ]
+    )
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "/tmp/git-clone-0" in output  # nosec B108
+    assert "/tmp/git-clone-1" in output  # nosec B108
+    assert "repo-a" in output
+    assert "repo-b" in output
+    assert "rm -rf /tmp/git-clone-0" in output  # nosec B108
+    assert "rm -rf /tmp/git-clone-1" in output  # nosec B108
+
+    print("✓ Git-clone module handles multiple repos")
+
+
+def test_git_clone_module_multiple_files_per_repo():
+    """Multiple files from one repo should produce multiple install commands."""
+    config = _make_git_clone_config(
+        repos=[
+            {
+                "url": "https://github.com/user/tools",
+                "branch": "main",
+                "files": [
+                    {"src": "src/tool1.py", "dst": "/usr/local/bin/tool1", "mode": "0755"},
+                    {"src": "src/tool2.py", "dst": "/usr/local/bin/tool2", "mode": "0755"},
+                    {"src": "conf/config.yml", "dst": "/etc/tools/config.yml", "mode": "0644"},
+                ],
+            }
+        ]
+    )
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert (
+        "install -m 0755 /tmp/git-clone-0/src/tool1.py /usr/local/bin/tool1" in output
+    )  # nosec B108
+    assert (
+        "install -m 0755 /tmp/git-clone-0/src/tool2.py /usr/local/bin/tool2" in output
+    )  # nosec B108
+    assert (
+        "install -m 0644 /tmp/git-clone-0/conf/config.yml /etc/tools/config.yml" in output
+    )  # nosec B108
+
+    print("✓ Git-clone module handles multiple files per repo")
+
+
+def test_git_clone_module_missing_url():
+    """Missing url should emit an error comment."""
+    config = _make_git_clone_config(
+        repos=[{"files": [{"src": "bin/tool", "dst": "/usr/local/bin/tool", "mode": "0755"}]}]
+    )
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "# ERROR: git-clone repo entry 0 missing 'url'" in output
+
+    print("✓ Git-clone module emits error for missing url")
+
+
+def test_git_clone_module_missing_files():
+    """Empty files list should emit an error comment."""
+    config = _make_git_clone_config(
+        repos=[
+            {
+                "url": "https://github.com/user/repo",
+                "files": [],
+            }
+        ]
+    )
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "# ERROR: git-clone repo https://github.com/user/repo has no 'files' defined" in output
+
+    print("✓ Git-clone module emits error for empty files list")
+
+
 if __name__ == "__main__":
     test_generator_is_stateless()
     test_generator_with_different_contexts()
@@ -372,4 +697,20 @@ if __name__ == "__main__":
     test_enable_plymouth_generates_env()
     test_package_loader_module()
     test_plymouth_not_generated_for_sway_atomic()
-    print("\n✅ All tests passed!")
+    test_chezmoi_module_generates_copy_and_sed()
+    test_chezmoi_module_skip_policy()
+    test_chezmoi_module_replace_policy()
+    test_chezmoi_module_all_users_false()
+    test_chezmoi_module_disable_init()
+    test_chezmoi_module_disable_update()
+    test_chezmoi_module_missing_repo()
+    test_chezmoi_module_with_branch()
+    test_systemd_module_user_services()
+    test_git_clone_module_generates_clone_and_install()
+    test_git_clone_module_with_branch()
+    test_git_clone_module_without_branch()
+    test_git_clone_module_multiple_repos()
+    test_git_clone_module_multiple_files_per_repo()
+    test_git_clone_module_missing_url()
+    test_git_clone_module_missing_files()
+    print("\nAll tests passed!")

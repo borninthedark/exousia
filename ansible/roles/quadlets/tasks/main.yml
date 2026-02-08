@@ -1,0 +1,80 @@
+---
+# Quadlet lifecycle management
+# Deploys Podman Quadlet definitions for local dev services:
+#   - Forgejo (git forge)
+#   - Forgejo Actions runner (CI)
+#   - Local container registry (dev builds)
+
+- name: Ensure systemd user Quadlet directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.config/containers/systemd"
+    state: directory
+    mode: "0755"
+
+- name: Copy Quadlet container definitions
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ ansible_env.HOME }}/.config/containers/systemd/"
+    mode: "0644"
+  loop: "{{ lookup('fileglob', quadlet_source_dir + '/*.container', wantlist=True) }}"
+  notify: Reload systemd user daemon
+
+- name: Copy Quadlet volume definitions
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ ansible_env.HOME }}/.config/containers/systemd/"
+    mode: "0644"
+  loop: "{{ lookup('fileglob', quadlet_source_dir + '/*.volume', wantlist=True) }}"
+  notify: Reload systemd user daemon
+
+- name: Copy Quadlet network definitions
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ ansible_env.HOME }}/.config/containers/systemd/"
+    mode: "0644"
+  loop: "{{ lookup('fileglob', quadlet_source_dir + '/*.network', wantlist=True) }}"
+  notify: Reload systemd user daemon
+
+- name: Flush handlers (reload daemon before starting services)
+  ansible.builtin.meta: flush_handlers
+
+- name: Start Forgejo service
+  ansible.builtin.systemd:
+    name: forgejo
+    state: started
+    scope: user
+
+- name: Start local registry service
+  ansible.builtin.systemd:
+    name: exousia-registry
+    state: started
+    scope: user
+
+- name: Wait for Forgejo to be ready
+  ansible.builtin.uri:
+    url: "http://localhost:3000/api/v1/version"
+    status_code: 200
+  register: forgejo_health
+  until: forgejo_health.status == 200
+  retries: 30
+  delay: 5
+
+- name: Register Forgejo runner (if token provided)
+  ansible.builtin.command:
+    cmd: >-
+      podman exec forgejo-runner
+      forgejo-runner register
+      --instance http://forgejo:3000
+      --token {{ forgejo_runner_token }}
+      --name exousia-runner
+      --no-interactive
+  when: forgejo_runner_token is defined and forgejo_runner_token | length > 0
+  changed_when: true
+  failed_when: false
+
+- name: Start Forgejo runner service
+  ansible.builtin.systemd:
+    name: forgejo-runner
+    state: started
+    scope: user
+  when: forgejo_runner_token is defined and forgejo_runner_token | length > 0

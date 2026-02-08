@@ -55,25 +55,26 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Aizen.
 
 ## Getting Started
 
-- **[BOOTC_UPGRADE.md](BOOTC_UPGRADE.md)** -- Switch images and perform upgrades
-- **[BOOTC_IMAGE_BUILDER.md](BOOTC_IMAGE_BUILDER.md)** -- Build bootable disk images (ISO, raw, qcow2)
+- **[bootc-upgrade.md](bootc-upgrade.md)** -- Switch images and perform upgrades
+- **[bootc-image-builder.md](bootc-image-builder.md)** -- Build bootable disk images (ISO, raw, qcow2)
+- **[distros.md](distros.md)** -- Supported distributions and image variants
 
 ## Desktop and Session
 
 - **[sway-session-greetd.md](sway-session-greetd.md)** -- Sway session with greetd login manager
-- **[FLATPAK_VERIFICATION.md](FLATPAK_VERIFICATION.md)** -- Flatpak application verification
+- **[flatpak-verification.md](flatpak-verification.md)** -- Flatpak application verification
 
 ## Configuration
 
-- **[CHEZMOI_INTEGRATION.md](CHEZMOI_INTEGRATION.md)** -- Dotfile management with chezmoi
-- **[KERNEL_OPTIONS.md](KERNEL_OPTIONS.md)** -- Kernel boot parameters and overrides
-- **[ZFS_BOOTC.md](ZFS_BOOTC.md)** -- ZFS kernel module build process (optional)
+- **[chezmoi-integration.md](chezmoi-integration.md)** -- Dotfile management with chezmoi
+- **[kernel-options.md](kernel-options.md)** -- Kernel boot parameters and overrides
+- **[zfs-bootc.md](zfs-bootc.md)** -- ZFS kernel module build process (optional)
 
 ## Testing
 
 - **[testing/README.md](testing/README.md)** -- Test suite overview
 - **[testing/guide.md](testing/guide.md)** -- Detailed test architecture
-- **[testing/test_suite.md](testing/test_suite.md)** -- Test categories and expected output
+- **[testing/test-suite.md](testing/test-suite.md)** -- Test categories and expected output
 - **[reference/writing-tests.md](reference/writing-tests.md)** -- How to write new tests
 
 ## Architecture
@@ -89,7 +90,7 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Aizen.
 ## Reference
 
 - **[reference/troubleshooting.md](reference/troubleshooting.md)** -- Common issues and fixes
-- **[reference/plymouth_usage_doc.md](reference/plymouth_usage_doc.md)** -- Plymouth boot splash setup
+- **[reference/plymouth-usage.md](reference/plymouth-usage.md)** -- Plymouth boot splash setup
 
 ---
 
@@ -103,10 +104,10 @@ docs/
 ├── testing/                        # Test documentation
 │   ├── README.md
 │   ├── guide.md
-│   └── test_suite.md
+│   └── test-suite.md
 ├── reference/                      # Reference materials
 │   ├── troubleshooting.md
-│   ├── plymouth_usage_doc.md
+│   ├── plymouth-usage.md
 │   └── writing-tests.md
 └── *.md                            # Feature and topic docs
 ```

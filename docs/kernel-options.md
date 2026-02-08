@@ -95,7 +95,7 @@ modules:
 ```
 
 1. **Rebuild your image**
-2. **Test in VM first!** (See BOOTC_IMAGE_BUILDER.md)
+2. **Test in VM first!** (See bootc-image-builder.md)
 
 ### Option 2: Runtime Kernel Override (Recommended for Testing)
 
@@ -235,7 +235,7 @@ For custom kernels, you'll need to:
 - [CachyOS COPR for Fedora](https://github.com/CachyOS/copr-linux-cachyos)
 - [Fedora Kernel Vanilla Repositories Wiki](https://fedoraproject.org/wiki/Kernel_Vanilla_Repositories)
 - [bootc rpm-ostree Integration](https://docs.fedoraproject.org/en-US/bootc/rpm-ostree/)
-- [BOOTC_UPGRADE.md](./BOOTC_UPGRADE.md) - Upgrade and rollback procedures
+- [bootc-upgrade.md](./bootc-upgrade.md) - Upgrade and rollback procedures
 
 ## Sources
 

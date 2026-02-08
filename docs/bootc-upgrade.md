@@ -150,7 +150,7 @@ For testing upgrades before full deployment:
 
 ```bash
 # 1. Test on a VM first
-# (See BOOTC_IMAGE_BUILDER.md for VM creation)
+# (See bootc-image-builder.md for VM creation)
 
 # 2. Deploy to test systems
 ssh test-system 'sudo bootc upgrade && sudo systemctl reboot'
@@ -306,7 +306,7 @@ sudo bootc upgrade --apply
 ## Related Documentation
 
 - [README.md](../README.md) - Using pre-built images
-- [BOOTC_IMAGE_BUILDER.md](BOOTC_IMAGE_BUILDER.md) - Testing disk images locally
+- [bootc-image-builder.md](bootc-image-builder.md) - Testing disk images locally
 - [TESTING.md](TESTING.md) - Container image testing
 - [bootc Project](https://github.com/bootc-dev/bootc)
 

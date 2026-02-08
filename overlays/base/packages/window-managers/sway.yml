@@ -118,6 +118,10 @@ theme:
   - qt6ct
   - nwg-look
 
+# Autotiling
+autotiling:
+  - python3-i3ipc
+
 # Wayland utilities
 utilities:
   - wl-clipboard

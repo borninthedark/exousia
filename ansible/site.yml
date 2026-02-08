@@ -1,0 +1,43 @@
+---
+# Exousia Dynamic Reconfiguration Playbook
+#
+# All changes are TRANSIENT (bootc best practices):
+#   - Uses /run and /tmp, never persists to /etc
+#   - Image defines base state, Ansible applies runtime deltas
+#   - Ansible is NOT baked into the image (runs from management host)
+#
+# Usage:
+#   ansible-playbook site.yml                       # Full run (dry mode)
+#   ansible-playbook site.yml --tags quadlets       # Local dev services only
+#   ansible-playbook site.yml --tags ci_build       # Build pipeline only
+#   ansible-playbook site.yml --tags runtime        # Runtime config only
+
+- name: Configure bootc systems (transient)
+  hosts: bootc_systems
+  become: true
+  tags: [runtime]
+
+  roles:
+    - firewall
+    - network
+    - containers
+    - services
+    - user_config
+
+- name: Deploy local development services (Quadlets)
+  hosts: localhost
+  connection: local
+  become: false
+  tags: [quadlets, never]
+
+  roles:
+    - quadlets
+
+- name: Run CI build pipeline
+  hosts: localhost
+  connection: local
+  become: false
+  tags: [ci_build, never]
+
+  roles:
+    - ci_build

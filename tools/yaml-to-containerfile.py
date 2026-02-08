@@ -228,6 +228,10 @@ class ContainerfileGenerator:
                 self._process_systemd_module(module)
             elif module_type == "sddm-themes":
                 self._process_sddm_themes_module(module)
+            elif module_type == "chezmoi":
+                self._process_chezmoi_module(module)
+            elif module_type == "git-clone":
+                self._process_git_clone_module(module)
             else:
                 self.lines.append(f"# WARNING: Unknown module type: {module_type}")
 
@@ -511,8 +515,105 @@ class ContainerfileGenerator:
         for service in enabled:
             commands.append(f"systemctl enable {service}")
 
+        # User services (enabled globally for all users)
+        user = module.get("user", {})
+        user_enabled = user.get("enabled", [])
+        for service in user_enabled:
+            commands.append(f"systemctl --global enable {service}")
+
         if commands:
             self.lines.append("RUN " + " && \\\n    ".join(commands))
+
+    def _process_chezmoi_module(self, module: dict[str, Any]):
+        """Process chezmoi module (dotfiles management via systemd user services)."""
+        repository = module.get("repository", "")
+        branch = module.get("branch", "")
+        all_users = module.get("all-users", True)
+        conflict_policy = module.get("file-conflict-policy", "skip")
+        run_every = module.get("run-every", "1d")
+        wait_after_boot = module.get("wait-after-boot", "5m")
+        disable_init = module.get("disable-init", False)
+        disable_update = module.get("disable-update", False)
+
+        # Validate: repository is required unless init is disabled
+        if not repository and not disable_init:
+            self.lines.append("# ERROR: chezmoi module requires 'repository' when init is enabled")
+            return
+
+        # 1. COPY systemd user unit templates
+        self.lines.append("COPY --chmod=0644 overlays/base/systemd/user/ /usr/lib/systemd/user/")
+
+        # 2. Build sed commands to replace placeholders
+        # Build the repo argument (optionally with --branch)
+        repo_arg = repository
+        if branch:
+            repo_arg = f"{repository} --branch {branch}"
+
+        # Determine update args based on conflict policy
+        if conflict_policy == "replace":
+            update_args = "--force"
+        else:
+            update_args = "--keep-going"
+
+        sed_commands = [
+            f"sed -i 's|%CHEZMOI_REPO%|{repo_arg}|g' /usr/lib/systemd/user/chezmoi-init.service",
+            f"sed -i 's|%CHEZMOI_UPDATE_ARGS%|{update_args}|g' /usr/lib/systemd/user/chezmoi-update.service",
+            f"sed -i 's|%CHEZMOI_WAIT_AFTER_BOOT%|{wait_after_boot}|g' /usr/lib/systemd/user/chezmoi-update.timer",
+            f"sed -i 's|%CHEZMOI_RUN_EVERY%|{run_every}|g' /usr/lib/systemd/user/chezmoi-update.timer",
+        ]
+
+        self._render_script_lines(sed_commands, "set -euxo pipefail")
+
+        # 3. Enable services globally (for all users) if requested
+        if all_users:
+            enable_commands = []
+            if not disable_init:
+                enable_commands.append("systemctl --global enable chezmoi-init.service")
+            if not disable_update:
+                enable_commands.append("systemctl --global enable chezmoi-update.timer")
+
+            if enable_commands:
+                self.lines.append("RUN " + " && \\\n    ".join(enable_commands))
+
+    def _process_git_clone_module(self, module: dict[str, Any]):
+        """Process git-clone module (clone public repos and install files at build time)."""
+        repos = module.get("repos", [])
+        if not repos:
+            self.lines.append("# ERROR: git-clone module has no repos defined")
+            return
+
+        commands: list[str] = []
+        for idx, repo in enumerate(repos):
+            url = repo.get("url")
+            if not url:
+                self.lines.append(f"# ERROR: git-clone repo entry {idx} missing 'url'")
+                continue
+
+            files = repo.get("files", [])
+            if not files:
+                self.lines.append(f"# ERROR: git-clone repo {url} has no 'files' defined")
+                continue
+
+            clone_dir = f"/tmp/git-clone-{idx}"  # nosec B108
+            branch = repo.get("branch")
+
+            clone_cmd = "git clone --depth 1"
+            if branch:
+                clone_cmd += f" --branch {branch}"
+            clone_cmd += f" {url} {clone_dir}"
+            commands.append(clone_cmd)
+
+            for file_spec in files:
+                src = file_spec.get("src", "")
+                dst = file_spec.get("dst", "")
+                mode = file_spec.get("mode", "0644")
+                if src and dst:
+                    commands.append(f"install -m {mode} {clone_dir}/{src} {dst}")
+
+            commands.append(f"rm -rf {clone_dir}")
+
+        if commands:
+            self._render_script_lines(commands, "set -euxo pipefail")
 
     def _process_sddm_themes_module(self, module: dict[str, Any]):
         """Process sddm-themes module for automatic theme extraction and configuration."""
