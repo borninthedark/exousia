@@ -118,7 +118,7 @@ theme:
   - qt6ct
   - nwg-look
 
-# Autotiling
+# Autotiling dependency (autotiling itself installed via pip in blueprint)
 autotiling:
   - python3-i3ipc
 

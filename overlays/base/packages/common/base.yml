@@ -26,6 +26,7 @@ core_utilities:
   - policycoreutils-python-utils
   - cryptsetup
   - python3
+  - uv
   - chezmoi
 
 # Audio and media
@@ -77,11 +78,22 @@ security:
   - lynis
   - openssl
 
+# VPN (wireguard-tools pre-installed on Fedora)
+vpn:
+  - openconnect
+  - NetworkManager-openconnect
+  - openvpn
+  - NetworkManager-openvpn
+
 # Shell and terminal enhancements
 shell:
   - zsh
   - zsh-autosuggestions
   - zsh-syntax-highlighting
+
+# Infrastructure
+infrastructure:
+  - opentofu
 
 # Extra utilities
 extra:

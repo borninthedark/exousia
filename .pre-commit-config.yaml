@@ -1,8 +1,8 @@
-# Pre-commit hooks for code quality (shift-left strategy)
-# Everything that can run locally runs at commit time.
+# Pre-commit hooks for DevSecOps shift-left strategy
+# TDD + security + quality gates -- all enforced before code leaves the developer.
 # CI only does integration tests, builds, and deploys.
 #
-# Install: uv run pre-commit install
+# Install: uv run pre-commit install && uv run pre-commit install --hook-type commit-msg
 # Run: uv run pre-commit run --all-files
 
 repos:
@@ -79,6 +79,12 @@ repos:
       - id: shellcheck
         args: [-x]
 
+  # Secret detection (uses .gitleaks.toml)
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.22.1
+    hooks:
+      - id: gitleaks
+
   # Security checks
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.6
@@ -115,6 +121,14 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+
+  # Conventional commit enforcement (install: pre-commit install --hook-type commit-msg)
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.0.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert]
 
   # DRY check for tools/ directory
   - repo: local
