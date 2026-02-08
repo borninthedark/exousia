@@ -9,9 +9,9 @@ Standalone version (no FastAPI dependencies).
 """
 
 from pathlib import Path
-from typing import Optional, Dict, Any
-import yaml
+from typing import Any
 
+import yaml
 
 # Default paths
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -72,17 +72,15 @@ class YamlSelectorService:
             if candidate.exists():
                 return candidate
 
-        raise FileNotFoundError(
-            f"YAML definition not found: {definition_filename}"
-        )
+        raise FileNotFoundError(f"YAML definition not found: {definition_filename}")
 
     def select_definition(
         self,
-        os: Optional[str] = None,
-        image_type: Optional[str] = None,
-        desktop_environment: Optional[str] = None,
-        window_manager: Optional[str] = None,
-    ) -> Optional[str]:
+        os: str | None = None,
+        image_type: str | None = None,
+        desktop_environment: str | None = None,
+        window_manager: str | None = None,
+    ) -> str | None:
         """Select appropriate YAML definition based on inputs."""
         if desktop_environment:
             de_def: str | None = self.DE_DEFINITIONS.get(desktop_environment.lower())
@@ -127,15 +125,15 @@ class YamlSelectorService:
     def load_and_customize_yaml(
         self,
         definition_filename: str,
-        desktop_environment: Optional[str] = None,
-        window_manager: Optional[str] = None,
-        distro_version: Optional[str] = None,
-        enable_plymouth: Optional[bool] = None,
+        desktop_environment: str | None = None,
+        window_manager: str | None = None,
+        distro_version: str | None = None,
+        enable_plymouth: bool | None = None,
     ) -> str:
         """Load a YAML definition and customize it with provided overrides."""
         definition_path = self._resolve_definition_path(definition_filename)
 
-        with open(definition_path, 'r') as f:
+        with open(definition_path) as f:
             config = yaml.safe_load(f)
 
         if distro_version:
@@ -157,16 +155,16 @@ class YamlSelectorService:
         dumped: str = yaml.safe_dump(config)
         return dumped
 
-    def get_available_definitions(self) -> Dict[str, Any]:
+    def get_available_definitions(self) -> dict[str, Any]:
         """Get list of available YAML definitions."""
-        definitions: Dict[str, Any] = {}
+        definitions: dict[str, Any] = {}
 
         if not self.definitions_dir.exists():
             return definitions
 
         for yaml_file in self.definitions_dir.glob("*.yml"):
             try:
-                with open(yaml_file, 'r') as f:
+                with open(yaml_file) as f:
                     config = yaml.safe_load(f)
 
                 definitions[yaml_file.name] = {

@@ -89,7 +89,7 @@ class ContainerfileGenerator:
             from package_loader import PackageLoader
 
             loader = PackageLoader()
-            return loader.load_remove()
+            return list(loader.load_remove())
         except Exception:
             return []
 

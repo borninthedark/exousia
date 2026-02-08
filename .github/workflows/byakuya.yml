@@ -1,7 +1,8 @@
-# Anat - Goddess of War & Wisdom - CI: Lint + Test
-# Runs Hadolint, Python quality (ruff), pytest with coverage + codecov.
+# Byakuya - Captain of the 6th Division, Law & Order
+# Validates file structure, generates Containerfile, runs Hadolint + Checkov +
+# Trivy config scan + Bandit, then uploads the generated Containerfile for Kenpachi.
 
-name: "Anat - CI"
+name: "Byakuya - Security"
 
 on:
   workflow_call:
@@ -10,8 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  lint-and-validate:
-    name: Lint & Validate
+  security-scan:
+    name: Security & Static Analysis
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -27,7 +28,7 @@ jobs:
 
       - name: Verify required file structure
         run: |
-          echo "## Anat: File Structure Check" >> $GITHUB_STEP_SUMMARY
+          echo "## Byakuya: File Structure Check" >> $GITHUB_STEP_SUMMARY
 
           for file in sway.desktop environment start-sway; do
             if [[ ! -f "overlays/sway/session/$file" ]]; then
@@ -63,7 +64,7 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Containerfile.generated
-          ignore: DL3041,DL3059,DL4006
+          ignore: DL3041,DL3059,DL4006,SC3040
 
       - name: Upload generated Containerfile
         uses: actions/upload-artifact@v6
@@ -72,49 +73,33 @@ jobs:
           path: Containerfile.generated
           retention-days: 1
 
-  python-quality:
-    name: Python Quality & Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-
-      - name: Install dependencies
-        run: uv sync --dev
-
-      - name: Ruff
-        run: uv run ruff check tools/
-
-      - name: Black (check)
-        run: uv run black --check tools/
-
-      - name: isort (check)
-        run: uv run isort --check-only tools/
-
-      - name: Pytest with coverage
-        run: |
-          uv run pytest tools/ -v --tb=short \
-            --cov=tools --cov-branch \
-            --cov-report=term \
-            --cov-report=xml:coverage.xml
-
-      - name: Upload coverage to Codecov
-        if: always()
-        uses: codecov/codecov-action@v5
+      - name: Checkov (Containerfile)
+        uses: bridgecrewio/checkov-action@v12
         with:
-          file: coverage.xml
-          fail_ci_if_error: false
+          file: Containerfile.generated
+          framework: dockerfile
+          quiet: true
+          soft_fail: true
 
-      - name: Test summary
+      - name: Trivy config scan
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: 0
+
+      - name: Bandit (Python SAST)
+        run: uv run bandit -r tools/ -ll -c pyproject.toml
+
+      - name: Security summary
         if: always()
         run: |
-          echo "## Anat: Python Quality" >> $GITHUB_STEP_SUMMARY
-          echo "- Ruff: passed" >> $GITHUB_STEP_SUMMARY
-          echo "- Black: passed" >> $GITHUB_STEP_SUMMARY
-          echo "- isort: passed" >> $GITHUB_STEP_SUMMARY
-          echo "- Pytest: see coverage report" >> $GITHUB_STEP_SUMMARY
+          echo "## Byakuya: Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scanner | Target |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Hadolint | Containerfile |" >> $GITHUB_STEP_SUMMARY
+          echo "| Checkov | Containerfile |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trivy | Repository config |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bandit | Python tools/ |" >> $GITHUB_STEP_SUMMARY

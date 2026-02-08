@@ -114,6 +114,7 @@ tail -n 30 /var/lib/dkms/zfs/*/build/make.log
 ```
 
 Common causes:
+
 - Kernel headers mismatch: ensure `kernel-devel` matches the installed kernel.
 - GPL symbol errors: the kernel version may not yet be supported by OpenZFS.
   Check [OpenZFS compatibility](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html).

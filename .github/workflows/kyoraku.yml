@@ -1,7 +1,7 @@
-# Kothar - God of Craftsmanship - Build + Push
+# Kyoraku - Captain-Commander of the Gotei 13 - Build + Push
 # Resolves config, generates Containerfile, builds and pushes to registry.
 
-name: "Kothar - Build"
+name: "Kyoraku - Build"
 
 on:
   workflow_call:

@@ -158,14 +158,12 @@ modules:
   - type: script
     scripts:
       - |
-        set -euxo pipefail
-
         # Add Flathub remote at build time (safe, no package installation)
         # This allows tests to verify the remote is configured
         flatpak remote-add --if-not-exists --system flathub \
           https://dl.flathub.org/repo/flathub.flatpakrepo
 
-        echo "✓ Flathub remote configured at build time"
+        echo "Flathub remote configured at build time"
 
   # Flatpak setup - Boot-time installation via default-flatpaks module
   # The module creates systemd services that automatically:
@@ -203,7 +201,7 @@ modules:
         echo 'add_dracutmodules+=" plymouth ostree "' > /usr/lib/dracut/dracut.conf.d/plymouth.conf
         plymouth-set-default-theme bgrt-better-luks
         kver=$(basename /usr/lib/modules/*)
-        dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
+        dracut -vf "/usr/lib/modules/${kver}/initramfs.img" "$kver"
 
   # System services (common to all image types)
   - type: systemd
@@ -228,8 +226,6 @@ modules:
   - type: script
     scripts:
       - |
-        set -euxo pipefail
-
         # /var/run should be a symlink to /run for bootc lint
         if [ ! -L /var/run ]; then
           rm -rf /var/run

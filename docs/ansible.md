@@ -63,7 +63,7 @@ Following [Fedora bootc best practices](https://docs.fedoraproject.org/en-US/boo
 
 ## Directory Structure
 
-```
+```text
 ansible/
 ├── inventory/
 │   ├── hosts.yml              # Host inventory

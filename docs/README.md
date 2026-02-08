@@ -17,15 +17,15 @@ Comprehensive documentation for building, testing, and deploying custom Fedora b
 
 ## CI/CD Workflows
 
-Exousia uses a Phoenician-pantheon-themed GitHub Actions pipeline:
+Exousia uses a Shinigami-themed GitHub Actions pipeline (Gotei 13 captains):
 
 | Workflow | File | Role |
 |----------|------|------|
-| **El** | `el.yml` | Orchestrator -- calls Anat + Resheph in parallel, then Kothar, then gate |
-| **Anat** | `anat.yml` | CI -- Hadolint, Ruff, Black, isort, pytest + Codecov |
-| **Resheph** | `resheph.yml` | Security -- Checkov, Trivy config scan, Bandit |
-| **Kothar** | `kothar.yml` | Build -- resolve config, buildah build, DockerHub push, Trivy image scan, Cosign |
-| **Eshmun** | `eshmun.yml` | Release -- semver from conventional commits, retag, GitHub Release |
+| **Aizen** | `aizen.yml` | Orchestrator -- calls Mayuri + Byakuya in parallel, then Kyoraku, then gate |
+| **Mayuri** | `mayuri.yml` | CI -- Ruff, Black, isort, pytest + Codecov |
+| **Byakuya** | `byakuya.yml` | Security -- Hadolint, Checkov, Trivy config scan, Bandit |
+| **Kyoraku** | `kyoraku.yml` | Build -- resolve config, Buildah build, DockerHub push, Trivy image scan, Cosign |
+| **Unohana** | `unohana.yml` | Release -- semver from conventional commits, retag, GitHub Release |
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):
 `feat:` minor, `fix:` patch, `feat!:` major.
@@ -50,7 +50,7 @@ Configure in GitHub repository settings under **Settings > Secrets and variables
 | `DOCKERHUB_IMAGE` | Image path (e.g., `user/exousia`) | Yes |
 | `REGISTRY_URL` | Registry URL (defaults to `docker.io`) | No |
 
-Secrets are passed to reusable workflows via `secrets: inherit` in El.
+Secrets are passed to reusable workflows via `secrets: inherit` in Aizen.
 
 ---
 
@@ -80,7 +80,6 @@ Secrets are passed to reusable workflows via `secrets: inherit` in El.
 ## Infrastructure
 
 - **[ansible.md](ansible.md)** -- Ansible playbooks for post-deployment configuration
-- **[WEBHOOK_API.md](WEBHOOK_API.md)** -- Trigger builds programmatically via repository_dispatch
 - **[security-boundaries.md](security-boundaries.md)** -- Security model and boundaries
 
 ## Reference

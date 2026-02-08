@@ -1,7 +1,7 @@
-# Eshmun - God of Healing/Renewal - Release
+# Unohana - Captain of the 4th Division, Healing & Renewal - Release
 # Semver from conventional commits, retag images, create GitHub Release.
 
-name: "Eshmun - Release"
+name: "Unohana - Release"
 
 on:
   workflow_call:

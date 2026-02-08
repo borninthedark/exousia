@@ -125,7 +125,7 @@ def resolve_yaml_config(
 
             if selected_filename:
                 # Resolve the path (could be in yaml-definitions/ or repo root)
-                selected_path = selector._resolve_definition_path(selected_filename)
+                selected_path: Path = selector._resolve_definition_path(selected_filename)
                 print(f"Auto-selected config: {selected_path} (from {selected_filename})")
                 return selected_path
 

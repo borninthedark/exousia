@@ -1,0 +1,58 @@
+# Mayuri - Captain of the 12th Division, Research & Development
+# Runs Python quality checks (ruff, black, isort) and pytest with coverage.
+
+name: "Mayuri - CI"
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Ruff
+        run: uv run ruff check tools/
+
+      - name: Black (check)
+        run: uv run black --check tools/
+
+      - name: isort (check)
+        run: uv run isort --check-only tools/
+
+      - name: Pytest with coverage
+        run: |
+          uv run pytest tools/ -v --tb=short \
+            --cov=tools --cov-branch \
+            --cov-report=term \
+            --cov-report=xml:coverage.xml
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          file: coverage.xml
+          fail_ci_if_error: false
+
+      - name: Test summary
+        if: always()
+        run: |
+          echo "## Mayuri: CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Ruff: passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Black: passed" >> $GITHUB_STEP_SUMMARY
+          echo "- isort: passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Pytest: see coverage report" >> $GITHUB_STEP_SUMMARY

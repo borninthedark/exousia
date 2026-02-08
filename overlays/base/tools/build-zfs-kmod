@@ -22,7 +22,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 SCRIPT_NAME = Path(__file__).name
 
 BUILD_DEPS = [
@@ -76,10 +75,7 @@ def verify_kernel_headers(kver: str) -> None:
     build_dir = Path(f"/usr/lib/modules/{kver}/build")
     src_dir = Path(f"/usr/src/kernels/{kver}")
     if not build_dir.exists() and not src_dir.exists():
-        die(
-            f"Kernel headers not found for {kver}. "
-            "Install kernel-devel matching this version."
-        )
+        die(f"Kernel headers not found for {kver}. " "Install kernel-devel matching this version.")
 
 
 def add_zfs_repo() -> None:

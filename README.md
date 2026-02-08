@@ -1,342 +1,194 @@
-# Exousia: Declarative Bootc Builder
+# Exousia
 
-[![Last Build: Fedora 43 • Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%E2%80%A2%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](#build--release-workflow)
-[![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
+[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](#the-shinigami-pipeline)
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
-Build custom, container-based immutable operating systems using the [**bootc project**](https://github.com/bootc-dev/bootc). Images are built, tested, and published via GitHub Actions to DockerHub.
+Declarative bootc image builder for Fedora Linux. YAML blueprints define OS
+images, Python tools transpile them to Containerfiles, Buildah builds them, and
+GitHub Actions pushes signed images to DockerHub.
 
-Exousia builds custom, container-based immutable operating systems using [bootc](https://github.com/bootc-dev/bootc) and GitHub Actions. It focuses on reproducible, security-conscious laptop images with fast iteration cycles.
+> **Warning** -- This project is highly experimental. There are no guarantees
+> about stability, data safety, or fitness for any purpose.
 
-## Table of Contents
+---
 
-- [Highly Experimental Disclaimer](#highly-experimental-disclaimer)
-- [Project Snapshot](#project-snapshot)
-- [Build & Release Workflow](#build--release-workflow)
-- [Getting Started](#getting-started)
-- [Triggering Builds Remotely](#triggering-builds-remotely)
+## Contents
+
+- [Quick Start](#quick-start)
+- [How It Works](#how-it-works)
+- [The Shinigami Pipeline](#the-shinigami-pipeline)
 - [Customizing Builds](#customizing-builds)
-- [YubiKey Authentication (PAM U2F)](#yubikey-authentication-pam-u2f)
-- [Package Validation & Dependency Tooling](#package-validation--dependency-tooling)
-- [Required Secrets](#required-secrets)
+- [YubiKey Authentication](#yubikey-authentication)
+- [Required Secrets and Variables](#required-secrets-and-variables)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
-- [License](#license)
 - [Acknowledgments](#acknowledgments)
 
 ---
 
-## Highly Experimental Disclaimer
+## Quick Start
 
-> **Warning**: This project is highly experimental. There are **no guarantees** about stability, data safety, or fitness for any purpose. Proceed only if you understand the risks.
+### Use a published image
 
----
+```bash
+sudo bootc switch docker.io/1borninthedark/exousia:latest
+sudo bootc upgrade && sudo systemctl reboot
+```
 
-## Project Snapshot
-
-- **Purpose:** Declarative laptop images with a DevSecOps-friendly workflow.
-- **Outputs:** bootc Sway images published to DockerHub.
-- **Tooling:** Python CLI tools in `tools/`, YAML-based blueprints, and `just` task runner.
-- **Security/Quality:** Linting, scanning, and automated tests baked into CI.
-
----
-
-## Build & Release Workflow
-
-### Semantic Versioning
-
-Version bumps are determined automatically from [conventional commits](https://www.conventionalcommits.org/):
-
-- `feat:` → minor bump
-- `fix:` → patch bump
-- `feat!:` or `BREAKING CHANGE:` → major bump
-
-### CI/CD Pipeline (Phoenician Pantheon)
-
-All workflows use Phoenician mythology-themed names and run on GitHub Actions.
-
-| Workflow | Role | Trigger |
-|----------|------|---------|
-| **El** | Orchestrator (king of the gods) | Push to main, PR |
-| **Anat** | CI: lint, test, validate (goddess of wisdom) | Called by El |
-| **Resheph** | Security: Checkov, Trivy, Bandit (god of protection) | Called by El |
-| **Kothar** | Build + push to DockerHub (god of craftsmanship) | Called by El |
-| **Eshmun** | Release: semver, retag, GitHub Release (god of renewal) | After gate on main |
-
-### Pipeline Stages
-
-| Stage | What happens |
-|-------|--------------|
-| **Anat** | Hadolint, file structure, Containerfile gen, Ruff, Black, pytest + Codecov |
-| **Resheph** | Checkov (Containerfile), Trivy config scan, Bandit SAST |
-| **Kothar** | Buildah image build, DockerHub push, Trivy image scan, Cosign signing |
-| **Eshmun** | Semver from commits, retag image, GitHub Release |
-
-**Triggers:** pushes to `main`, pull requests, and manual workflow dispatch.
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Fedora system (Atomic variant recommended)
-- DockerHub account (or local container registry)
-- Basic familiarity with bootc/container workflows
-
-### Use a Published Image
-
-> **Flathub Setup**
->
-> Exousia installs applications like Firefox and VS Code via Flatpak. To use Flathub apps, set up the remote before switching images:
+> Exousia delivers desktop apps via Flatpak. Set up Flathub before switching:
 >
 > ```bash
 > flatpak remote-add --if-not-exists --system flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 > ```
 
-```bash
-# From DockerHub
-sudo bootc switch docker.io/1borninthedark/exousia:latest
-sudo bootc upgrade && sudo systemctl reboot
-```
-
-### Build Locally
+### Build locally
 
 ```bash
-git clone <your-forgejo-url>/exousia.git
-cd exousia
+git clone https://github.com/borninthedark/exousia.git && cd exousia
 just build
 ```
 
+### Trigger a remote build
+
+```bash
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  https://api.github.com/repos/borninthedark/exousia/actions/workflows/aizen.yml/dispatches \
+  -d '{"ref":"main","inputs":{"image_type":"fedora-bootc","distro_version":"43","enable_plymouth":"true"}}'
+```
+
+Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://github.com/borninthedark/exousia/actions).
+
 ---
 
-## Triggering Builds Remotely
+## How It Works
 
-Trigger builds programmatically via the webhook API.
-
-**Prerequisites:** GitHub API token, Python 3.11+ with `requests`
-
-### Python CLI
-
-```bash
-# Set your Forgejo token
-export GITHUB_TOKEN="your_token_here"
-
-# Trigger a build using repo defaults
-python tools/webhook_trigger.py
-
-# Trigger specific image type and version
-python tools/webhook_trigger.py \
-  --image-type fedora-sway-atomic \
-  --distro-version 43 \
-  --enable-plymouth
-
-# Build with specific window manager
-python tools/webhook_trigger.py --wm sway --distro-version 43
+```text
+adnyeus.yml          Python transpiler          Buildah           DockerHub
+ (blueprint)   --->  (tools/*.py)         --->  (Containerfile)  --->  (signed image)
+                          |
+                    package_loader.py
+                    resolve_build_config.py
 ```
 
-<details>
-<summary>More Python examples</summary>
+- **Blueprint** (`adnyeus.yml`) -- declares base image, packages, overlays,
+  scripts, services, and build flags.
+- **Transpiler** (`tools/yaml-to-containerfile.py`) -- reads the blueprint,
+  loads package lists from `overlays/base/packages/`, and emits a valid
+  Containerfile.
+- **Overlays** -- static files, configs, and scripts organized under
+  `overlays/base/` (shared) and `overlays/sway/` (desktop-specific).
+- **Tests** -- Bats tests in `custom-tests/` validate the built image.
 
-```bash
-# Use a YAML definition file
-python tools/webhook_trigger.py --yaml sway-bootc.yml --distro-version 44
+---
 
-# Disable Plymouth
-python tools/webhook_trigger.py --yaml sway-atomic.yml --disable-plymouth --verbose
+## The Shinigami Pipeline
+
+Every workflow is named after a captain from the Gotei 13. Each captain's
+division maps to the workflow's role in the pipeline:
+
+```text
+              Aizen (orchestrator)
+             /                    \
+      Mayuri                      Byakuya        <-- parallel
+   (CI: lint+test)             (security scan)
+             \                    /
+              Kyoraku
+            (build+push)
+                 |
+               Gate
+                 |
+             Unohana              <-- main branch only
+            (release)
 ```
 
-</details>
+| Workflow | Captain | Division | Pipeline Role |
+|----------|---------|----------|---------------|
+| **Aizen** | Sosuke Aizen | The mastermind | Orchestrates the entire pipeline |
+| **Mayuri** | Mayuri Kurotsuchi | 12th -- Research & Development | Ruff, Black, isort, pytest, Codecov |
+| **Byakuya** | Byakuya Kuchiki | 6th -- Law & Order | Hadolint, Checkov, Trivy, Bandit, file structure |
+| **Kyoraku** | Shunsui Kyoraku | Captain-Commander | Buildah build, DockerHub push, Trivy image scan, Cosign |
+| **Unohana** | Retsu Unohana | 4th -- Healing & Renewal | Semver from conventional commits, retag, GitHub Release |
 
-### cURL API
+Aizen calls Mayuri and Byakuya in parallel. When both pass, Kyoraku builds and
+pushes. On `main`, the gate opens for Unohana to cut a release.
 
-```bash
-# Trigger a build via GitHub Actions workflow dispatch
-curl -X POST \
-  -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $GITHUB_TOKEN" \
-  https://api.github.com/repos/borninthedark/exousia/actions/workflows/el.yml/dispatches \
-  -d '{
-    "ref": "main",
-    "inputs": {
-      "image_type": "fedora-bootc",
-      "distro_version": "43",
-      "enable_plymouth": "true"
-    }
-  }'
-```
+### Versioning
 
-<details>
-<summary>More cURL examples</summary>
-
-```bash
-# Build Sway Atomic variant
-curl -X POST \
-  -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $GITHUB_TOKEN" \
-  https://api.github.com/repos/borninthedark/exousia/actions/workflows/el.yml/dispatches \
-  -d '{"ref": "main", "inputs": {"image_type": "fedora-sway-atomic", "distro_version": "43", "enable_plymouth": "true"}}'
-```
-
-</details>
-
-View builds on [GitHub Actions](https://github.com/borninthedark/exousia/actions) | [Webhook API Guide](docs/WEBHOOK_API.md)
+Versions are automatic via [conventional commits](https://www.conventionalcommits.org/):
+`feat:` bumps minor, `fix:` bumps patch, `feat!:` bumps major.
 
 ---
 
 ## Customizing Builds
 
-### Switch Blueprint Versions
+### Packages
 
-```bash
-# Via webhook CLI
-python tools/webhook_trigger.py --image-type fedora-bootc --distro-version 44
-python tools/webhook_trigger.py --image-type fedora-sway-atomic --distro-version 43
-```
+| Scope | Location |
+|-------|----------|
+| Base packages | `overlays/base/packages/common/*.yml` |
+| Window managers | `overlays/base/packages/window-managers/*.yml` |
+| Removals | `overlays/base/packages/common/remove.yml` |
 
-Or use the manual workflow dispatch in the GitHub Actions UI.
+All packages are managed through the package loader. Edit the YAML lists, not
+the blueprint directly.
 
-### Adjust Packages
-
-| Scope | Where to edit | What to change |
-|-------|---------------|----------------|
-| Base packages | `overlays/base/packages/common/*.yml` | Add/remove shared package sets |
-| Window managers | `overlays/base/packages/window-managers/*.yml` | Add to the relevant categories |
-
-All package additions are managed from the `overlays/base/packages/` directory via the package loader; avoid editing YAML definitions for package lists.
-
-### Configuration Files
+### Configuration
 
 | Directory | Purpose |
 |-----------|---------|
 | `overlays/sway/configs/sway/` | Sway WM and config.d snippets |
-| `overlays/sway/configs/greetd/` | Display manager (greetd) |
+| `overlays/sway/configs/greetd/` | greetd display manager |
 | `overlays/sway/configs/plymouth/` | Boot splash themes |
-| `overlays/sway/configs/swaylock/` | Swaylock screen lock |
 | `overlays/base/configs/pam.d/` | PAM authentication (YubiKey U2F) |
-| `overlays/sway/scripts/runtime/` | Runtime scripts (autotiling, lid, volume-helper) |
+| `overlays/sway/scripts/runtime/` | Runtime scripts (autotiling, lid, volume) |
 | `overlays/sway/scripts/setup/` | Build-time setup scripts |
-| `overlays/base/tools/` | Shared scripts |
 
-### Desktop & Boot Experience
+### Desktop and boot
 
-- **Sway** uses `sway-config-minimal` for headless/container compatibility.
-  - `/usr/share/sway/config.d/*.conf` — Packaged configs
-  - `/etc/sway/config.d/*.conf` — System overrides
-  - `~/.config/sway/config.d/*.conf` — User overrides
-  - See [Fedora Sericea Configuration Guide](https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/).
-- **Plymouth**: Set `enable_plymouth: true` in YAML; themes live in `overlays/sway/configs/plymouth/themes/`.
-- **Display managers**: all images use greetd.
+- **Sway** uses `sway-config-minimal` with layered config.d overrides.
+- **Plymouth** is toggled via `enable_plymouth: true` in the blueprint.
+- **greetd** is the login manager for all image types.
+- **ZFS** is optional -- enable via `build.enable_zfs: true`. See [ZFS docs](docs/ZFS_BOOTC.md).
 
 ---
 
-## YubiKey Authentication (PAM U2F)
+## YubiKey Authentication
 
-Exousia includes built-in support for YubiKey hardware authentication using PAM U2F. This allows you to use your YubiKey as a second factor or alternative authentication method for `sudo`, login, and other PAM-aware services.
-
-### Configuration
-
-The system includes pre-configured PAM modules in `overlays/base/configs/pam.d/`:
-
-- `u2f-required` — YubiKey authentication is mandatory
-- `u2f-sufficient` — YubiKey OR password authentication (default for sudo)
-
-By default, `sudo` is configured to accept YubiKey authentication as an alternative to password authentication. If your YubiKey is present and registered, you can use it instead of entering your password.
-
-### Setup
-
-After deploying an Exousia image, register your YubiKey(s):
+Exousia ships PAM U2F modules for YubiKey hardware authentication. After
+deploying, register your key:
 
 ```bash
-# Create credential directory
 mkdir -p ~/.config/Yubico
-
-# Register your primary YubiKey
-pamu2fcfg > ~/.config/Yubico/u2f_keys
-
-# Register backup YubiKey (recommended)
-pamu2fcfg -n >> ~/.config/Yubico/u2f_keys
+pamu2fcfg > ~/.config/Yubico/u2f_keys       # primary key
+pamu2fcfg -n >> ~/.config/Yubico/u2f_keys    # backup key (recommended)
 ```
 
-### Usage
-
-Once registered, touch your YubiKey when prompted during `sudo` authentication. If the YubiKey is not present or registration fails, standard password authentication is used as a fallback.
-
-For more details, see the [Fedora YubiKey Quick Docs](https://docs.fedoraproject.org/en-US/quick-docs/using-yubikeys/).
+`sudo` accepts YubiKey as an alternative to password by default. See
+[Fedora YubiKey Quick Docs](https://docs.fedoraproject.org/en-US/quick-docs/using-yubikeys/).
 
 ---
 
-## Package Validation & Dependency Tooling
+## Required Secrets and Variables
 
-### Package Dependency Checker
-
-Cross-distro package dependency translation and verification.
-
-```bash
-python3 tools/package_dependency_checker.py --packages python3-requests neovim
-python3 tools/package_dependency_checker.py --verify-only --json
-```
-
-<details>
-<summary>Distro-specific examples</summary>
-
-```bash
-# Fedora
-python3 tools/package_dependency_checker.py --packages python3-requests neovim
-
-# Arch Linux
-python3 tools/package_dependency_checker.py --distro arch --packages python-requests sway
-
-# Debian/Ubuntu
-python3 tools/package_dependency_checker.py --distro debian --packages python3-requests sway
-
-# OpenSUSE
-python3 tools/package_dependency_checker.py --distro opensuse --packages python3-requests waybar
-
-# Gentoo
-python3 tools/package_dependency_checker.py --distro gentoo --packages dev-python/requests greetd
-
-# FreeBSD
-python3 tools/package_dependency_checker.py --distro freebsd --packages py311-requests sway
-```
-
-</details>
-
-### Validation CLI
-
-```bash
-python3 tools/validate_installed_packages.py --yaml adnyeus.yml --image-type fedora-bootc
-python3 tools/validate_installed_packages.py --wm sway --distro arch
-```
-
-**Package naming equivalents:**
-
-| Distro | Example |
-|--------|---------|
-| Fedora/Debian | `python3-requests` |
-| Arch | `python-requests` |
-| Gentoo | `dev-python/requests` |
-| FreeBSD | `py311-requests` |
-
----
-
-## Required Secrets
-
-Configure in GitHub repository settings under **Settings → Secrets and variables → Actions**:
+Configure in GitHub **Settings > Secrets and variables > Actions**.
 
 **Secrets:**
 
-| Secret | Purpose |
-|--------|---------|
-| `DOCKERHUB_USERNAME` | DockerHub username |
+| Name | Purpose |
+|------|---------|
 | `DOCKERHUB_TOKEN` | DockerHub access token |
 
 **Variables:**
 
-| Variable | Purpose |
-|----------|---------|
-| `DOCKERHUB_IMAGE` | Image path (e.g., `1borninthedark/exousia`) |
-| `REGISTRY_URL` | Registry URL (e.g., `docker.io`) |
+| Name | Purpose | Required |
+|------|---------|----------|
+| `DOCKERHUB_USERNAME` | DockerHub username | Yes |
+| `DOCKERHUB_IMAGE` | Image path (e.g., `user/exousia`) | Yes |
+| `REGISTRY_URL` | Registry URL (defaults to `docker.io`) | No |
+
+Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 
 ---
 
@@ -347,45 +199,34 @@ Configure in GitHub repository settings under **Settings → Secrets and variabl
 | Topic | Links |
 |-------|-------|
 | Getting Started | [Upgrade Guide](docs/BOOTC_UPGRADE.md) &#124; [Image Builder](docs/BOOTC_IMAGE_BUILDER.md) |
-| Testing | [Guide](docs/testing/README.md) &#124; [Writing Tests](docs/reference/writing-tests.md) |
-| Reference | [Troubleshooting](docs/reference/troubleshooting.md) &#124; [Webhook API](docs/WEBHOOK_API.md) |
+| Desktop | [Sway + greetd](docs/sway-session-greetd.md) &#124; [Plymouth](docs/reference/plymouth_usage_doc.md) |
+| Testing | [Test Suite](docs/testing/README.md) &#124; [Writing Tests](docs/reference/writing-tests.md) |
+| Reference | [Troubleshooting](docs/reference/troubleshooting.md) &#124; [Security](SECURITY.md) |
 
 ---
 
 ## Contributing
 
-Contributions welcome! Submit PRs or open issues. Use [conventional commits](https://www.conventionalcommits.org/) for automatic versioning.
-
----
-
-## AI-Assisted Development
-
-This project was developed with assistance from [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [ChatGPT Codex](https://chatgpt.com/codex), and [GitHub Dependabot](https://docs.github.com/en/code-security/dependabot) for automated dependency security updates.
-
----
-
-## License
-
-MIT License — see LICENSE file.
+Contributions welcome. Submit PRs or open issues. Use
+[conventional commits](https://www.conventionalcommits.org/) for automatic
+versioning.
 
 ---
 
 ## Acknowledgments
 
-- [bootc project](https://github.com/bootc-dev/bootc) maintainers and Fedora community
-- [Fedora Sway SIG](https://gitlab.com/fedora/sigs/sway/sway-config-fedora) for Sway configs and QoL improvements
-- [openSUSEway](https://github.com/openSUSE/openSUSEway) for Sway enhancements
+- [bootc project](https://github.com/bootc-dev/bootc) and the Fedora community
+- [Fedora Sway SIG](https://gitlab.com/fedora/sigs/sway/sway-config-fedora) for Sway configs
 - [Universal Blue](https://universal-blue.org/) and [BlueBuild](https://blue-build.org/) for container-native workflows
-- [GitHub Actions](https://github.com/features/actions) for CI/CD pipelines
-- [Buildah](https://buildah.io/), [Skopeo](https://github.com/containers/skopeo), [Podman](https://podman.io/)
-- **Claude** (Anthropic) and **GPT Codex** (OpenAI) for AI-assisted development
+- [Buildah](https://buildah.io/), [Podman](https://podman.io/), [Skopeo](https://github.com/containers/skopeo)
 
-### Creative Acknowledgments
+### Creative
 
-**Tite Kubo** — Creator of *BLEACH*. The "Reiatsu" status indicator is inspired by themes from BLEACH, used respectfully as a playful aesthetic. All rights belong to Tite Kubo and respective copyright holders.
+**Tite Kubo** -- Creator of *BLEACH*. The CI/CD naming scheme and Reiatsu
+status indicator are inspired by the Gotei 13 and themes from BLEACH, used
+respectfully as a playful aesthetic. All rights belong to Tite Kubo and
+respective copyright holders.
 
 ---
 
-**Built with [bootc](https://github.com/bootc-dev/bootc)** | [Docs](https://bootc-dev.github.io/bootc/) | [Fedora bootc](https://docs.fedoraproject.org/en-US/bootc/)
-
-*Generated on 2026-02-08 02:01:46 UTC*
+**Built with [bootc](https://github.com/bootc-dev/bootc)** | [Docs](https://bootc-dev.github.io/bootc/) | [Fedora bootc](https://docs.fedoraproject.org/en-US/bootc/) | MIT License

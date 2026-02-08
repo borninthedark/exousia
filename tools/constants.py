@@ -1,17 +1,20 @@
 """
 Constants and enums shared across tools.
 """
-from enum import Enum
+
+from enum import StrEnum
 
 
-class ImageType(str, Enum):
+class ImageType(StrEnum):
     """Supported base image types."""
+
     FEDORA_BOOTC = "fedora-bootc"
     FEDORA_SWAY_ATOMIC = "fedora-sway-atomic"
 
 
-class BuildStatus(str, Enum):
+class BuildStatus(StrEnum):
     """Build status enumeration."""
+
     PENDING = "pending"
     QUEUED = "queued"
     IN_PROGRESS = "in_progress"

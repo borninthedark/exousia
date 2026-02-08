@@ -78,6 +78,8 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.13"
+explicit_package_bases = true
+exclude = ["overlays/"]
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false  # Enable gradually

@@ -1,14 +1,14 @@
-# El - King of the Phoenician Gods - Orchestrator Workflow
-# Calls Anat (CI) + Resheph (security) in parallel, then Kothar (build), then gate.
+# Aizen - The Mastermind - Orchestrator
+# Calls Mayuri (CI) + Byakuya (security) in parallel, then Kyoraku (build), then gate.
 #
-# Phoenician Pantheon:
-#   El        -> Orchestrator (king of the gods)
-#   Anat      -> CI: lint + test (goddess of war & wisdom)
-#   Resheph   -> Security scanning (god of protection)
-#   Kothar    -> Build + push (god of craftsmanship)
-#   Eshmun    -> Release: semver + retag (god of healing/renewal)
+# Shinigami Pipeline:
+#   Aizen     -> Orchestrator (the one who sees everything)
+#   Mayuri    -> CI: lint + test (12th Division, Research & Development)
+#   Byakuya  -> Security scanning (6th Division, law & order)
+#   Kyoraku  -> Build + push (Captain-Commander, master strategist)
+#   Unohana   -> Release: semver + retag (4th Division, healing & renewal)
 
-name: "El - Orchestrator"
+name: "Aizen - Orchestrator"
 
 on:
   push:
@@ -48,24 +48,24 @@ permissions:
   contents: read
 
 jobs:
-  # ── Anat (CI) + Resheph (Security) run in parallel ──
-  anat:
-    name: "Anat (CI)"
-    uses: ./.github/workflows/anat.yml
+  # -- Mayuri (CI) + Byakuya (Security) run in parallel --
+  mayuri:
+    name: "Mayuri (CI)"
+    uses: ./.github/workflows/mayuri.yml
     permissions:
       contents: read
 
-  resheph:
-    name: "Resheph (Security)"
-    uses: ./.github/workflows/resheph.yml
+  byakuya:
+    name: "Byakuya (Security)"
+    uses: ./.github/workflows/byakuya.yml
     permissions:
       contents: read
 
-  # ── Kothar (Build) runs after both pass ──
-  kothar:
-    name: "Kothar (Build)"
-    needs: [anat, resheph]
-    uses: ./.github/workflows/kothar.yml
+  # -- Kyoraku (Build) runs after both pass --
+  kyoraku:
+    name: "Kyoraku (Build)"
+    needs: [mayuri, byakuya]
+    uses: ./.github/workflows/kyoraku.yml
     with:
       image_type: ${{ inputs.image_type || 'fedora-sway-atomic' }}
       distro_version: ${{ inputs.distro_version || '43' }}
@@ -75,36 +75,36 @@ jobs:
       contents: read
       packages: write
 
-  # ── Gate: summary of all jobs ──
+  # -- Gate: summary of all jobs --
   gate:
     name: "Gate (Summary)"
-    needs: [anat, resheph, kothar]
+    needs: [mayuri, byakuya, kyoraku]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Pipeline summary
         run: |
-          echo "## El Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Aizen Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Workflow | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Anat (CI) | ${{ needs.anat.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Resheph (Security) | ${{ needs.resheph.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Kothar (Build) | ${{ needs.kothar.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Mayuri (CI) | ${{ needs.mayuri.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Byakuya (Security) | ${{ needs.byakuya.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Kyoraku (Build) | ${{ needs.kyoraku.result }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if any job failed
         if: >-
-          needs.anat.result == 'failure' ||
-          needs.resheph.result == 'failure' ||
-          needs.kothar.result == 'failure'
+          needs.mayuri.result == 'failure' ||
+          needs.byakuya.result == 'failure' ||
+          needs.kyoraku.result == 'failure'
         run: exit 1
 
-  # ── Eshmun (Release) runs after gate on main pushes ──
-  eshmun:
-    name: "Eshmun (Release)"
+  # -- Unohana (Release) runs after gate on main pushes --
+  unohana:
+    name: "Unohana (Release)"
     needs: [gate]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/eshmun.yml
+    uses: ./.github/workflows/unohana.yml
     secrets: inherit
     permissions:
       contents: write
