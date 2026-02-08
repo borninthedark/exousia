@@ -41,10 +41,11 @@ jobs:
             --cov-report=term \
             --cov-report=xml:coverage.xml
 
-      - name: Upload coverage to Codecov
+      - name: Upload coverage reports to Codecov
         if: always()
         uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           file: coverage.xml
           fail_ci_if_error: false
 
