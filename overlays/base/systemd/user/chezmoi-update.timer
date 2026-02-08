@@ -1,0 +1,7 @@
+[Unit]
+Description=Periodically update chezmoi dotfiles
+
+[Timer]
+OnBootSec=%CHEZMOI_WAIT_AFTER_BOOT%
+OnUnitInactiveSec=%CHEZMOI_RUN_EVERY%
+Unit=chezmoi-update.service

@@ -1,0 +1,7 @@
+[Unit]
+Description=Update chezmoi dotfiles
+After=chezmoi-init.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/chezmoi update --no-tty %CHEZMOI_UPDATE_ARGS%

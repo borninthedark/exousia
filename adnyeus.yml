@@ -121,6 +121,16 @@ modules:
         dst: /usr/local/bin/
         mode: "0755"
 
+  # Git-sourced tools (pulled at build time from public repos)
+  - type: git-clone
+    repos:
+      - url: https://github.com/nwg-piotr/autotiling
+        branch: master
+        files:
+          - src: autotiling/main.py
+            dst: /usr/local/bin/autotiling
+            mode: "0755"
+
   # Sway session files (custom Exousia configs)
   - type: files
     files:

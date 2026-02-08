@@ -1,0 +1,8 @@
+title = "Exousia Gitleaks Configuration"
+
+[allowlist]
+  description = "Global allowlist"
+  paths = [
+    '''\.lock$''',
+    '''go\.sum$''',
+  ]
