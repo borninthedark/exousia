@@ -127,7 +127,7 @@ jobs:
 
     steps:
       - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: ${{ vars.REGISTRY_URL || 'docker.io' }}/${{ vars.DOCKERHUB_IMAGE }}:${{ needs.build.outputs.image_tag }}
           severity: HIGH,CRITICAL
