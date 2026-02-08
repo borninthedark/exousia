@@ -20,8 +20,8 @@ on:
         default: true
 
 env:
-  DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
   REGISTRY_URL: ${{ vars.REGISTRY_URL || 'docker.io' }}
+  IMAGE_PATH: ${{ vars.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}
 
 permissions:
   contents: read
@@ -66,7 +66,9 @@ jobs:
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
           TAG="${{ steps.config.outputs.BUILD_IMAGE_TYPE }}-${SHORT_SHA}"
+          BRANCH="${GITHUB_REF_NAME//\//-}"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
 
       - name: Create auth.json secret for build
         run: |
@@ -98,8 +100,9 @@ jobs:
           file: ${{ steps.config.outputs.CONTAINERFILE }}
           push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
           tags: |
-            ${{ env.REGISTRY_URL }}/${{ env.DOCKERHUB_IMAGE }}:${{ steps.tag.outputs.tag }}
-            ${{ env.REGISTRY_URL }}/${{ env.DOCKERHUB_IMAGE }}:latest
+            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:${{ steps.tag.outputs.tag }}
+            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:${{ steps.tag.outputs.branch }}
+            ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:latest
           build-args: |
             FEDORA_VERSION=${{ steps.config.outputs.BUILD_VERSION }}
             IMAGE_TYPE=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
@@ -116,7 +119,7 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "true"
         run: |
-          cosign sign --yes "${{ env.REGISTRY_URL }}/${{ env.DOCKERHUB_IMAGE }}@${{ steps.build-push.outputs.digest }}"
+          cosign sign --yes "${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}@${{ steps.build-push.outputs.digest }}"
 
   scan:
     name: Trivy Image Scan
@@ -129,18 +132,18 @@ jobs:
       - name: Trivy vulnerability scan
         uses: aquasecurity/trivy-action@0.33.1
         with:
-          image-ref: ${{ vars.REGISTRY_URL || 'docker.io' }}/${{ vars.DOCKERHUB_IMAGE }}:${{ needs.build.outputs.image_tag }}
+          image-ref: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:${{ needs.build.outputs.image_tag }}
           severity: HIGH,CRITICAL
           exit-code: 0
 
       - name: Build summary
         if: always()
         run: |
-          echo "## Kothar: Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "## Kyoraku: Build Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Image | \`${{ vars.DOCKERHUB_IMAGE }}:${{ needs.build.outputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | \`${{ env.IMAGE_PATH }}:${{ needs.build.outputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Type | ${{ needs.build.outputs.build_type }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Plymouth | ${{ needs.build.outputs.enable_plymouth }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Digest | \`${{ needs.build.outputs.image_digest }}\` |" >> $GITHUB_STEP_SUMMARY

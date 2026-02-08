@@ -7,8 +7,8 @@ on:
   workflow_call:
 
 env:
-  DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
   REGISTRY_URL: ${{ vars.REGISTRY_URL || 'docker.io' }}
+  IMAGE_PATH: ${{ vars.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}
 
 permissions:
   contents: write
@@ -73,7 +73,7 @@ jobs:
         if: steps.version.outputs.skip != 'true'
         id: retag
         run: |
-          IMAGE="${{ env.REGISTRY_URL }}/${{ env.DOCKERHUB_IMAGE }}"
+          IMAGE="${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}"
           VERSION="${{ steps.version.outputs.version }}"
 
           docker pull "${IMAGE}:latest"
@@ -92,7 +92,7 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "true"
         run: |
-          cosign sign --yes "${{ env.REGISTRY_URL }}/${{ env.DOCKERHUB_IMAGE }}@${{ steps.retag.outputs.digest }}"
+          cosign sign --yes "${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}@${{ steps.retag.outputs.digest }}"
 
       - name: Create tag
         if: steps.version.outputs.skip != 'true'
@@ -112,11 +112,11 @@ jobs:
       - name: Release summary
         if: always()
         run: |
-          echo "## Eshmun: Release Results" >> $GITHUB_STEP_SUMMARY
+          echo "## Unohana: Release Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ steps.version.outputs.skip }}" == "true" ]]; then
             echo "No release needed (no conventional commits)" >> $GITHUB_STEP_SUMMARY
           else
             echo "Released **${{ steps.version.outputs.version }}**" >> $GITHUB_STEP_SUMMARY
-            echo "Image: \`${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "Image: \`${{ env.IMAGE_PATH }}:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
           fi

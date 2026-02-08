@@ -47,7 +47,6 @@ Configure in GitHub repository settings under **Settings > Secrets and variables
 | Name | Purpose | Required |
 |------|---------|----------|
 | `DOCKERHUB_USERNAME` | DockerHub username | Yes |
-| `DOCKERHUB_IMAGE` | Image path (e.g., `user/exousia`) | Yes |
 | `REGISTRY_URL` | Registry URL (defaults to `docker.io`) | No |
 
 Secrets are passed to reusable workflows via `secrets: inherit` in Aizen.

@@ -378,7 +378,6 @@ Configure in GitHub **Settings > Secrets and variables > Actions**.
 | Name | Purpose | Required |
 |------|---------|----------|
 | `DOCKERHUB_USERNAME` | DockerHub username | Yes |
-| `DOCKERHUB_IMAGE` | Image path (e.g., `user/exousia`) | Yes |
 | `REGISTRY_URL` | Registry URL (defaults to `docker.io`) | No |
 
 Secrets propagate to child workflows via `secrets: inherit` in Aizen.
