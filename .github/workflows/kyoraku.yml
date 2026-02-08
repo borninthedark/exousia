@@ -1,6 +1,5 @@
 # Kyoraku - Captain-Commander of the Gotei 13 - Build + Push
 # Resolves config, generates Containerfile, builds and pushes to registry.
-
 name: "Kyoraku - Build"
 
 on:
@@ -26,6 +25,7 @@ env:
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 jobs:
   build:
@@ -37,7 +37,6 @@ jobs:
       image_digest: ${{ steps.build-push.outputs.digest }}
       build_type: ${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
       enable_plymouth: ${{ steps.config.outputs.ENABLE_PLYMOUTH }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -119,7 +118,11 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: "true"
         run: |
-          cosign sign --yes "${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}@${{ steps.build-push.outputs.digest }}"
+          echo "Signing container image with cosign..."
+          cosign sign --yes \
+            --oidc-issuer=https://token.actions.githubusercontent.com \
+            --oidc-client-id=sigstore \
+            "${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}@${{ steps.build-push.outputs.digest }}"
 
   scan:
     name: Trivy Image Scan
@@ -127,7 +130,6 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     timeout-minutes: 15
-
     steps:
       - name: Trivy vulnerability scan
         uses: aquasecurity/trivy-action@0.33.1
