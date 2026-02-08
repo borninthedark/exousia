@@ -53,10 +53,17 @@ jobs:
             --build-arg IMAGE_TYPE=fedora-sway-atomic \
             --build-arg ENABLE_PLYMOUTH=true \
             -t ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} \
-            -t ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
             -f Containerfile.generated .
 
+      - name: Tag latest
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          buildah tag \
+            ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} \
+            ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
       - name: Push to local registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           buildah push --tls-verify=false \
             ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
@@ -70,3 +77,4 @@ jobs:
           echo "======================="
           echo "Image: ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}"
           echo "Registry: ${{ env.LOCAL_REGISTRY }}"
+          echo "Pushed: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}"
