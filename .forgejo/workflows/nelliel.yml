@@ -1,0 +1,131 @@
+---
+# Nelliel Tu Odelschwanck - Former Tres Espada - Status Report
+# Mirrors Yoruichi (GitHub Actions) for the local Forgejo pipeline.
+# Called by Starrk after gate, receives job results as inputs.
+#
+# Espada Pipeline (Forgejo Actions):
+#   Starrk        -> Orchestrator (the strongest, acts only when necessary)
+#   Szayelaporro  -> CI: lint + test (Octava, the scientist)
+#   Ulquiorra     -> Security scanning (Cuatro, cold logic)
+#   Harribel      -> Build & push (Tres, calm and decisive)
+#   Nelliel       -> Status report (former Tres, gentle but powerful)
+
+name: "Nelliel - Status Report"
+
+on:
+  workflow_call:
+    inputs:
+      szayelaporro_result:
+        type: string
+        required: true
+      ulquiorra_result:
+        type: string
+        required: true
+      harribel_result:
+        type: string
+        required: true
+
+jobs:
+  status-report:
+    name: Generate Status Report
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract build metadata
+        id: meta
+        run: |
+          IMAGE_TYPE=$(grep '^image-type:' adnyeus.yml | awk '{print $2}')
+          IMAGE_VERSION=$(grep '^image-version:' adnyeus.yml \
+            | awk '{print $2}')
+          WM=$(grep 'window_manager:' adnyeus.yml | head -1 | awk '{print $2}')
+          COMMIT_SHA=$(echo "${{ gitea.sha }}" | cut -c1-8)
+
+          echo "image_type=${IMAGE_TYPE}" >> "$GITHUB_OUTPUT"
+          echo "image_version=${IMAGE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "wm=${WM}" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
+          SEMVER=$(git describe --tags --abbrev=0 2>/dev/null \
+            || echo "unreleased")
+          echo "semver=${SEMVER}" >> "$GITHUB_OUTPUT"
+
+      - name: Determine pipeline result
+        id: result
+        run: |
+          if [ "${{ inputs.szayelaporro_result }}" = "failure" ] || \
+             [ "${{ inputs.ulquiorra_result }}" = "failure" ] || \
+             [ "${{ inputs.harribel_result }}" = "failure" ]; then
+            echo "conclusion=failure" >> "$GITHUB_OUTPUT"
+          else
+            echo "conclusion=success" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate STATUS.md
+        env:
+          CONCLUSION: ${{ steps.result.outputs.conclusion }}
+          SZAYELAPORRO: ${{ inputs.szayelaporro_result }}
+          ULQUIORRA: ${{ inputs.ulquiorra_result }}
+          HARRIBEL: ${{ inputs.harribel_result }}
+          IMAGE_TYPE: ${{ steps.meta.outputs.image_type }}
+          IMAGE_VERSION: ${{ steps.meta.outputs.image_version }}
+          WM: ${{ steps.meta.outputs.wm }}
+          COMMIT_SHA: ${{ steps.meta.outputs.commit_sha }}
+          SEMVER: ${{ steps.meta.outputs.semver }}
+        run: |
+          TIMESTAMP=$(date -u "+%Y-%m-%d %H:%M:%S UTC")
+          SERVER="${{ gitea.server_url }}"
+          REPO="${{ gitea.repository }}"
+          RUN_URL="${SERVER}/${REPO}/actions/runs/${{ gitea.run_id }}"
+          cat > STATUS.md <<EOF
+          # Exousia CI Status
+
+          > Last updated: ${TIMESTAMP} | [View Run](${RUN_URL})
+
+          ## Pipeline: Starrk
+
+          | Espada | Number | Role | Status |
+          |--------|--------|------|--------|
+          | Szayelaporro | Octava (#8) | CI: lint + test | ${SZAYELAPORRO} |
+          | Ulquiorra | Cuatro (#4) | Security scanning | ${ULQUIORRA} |
+          | Harribel | Tres (#3) | Build & push | ${HARRIBEL} |
+
+          **Result:** ${CONCLUSION}
+
+          ## Build
+
+          | Property | Value |
+          |----------|-------|
+          | Version | \`${SEMVER}\` |
+          | Image Type | ${IMAGE_TYPE} |
+          | Fedora Version | ${IMAGE_VERSION} |
+          | Window Manager | ${WM} |
+          | Commit | \`${COMMIT_SHA}\` |
+          | Triggered By | push |
+          EOF
+          sed -i 's/^          //' STATUS.md
+
+      - name: Update README badge
+        env:
+          IMAGE_VERSION: ${{ steps.meta.outputs.image_version }}
+          WM: ${{ steps.meta.outputs.wm }}
+        run: |
+          WM_DISPLAY=$(echo "${WM}" | sed 's/./\U&/')
+          BADGE_TEXT="Fedora%20${IMAGE_VERSION}%20%2F%20${WM_DISPLAY}"
+          sed -i \
+            "s|\(Last%20Build-\)[^?]*\(-0A74DA\)|\1${BADGE_TEXT}\2|" \
+            README.md
+
+      - name: Commit and push
+        run: |
+          git config user.name "forgejo-actions[bot]"
+          git config user.email "forgejo-actions[bot]@noreply.localhost"
+          git add STATUS.md README.md
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "docs: update CI status [skip ci]"
+            git push
+          fi

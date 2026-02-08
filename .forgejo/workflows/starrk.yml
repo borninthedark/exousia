@@ -1,13 +1,14 @@
 ---
 # Starrk - Primera Espada (#1) - Orchestrator
 # Mirrors Aizen (GitHub Actions). Calls Szayelaporro (CI) + Ulquiorra (security)
-# in parallel, then Harribel (build), then gate.
+# in parallel, then Harribel (build), then gate, then Nelliel (status report).
 #
 # Espada Pipeline (Forgejo Actions):
 #   Starrk        -> Orchestrator (the strongest, acts only when necessary)
 #   Szayelaporro  -> CI: lint + test (Octava, the scientist)
 #   Ulquiorra     -> Security scanning (Cuatro, cold logic)
 #   Harribel      -> Build & push (Tres, calm and decisive)
+#   Nelliel       -> Status report (former Tres, gentle but powerful)
 
 name: "Starrk - Orchestrator"
 
@@ -51,3 +52,13 @@ jobs:
           needs.ulquiorra.result == 'failure' ||
           needs.harribel.result == 'failure'
         run: exit 1
+
+  nelliel:
+    name: "Nelliel (Status)"
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [szayelaporro, ulquiorra, harribel, gate]
+    uses: ./.forgejo/workflows/nelliel.yml
+    with:
+      szayelaporro_result: ${{ needs.szayelaporro.result }}
+      ulquiorra_result: ${{ needs.ulquiorra.result }}
+      harribel_result: ${{ needs.harribel.result }}

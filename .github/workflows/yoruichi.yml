@@ -1,0 +1,145 @@
+---
+# Yoruichi Shihoin - Former Captain of the 2nd Division - Goddess of Flash
+# Post-CI housekeeping: generates STATUS.md and updates README badges
+# after the Aizen pipeline completes on main.
+#
+# Shinigami Pipeline:
+#   Aizen     -> Orchestrator (the one who sees everything)
+#   Mayuri    -> CI: lint + test (12th Division, Research & Development)
+#   Byakuya  -> Security scanning (6th Division, law & order)
+#   Kyoraku  -> Build, scan, sign, release (Captain-Commander)
+#   Yoruichi -> Status report (2nd Division, Stealth Force)
+
+name: "Yoruichi - Status Report"
+
+on:
+  workflow_run:
+    workflows: ["Aizen - Orchestrator"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  status-report:
+    name: Generate Status Report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Fetch workflow run jobs
+        id: jobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          API_PATH="repos/${{ github.repository }}"
+          API_PATH="${API_PATH}/actions/runs/${RUN_ID}/jobs"
+          JOBS_JSON=$(gh api "${API_PATH}" --jq '.jobs')
+
+          get_conclusion() {
+            echo "${JOBS_JSON}" | jq -r \
+              --arg name "$1" \
+              '[.[] | select(.name | test($name; "i"))
+              ][0].conclusion // "skipped"'
+          }
+
+          MAYURI=$(get_conclusion "Mayuri")
+          BYAKUYA=$(get_conclusion "Byakuya")
+          KYORAKU=$(get_conclusion "Kyoraku")
+
+          echo "mayuri=${MAYURI}" >> "$GITHUB_OUTPUT"
+          echo "byakuya=${BYAKUYA}" >> "$GITHUB_OUTPUT"
+          echo "kyoraku=${KYORAKU}" >> "$GITHUB_OUTPUT"
+          echo "run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract build metadata
+        id: meta
+        run: |
+          IMAGE_TYPE=$(grep '^image-type:' adnyeus.yml | awk '{print $2}')
+          IMAGE_VERSION=$(grep '^image-version:' adnyeus.yml \
+            | awk '{print $2}')
+          WM=$(grep 'window_manager:' adnyeus.yml | head -1 | awk '{print $2}')
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          COMMIT_SHA=$(echo "${HEAD_SHA}" | cut -c1-8)
+          EVENT="${{ github.event.workflow_run.event }}"
+
+          echo "image_type=${IMAGE_TYPE}" >> "$GITHUB_OUTPUT"
+          echo "image_version=${IMAGE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "wm=${WM}" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "event=${EVENT}" >> "$GITHUB_OUTPUT"
+          SEMVER=$(git describe --tags --abbrev=0 2>/dev/null \
+            || echo "unreleased")
+          echo "semver=${SEMVER}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate STATUS.md
+        env:
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          MAYURI: ${{ steps.jobs.outputs.mayuri }}
+          BYAKUYA: ${{ steps.jobs.outputs.byakuya }}
+          KYORAKU: ${{ steps.jobs.outputs.kyoraku }}
+          IMAGE_TYPE: ${{ steps.meta.outputs.image_type }}
+          IMAGE_VERSION: ${{ steps.meta.outputs.image_version }}
+          WM: ${{ steps.meta.outputs.wm }}
+          COMMIT_SHA: ${{ steps.meta.outputs.commit_sha }}
+          EVENT: ${{ steps.meta.outputs.event }}
+          SEMVER: ${{ steps.meta.outputs.semver }}
+        run: |
+          TIMESTAMP=$(date -u "+%Y-%m-%d %H:%M:%S UTC")
+          cat > STATUS.md <<EOF
+          # Exousia CI Status
+
+          > Last updated: ${TIMESTAMP} | [View Run](${RUN_URL})
+
+          ## Pipeline: Aizen
+
+          | Captain | Division | Role | Status |
+          |---------|----------|------|--------|
+          | Mayuri | 12th (R&D) | CI: lint + test | ${MAYURI} |
+          | Byakuya | 6th (Law) | Security scanning | ${BYAKUYA} |
+          | Kyoraku | Captain-Commander | Build & Release | ${KYORAKU} |
+
+          **Result:** ${CONCLUSION}
+
+          ## Build
+
+          | Property | Value |
+          |----------|-------|
+          | Version | \`${SEMVER}\` |
+          | Image Type | ${IMAGE_TYPE} |
+          | Fedora Version | ${IMAGE_VERSION} |
+          | Window Manager | ${WM} |
+          | Commit | \`${COMMIT_SHA}\` |
+          | Triggered By | ${EVENT} |
+          EOF
+          sed -i 's/^          //' STATUS.md
+
+      - name: Update README badge
+        env:
+          IMAGE_VERSION: ${{ steps.meta.outputs.image_version }}
+          WM: ${{ steps.meta.outputs.wm }}
+        run: |
+          WM_DISPLAY=$(echo "${WM}" | sed 's/./\U&/')
+          BADGE_TEXT="Fedora%20${IMAGE_VERSION}%20%2F%20${WM_DISPLAY}"
+          sed -i \
+            "s|\(Last%20Build-\)[^?]*\(-0A74DA\)|\1${BADGE_TEXT}\2|" \
+            README.md
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          BOT_EMAIL="41898282+github-actions[bot]"
+          git config user.email "${BOT_EMAIL}@users.noreply.github.com"
+          git add STATUS.md README.md
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "docs: update CI status [skip ci]"
+            git push
+          fi

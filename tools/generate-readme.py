@@ -1,9 +1,119 @@
+#!/usr/bin/env python3
+"""Generate README.md from template with dynamic documentation section."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+REPO = "borninthedark/exousia"
+
+# Documentation entries: (rel_path, title, description)
+DOC_ENTRIES: list[tuple[str, str, str]] = [
+    (
+        "docs/README.md",
+        "Documentation Index",
+        "Full docs: getting started, architecture, desktop, testing, reference",
+    ),
+    (
+        "docs/bootc-upgrade.md",
+        "Upgrade Guide",
+        "Switch images and perform bootc upgrades",
+    ),
+    (
+        "docs/bootc-image-builder.md",
+        "Image Builder",
+        "Build bootable disk images (ISO, raw, qcow2)",
+    ),
+    (
+        "docs/overlay-system.md",
+        "Overlay System",
+        "Overlay directory structure and how files map into images",
+    ),
+    (
+        "docs/local-build-pipeline.md",
+        "Local Build Pipeline",
+        "Quadlet services, local build, and promotion to DockerHub",
+    ),
+    (
+        "docs/sway-session-greetd.md",
+        "Sway + greetd",
+        "Sway session with greetd login manager",
+    ),
+    (
+        "docs/zfs-bootc.md",
+        "ZFS Support",
+        "Optional ZFS kernel module build process",
+    ),
+    (
+        "docs/testing/README.md",
+        "Test Suite",
+        "Test architecture, categories, and writing guide",
+    ),
+    (
+        "docs/reference/troubleshooting.md",
+        "Troubleshooting",
+        "Common issues and fixes",
+    ),
+    (
+        "SECURITY.md",
+        "Security Policy",
+        "Vulnerability reporting and security model",
+    ),
+]
+
+# Subdirectory entries: (rel_path, title, description)
+SUBDIR_ENTRIES: list[tuple[str, str, str]] = [
+    ("tools/", "Build Tools", "Python transpiler, package loader, build tools"),
+    ("overlays/", "Overlays", "Static files and configs copied into images"),
+    ("overlays/base/", "Base Overlay", "Shared configs: PAM, polkit, sysusers, packages"),
+    ("overlays/sway/", "Sway Overlay", "Sway desktop: configs, scripts, session"),
+    ("overlays/deploy/", "Deploy Overlay", "Podman Quadlet container definitions"),
+    ("custom-tests/", "Test Suite", "Bats integration tests for built images"),
+    ("yaml-definitions/", "YAML Definitions", "Alternative build blueprints"),
+    ("ansible/", "Ansible", "Post-deployment Ansible playbooks"),
+    ("docs/", "Documentation", "Full documentation"),
+    (".github/workflows/", "Shinigami Pipeline", "GitHub Actions CI/CD"),
+    (".forgejo/workflows/", "Espada Pipeline", "Forgejo Actions CI/CD"),
+]
+
+
+def _docs_table(root: Path) -> str:
+    rows = ["| Document | Description |", "|----------|-------------|"]
+    for rel_path, title, desc in DOC_ENTRIES:
+        if (root / rel_path).exists():
+            rows.append(f"| [{title}]({rel_path}) | {desc} |")
+    return "\n".join(rows)
+
+
+def _structure_table(root: Path) -> str:
+    rows = [
+        "| Directory | Purpose | Docs |",
+        "|-----------|---------|------|",
+    ]
+    for rel_path, _title, desc in SUBDIR_ENTRIES:
+        dir_path = root / rel_path
+        readme = dir_path / "README.md"
+        if dir_path.exists():
+            if readme.exists():
+                rows.append(
+                    f"| [`{rel_path}`]({rel_path}) | {desc} " f"| [README]({rel_path}README.md) |"
+                )
+            else:
+                rows.append(f"| [`{rel_path}`]({rel_path}) | {desc} | -- |")
+    return "\n".join(rows)
+
+
+def generate_readme(root: Path) -> str:
+    docs = _docs_table(root)
+    structure = _structure_table(root)
+
+    return f"""\
 # Exousia - Declarative Bootc Image Builder
 
 > *Can't Fear Your Own OS*
 
-[![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/aizen.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/aizen.yml)
-[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/aizen.yml?query=branch%3Amain+is%3Asuccess)
+[![Reiatsu](https://img.shields.io/github/actions/workflow/status/{REPO}/aizen.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/{REPO}/actions/workflows/aizen.yml)
+[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/{REPO}/actions/workflows/aizen.yml?query=branch%3Amain+is%3Asuccess)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 
 Declarative, container-based immutable operating systems built on
@@ -56,28 +166,28 @@ sudo bootc upgrade && sudo systemctl reboot
 ### Build locally
 
 ```bash
-git clone https://github.com/borninthedark/exousia.git && cd exousia
+git clone https://github.com/{REPO}.git && cd exousia
 just build
 ```
 
 ### Trigger a remote build
 
 ```bash
-curl -X POST \
-  -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $GITHUB_TOKEN" \
-  https://api.github.com/repos/borninthedark/exousia/actions/workflows/aizen.yml/dispatches \
-  -d '{"ref":"main","inputs":{"image_type":"fedora-bootc","distro_version":"43","enable_plymouth":"true"}}'
+curl -X POST \\
+  -H "Accept: application/vnd.github+json" \\
+  -H "Authorization: Bearer $GITHUB_TOKEN" \\
+  https://api.github.com/repos/{REPO}/actions/workflows/aizen.yml/dispatches \\
+  -d '{{"ref":"main","inputs":{{"image_type":"fedora-bootc","distro_version":"43","enable_plymouth":"true"}}}}'
 ```
 
-Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://github.com/borninthedark/exousia/actions).
+Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://github.com/{REPO}/actions).
 
 ## Architecture
 
 ### Build Flow
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}%%
+%%{{init: {{'theme': 'base', 'themeVariables': {{'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}}}}%%
 graph LR
     A["adnyeus.yml<br/>(blueprint)"] --> B["Python transpiler<br/>(tools/*.py)"]
     B --> C["Containerfile"]
@@ -100,7 +210,7 @@ Every CI workflow is named after a captain from the Gotei 13. Each captain's
 division maps to the workflow's role:
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}%%
+%%{{init: {{'theme': 'base', 'themeVariables': {{'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}}}}%%
 graph TD
     A["Aizen<br/>(orchestrator)"] --> B["Mayuri<br/>(CI: lint+test)"]
     A --> C["Byakuya<br/>(security scan)"]
@@ -208,34 +318,11 @@ Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 
 **[Full Documentation Index](docs/README.md)**
 
-| Document | Description |
-|----------|-------------|
-| [Documentation Index](docs/README.md) | Full docs: getting started, architecture, desktop, testing, reference |
-| [Upgrade Guide](docs/bootc-upgrade.md) | Switch images and perform bootc upgrades |
-| [Image Builder](docs/bootc-image-builder.md) | Build bootable disk images (ISO, raw, qcow2) |
-| [Overlay System](docs/overlay-system.md) | Overlay directory structure and how files map into images |
-| [Local Build Pipeline](docs/local-build-pipeline.md) | Quadlet services, local build, and promotion to DockerHub |
-| [Sway + greetd](docs/sway-session-greetd.md) | Sway session with greetd login manager |
-| [ZFS Support](docs/zfs-bootc.md) | Optional ZFS kernel module build process |
-| [Test Suite](docs/testing/README.md) | Test architecture, categories, and writing guide |
-| [Troubleshooting](docs/reference/troubleshooting.md) | Common issues and fixes |
-| [Security Policy](SECURITY.md) | Vulnerability reporting and security model |
+{docs}
 
 ## Project Structure
 
-| Directory | Purpose | Docs |
-|-----------|---------|------|
-| [`tools/`](tools/) | Python transpiler, package loader, build tools | [README](tools/README.md) |
-| [`overlays/`](overlays/) | Static files and configs copied into images | [README](overlays/README.md) |
-| [`overlays/base/`](overlays/base/) | Shared configs: PAM, polkit, sysusers, packages | [README](overlays/base/README.md) |
-| [`overlays/sway/`](overlays/sway/) | Sway desktop: configs, scripts, session | [README](overlays/sway/README.md) |
-| [`overlays/deploy/`](overlays/deploy/) | Podman Quadlet container definitions | [README](overlays/deploy/README.md) |
-| [`custom-tests/`](custom-tests/) | Bats integration tests for built images | [README](custom-tests/README.md) |
-| [`yaml-definitions/`](yaml-definitions/) | Alternative build blueprints | [README](yaml-definitions/README.md) |
-| [`ansible/`](ansible/) | Post-deployment Ansible playbooks | [README](ansible/README.md) |
-| [`docs/`](docs/) | Full documentation | [README](docs/README.md) |
-| [`.github/workflows/`](.github/workflows/) | GitHub Actions CI/CD | [README](.github/workflows/README.md) |
-| [`.forgejo/workflows/`](.forgejo/workflows/) | Forgejo Actions CI/CD | [README](.forgejo/workflows/README.md) |
+{structure}
 
 ## Contributing
 
@@ -274,3 +361,20 @@ respective copyright holders.
 ---
 
 **Built with [bootc](https://github.com/bootc-dev/bootc)** | [Docs](https://bootc-dev.github.io/bootc/) | [Fedora bootc](https://docs.fedoraproject.org/en-US/bootc/) | MIT License
+"""
+
+
+def update_readme() -> bool:
+    root = Path(__file__).resolve().parent.parent
+    readme = root / "README.md"
+    content = generate_readme(root)
+    if readme.exists() and readme.read_text(encoding="utf-8") == content:
+        print("README.md is up to date")
+        return True
+    readme.write_text(content, encoding="utf-8")
+    print("Generated README.md")
+    return True
+
+
+if __name__ == "__main__":
+    raise SystemExit(0 if update_readme() else 1)

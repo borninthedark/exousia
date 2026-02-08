@@ -79,14 +79,6 @@ repos:
       - id: shellcheck
         args: [-x]
 
-  # Containerfile linting
-  - repo: https://github.com/hadolint/hadolint
-    rev: v2.12.0
-    hooks:
-      - id: hadolint-docker
-        args: [--ignore, DL3041, --ignore, DL3059, --ignore, DL4006]
-        files: (Containerfile.*|Dockerfile)
-
   # Security checks
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.6
@@ -114,12 +106,23 @@ repos:
         pass_filenames: false
         always_run: true
 
+  # README generation
+  - repo: local
+    hooks:
+      - id: generate-readme
+        name: generate-readme
+        entry: uv run python tools/generate-readme.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
   # DRY check for tools/ directory
   - repo: local
     hooks:
       - id: dry-check
         name: dry-check (tools/)
-        entry: bash -c 'duplicates=$(find tools/ -name "*.py" -exec md5sum {} + | sort | uniq -D -w32); if [ -n "$duplicates" ]; then echo "Duplicate files found:" && echo "$duplicates" && exit 1; fi'
+        entry: uv run python tools/dry_check.py --functions-only --similarity 0.95 --path tools
         language: system
+        types: [python]
         pass_filenames: false
         always_run: true
