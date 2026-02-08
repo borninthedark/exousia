@@ -61,7 +61,7 @@ jobs:
             --verbose
 
       - name: Hadolint
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: Containerfile.generated
           ignore: DL3041,DL3059,DL4006,SC3040
