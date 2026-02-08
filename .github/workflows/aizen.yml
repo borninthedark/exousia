@@ -46,6 +46,8 @@ concurrency:
 
 permissions:
   contents: read
+  packages: write
+  id-token: write
 
 jobs:
   # -- Mayuri (CI) + Byakuya (Security) run in parallel --
