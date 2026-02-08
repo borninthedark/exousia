@@ -66,8 +66,10 @@ jobs:
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
           TAG="${{ steps.config.outputs.BUILD_IMAGE_TYPE }}-${SHORT_SHA}"
           BRANCH="${GITHUB_REF_NAME//\//-}"
+          NIGHTLY=$([[ "${{ github.event_name }}" == "schedule" ]] && echo "true" || echo "false")
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "nightly=$NIGHTLY" >> $GITHUB_OUTPUT
 
       - name: Create auth.json secret for build
         run: |
@@ -101,6 +103,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:${{ steps.tag.outputs.tag }}
             ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:${{ steps.tag.outputs.branch }}
+            ${{ steps.tag.outputs.nightly == 'true' && format('{0}/{1}:nightly', env.REGISTRY_URL, env.IMAGE_PATH) || '' }}
             ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:latest
           build-args: |
             FEDORA_VERSION=${{ steps.config.outputs.BUILD_VERSION }}
