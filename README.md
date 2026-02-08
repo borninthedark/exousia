@@ -1,4 +1,4 @@
-# Exousia
+# Exousia - Declarative Bootc Image Builder
 
 > *Can't Fear Your Own OS*
 
