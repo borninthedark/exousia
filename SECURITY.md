@@ -50,7 +50,7 @@ Exousia employs a defense-in-depth approach:
 
 - Pre-commit hooks enforce linting and security checks locally
 - Conventional commits for auditable change history
-- TDD with minimum 75% code coverage on Python tools
+- TDD with minimum 50% code coverage on Python tools (ratcheting toward 75%)
 
 ## Dependency Management
 

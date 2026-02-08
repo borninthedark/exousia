@@ -19,7 +19,7 @@ GitHub Actions pushes signed images to DockerHub.
 Development follows a **TDD-first, shift-left** methodology: tests are written
 before implementation, pre-commit hooks enforce quality and security gates
 locally, and CI validates what cannot run on a developer machine. Every tool
-change requires 75% branch coverage to merge.
+change requires 50% branch coverage to merge (ratcheting toward 75%).
 
 ## Table of Contents
 
@@ -248,7 +248,7 @@ Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 
 Contributions welcome. Development rules:
 
-- **TDD mandatory** -- write tests before implementation, 75% branch coverage required
+- **TDD mandatory** -- write tests before implementation, 50% branch coverage floor (ratcheting toward 75%)
 - **[Conventional commits](https://www.conventionalcommits.org/)** -- enforced by pre-commit hook
 - **Shift-left** -- `uv run pre-commit install && uv run pre-commit install --hook-type commit-msg`
 - Security gates (Bandit, Gitleaks) and quality checks (Ruff, Black, mypy) run locally before push
