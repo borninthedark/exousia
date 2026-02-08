@@ -1,4 +1,6 @@
-# Exousia: Declarative Bootc Builder
+# Exousia
+
+> *Can't Fear Your Own OS*
 
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/aizen.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/aizen.yml)
 [![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/aizen.yml?query=branch%3Amain+is%3Asuccess)
@@ -6,10 +8,10 @@
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 <img src=".github/blue-sparrow.svg" alt="Blue Sparrow" width="28" />
 
-Build custom, container-based immutable operating systems using the
-[**bootc project**](https://github.com/bootc-dev/bootc). YAML blueprints define
-OS images, Python tools transpile them to Containerfiles, Buildah builds them,
-and GitHub Actions pushes signed images to DockerHub.
+Declarative, container-based immutable operating systems built on
+[**bootc**](https://github.com/bootc-dev/bootc). YAML blueprints define OS
+images, Python tools transpile them to Containerfiles, Buildah builds them, and
+GitHub Actions pushes signed images to DockerHub.
 
 **Note:** The "Reiatsu" badge is inspired by *BLEACH* by **Tite Kubo** --
 used as a playful status indicator with full acknowledgment.
@@ -18,8 +20,10 @@ used as a playful status indicator with full acknowledgment.
 
 - [Highly Experimental Disclaimer](#highly-experimental-disclaimer)
 - [Quick Start](#quick-start)
-- [How It Works](#how-it-works)
-- [The Shinigami Pipeline](#the-shinigami-pipeline)
+- [Architecture](#architecture)
+  - [Build Flow](#build-flow)
+  - [The Shinigami Pipeline](#the-shinigami-pipeline)
+  - [Versioning](#versioning)
 - [Customizing Builds](#customizing-builds)
 - [Local Build Pipeline](#local-build-pipeline)
 - [YubiKey Authentication](#yubikey-authentication)
@@ -29,15 +33,11 @@ used as a playful status indicator with full acknowledgment.
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
 
----
-
 ## Highly Experimental Disclaimer
 
 > **Warning**: This project is highly experimental. There are **no guarantees**
 > about stability, data safety, or fitness for any purpose. Proceed only if you
 > understand the risks.
-
----
 
 ## Quick Start
 
@@ -73,9 +73,9 @@ curl -X POST \
 
 Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://github.com/borninthedark/exousia/actions).
 
----
+## Architecture
 
-## How It Works
+### Build Flow
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}%%
@@ -88,21 +88,17 @@ graph LR
     B -.-> G["resolve_build_config.py"]
 ```
 
-- **Blueprint** (`adnyeus.yml`) -- declares base image, packages, overlays,
-  scripts, services, and build flags.
-- **Transpiler** (`tools/yaml-to-containerfile.py`) -- reads the blueprint,
-  loads package lists from `overlays/base/packages/`, and emits a valid
-  Containerfile.
-- **Overlays** -- static files, configs, and scripts organized under
-  `overlays/base/` (shared) and `overlays/sway/` (desktop-specific).
-- **Tests** -- Bats tests in `custom-tests/` validate the built image.
+| Component | Description |
+|-----------|-------------|
+| **Blueprint** (`adnyeus.yml`) | Declares base image, packages, overlays, scripts, services, and build flags |
+| **Transpiler** (`tools/yaml-to-containerfile.py`) | Reads the blueprint, loads package lists from `overlays/base/packages/`, emits a valid Containerfile |
+| **Overlays** | Static files, configs, and scripts under `overlays/base/` (shared) and `overlays/sway/` (desktop) |
+| **Tests** | Bats tests in `custom-tests/` validate the built image |
 
----
+### The Shinigami Pipeline
 
-## The Shinigami Pipeline
-
-Every workflow is named after a captain from the Gotei 13. Each captain's
-division maps to the workflow's role in the pipeline:
+Every CI workflow is named after a captain from the Gotei 13. Each captain's
+division maps to the workflow's role:
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}%%
@@ -114,15 +110,17 @@ graph TD
     D --> E["Gate"]
 ```
 
-Aizen calls Mayuri and Byakuya in parallel. When both pass, Kyoraku builds,
-signs, scans, and cuts a semver release on `main`.
+| Captain | Division | Role | Key Tools |
+|---------|----------|------|-----------|
+| **Aizen** | -- | Orchestrator | Calls Mayuri + Byakuya in parallel, then Kyoraku |
+| **Mayuri** | 12th (R&D) | CI | Ruff, Black, isort, pytest, Codecov |
+| **Byakuya** | 6th (Law) | Security | Hadolint, Checkov, Trivy config scan, Bandit |
+| **Kyoraku** | Captain-Commander | Build & Release | Docker Buildx, Cosign (OIDC), Trivy image scan, semver |
 
 ### Versioning
 
 Versions are automatic via [conventional commits](https://www.conventionalcommits.org/):
 `feat:` bumps minor, `fix:` bumps patch, `feat!:` bumps major.
-
----
 
 ## Customizing Builds
 
@@ -154,9 +152,7 @@ the blueprint directly.
   Configuration references drawn from [openSUSEway](https://github.com/openSUSE/openSUSEway).
 - **Plymouth** is toggled via `enable_plymouth: true` in the blueprint.
 - **greetd** is the login manager for all image types.
-- **ZFS** is optional -- enable via `build.enable_zfs: true`. See [ZFS docs](docs/ZFS_BOOTC.md).
-
----
+- **ZFS** is optional -- enable via `build.enable_zfs: true`. See [ZFS docs](docs/zfs-bootc.md).
 
 ## Local Build Pipeline
 
@@ -188,8 +184,6 @@ pamu2fcfg -n >> ~/.config/Yubico/u2f_keys    # backup key (recommended)
 `sudo` accepts YubiKey as an alternative to password by default. See
 [Fedora YubiKey Quick Docs](https://docs.fedoraproject.org/en-US/quick-docs/using-yubikeys/).
 
----
-
 ## Required Secrets and Variables
 
 Configure in GitHub **Settings > Secrets and variables > Actions**.
@@ -209,21 +203,17 @@ Configure in GitHub **Settings > Secrets and variables > Actions**.
 
 Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 
----
-
 ## Documentation
 
 **[Full Documentation Index](docs/README.md)**
 
 | Topic | Links |
 |-------|-------|
-| Getting Started | [Upgrade Guide](docs/BOOTC_UPGRADE.md) &#124; [Image Builder](docs/BOOTC_IMAGE_BUILDER.md) |
+| Getting Started | [Upgrade Guide](docs/bootc-upgrade.md) &#124; [Image Builder](docs/bootc-image-builder.md) |
 | Architecture | [Overlay System](docs/overlay-system.md) &#124; [Local Build Pipeline](docs/local-build-pipeline.md) |
-| Desktop | [Sway + greetd](docs/sway-session-greetd.md) &#124; [Plymouth](docs/reference/plymouth_usage_doc.md) |
+| Desktop | [Sway + greetd](docs/sway-session-greetd.md) &#124; [Plymouth](docs/reference/plymouth-usage.md) |
 | Testing | [Test Suite](docs/testing/README.md) &#124; [Writing Tests](docs/reference/writing-tests.md) |
 | Reference | [Troubleshooting](docs/reference/troubleshooting.md) &#124; [Security](SECURITY.md) |
-
----
 
 ## Contributing
 
@@ -231,13 +221,9 @@ Contributions welcome. Submit PRs or open issues. Use
 [conventional commits](https://www.conventionalcommits.org/) for automatic
 versioning.
 
----
-
 ## License
 
 MIT License -- see LICENSE file.
-
----
 
 ## Acknowledgments
 
@@ -254,6 +240,7 @@ This project uses AI-assisted development tools:
 - **[Claude Code](https://claude.ai/claude-code)** (Anthropic)
 - **[ChatGPT Codex](https://openai.com/index/openai-codex/)** (OpenAI)
 - **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)**
+- **[github-actions[bot]](https://github.com/apps/github-actions)** -- automated releases and tagging
 
 ### Creative
 

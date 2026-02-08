@@ -32,6 +32,3 @@ Thumbs.db
 # Local environment files (e.g., for secrets)
 .env
 env
-
-# Ansible (not yet tracked)
-ansible/

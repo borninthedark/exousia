@@ -334,7 +334,7 @@ the blueprint directly.
   Configuration references drawn from [openSUSEway](https://github.com/openSUSE/openSUSEway).
 - **Plymouth** is toggled via `enable_plymouth: true` in the blueprint.
 - **greetd** is the login manager for all image types.
-- **ZFS** is optional -- enable via `build.enable_zfs: true`. See [ZFS docs](docs/ZFS_BOOTC.md).
+- **ZFS** is optional -- enable via `build.enable_zfs: true`. See [ZFS docs](docs/zfs-bootc.md).
 
 ---
 
@@ -381,8 +381,8 @@ Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 
 | Topic | Links |
 |-------|-------|
-| Getting Started | [Upgrade Guide](docs/BOOTC_UPGRADE.md) &#124; [Image Builder](docs/BOOTC_IMAGE_BUILDER.md) |
-| Desktop | [Sway + greetd](docs/sway-session-greetd.md) &#124; [Plymouth](docs/reference/plymouth_usage_doc.md) |
+| Getting Started | [Upgrade Guide](docs/bootc-upgrade.md) &#124; [Image Builder](docs/bootc-image-builder.md) |
+| Desktop | [Sway + greetd](docs/sway-session-greetd.md) &#124; [Plymouth](docs/reference/plymouth-usage.md) |
 | Testing | [Test Suite](docs/testing/README.md) &#124; [Writing Tests](docs/reference/writing-tests.md) |
 | Reference | [Troubleshooting](docs/reference/troubleshooting.md) &#124; [Security](SECURITY.md) |
 

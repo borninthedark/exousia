@@ -31,7 +31,7 @@ Images are tagged with:
 Example: build a Fedora Sway Atomic image locally
 
 ```bash
-python3 tools/yaml-to-containerfile.py \
+uv run python tools/yaml-to-containerfile.py \
   --config yaml-definitions/sway-atomic.yml \
   --image-type fedora-sway-atomic \
   --fedora-version 43 \
@@ -77,7 +77,7 @@ modules:
 Then build it:
 
 ```bash
-python3 tools/yaml-to-containerfile.py \
+uv run python tools/yaml-to-containerfile.py \
   --config my-custom-fedora.yml \
   --image-type fedora-bootc \
   --output Containerfile.custom

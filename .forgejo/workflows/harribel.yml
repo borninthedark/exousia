@@ -1,0 +1,72 @@
+---
+# Tier Harribel - Tres Espada (#3) - Build & Push
+# Mirrors Kyoraku (GitHub Actions). Builds with buildah, pushes to local registry.
+# Calm and decisive -- executes the build with precision.
+
+name: "Harribel - Build"
+
+on:
+  workflow_call:
+
+env:
+  LOCAL_REGISTRY: localhost:5000
+  IMAGE_NAME: exousia
+
+jobs:
+  build:
+    name: Build Bootc Image
+    runs-on: self-hosted
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Resolve build configuration
+        run: uv run python tools/resolve_build_config.py
+        env:
+          INPUT_IMAGE_TYPE: fedora-sway-atomic
+          INPUT_DISTRO_VERSION: "43"
+          INPUT_ENABLE_PLYMOUTH: "true"
+
+      - name: Download generated Containerfile
+        uses: actions/download-artifact@v4
+        with:
+          name: containerfile-generated
+
+      - name: Generate image tag
+        id: tag
+        run: |
+          SHORT_SHA=$(echo "${{ gitea.sha }}" | cut -c1-8)
+          TAG="fedora-sway-atomic-${SHORT_SHA}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Build with buildah
+        run: |
+          buildah build \
+            --format oci \
+            --layers \
+            --build-arg FEDORA_VERSION=43 \
+            --build-arg IMAGE_TYPE=fedora-sway-atomic \
+            --build-arg ENABLE_PLYMOUTH=true \
+            -t ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} \
+            -t ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            -f Containerfile.generated .
+
+      - name: Push to local registry
+        run: |
+          buildah push --tls-verify=false \
+            ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
+          buildah push --tls-verify=false \
+            ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Build summary
+        if: always()
+        run: |
+          echo "Harribel: Build Results"
+          echo "======================="
+          echo "Image: ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}"
+          echo "Registry: ${{ env.LOCAL_REGISTRY }}"

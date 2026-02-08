@@ -1,0 +1,14 @@
+---
+# Transient firewall rules - firewall-cmd WITHOUT --permanent
+# Rules are lost on reboot; the image defines the persistent baseline.
+
+- name: Open transient firewall ports
+  ansible.builtin.command:
+    cmd: "firewall-cmd --add-port={{ item.port }}/{{ item.protocol }}"
+  loop: "{{ firewall_open_ports }}"
+  changed_when: true
+
+- name: Reload firewall (runtime only)
+  ansible.builtin.command:
+    cmd: firewall-cmd --reload
+  changed_when: true
