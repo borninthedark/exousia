@@ -1,6 +1,7 @@
-# Kyoraku - Captain-Commander of the Gotei 13 - Build + Push
-# Resolves config, generates Containerfile, builds and pushes to registry.
-name: "Kyoraku - Build"
+# Kyoraku - Captain-Commander of the Gotei 13 - Build, Sign & Release
+# Builds image, scans with Trivy, signs with cosign (OIDC keyless),
+# and cuts semver releases from conventional commits.
+name: "Kyoraku - Build & Release"
 
 on:
   workflow_call:
@@ -23,7 +24,7 @@ env:
   IMAGE_PATH: ${{ vars.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   id-token: write
 
@@ -112,18 +113,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Install cosign
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: sigstore/cosign-installer@v3
-
-      - name: Sign image by digest
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+      - name: Build summary
+        if: always()
         run: |
-          cosign sign --yes \
-            --oidc-issuer=https://token.actions.githubusercontent.com \
-            --oidc-client-id=sigstore \
-            "${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}@${{ steps.build-push.outputs.digest }}"
+          echo "## Kyoraku: Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | \`${{ env.IMAGE_PATH }}:${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Type | ${{ steps.config.outputs.BUILD_IMAGE_TYPE }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Plymouth | ${{ steps.config.outputs.ENABLE_PLYMOUTH }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Digest | \`${{ steps.build-push.outputs.digest }}\` |" >> $GITHUB_STEP_SUMMARY
 
+  # -- Scan + Sign run in parallel after build --
   scan:
     name: Trivy Image Scan
     needs: build
@@ -138,14 +140,117 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: 0
 
-      - name: Build summary
+  sign:
+    name: Cosign Image
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Sign image with cosign
+        uses: sigstore/cosign-installer@v3
+      - run: |
+          cosign sign --yes \
+            --oidc-issuer=https://token.actions.githubusercontent.com \
+            --oidc-client-id=sigstore \
+            "${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}@${{ needs.build.outputs.image_digest }}"
+
+  # -- Release runs after scan + sign --
+  release:
+    name: Semantic Release
+    needs: [build, scan, sign]
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Determine next version
+        id: version
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+
+          VERSION=${LATEST_TAG#v}
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+
+          COMMITS=$(git log "$LATEST_TAG"..HEAD --pretty=format:"%s" 2>/dev/null || git log --pretty=format:"%s")
+
+          if echo "$COMMITS" | grep -qiE "^(feat|feature)(\(.+\))?!:|BREAKING CHANGE"; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif echo "$COMMITS" | grep -qiE "^feat(\(.+\))?:"; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          elif echo "$COMMITS" | grep -qiE "^fix(\(.+\))?:"; then
+            PATCH=$((PATCH + 1))
+          else
+            echo "No conventional commits found - skipping release"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
+          echo "Next version: $NEW_VERSION"
+
+      - name: Login to Docker Hub
+        if: steps.version.outputs.skip != 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Retag image with semver
+        if: steps.version.outputs.skip != 'true'
+        id: retag
+        run: |
+          IMAGE="${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}"
+          VERSION="${{ steps.version.outputs.version }}"
+
+          docker pull "${IMAGE}:latest"
+          docker tag "${IMAGE}:latest" "${IMAGE}:${VERSION}"
+          docker push "${IMAGE}:${VERSION}"
+
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE}:${VERSION}" | cut -d@ -f2)
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Sign release image with cosign
+        if: steps.version.outputs.skip != 'true'
+        uses: sigstore/cosign-installer@v3
+      - if: steps.version.outputs.skip != 'true'
+        run: |
+          cosign sign --yes \
+            --oidc-issuer=https://token.actions.githubusercontent.com \
+            --oidc-client-id=sigstore \
+            "${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}@${{ steps.retag.outputs.digest }}"
+
+      - name: Create tag and release
+        if: steps.version.outputs.skip != 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
+          gh release create "$VERSION" --generate-notes
+
+      - name: Release summary
         if: always()
         run: |
-          echo "## Kyoraku: Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "## Kyoraku: Release Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Image | \`${{ env.IMAGE_PATH }}:${{ needs.build.outputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Type | ${{ needs.build.outputs.build_type }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Plymouth | ${{ needs.build.outputs.enable_plymouth }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Digest | \`${{ needs.build.outputs.image_digest }}\` |" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.version.outputs.skip }}" == "true" ]]; then
+            echo "No release needed (no conventional commits)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Released **${{ steps.version.outputs.version }}**" >> $GITHUB_STEP_SUMMARY
+            echo "Image: \`${{ env.IMAGE_PATH }}:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          fi

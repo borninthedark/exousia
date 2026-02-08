@@ -24,8 +24,7 @@ Exousia uses a Shinigami-themed GitHub Actions pipeline (Gotei 13 captains):
 | **Aizen** | `aizen.yml` | Orchestrator -- calls Mayuri + Byakuya in parallel, then Kyoraku, then gate |
 | **Mayuri** | `mayuri.yml` | CI -- Ruff, Black, isort, pytest + Codecov |
 | **Byakuya** | `byakuya.yml` | Security -- Hadolint, Checkov, Trivy config scan, Bandit |
-| **Kyoraku** | `kyoraku.yml` | Build -- resolve config, Buildah build, DockerHub push, Trivy image scan, Cosign |
-| **Unohana** | `unohana.yml` | Release -- semver from conventional commits, retag, GitHub Release |
+| **Kyoraku** | `kyoraku.yml` | Build, Cosign, Trivy scan, semver release |
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):
 `feat:` minor, `fix:` patch, `feat!:` major.

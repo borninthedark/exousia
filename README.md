@@ -95,12 +95,9 @@ division maps to the workflow's role in the pipeline:
    (CI: lint+test)             (security scan)
              \                    /
               Kyoraku
-            (build+push)
+       (build, sign, release)
                  |
                Gate
-                 |
-             Unohana              <-- main branch only
-            (release)
 ```
 
 | Workflow | Captain | Division | Pipeline Role |
@@ -108,11 +105,10 @@ division maps to the workflow's role in the pipeline:
 | **Aizen** | Sosuke Aizen | The mastermind | Orchestrates the entire pipeline |
 | **Mayuri** | Mayuri Kurotsuchi | 12th -- Research & Development | Ruff, Black, isort, pytest, Codecov |
 | **Byakuya** | Byakuya Kuchiki | 6th -- Law & Order | Hadolint, Checkov, Trivy, Bandit, file structure |
-| **Kyoraku** | Shunsui Kyoraku | Captain-Commander | Buildah build, DockerHub push, Trivy image scan, Cosign |
-| **Unohana** | Retsu Unohana | 4th -- Healing & Renewal | Semver from conventional commits, retag, GitHub Release |
+| **Kyoraku** | Shunsui Kyoraku | Captain-Commander | Build, Cosign, Trivy scan, semver release |
 
-Aizen calls Mayuri and Byakuya in parallel. When both pass, Kyoraku builds and
-pushes. On `main`, the gate opens for Unohana to cut a release.
+Aizen calls Mayuri and Byakuya in parallel. When both pass, Kyoraku builds,
+signs, scans, and cuts a semver release on `main`.
 
 ### Versioning
 

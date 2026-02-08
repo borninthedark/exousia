@@ -1,12 +1,11 @@
 # Aizen - The Mastermind - Orchestrator
-# Calls Mayuri (CI) + Byakuya (security) in parallel, then Kyoraku (build), then gate.
+# Calls Mayuri (CI) + Byakuya (security) in parallel, then Kyoraku, then gate.
 #
 # Shinigami Pipeline:
 #   Aizen     -> Orchestrator (the one who sees everything)
 #   Mayuri    -> CI: lint + test (12th Division, Research & Development)
 #   Byakuya  -> Security scanning (6th Division, law & order)
-#   Kyoraku  -> Build + push (Captain-Commander, master strategist)
-#   Unohana   -> Release: semver + retag (4th Division, healing & renewal)
+#   Kyoraku  -> Build -> scan + sign -> release (Captain-Commander, master strategist)
 
 name: "Aizen - Orchestrator"
 
@@ -76,7 +75,7 @@ jobs:
       enable_plymouth: ${{ inputs.enable_plymouth == '' && true || inputs.enable_plymouth }}
     secrets: inherit
     permissions:
-      contents: read
+      contents: write
       packages: write
       id-token: write
 
@@ -103,15 +102,3 @@ jobs:
           needs.byakuya.result == 'failure' ||
           needs.kyoraku.result == 'failure'
         run: exit 1
-
-  # -- Unohana (Release) runs after gate on main pushes --
-  unohana:
-    name: "Unohana (Release)"
-    needs: [gate]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/unohana.yml
-    secrets: inherit
-    permissions:
-      contents: write
-      packages: write
-      id-token: write
