@@ -1,19 +1,22 @@
-# Exousia
+# Exousia: Declarative Bootc Builder
 
-[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](#the-shinigami-pipeline)
-[![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/aizen.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/aizen.yml)
+[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/aizen.yml?query=branch%3Amain+is%3Asuccess)
+[![Code Coverage](https://img.shields.io/codecov/c/github/borninthedark/exousia?style=for-the-badge&logo=codecov&logoColor=white&label=Coverage&token=G8NS9O5HZB)](https://codecov.io/gh/borninthedark/exousia)
+[![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
+<img src=".github/blue-sparrow.svg" alt="Blue Sparrow" width="28" />
 
-Declarative bootc image builder for Fedora Linux. YAML blueprints define OS
-images, Python tools transpile them to Containerfiles, Buildah builds them, and
-GitHub Actions pushes signed images to DockerHub.
+Build custom, container-based immutable operating systems using the
+[**bootc project**](https://github.com/bootc-dev/bootc). YAML blueprints define
+OS images, Python tools transpile them to Containerfiles, Buildah builds them,
+and GitHub Actions pushes signed images to DockerHub.
 
-> **Warning** -- This project is highly experimental. There are no guarantees
-> about stability, data safety, or fitness for any purpose.
+**Note:** The "Reiatsu" badge is inspired by *BLEACH* by **Tite Kubo** --
+used as a playful status indicator with full acknowledgment.
 
----
+## Table of Contents
 
-## Contents
-
+- [Highly Experimental Disclaimer](#highly-experimental-disclaimer)
 - [Quick Start](#quick-start)
 - [How It Works](#how-it-works)
 - [The Shinigami Pipeline](#the-shinigami-pipeline)
@@ -22,7 +25,16 @@ GitHub Actions pushes signed images to DockerHub.
 - [Required Secrets and Variables](#required-secrets-and-variables)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
+- [License](#license)
 - [Acknowledgments](#acknowledgments)
+
+---
+
+## Highly Experimental Disclaimer
+
+> **Warning**: This project is highly experimental. There are **no guarantees**
+> about stability, data safety, or fitness for any purpose. Proceed only if you
+> understand the risks.
 
 ---
 
@@ -64,12 +76,15 @@ Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://githu
 
 ## How It Works
 
-```text
-adnyeus.yml          Python transpiler          Buildah           DockerHub
- (blueprint)   --->  (tools/*.py)         --->  (Containerfile)  --->  (signed image)
-                          |
-                    package_loader.py
-                    resolve_build_config.py
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}%%
+graph LR
+    A["adnyeus.yml<br/>(blueprint)"] --> B["Python transpiler<br/>(tools/*.py)"]
+    B --> C["Containerfile"]
+    C --> D["Buildah build"]
+    D --> E["DockerHub<br/>(signed image)"]
+    B -.-> F["package_loader.py"]
+    B -.-> G["resolve_build_config.py"]
 ```
 
 - **Blueprint** (`adnyeus.yml`) -- declares base image, packages, overlays,
@@ -88,16 +103,14 @@ adnyeus.yml          Python transpiler          Buildah           DockerHub
 Every workflow is named after a captain from the Gotei 13. Each captain's
 division maps to the workflow's role in the pipeline:
 
-```text
-              Aizen (orchestrator)
-             /                    \
-      Mayuri                      Byakuya        <-- parallel
-   (CI: lint+test)             (security scan)
-             \                    /
-              Kyoraku
-       (build, sign, release)
-                 |
-               Gate
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}%%
+graph TD
+    A["Aizen<br/>(orchestrator)"] --> B["Mayuri<br/>(CI: lint+test)"]
+    A --> C["Byakuya<br/>(security scan)"]
+    B --> D["Kyoraku<br/>(build, sign, release)"]
+    C --> D
+    D --> E["Gate"]
 ```
 
 | Workflow | Captain | Division | Pipeline Role |
@@ -144,6 +157,7 @@ the blueprint directly.
 ### Desktop and boot
 
 - **Sway** uses `sway-config-minimal` with layered config.d overrides.
+  Configuration references drawn from [openSUSEway](https://github.com/openSUSE/openSUSEway).
 - **Plymouth** is toggled via `enable_plymouth: true` in the blueprint.
 - **greetd** is the login manager for all image types.
 - **ZFS** is optional -- enable via `build.enable_zfs: true`. See [ZFS docs](docs/ZFS_BOOTC.md).
@@ -208,18 +222,33 @@ versioning.
 
 ---
 
+## License
+
+MIT License -- see LICENSE file.
+
+---
+
 ## Acknowledgments
 
-- [bootc project](https://github.com/bootc-dev/bootc) and the Fedora community
-- [Fedora Sway SIG](https://gitlab.com/fedora/sigs/sway/sway-config-fedora) for Sway configs
+- [bootc project](https://github.com/bootc-dev/bootc) maintainers and the Fedora community
+- [Fedora Sway SIG](https://gitlab.com/fedora/sigs/sway/sway-config-fedora) for Sway configs and QoL improvements
+- [openSUSEway](https://github.com/openSUSE/openSUSEway) for Sway enhancements and config references
 - [Universal Blue](https://universal-blue.org/) and [BlueBuild](https://blue-build.org/) for container-native workflows
 - [Buildah](https://buildah.io/), [Podman](https://podman.io/), [Skopeo](https://github.com/containers/skopeo)
 
+### AI-Assisted Development
+
+This project uses AI-assisted development tools:
+
+- **[Claude Code](https://claude.ai/claude-code)** (Anthropic) -- code generation, refactoring, and CI/CD pipeline design
+- **[ChatGPT Codex](https://openai.com/index/openai-codex/)** (OpenAI) -- code generation and documentation
+- **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)** -- automated dependency updates for Actions and pip
+
 ### Creative
 
-**Tite Kubo** -- Creator of *BLEACH*. The CI/CD naming scheme and Reiatsu
-status indicator are inspired by the Gotei 13 and themes from BLEACH, used
-respectfully as a playful aesthetic. All rights belong to Tite Kubo and
+**Tite Kubo** -- Creator of *BLEACH*. The CI/CD naming scheme (Shinigami Pipeline)
+and Reiatsu status indicator are inspired by the Gotei 13 and themes from BLEACH,
+used respectfully as a playful aesthetic. All rights belong to Tite Kubo and
 respective copyright holders.
 
 ---

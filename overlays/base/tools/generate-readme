@@ -257,12 +257,15 @@ Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://githu
 
 ## How It Works
 
-```text
-adnyeus.yml          Python transpiler          Buildah           DockerHub
- (blueprint)   --->  (tools/*.py)         --->  (Containerfile)  --->  (signed image)
-                          |
-                    package_loader.py
-                    resolve_build_config.py
+```mermaid
+%%{{init: {{'theme': 'base', 'themeVariables': {{'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}}}}%%
+graph LR
+    A["adnyeus.yml<br/>(blueprint)"] --> B["Python transpiler<br/>(tools/*.py)"]
+    B --> C["Containerfile"]
+    C --> D["Buildah build"]
+    D --> E["DockerHub<br/>(signed image)"]
+    B -.-> F["package_loader.py"]
+    B -.-> G["resolve_build_config.py"]
 ```
 
 - **Blueprint** (`adnyeus.yml`) -- declares base image, packages, overlays,
@@ -281,16 +284,14 @@ adnyeus.yml          Python transpiler          Buildah           DockerHub
 Every workflow is named after a captain from the Gotei 13. Each captain's
 division maps to the workflow's role in the pipeline:
 
-```text
-              Aizen (orchestrator)
-             /                    \\
-      Mayuri                      Byakuya        <-- parallel
-   (CI: lint+test)             (security scan)
-             \\                    /
-              Kyoraku
-       (build, sign, release)
-                 |
-               Gate
+```mermaid
+%%{{init: {{'theme': 'base', 'themeVariables': {{'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}}}}%%
+graph TD
+    A["Aizen<br/>(orchestrator)"] --> B["Mayuri<br/>(CI: lint+test)"]
+    A --> C["Byakuya<br/>(security scan)"]
+    B --> D["Kyoraku<br/>(build, sign, release)"]
+    C --> D
+    D --> E["Gate"]
 ```
 
 | Workflow | Captain | Division | Pipeline Role |
@@ -337,6 +338,7 @@ the blueprint directly.
 ### Desktop and boot
 
 - **Sway** uses `sway-config-minimal` with layered config.d overrides.
+  Configuration references drawn from [openSUSEway](https://github.com/openSUSE/openSUSEway).
 - **Plymouth** is toggled via `enable_plymouth: true` in the blueprint.
 - **greetd** is the login manager for all image types.
 - **ZFS** is optional -- enable via `build.enable_zfs: true`. See [ZFS docs](docs/ZFS_BOOTC.md).
@@ -403,15 +405,26 @@ versioning.
 
 ## Acknowledgments
 
-- [bootc project](https://github.com/bootc-dev/bootc) and the Fedora community
-- [Fedora Sway SIG](https://gitlab.com/fedora/sigs/sway/sway-config-fedora) for Sway configs
+- [bootc project](https://github.com/bootc-dev/bootc) maintainers and the Fedora community
+- [Fedora Sway SIG](https://gitlab.com/fedora/sigs/sway/sway-config-fedora) for Sway configs and QoL improvements
+- [openSUSEway](https://github.com/openSUSE/openSUSEway) for Sway enhancements and config references
 - [Universal Blue](https://universal-blue.org/) and [BlueBuild](https://blue-build.org/) for container-native workflows
 - [Buildah](https://buildah.io/), [Podman](https://podman.io/), [Skopeo](https://github.com/containers/skopeo)
 
+### AI-Assisted Development
+
+This project uses AI-assisted development tools:
+
+- **[Claude Code](https://claude.ai/claude-code)** (Anthropic) -- code generation, refactoring, and CI/CD pipeline design
+- **[ChatGPT Codex](https://openai.com/index/openai-codex/)** (OpenAI) -- code generation and documentation
+- **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)** -- automated dependency updates for Actions and pip
+
 ### Creative
 
-**Tite Kubo** -- Creator of *BLEACH*. The Reiatsu status indicator is inspired
-by themes from BLEACH. All rights belong to Tite Kubo and respective holders.
+**Tite Kubo** -- Creator of *BLEACH*. The CI/CD naming scheme (Shinigami Pipeline)
+and Reiatsu status indicator are inspired by the Gotei 13 and themes from BLEACH,
+used respectfully as a playful aesthetic. All rights belong to Tite Kubo and
+respective copyright holders.
 
 ---
 
