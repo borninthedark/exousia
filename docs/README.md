@@ -23,9 +23,10 @@ Exousia uses a Shinigami-themed GitHub Actions pipeline (Gotei 13 captains):
 | Workflow | File | Role |
 |----------|------|------|
 | **Aizen** | `aizen.yml` | Orchestrator -- calls Mayuri + Byakuya in parallel, then Kyoraku, then gate |
-| **Mayuri** | `mayuri.yml` | CI -- Ruff, Black, isort, pytest + Codecov |
+| **Mayuri** | `mayuri.yml` | CI -- Ruff, Black, isort, pytest |
 | **Byakuya** | `byakuya.yml` | Security -- Hadolint, Checkov, Trivy config scan, Bandit |
 | **Kyoraku** | `kyoraku.yml` | Build, Cosign, Trivy scan, semver release |
+| **Yoruichi** | `yoruichi.yml` | Post-CI -- STATUS.md, badge updates |
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):
 `feat:` minor, `fix:` patch, `feat!:` major.
@@ -40,7 +41,7 @@ Configure in GitHub repository settings under **Settings > Secrets and variables
 
 | Name | Purpose |
 |------|---------|
-| `DOCKERHUB_TOKEN` | DockerHub access token (used by Kothar and Eshmun) |
+| `DOCKERHUB_TOKEN` | DockerHub access token |
 
 **Variables:**
 

@@ -4,63 +4,55 @@ Bats-based integration tests for bootc container images.
 
 ## Running Tests
 
-### Using Make (Recommended)
-
 ```bash
-# Build and test
-make build test
+# Build and test via justfile
+just build
+just test
 
-# Test only
-make test-run
-
-# Setup check
-make test-setup
-
-# Set image tag
+# Or run directly
 export TEST_IMAGE_TAG=localhost:5000/exousia:latest
-
-# Run all tests
-buildah unshare -- bats -r tests/
+buildah unshare -- bats -r custom-tests/
 
 # Verbose mode
-buildah unshare -- bats -r tests/ --verbose-run
+buildah unshare -- bats -r custom-tests/ --verbose-run
+```
 
-# TAP format
-buildah unshare -- bats -r tests/ --formatter tap
+## Structure
 
-tests/
-├── README.md              # This file
-└── image_content.bats     # Main test suite (52+ tests)
+```text
+custom-tests/
+└── image_content.bats     # Main test suite
+```
 
+Tests mount the built container image with `buildah` and assert on filesystem
+contents, installed packages, enabled services, and configuration files.
+
+## Filtering
+
+```bash
 # Run specific test by line number
-buildah unshare -- bats tests/image_content.bats:85
+buildah unshare -- bats custom-tests/image_content.bats:85
 
 # Filter tests by pattern
-buildah unshare -- bats tests/image_content.bats --filter "package"
+buildah unshare -- bats custom-tests/image_content.bats --filter "package"
+```
 
-# Show all output
-buildah unshare -- bats -r tests/ --show-output-of-passing-tests
+## Prerequisites
 
-# Fedora/RHEL
+```bash
+# Fedora
 sudo dnf install bats buildah
+```
 
-# Or from source
-git clone https://github.com/bats-core/bats-core.git
-cd bats-core
-sudo ./install.sh /usr/local
-
-# Or use the github action #
-
-# Always use buildah unshare
-buildah unshare -- bats -r tests/
-
-## Why Bats instead of pytest?
+## Why Bats?
 
 The integration suite mounts the produced container image with `buildah` and
 asserts on its filesystem contents. Using Bats keeps the runner dependency
 footprint minimal (only shell, buildah, and the bats libraries are required)
 and avoids having to vendor Python tooling into the host or the image under
-test. Converting these checks to pytest would require shipping Python and its
-dependencies into the same environment that performs the mount operations,
-which adds overhead and complicates portability across the different distros
-the project supports.
+test.
+
+## See Also
+
+- [Testing Docs](../docs/testing/) -- Test architecture and writing guide
+- [Build Tools](../tools/) -- Transpiler that generates the Containerfile
