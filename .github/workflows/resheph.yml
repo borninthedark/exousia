@@ -40,7 +40,7 @@ jobs:
           soft_fail: true
 
       - name: Trivy config scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           scan-type: config
           scan-ref: .
