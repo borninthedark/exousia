@@ -21,6 +21,7 @@ used as a playful status indicator with full acknowledgment.
 - [How It Works](#how-it-works)
 - [The Shinigami Pipeline](#the-shinigami-pipeline)
 - [Customizing Builds](#customizing-builds)
+- [Local Build Pipeline](#local-build-pipeline)
 - [YubiKey Authentication](#yubikey-authentication)
 - [Required Secrets and Variables](#required-secrets-and-variables)
 - [Documentation](#documentation)
@@ -113,13 +114,6 @@ graph TD
     D --> E["Gate"]
 ```
 
-| Workflow | Captain | Division | Pipeline Role |
-|----------|---------|----------|---------------|
-| **Aizen** | Sosuke Aizen | The mastermind | Orchestrates the entire pipeline |
-| **Mayuri** | Mayuri Kurotsuchi | 12th -- Research & Development | Ruff, Black, isort, pytest, Codecov |
-| **Byakuya** | Byakuya Kuchiki | 6th -- Law & Order | Hadolint, Checkov, Trivy, Bandit, file structure |
-| **Kyoraku** | Shunsui Kyoraku | Captain-Commander | Build, Cosign, Trivy scan, semver release |
-
 Aizen calls Mayuri and Byakuya in parallel. When both pass, Kyoraku builds,
 signs, scans, and cuts a semver release on `main`.
 
@@ -161,6 +155,22 @@ the blueprint directly.
 - **Plymouth** is toggled via `enable_plymouth: true` in the blueprint.
 - **greetd** is the login manager for all image types.
 - **ZFS** is optional -- enable via `build.enable_zfs: true`. See [ZFS docs](docs/ZFS_BOOTC.md).
+
+---
+
+## Local Build Pipeline
+
+Build images locally with Podman Quadlet services before promoting to DockerHub:
+
+```bash
+just quadlet-install && just quadlet-start   # start Forgejo + local registry
+just local-build                             # generate containerfile, buildah build, push to local registry
+just local-test                              # run bats tests against local image
+just local-push                              # promote to DockerHub via skopeo
+```
+
+See [Local Build Pipeline docs](docs/local-build-pipeline.md) for the full
+setup, Forgejo runner registration, and troubleshooting.
 
 ---
 
@@ -208,6 +218,7 @@ Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 | Topic | Links |
 |-------|-------|
 | Getting Started | [Upgrade Guide](docs/BOOTC_UPGRADE.md) &#124; [Image Builder](docs/BOOTC_IMAGE_BUILDER.md) |
+| Architecture | [Overlay System](docs/overlay-system.md) &#124; [Local Build Pipeline](docs/local-build-pipeline.md) |
 | Desktop | [Sway + greetd](docs/sway-session-greetd.md) &#124; [Plymouth](docs/reference/plymouth_usage_doc.md) |
 | Testing | [Test Suite](docs/testing/README.md) &#124; [Writing Tests](docs/reference/writing-tests.md) |
 | Reference | [Troubleshooting](docs/reference/troubleshooting.md) &#124; [Security](SECURITY.md) |
@@ -240,9 +251,9 @@ MIT License -- see LICENSE file.
 
 This project uses AI-assisted development tools:
 
-- **[Claude Code](https://claude.ai/claude-code)** (Anthropic) -- code generation, refactoring, and CI/CD pipeline design
-- **[ChatGPT Codex](https://openai.com/index/openai-codex/)** (OpenAI) -- code generation and documentation
-- **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)** -- automated dependency updates for Actions and pip
+- **[Claude Code](https://claude.ai/claude-code)** (Anthropic)
+- **[ChatGPT Codex](https://openai.com/index/openai-codex/)** (OpenAI)
+- **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)**
 
 ### Creative
 

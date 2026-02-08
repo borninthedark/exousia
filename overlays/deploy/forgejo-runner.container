@@ -1,6 +1,7 @@
 [Unit]
 Description=Forgejo Actions runner
 After=forgejo.service
+Requires=forgejo.service
 
 [Container]
 Image=codeberg.org/forgejo/runner:latest
@@ -11,6 +12,7 @@ Network=exousia.network
 Label=io.containers.autoupdate=registry
 Environment=FORGEJO_INSTANCE_URL=http://forgejo:3000
 Environment=FORGEJO_RUNNER_LABELS=ubuntu-latest:docker://node:20
+Environment=FORGEJO_RUNNER_TOKEN=
 
 [Service]
 Restart=always

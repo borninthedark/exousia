@@ -8,6 +8,8 @@ ContainerName=exousia-registry
 PublishPort=5000:5000
 Volume=exousia-registry-data.volume:/var/lib/registry
 Network=exousia.network
+Label=io.containers.autoupdate=registry
+Environment=REGISTRY_STORAGE_DELETE_ENABLED=true
 
 [Service]
 Restart=always

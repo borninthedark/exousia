@@ -106,6 +106,8 @@ Deploys Podman Quadlet services for local development:
 | Registry | 5000 | Local container registry |
 
 All services use the `exousia.network` (10.89.1.0/24) for inter-service communication.
+See [Local Build Pipeline](local-build-pipeline.md) for Quadlet setup, build
+workflow, and promotion to DockerHub.
 
 ### CI Build Role (tag: `ci_build`)
 

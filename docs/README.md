@@ -10,6 +10,7 @@ Comprehensive documentation for building, testing, and deploying custom Fedora b
 - [Desktop and Session](#desktop-and-session)
 - [Configuration](#configuration)
 - [Testing](#testing)
+- [Architecture](#architecture)
 - [Infrastructure](#infrastructure)
 - [Reference](#reference)
 
@@ -75,6 +76,11 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Aizen.
 - **[testing/test_suite.md](testing/test_suite.md)** -- Test categories and expected output
 - **[reference/writing-tests.md](reference/writing-tests.md)** -- How to write new tests
 
+## Architecture
+
+- **[overlay-system.md](overlay-system.md)** -- Overlay directory structure and how files map into images
+- **[local-build-pipeline.md](local-build-pipeline.md)** -- Quadlet services, local build, and promotion to DockerHub
+
 ## Infrastructure
 
 - **[ansible.md](ansible.md)** -- Ansible playbooks for post-deployment configuration
@@ -91,16 +97,18 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Aizen.
 
 ```text
 docs/
-├── README.md                   <- You are here
-├── testing/                    # Test documentation
+├── README.md                       <- You are here
+├── local-build-pipeline.md         # Quadlet services and local build workflow
+├── overlay-system.md               # Overlay directory structure
+├── testing/                        # Test documentation
 │   ├── README.md
 │   ├── guide.md
 │   └── test_suite.md
-├── reference/                  # Reference materials
+├── reference/                      # Reference materials
 │   ├── troubleshooting.md
 │   ├── plymouth_usage_doc.md
 │   └── writing-tests.md
-└── *.md                        # Feature and topic docs
+└── *.md                            # Feature and topic docs
 ```
 
 ---

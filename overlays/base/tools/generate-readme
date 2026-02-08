@@ -294,13 +294,6 @@ graph TD
     D --> E["Gate"]
 ```
 
-| Workflow | Captain | Division | Pipeline Role |
-|----------|---------|----------|---------------|
-| **Aizen** | Sosuke Aizen | The mastermind | Orchestrates the entire pipeline |
-| **Mayuri** | Mayuri Kurotsuchi | 12th -- Research & Development | Ruff, Black, isort, pytest, Codecov |
-| **Byakuya** | Byakuya Kuchiki | 6th -- Law & Order | Hadolint, Checkov, Trivy, Bandit, file structure |
-| **Kyoraku** | Shunsui Kyoraku | Captain-Commander | Build, Cosign, Trivy scan, semver release |
-
 Aizen calls Mayuri and Byakuya in parallel. When both pass, Kyoraku builds,
 signs, scans, and cuts a semver release on `main`.
 
@@ -415,9 +408,9 @@ versioning.
 
 This project uses AI-assisted development tools:
 
-- **[Claude Code](https://claude.ai/claude-code)** (Anthropic) -- code generation, refactoring, and CI/CD pipeline design
-- **[ChatGPT Codex](https://openai.com/index/openai-codex/)** (OpenAI) -- code generation and documentation
-- **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)** -- automated dependency updates for Actions and pip
+- **[Claude Code](https://claude.ai/claude-code)** (Anthropic)
+- **[ChatGPT Codex](https://openai.com/index/openai-codex/)** (OpenAI)
+- **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)**
 
 ### Creative
 

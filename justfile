@@ -132,6 +132,37 @@ ansible-quadlets *args:
 ansible-build *args:
     cd ansible && ansible-playbook site.yml --tags ci_build {{ args }}
 
+# Build image locally and push to local registry
+local-build tag="latest":
+    @echo "==> Generating Containerfile..."
+    uv run python tools/yaml-to-containerfile.py \
+        --config adnyeus.yml \
+        --image-type fedora-sway-atomic \
+        --output Containerfile.local.generated
+    @echo "==> Building image with buildah..."
+    buildah bud -t localhost:5000/exousia:{{ tag }} -f Containerfile.local.generated .
+    @echo "==> Pushing to local registry..."
+    skopeo copy \
+        containers-storage:localhost:5000/exousia:{{ tag }} \
+        docker://localhost:5000/exousia:{{ tag }} \
+        --dest-tls-verify=false
+    @echo "==> Done. Image available at localhost:5000/exousia:{{ tag }}"
+
+# Promote image from local registry to DockerHub
+local-push tag="latest" image="1borninthedark/exousia":
+    @echo "==> Copying localhost:5000/exousia:{{ tag }} -> docker.io/{{ image }}:{{ tag }}"
+    skopeo copy \
+        docker://localhost:5000/exousia:{{ tag }} \
+        docker://docker.io/{{ image }}:{{ tag }} \
+        --src-tls-verify=false
+    @echo "==> Pushed to docker.io/{{ image }}:{{ tag }}"
+
+# Run bats tests against locally built image
+local-test tag="latest":
+    @echo "==> Running bats tests against localhost:5000/exousia:{{ tag }}..."
+    podman run --rm localhost:5000/exousia:{{ tag }} cat /etc/os-release
+    bats custom-tests/image_content.bats
+
 # Generate README.md from template
 readme:
     uv run python overlays/base/tools/generate-readme
