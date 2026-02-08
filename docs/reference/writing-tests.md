@@ -16,10 +16,10 @@ Guide for adding new tests to the suite.
 ```bash
 @test "Descriptive test name that explains what is being validated" {
     # Arrange: Setup test data or conditions (if needed)
-    
+
     # Act: Perform the action or check
     run command_to_test
-    
+
     # Assert: Verify the results
     assert_success "Helpful error message explaining what failed"
     assert_output "expected output"
@@ -39,6 +39,7 @@ Guide for adding new tests to the suite.
 ```
 
 Test names should:
+
 - Explain what is being tested
 - Describe expected behavior
 - Be readable as documentation
@@ -54,6 +55,7 @@ assert_success
 ```
 
 Error messages should:
+
 - Explain what should have happened
 - Provide context for debugging
 - Be specific about the failure
@@ -75,6 +77,7 @@ assert_dir_exists "$MOUNT_POINT/var/lib/greeter"
 ```
 
 Available helpers from bats-file:
+
 - `assert_file_exists`
 - `assert_file_not_exists`
 - `assert_file_executable`
@@ -99,6 +102,7 @@ Available helpers from bats-file:
 ```
 
 **When to use conditionals:**
+
 - Feature exists only in one image type
 - Configuration differs by type
 - Different packages installed per type
@@ -119,6 +123,7 @@ Test what should NOT be present to catch regressions.
 ### 6. Keep Tests Independent
 
 Each test should:
+
 - Not depend on other tests running first
 - Not modify shared state
 - Clean up after itself (if needed)
@@ -159,7 +164,7 @@ assert_output --partial "expected text"
 ```bash
 @test "Configuration file should contain required setting" {
     assert_file_exists "$MOUNT_POINT/etc/example/config.conf"
-    
+
     run grep -q 'setting=value' "$MOUNT_POINT/etc/example/config.conf"
     assert_success "Configuration should contain 'setting=value'"
 }
@@ -171,7 +176,7 @@ assert_output --partial "expected text"
 @test "Symlink should point to correct target" {
     run test -L "$MOUNT_POINT/path/to/link"
     assert_success "Should be a symlink"
-    
+
     run readlink "$MOUNT_POINT/path/to/link"
     assert_output "/target/path"
 }
@@ -192,7 +197,7 @@ assert_output --partial "expected text"
 @test "System user should exist with correct configuration" {
     run chroot "$MOUNT_POINT" getent passwd username
     assert_success "username should exist"
-    
+
     echo "$output" | grep -Eq '^username:x:[0-9]+:[0-9]+:.*'
     assert_success "username should have correct format"
 }
@@ -205,10 +210,10 @@ assert_output --partial "expected text"
     # Check installation
     run buildah run "$CONTAINER" -- rpm -q package-name
     assert_success "package-name should be installed"
-    
+
     # Check configuration exists
     assert_file_exists "$MOUNT_POINT/etc/package/config.conf"
-    
+
     # Check configuration content
     run grep -q 'enabled=true' "$MOUNT_POINT/etc/package/config.conf"
     assert_success "Package should be enabled"
@@ -231,7 +236,7 @@ assert_output --partial "expected text"
 ```bash
 @test "Sway environment file should exist and contain Java compatibility" {
     assert_file_exists "$MOUNT_POINT/etc/sway/environment"
-    
+
     run grep -q '_JAVA_AWT_WM_NONREPARENTING=1' "$MOUNT_POINT/etc/sway/environment"
     assert_success "Sway environment should contain Java compatibility variable"
 }
@@ -242,7 +247,7 @@ assert_output --partial "expected text"
 ```bash
 @test "Custom script should be executable and have correct shebang" {
     assert_file_executable "$MOUNT_POINT/usr/local/bin/custom-script"
-    
+
     run head -n1 "$MOUNT_POINT/usr/local/bin/custom-script"
     assert_output '#!/usr/bin/env bash'
 }
@@ -255,10 +260,10 @@ assert_output --partial "expected text"
     if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
         assert_dir_exists "$MOUNT_POINT/var/roothome"
         assert_dir_exists "$MOUNT_POINT/var/opt"
-        
+
         run test -L "$MOUNT_POINT/opt"
         assert_success "/opt should be a symlink"
-        
+
         run readlink "$MOUNT_POINT/opt"
         assert_output "/var/opt"
     else
@@ -274,7 +279,7 @@ assert_output --partial "expected text"
     if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
         run buildah run "$CONTAINER" -- systemctl is-enabled greetd.service
         assert_success "greetd should be enabled for fedora-bootc"
-        
+
         run buildah run "$CONTAINER" -- systemctl get-default
         assert_output "graphical.target"
     else
@@ -297,7 +302,7 @@ assert_output --partial "expected text"
 ```bash
 @test "RPM Fusion Free repository should be configured and enabled" {
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-free.repo"
-    
+
     run grep -E '^\s*enabled\s*=\s*1' "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-free.repo"
     assert_success "RPM Fusion Free should be enabled"
 }
@@ -332,7 +337,7 @@ buildah unshare -- bats -r custom-tests/ --show-output-of-passing-tests
     echo "IMAGE_TYPE=$IMAGE_TYPE" >&3
     echo "MOUNT_POINT=$MOUNT_POINT" >&3
     ls -la "$MOUNT_POINT/usr/local/bin/" >&3
-    
+
     # Your test logic here
 }
 ```
@@ -434,7 +439,7 @@ fi
 @test "package should be installed and configured" {
     run buildah run "$CONTAINER" -- rpm -q package
     assert_success "Package should be installed"
-    
+
     run grep config "$MOUNT_POINT/etc/config"
     assert_success "Configuration should exist"
 }

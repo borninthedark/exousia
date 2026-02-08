@@ -1,0 +1,146 @@
+# Kothar - God of Craftsmanship - Build + Push
+# Resolves config, generates Containerfile, builds and pushes to registry.
+
+name: "Kothar - Build"
+
+on:
+  workflow_call:
+    inputs:
+      image_type:
+        description: "Fedora image type to build"
+        type: string
+        default: "fedora-sway-atomic"
+      distro_version:
+        description: "Fedora version"
+        type: string
+        default: "43"
+      enable_plymouth:
+        description: "Enable Plymouth boot splash"
+        type: boolean
+        default: true
+
+env:
+  DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
+  REGISTRY_URL: ${{ vars.REGISTRY_URL || 'docker.io' }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build Bootc Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      image_tag: ${{ steps.tag.outputs.tag }}
+      image_digest: ${{ steps.build-push.outputs.digest }}
+      build_type: ${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
+      enable_plymouth: ${{ steps.config.outputs.ENABLE_PLYMOUTH }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Detect and resolve distro configuration
+        id: config
+        env:
+          INPUT_IMAGE_TYPE: ${{ inputs.image_type }}
+          INPUT_DISTRO_VERSION: ${{ inputs.distro_version }}
+          INPUT_ENABLE_PLYMOUTH: ${{ inputs.enable_plymouth }}
+        run: uv run python tools/resolve_build_config.py
+
+      - name: Download generated Containerfile
+        uses: actions/download-artifact@v4
+        with:
+          name: containerfile-generated
+
+      - name: Generate image tag
+        id: tag
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          TAG="${{ steps.config.outputs.BUILD_IMAGE_TYPE }}-${SHORT_SHA}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Create auth.json secret for build
+        run: |
+          mkdir -p ./bootc-secrets
+          if [[ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]]; then
+            DH_AUTH=$(printf "%s:%s" "${{ vars.DOCKERHUB_USERNAME }}" "${{ secrets.DOCKERHUB_TOKEN }}" | base64 -w0)
+            cat > ./bootc-secrets/auth.json <<EOF
+          {"auths":{"${{ env.REGISTRY_URL }}":{"auth":"${DH_AUTH}"}}}
+          EOF
+          else
+            echo '{"auths":{}}' > ./bootc-secrets/auth.json
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ steps.config.outputs.CONTAINERFILE }}
+          push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ env.REGISTRY_URL }}/${{ env.DOCKERHUB_IMAGE }}:${{ steps.tag.outputs.tag }}
+            ${{ env.REGISTRY_URL }}/${{ env.DOCKERHUB_IMAGE }}:latest
+          build-args: |
+            FEDORA_VERSION=${{ steps.config.outputs.BUILD_VERSION }}
+            IMAGE_TYPE=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
+            ENABLE_PLYMOUTH=${{ steps.config.outputs.ENABLE_PLYMOUTH }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Install cosign
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image by digest
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+        run: |
+          cosign sign --yes "${{ env.REGISTRY_URL }}/${{ env.DOCKERHUB_IMAGE }}@${{ steps.build-push.outputs.digest }}"
+
+  scan:
+    name: Trivy Image Scan
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    timeout-minutes: 15
+
+    steps:
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ vars.REGISTRY_URL || 'docker.io' }}/${{ vars.DOCKERHUB_IMAGE }}:${{ needs.build.outputs.image_tag }}
+          severity: HIGH,CRITICAL
+          exit-code: 0
+
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## Kothar: Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | \`${{ vars.DOCKERHUB_IMAGE }}:${{ needs.build.outputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Type | ${{ needs.build.outputs.build_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Plymouth | ${{ needs.build.outputs.enable_plymouth }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Digest | \`${{ needs.build.outputs.image_digest }}\` |" >> $GITHUB_STEP_SUMMARY

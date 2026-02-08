@@ -83,7 +83,9 @@ def test_get_package_list_with_wm():
 
     # Should not have removed packages in install list
     for pkg in result["remove"]:
-        assert pkg not in result["install"], f"Package {pkg} should not be in both install and remove"
+        assert (
+            pkg not in result["install"]
+        ), f"Package {pkg} should not be in both install and remove"
 
     print("✓ Complete package list generation works correctly")
 
@@ -107,15 +109,9 @@ def test_flatten_packages():
     loader = PackageLoader()
 
     config = {
-        "metadata": {
-            "name": "test",
-            "type": "test"
-        },
+        "metadata": {"name": "test", "type": "test"},
         "core": ["pkg1", "pkg2"],
-        "utilities": {
-            "shell": ["bash", "zsh"],
-            "editor": ["vim"]
-        }
+        "utilities": {"shell": ["bash", "zsh"], "editor": ["vim"]},
     }
 
     packages = loader.flatten_packages(config)
@@ -163,8 +159,9 @@ def test_no_duplicate_packages():
     install_packages = result["install"]
     unique_packages = set(install_packages)
 
-    assert len(install_packages) == len(unique_packages), \
-        f"Install list has duplicates: {len(install_packages)} vs {len(unique_packages)}"
+    assert len(install_packages) == len(
+        unique_packages
+    ), f"Install list has duplicates: {len(install_packages)} vs {len(unique_packages)}"
 
     print("✓ Package lists are deduplicated correctly")
 

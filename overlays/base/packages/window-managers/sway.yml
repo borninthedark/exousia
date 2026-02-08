@@ -1,0 +1,140 @@
+# Sway Window Manager Package Definition
+# This defines all packages needed for a Sway desktop environment
+
+metadata:
+  name: sway
+  type: window-manager
+  description: Tiling Wayland compositor and i3 replacement
+  homepage: https://swaywm.org/
+
+# Core Sway components
+core:
+  - sway
+  - swaylock  # Screen locker
+  - swayidle
+  - swaybg
+  - waybar
+
+# Terminal emulators
+terminals:
+  - kitty  # Primary terminal
+
+# Application launchers and notifications
+launchers:
+  - fuzzel
+
+notifications:
+  - mako
+  - swaync
+
+# Display manager
+display_manager:
+  - greetd
+  - tuigreet
+
+# Wayland core components
+wayland:
+  - wlroots
+  - xorg-x11-server-Xwayland
+  - seatd
+
+# Session and authentication
+session:
+  - lxqt-policykit  # Using lxqt-polkit instead of xfce-polkit
+  - xdg-utils
+  - xdg-user-dirs
+  - xdg-dbus-proxy
+  - flatpak-xdg-utils
+  - xdg-desktop-portal
+  - xdg-desktop-portal-wlr
+  - xdg-desktop-portal-lxqt
+
+# Audio stack (PipeWire)
+audio:
+  - pipewire
+  - pipewire-alsa
+  - pipewire-pulseaudio
+  - pipewire-utils
+  - wireplumber
+  - pavucontrol
+  - pamixer
+  - playerctl
+
+# Graphics drivers
+graphics:
+  - mesa-dri-drivers
+  - mesa-vulkan-drivers
+
+# Essential fonts
+fonts:
+  - google-noto-sans-fonts
+  - google-noto-serif-fonts
+  - dejavu-sans-fonts
+  - dejavu-sans-mono-fonts
+
+# File manager
+file_manager:
+  - thunar
+  - thunar-archive-plugin
+  - thunar-volman
+  - gvfs
+  - gvfs-mtp
+  - gvfs-gphoto2
+
+# Media viewers
+media:
+  - imv
+  - zathura
+  - zathura-pdf-mupdf
+
+# Screenshot tools
+screenshot:
+  - grim
+  - slurp
+  - swappy
+
+# System controls
+system_controls:
+  - brightnessctl
+  - network-manager-applet
+  - nm-connection-editor
+  - wlogout
+
+# Bluetooth support
+bluetooth:
+  - bluez-tools
+  - blueman
+
+# Power management
+power:
+  - tlp
+  - powertop
+
+# GTK theme support
+theme:
+  - adwaita-icon-theme
+  - adwaita-gtk2-theme
+  - gnome-themes-extra
+  - qt6ct
+  - nwg-look
+
+# Wayland utilities
+utilities:
+  - wl-clipboard
+  - cliphist
+  - wev
+  - kanshi
+  - wlsunset
+  - wob
+
+# System utilities
+system:
+  - jq
+  - curl
+  - ImageMagick
+
+# Boot splash (optional, for bootc images)
+boot_splash:
+  - plymouth
+  - plymouth-system-theme
+  - plymouth-plugin-two-step

@@ -28,12 +28,11 @@ labels:
 # Build configuration
 build:
   enable_plymouth: true
-  enable_rke2: true  # Enable RKE2 Kubernetes for immutable k8s infrastructure
 
   # Sway Configuration
   # See: https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/
   #
-  # Exousia uses custom sway configs from custom-configs/sway/ by default.
+  # Exousia uses custom sway configs from overlays/sway/ by default.
   # This provides:
   #   - Custom sway.desktop, environment, and start-sway script
   #   - Layered config.d snippets in /etc/sway/config.d/
@@ -52,7 +51,7 @@ modules:
   # System users configuration
   - type: files
     files:
-      - src: sysusers/bootc.conf
+      - src: overlays/base/sysusers/bootc.conf
         dst: /usr/lib/sysusers.d/bootc.conf
         mode: "0644"
 
@@ -83,55 +82,76 @@ modules:
   - type: files
     condition: enable_plymouth == true
     files:
-      - src: custom-configs/plymouth/themes/bgrt-better-luks/
+      - src: overlays/sway/configs/plymouth/themes/bgrt-better-luks/
         dst: /usr/share/plymouth/themes/bgrt-better-luks/
         mode: "0644"
 
-  # Custom repositories (includes kubernetes.repo)
+  # Custom repositories
   - type: files
     files:
-      - src: custom-repos/
+      - src: overlays/sway/repos/
         dst: /etc/yum.repos.d/
         mode: "0644"
 
-  # Custom configurations
+  # Base configurations (PAM, polkit, tmpfiles)
   - type: files
     files:
-      - src: custom-configs/
+      - src: overlays/base/configs/
         dst: /etc/
         mode: "0644"
 
-  # Custom scripts
+  # Sway configurations (greetd, sway, swaylock)
   - type: files
     files:
-      - src: custom-scripts/
+      - src: overlays/sway/configs/
+        dst: /etc/
+        mode: "0644"
+
+  # Base scripts
+  - type: files
+    files:
+      - src: overlays/base/tools/
+        dst: /usr/local/bin/
+        mode: "0755"
+
+  # Sway setup scripts
+  - type: files
+    files:
+      - src: overlays/sway/scripts/setup/
+        dst: /usr/local/bin/
+        mode: "0755"
+
+  # Sway runtime scripts
+  - type: files
+    files:
+      - src: overlays/sway/scripts/runtime/
         dst: /usr/local/bin/
         mode: "0755"
 
   # Sway session files (custom Exousia configs)
   - type: files
     files:
-      - src: custom-configs/sway/sway.desktop
+      - src: overlays/sway/session/sway.desktop
         dst: /usr/share/wayland-sessions/sway.desktop
         mode: "0644"
-      - src: custom-configs/sway/environment
+      - src: overlays/sway/session/environment
         dst: /etc/sway/environment
         mode: "0644"
-      - src: custom-configs/sway/start-sway
+      - src: overlays/sway/session/start-sway
         dst: /usr/bin/start-sway
         mode: "0755"
-      - src: custom-scripts/layered-include
+      - src: overlays/sway/scripts/runtime/layered-include
         dst: /usr/libexec/sway/layered-include
         mode: "0755"
-      - src: custom-scripts/volume-helper
+      - src: overlays/sway/scripts/runtime/volume-helper
         dst: /usr/libexec/sway/volume-helper
         mode: "0755"
 
   # Package management using new YAML-based loader
   # Automatically loads packages based on desktop.window_manager or desktop.desktop_environment
   - type: package-loader
-    window_manager: sway  # Loaded from packages/window-managers/sway.yml
-    include_common: true  # Also loads packages/common/base.yml including Fedora Wayland build deps
+    window_manager: sway  # Loaded from overlays/base/packages/window-managers/sway.yml
+    include_common: true  # Also loads overlays/base/packages/common/base.yml including Fedora Wayland build deps
 
   # Flatpak setup - Add Flathub remote at build time for testing
   # The remote must be present for tests to verify configuration
@@ -152,7 +172,7 @@ modules:
   # 1. Set up the Flathub remote on first boot (if not already present)
   # 2. Install all configured flatpak applications
   # See: https://blue-build.org/reference/modules/default-flatpaks/
-  - from-file: packages/common/flatpaks.yml
+  - from-file: overlays/base/packages/common/flatpaks.yml
 
   # Chezmoi dotfiles management
   # Automatically manages dotfiles from the configured repository
@@ -172,138 +192,6 @@ modules:
 
   # Enable image signing support
   - type: signing
-
-  # ============================================================================
-  # RKE2 Kubernetes Integration (optional, enabled via build.enable_rke2)
-  # Follows official quickstart: https://docs.rke2.io/install/quickstart
-  # ============================================================================
-
-  # RKE2 management CLI (Python)
-  - type: files
-    condition: enable_rke2 == true
-    files:
-      - src: tools/rke2_ops.py
-        dst: /usr/local/bin/rke2_ops
-        mode: "0755"
-
-  # RKE2 Server installation - Step 1: Run the installer
-  # This installs rke2-server service and rke2 binary
-  - type: script
-    condition: enable_rke2 == true
-    scripts:
-      - |
-        # Install RKE2 server using official install script
-        # Default INSTALL_RKE2_TYPE is "server" so we don't need to specify it
-        INSTALL_RKE2_BIN_DIR=/var/lib/rancher/rke2/bin \
-          curl -sfL https://get.rke2.io | sh -
-
-        # Ensure kubectl is staged even if the installer omitted it
-        mkdir -p /var/lib/rancher/rke2/bin
-        if [ ! -x /var/lib/rancher/rke2/bin/kubectl ] && [ -x /usr/bin/kubectl ]; then
-          install -m 0755 /usr/bin/kubectl /var/lib/rancher/rke2/bin/kubectl
-        fi
-
-        if [ -x /var/lib/rancher/rke2/bin/kubectl ] && [ ! -e /usr/local/bin/kubectl ]; then
-          ln -s /var/lib/rancher/rke2/bin/kubectl /usr/local/bin/kubectl
-        fi
-
-        if [ ! -x /var/lib/rancher/rke2/bin/kubectl ]; then
-          echo "✗ RKE2 kubectl not found after install" >&2
-          exit 1
-        fi
-
-        # Ensure the RKE2 binary is in the expected location for tests
-        if [ -x /var/lib/rancher/rke2/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
-          ln -s /var/lib/rancher/rke2/bin/rke2 /usr/local/bin/rke2
-        elif [ -x /usr/bin/rke2 ] && [ ! -e /usr/local/bin/rke2 ]; then
-          ln -s /usr/bin/rke2 /usr/local/bin/rke2
-        fi
-
-        if [ ! -x /usr/local/bin/rke2 ]; then
-          echo "✗ RKE2 binary missing after install" >&2
-          exit 1
-        fi
-
-        # Verify installation
-        # Note: RKE2 binary location may vary (RPM installs to /usr/bin, script installs to /usr/local/bin)
-        if [ -f /usr/local/bin/rke2 ] || [ -f /usr/bin/rke2 ]; then
-            echo "✓ RKE2 binary installed"
-        else
-            echo "✗ RKE2 binary not found"
-        fi
-        test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service installed" || echo "✗ rke2-server.service not found"
-
-  # RKE2 configuration directory
-  - type: script
-    condition: enable_rke2 == true
-    scripts:
-      - |
-        # Create RKE2 config directory
-        mkdir -p /etc/rancher/rke2
-
-  # RKE2 configuration files (already copied via custom-configs)
-  # Ensure these files exist in your custom-configs directory:
-  # - custom-configs/rancher/rke2/registries.yaml -> /etc/rancher/rke2/registries.yaml
-  # - custom-configs/rancher/rke2/config.yaml -> /etc/rancher/rke2/config.yaml
-  # The config.yaml should contain server-specific settings like:
-  #   write-kubeconfig-mode: "0644"
-  #   tls-san:
-  #     - "your-server-hostname"
-  #   node-label:
-  #     - "node-role.kubernetes.io/control-plane=true"
-
-  # RKE2 systemd drop-in directory for custom overrides
-  - type: script
-    condition: enable_rke2 == true
-    scripts:
-      - mkdir -p /etc/systemd/system/rke2-server.service.d
-
-  # RKE2 firewall configuration - open required ports
-  - type: script
-    condition: enable_rke2 == true
-    scripts:
-      - /usr/local/bin/rke2-configure-firewall
-
-  # RKE2 data directories and paths
-  - type: script
-    condition: enable_rke2 == true
-    scripts:
-      - |
-        # Create required directories for RKE2
-        mkdir -p /var/lib/rancher/rke2
-        mkdir -p /var/lib/rancher/rke2/bin
-        mkdir -p /var/lib/rancher/rke2/server
-        mkdir -p /usr/local/bin
-
-        # Note: /mnt/host/* directories are created at runtime by cloud-init
-        # See: k8s/rke2/cloud-init.yaml (lines 124-125)
-        # They serve as mount points for 9p virtio shares and don't need to be
-        # baked into the image
-
-  # RKE2 SELinux contexts
-  - type: script
-    condition: enable_rke2 == true
-    scripts:
-      - |
-        # Set proper SELinux contexts for RKE2 directories
-        semanage fcontext -a -t container_var_lib_t "/var/lib/rancher/rke2(/.*)?" || true
-        restorecon -R /var/lib/rancher/rke2 || true
-
-  # RKE2 kernel arguments for proper cgroups v2 support
-  - type: script
-    condition: enable_rke2 == true
-    scripts:
-      - |
-        mkdir -p /usr/lib/bootc/kargs.d
-        echo 'kargs = ["systemd.unified_cgroup_hierarchy=1", "swapaccount=1"]' > /usr/lib/bootc/kargs.d/99-rke2.toml
-
-  # RKE2 MOTD with helpful commands
-  - type: files
-    condition: enable_rke2 == true
-    files:
-      - src: custom-configs/rancher/rke2/motd
-        dst: /etc/motd
-        mode: "0644"
 
   # Plymouth configuration (all images when enabled)
   - type: script
@@ -336,11 +224,6 @@ modules:
   # Note: bluebuild-default-flatpaks-system.service is automatically enabled
   # by the default-flatpaks module when it creates the service files
 
-  # RKE2 Server service configuration
-  # Note: rke2-server.service is INSTALLED but NOT ENABLED by default
-  # Users must manually enable it with: systemctl enable rke2-server.service
-  # Or it can be enabled at VM deployment time via cloud-init
-
   # Ensure /var layout matches bootc lint expectations
   - type: script
     scripts:
@@ -363,26 +246,4 @@ modules:
     scripts:
       - bootc container lint
       - restorecon -vv /usr/local/bin/tuigreet || true
-      - restorecon -vv /usr/local/bin/rke2_ops || true
-      - restorecon -vv /usr/local/bin/rke2-kubectl || true
       - echo "composefs=true" >> /etc/ostree/repo.config || true
-
-  # RKE2 validation (only when enabled)
-  # Note: Dependencies (curl, iptables, container-selinux, etc.) are installed via packages/common/base.yml
-  - type: script
-    condition: enable_rke2 == true
-    scripts:
-      - |
-        # Check RKE2 installation (binary may be in /usr/bin or /usr/local/bin)
-        if [ -f /usr/local/bin/rke2 ] || [ -f /usr/bin/rke2 ]; then
-            echo "✓ RKE2 installed"
-        else
-            echo "○ RKE2 not installed"
-        fi
-      - test -f /usr/lib/systemd/system/rke2-server.service && echo "✓ rke2-server.service configured" || echo "○ rke2-server.service not found"
-
-  # Post-installation notes
-  - type: script
-    condition: enable_rke2 == true
-    scripts:
-      - echo "RKE2 Server installation configured. On first boot, rke2-server service will start automatically."

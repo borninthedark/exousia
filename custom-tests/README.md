@@ -5,6 +5,7 @@ Bats-based integration tests for bootc container images.
 ## Running Tests
 
 ### Using Make (Recommended)
+
 ```bash
 # Build and test
 make build test

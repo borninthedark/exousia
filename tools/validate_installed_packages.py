@@ -10,36 +10,37 @@ for Fedora-based images.
 This is intended to be run inside the built container as part of the build workflow.
 """
 
-import sys
-import yaml
-from pathlib import Path
-from typing import List, Dict, Set, Optional
 import argparse
 import json
+import sys
+from pathlib import Path
+
+import yaml
 
 # Import distro mapper for image type → distro resolution
 try:
     from distro_mapper import get_distro_for_image_type
 except ImportError:
     # Fallback if distro_mapper not in path
-    def get_distro_for_image_type(image_type: str) -> Optional[str]:
+    def get_distro_for_image_type(image_type: str) -> str | None:
         """Fallback distro mapper."""
-        if 'fedora' in image_type.lower():
-            return 'fedora'
+        if "fedora" in image_type.lower():
+            return "fedora"
         return None
 
 
-def load_yaml_config(yaml_path: Path) -> Dict:
+def load_yaml_config(yaml_path: Path) -> dict:
     """Load and parse YAML configuration."""
     try:
-        with open(yaml_path, 'r', encoding='utf-8') as f:
-            return yaml.safe_load(f)
+        with open(yaml_path, encoding="utf-8") as f:
+            data: dict = yaml.safe_load(f)
+            return data
     except Exception as e:
         print(f"Error loading YAML: {e}", file=sys.stderr)
         sys.exit(1)
 
 
-def extract_packages_from_yaml(config: Dict) -> Set[str]:
+def extract_packages_from_yaml(config: dict) -> set[str]:
     """
     Extract all package names from YAML configuration.
 
@@ -48,29 +49,31 @@ def extract_packages_from_yaml(config: Dict) -> Set[str]:
     packages = set()
 
     # Look for modules in the config
-    modules = config.get('modules', [])
+    modules = config.get("modules", [])
     for module in modules:
         if not isinstance(module, dict):
             continue
 
-        module_type = module.get('type', '')
+        module_type = module.get("type", "")
 
         # Handle rpm-ostree packages
-        if module_type == 'rpm-ostree':
-            pkg_list = module.get('packages', [])
+        if module_type == "rpm-ostree":
+            pkg_list = module.get("packages", [])
             if isinstance(pkg_list, list):
                 packages.update(pkg_list)
 
         # Handle other package types
-        elif module_type == 'packages':
-            pkg_list = module.get('packages', [])
+        elif module_type == "packages":
+            pkg_list = module.get("packages", [])
             if isinstance(pkg_list, list):
                 packages.update(pkg_list)
 
     return packages
 
 
-def validate_packages(packages: List[str], distro: Optional[str] = None, verbose: bool = False) -> tuple[bool, Dict]:
+def validate_packages(
+    packages: list[str], distro: str | None = None, verbose: bool = False
+) -> tuple[bool, dict]:
     """
     Validate that packages are installed.
 
@@ -90,11 +93,11 @@ def validate_packages(packages: List[str], distro: Optional[str] = None, verbose
         all_installed, missing = transpiler.verify_installation(packages)
 
         results = {
-            'distro': transpiler.get_current_distro(),
-            'total_packages': len(packages),
-            'installed': len(packages) - len(missing),
-            'missing': missing,
-            'all_installed': all_installed
+            "distro": transpiler.get_current_distro(),
+            "total_packages": len(packages),
+            "installed": len(packages) - len(missing),
+            "missing": missing,
+            "all_installed": all_installed,
         }
 
         if verbose:
@@ -113,8 +116,12 @@ def validate_packages(packages: List[str], distro: Optional[str] = None, verbose
         sys.exit(1)
 
 
-def validate_de_wm_packages(de_name: Optional[str] = None, wm_name: Optional[str] = None,
-                           distro: Optional[str] = None, verbose: bool = False) -> tuple[bool, Dict]:
+def validate_de_wm_packages(
+    de_name: str | None = None,
+    wm_name: str | None = None,
+    distro: str | None = None,
+    verbose: bool = False,
+) -> tuple[bool, dict]:
     """
     Validate desktop environment or window manager packages.
 
@@ -164,36 +171,34 @@ Examples:
   # Validate packages from YAML config
   python3 validate_installed_packages.py --yaml adnyeus.yml
 
-  # Validate specific DE packages
-  python3 validate_installed_packages.py --de kde
-
   # Validate specific WM packages
   python3 validate_installed_packages.py --wm sway
 
-  # Force specific distro and output JSON
+  # Force Fedora distro and output JSON
   python3 validate_installed_packages.py --yaml adnyeus.yml --distro fedora --json
 
   # Verbose output
   python3 validate_installed_packages.py --wm sway --verbose
-        """
+        """,
     )
 
-    parser.add_argument("--yaml", type=Path,
-                       help="YAML configuration file to validate")
-    parser.add_argument("--de", type=str,
-                       help="Desktop environment name to validate")
-    parser.add_argument("--wm", type=str,
-                       help="Window manager name to validate")
-    parser.add_argument("--image-type", type=str,
-                       help="Image type (e.g., fedora-bootc) - auto-maps to distro")
-    parser.add_argument("--distro", choices=["fedora"],
-                       help="Force specific distro (overrides --image-type)")
-    parser.add_argument("--json", action="store_true",
-                       help="Output results as JSON")
-    parser.add_argument("--verbose", "-v", action="store_true",
-                       help="Verbose output")
-    parser.add_argument("--fail-on-missing", action="store_true", default=True,
-                       help="Exit with error if any packages are missing (default: true)")
+    parser.add_argument("--yaml", type=Path, help="YAML configuration file to validate")
+    parser.add_argument("--de", type=str, help="Desktop environment name to validate")
+    parser.add_argument("--wm", type=str, help="Window manager name to validate")
+    parser.add_argument(
+        "--image-type", type=str, help="Image type (e.g., fedora-bootc) - auto-maps to distro"
+    )
+    parser.add_argument(
+        "--distro", choices=["fedora"], help="Force specific distro (overrides --image-type)"
+    )
+    parser.add_argument("--json", action="store_true", help="Output results as JSON")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+    parser.add_argument(
+        "--fail-on-missing",
+        action="store_true",
+        default=True,
+        help="Exit with error if any packages are missing (default: true)",
+    )
 
     args = parser.parse_args()
 
@@ -204,7 +209,10 @@ Examples:
         if distro and args.verbose:
             print(f"Mapped image type '{args.image_type}' to distro '{distro}'")
         elif not distro:
-            print(f"Warning: Unknown image type '{args.image_type}', will auto-detect distro", file=sys.stderr)
+            print(
+                f"Warning: Unknown image type '{args.image_type}', will auto-detect distro",
+                file=sys.stderr,
+            )
 
     # Validate arguments
     if not any([args.yaml, args.de, args.wm]):
@@ -229,14 +237,13 @@ Examples:
         if args.verbose:
             print(f"Found {len(packages)} packages in configuration")
 
-        all_installed, results = validate_packages(list(packages), distro=distro, verbose=args.verbose)
+        all_installed, results = validate_packages(
+            list(packages), distro=distro, verbose=args.verbose
+        )
 
     else:
         all_installed, results = validate_de_wm_packages(
-            de_name=args.de,
-            wm_name=args.wm,
-            distro=distro,
-            verbose=args.verbose
+            de_name=args.de, wm_name=args.wm, distro=distro, verbose=args.verbose
         )
 
     # Output results
@@ -244,11 +251,15 @@ Examples:
         print(json.dumps(results, indent=2))
     else:
         if all_installed:
-            print(f"\n✅ SUCCESS: All {results['installed']} packages are installed on {results['distro']}")
+            print(
+                f"\n✅ SUCCESS: All {results['installed']} packages are installed on {results['distro']}"
+            )
         else:
-            print(f"\n❌ FAILURE: {len(results['missing'])} packages are missing on {results['distro']}")
+            print(
+                f"\n❌ FAILURE: {len(results['missing'])} packages are missing on {results['distro']}"
+            )
             print("\nMissing packages:")
-            for pkg in results['missing']:
+            for pkg in results["missing"]:
                 print(f"  - {pkg}")
 
     # Exit with appropriate code

@@ -27,7 +27,7 @@ The test suite validates bootc container images using bats-core with intelligent
 
 ### Test Framework Stack
 
-```
+```text
 ┌─────────────────────────────────────┐
 │   bats-core (Test Runner)           │
 ├─────────────────────────────────────┤
@@ -49,7 +49,7 @@ The test suite validates bootc container images using bats-core with intelligent
 
 ### File Structure
 
-```
+```text
 tests/
 └── image_content.bats    # Main test suite
     ├── setup_file()      # One-time setup
@@ -64,11 +64,13 @@ tests/
 Validates operating system and Fedora version.
 
 **Tests:**
+
 - Confirms OS is Fedora Linux
 - Validates version (41-44 or rawhide)
 - Checks BUILD_IMAGE_TYPE environment variable
 
 **Example:**
+
 ```bash
 @test "OS should be Fedora Linux" {
     run grep 'ID=fedora' "$MOUNT_POINT/etc/os-release"
@@ -81,6 +83,7 @@ Validates operating system and Fedora version.
 Validates container registry authentication for bootc operations.
 
 **Tests:**
+
 - auth.json file presence and content
 - ostree symlink configuration
 - tmpfiles.d configuration
@@ -92,6 +95,7 @@ Validates container registry authentication for bootc operations.
 Verifies custom package management and boot splash configuration.
 
 **Tests:**
+
 - Package list files (packages.add, packages.remove, packages.sway)
 - Plymouth theme installation
 - Plymouth configuration files
@@ -103,6 +107,7 @@ Verifies custom package management and boot splash configuration.
 Ensures custom scripts are executable and functional.
 
 **Scripts tested:**
+
 - autotiling - Automatic tiling for Sway
 - lid - Laptop lid state handler
 - generate-readme - Dynamic documentation
@@ -112,6 +117,7 @@ Ensures custom scripts are executable and functional.
 Validates package repository setup.
 
 **Tests:**
+
 - RPM Fusion repositories present and enabled
 - Custom repositories configured (nwg-shell)
 
@@ -120,6 +126,7 @@ Validates package repository setup.
 Verifies all required packages are installed.
 
 **Package Groups:**
+
 - **Core System:** DNF5, bootc, systemd, NetworkManager, Podman
 - **Desktop:** Sway, waybar, swaylock
 - **Applications:** kitty, neovim, htop, btop, ranger
@@ -132,6 +139,7 @@ Verifies all required packages are installed.
 Confirms replaced packages are not present.
 
 **Tests:**
+
 - foot (replaced by kitty)
 - dunst (replaced by swaync)
 - rofi-wayland (replaced by fuzzel)
@@ -141,6 +149,7 @@ Confirms replaced packages are not present.
 Validates Flatpak repository setup.
 
 **Tests:**
+
 - Flathub remote added
 - Correct repository URL
 
@@ -149,6 +158,7 @@ Validates Flatpak repository setup.
 Validates Sway window manager setup.
 
 **Tests:**
+
 - Configuration files present
 - Greetd configuration valid
 - Session files (conditional on fedora-bootc)
@@ -158,6 +168,7 @@ Validates Sway window manager setup.
 Validates YubiKey hardware authentication setup.
 
 **Tests:**
+
 - PAM U2F configuration files present (u2f-required, u2f-sufficient)
 - sudo configured with U2F support
 - pam-u2f package installed
@@ -167,6 +178,7 @@ Validates YubiKey hardware authentication setup.
 Ensures image meets bootc requirements.
 
 **Tests:**
+
 - bootc container lint passes
 - ComposeFS enabled
 
@@ -175,6 +187,7 @@ Ensures image meets bootc requirements.
 Validates core system packages.
 
 **Tests:**
+
 - Systemd, kernel, NetworkManager, Podman present
 
 ### 13. System Users and Groups
@@ -182,6 +195,7 @@ Validates core system packages.
 Validates system user creation.
 
 **Tests:**
+
 - greeter, greetd, rtkit users exist
 - Correct UID/GID assignments
 - Proper home directories and shells
@@ -190,6 +204,7 @@ Validates system user creation.
 ### 14. Conditional Tests (Image Type Specific)
 
 **fedora-bootc only:**
+
 - Directory structure (/var/roothome, /var/opt, /opt symlink)
 - Service enablement (greetd, libvirtd, graphical.target)
 - Sway package installation
@@ -215,7 +230,7 @@ setup_file() {
     if [[ "$IMAGE_TYPE" != "fedora-bootc" ]]; then
         skip "Only applicable to fedora-bootc base"
     fi
-    
+
     # Test logic
 }
 ```
@@ -248,11 +263,13 @@ setup_file() {
 ### When to Use Conditional Tests
 
 **Use conditionals when:**
+
 - Feature only exists in one base image
 - Configuration differs significantly between types
 - Installation location varies by base
 
 **Avoid conditionals when:**
+
 - Same test applies to both types
 - Behavior should be identical
 - Testing custom additions (not base image features)
@@ -356,7 +373,8 @@ buildah unshare -- bats tests/image_content.bats --filter "Plymouth"
 ### Test Results
 
 **Success:**
-```
+
+```text
 ✓ OS should be Fedora Linux
 ✓ Package installation verified
 ...
@@ -364,7 +382,8 @@ buildah unshare -- bats tests/image_content.bats --filter "Plymouth"
 ```
 
 **Failure:**
-```
+
+```text
 ✗ Package 'example' should be installed
   (in test file tests/image_content.bats, line 234)
   `assert_success "example should be installed"' failed

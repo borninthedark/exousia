@@ -27,6 +27,7 @@ buildah unshare -- bats -r tests/
 The test suite includes 52+ tests organized into 12 categories:
 
 ### Core Categories
+
 1. OS and Fedora version validation
 2. Container authentication configuration (CI only)
 3. Package lists and Plymouth boot splash
@@ -35,12 +36,13 @@ The test suite includes 52+ tests organized into 12 categories:
 6. Package installation verification
 
 ### System Categories
-7. Flatpak configuration
-8. Sway desktop environment
-9. bootc compliance
-10. System components
-11. System users and groups
-12. Conditional tests (image type specific)
+
+1. Flatpak configuration
+2. Sway desktop environment
+3. bootc compliance
+4. System components
+5. System users and groups
+6. Conditional tests (image type specific)
 
 ### Conditional Testing
 
@@ -52,7 +54,8 @@ Tests automatically adapt based on base image type:
 | **fedora-sway-atomic** | Skips pre-configured features, validates customizations only |
 
 **Example output:**
-```
+
+```text
 ✓ Directory structure should be correct for image type
   # Skipping fedora-bootc specific directory checks for fedora-sway-atomic
 ✓ Services should be enabled based on image type
@@ -93,6 +96,7 @@ make test
 Tests run automatically in GitHub Actions after each build. See `.github/workflows/build.yml` for configuration.
 
 **CI Features:**
+
 - Automatic bats library installation
 - Proper environment variable setup
 - Image type detection
@@ -151,6 +155,7 @@ buildah rm "$CONTAINER"
 ## What Gets Tested
 
 ### Package Installation
+
 - Core system packages (DNF5, bootc, systemd)
 - Desktop environment (Sway, waybar)
 - User applications (kitty, neovim, htop, btop, ranger)
@@ -159,6 +164,7 @@ buildah rm "$CONTAINER"
 - Security tools (pam-u2f, lynis)
 
 ### Configuration Files
+
 - Sway window manager config
 - Plymouth boot splash
 - Greetd display manager
@@ -166,6 +172,7 @@ buildah rm "$CONTAINER"
 - Repository configuration
 
 ### System Setup
+
 - Service enablement (conditional)
 - Directory structure (conditional)
 - User/group creation
@@ -173,6 +180,7 @@ buildah rm "$CONTAINER"
 - ComposeFS enablement
 
 ### Security & Compliance
+
 - bootc container lint
 - Package removal verification
 - Permission validation
@@ -184,17 +192,19 @@ buildah rm "$CONTAINER"
 
 1. Add package to `custom-pkgs/packages.add`
 2. Write test in `tests/image_content.bats`:
+
 ```bash
 @test "New package should be installed" {
     run buildah run "$CONTAINER" -- rpm -q new-package
     assert_success "new-package should be installed"
 }
 ```
-3. Build and test: `make build test`
+
+1. Build and test: `make build test`
 
 ### Testing Configuration Changes
 
-1. Modify config in `custom-configs/`
+1. Modify config in `overlays/sway/configs/` or `overlays/base/configs/`
 2. Add validation test
 3. Test locally with both image types
 4. Verify CI passes
@@ -218,11 +228,13 @@ Tests recognize these environment variables:
 ## Further Reading
 
 ### Internal Documentation
+
 - [Test Suite Guide](./guide.md) - Complete reference
 - [Writing Tests](./writing-tests.md) - Developer guide
 - [Troubleshooting](./troubleshooting.md) - Debug help
 
 ### External Resources
+
 - [bootc Project](https://github.com/bootc-dev/bootc)
 - [bats-core Testing Framework](https://bats-core.readthedocs.io/)
 - [Buildah Documentation](https://buildah.io/)
@@ -252,6 +264,7 @@ If you encounter issues:
 ---
 
 **Quick Links:**
+
 - [Main README](../../README.md)
 - [Test Files](../../tests/)
 - [CI Workflow](../../.github/workflows/build.yml)

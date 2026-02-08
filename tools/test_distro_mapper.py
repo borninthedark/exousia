@@ -1,13 +1,10 @@
 import sys
 from pathlib import Path
 
-import pytest
+sys.path.insert(0, str(Path(__file__).parent))
 
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-from api.models import ImageType
-from tools import distro_mapper
+import distro_mapper
+from constants import ImageType
 
 
 def test_all_image_types_have_distro_mapping():
@@ -23,6 +20,7 @@ def test_package_manager_resolution_matches_distro():
 
     for image_type in ImageType:
         distro = distro_mapper.get_distro_for_image_type(image_type.value)
+        assert distro is not None
         pkg_mgr = distro_mapper.get_package_manager_for_image_type(image_type.value)
         assert pkg_mgr == expected_managers[distro]
 

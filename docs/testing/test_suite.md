@@ -31,7 +31,7 @@ The Exousia bootc image test suite is a comprehensive, conditionally-aware testi
 
 ### Test Framework Stack
 
-```
+```text
 ┌─────────────────────────────────────┐
 │   bats-core (Test Runner)           │
 ├─────────────────────────────────────┤
@@ -48,7 +48,7 @@ The Exousia bootc image test suite is a comprehensive, conditionally-aware testi
 
 ### Test File Structure
 
-```
+```text
 tests/
 └── image_content.bats    # Main test suite
     ├── setup_file()      # One-time setup before all tests
@@ -78,12 +78,14 @@ graph TD
 **Purpose**: Validate operating system and Fedora version
 
 **Tests**:
+
 - Confirms OS is Fedora Linux
 - Validates Fedora version (41-44 or rawhide)
 - Verifies detected version matches expected range
 - Checks BUILD_IMAGE_TYPE environment variable
 
 **Example**:
+
 ```bash
 @test "OS should be Fedora Linux" {
     run grep 'ID=fedora' "$MOUNT_POINT/etc/os-release"
@@ -96,6 +98,7 @@ graph TD
 **Purpose**: Validate container registry authentication setup
 
 **Tests**:
+
 - Verifies auth.json presence and content
 - Checks ostree symlink configuration
 - Validates tmpfiles.d configuration
@@ -103,6 +106,7 @@ graph TD
 **Conditional**: Only runs in CI environment
 
 **Example**:
+
 ```bash
 @test "Container auth files should be correctly configured in CI" {
     if [[ "${CI}" == "true" ]]; then
@@ -119,12 +123,14 @@ graph TD
 **Purpose**: Verify custom package management and boot splash
 
 **Tests**:
+
 - Package list files exist (packages.add, packages.remove, packages.sway)
 - Plymouth theme properly installed
 - Plymouth configuration files present
 - Kernel arguments configured
 
 **Example**:
+
 ```bash
 @test "Custom Plymouth theme should be copied" {
     assert_dir_exists "$MOUNT_POINT/usr/share/plymouth/themes/bgrt-better-luks/"
@@ -137,11 +143,13 @@ graph TD
 **Purpose**: Ensure custom scripts are present and executable
 
 **Tests**:
+
 - autotiling script
 - lid script
 - generate-readme script
 
 **Example**:
+
 ```bash
 @test "Custom script 'autotiling' should be executable" {
     assert_file_executable "$MOUNT_POINT/usr/local/bin/autotiling"
@@ -153,11 +161,13 @@ graph TD
 **Purpose**: Validate package repository setup
 
 **Tests**:
+
 - RPM Fusion repositories present and enabled
 - Custom repositories configured (nwg-shell)
 - Repository enablement status
 
 **Example**:
+
 ```bash
 @test "RPM Fusion repositories should be enabled" {
     run grep -E '^\s*enabled\s*=\s*1' "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-free.repo"
@@ -172,6 +182,7 @@ graph TD
 **Test Groups**:
 
 #### Core System Packages
+
 - DNF5 with symlink
 - bootc
 - Systemd
@@ -179,10 +190,12 @@ graph TD
 - Podman
 
 #### Desktop Environment
+
 - Sway and components (waybar, swaylock)
 - Conditional on image type
 
 #### User Applications
+
 - Terminal: kitty
 - Editor: neovim
 - Monitors: htop, btop
@@ -190,24 +203,28 @@ graph TD
 - Container tools: distrobox
 
 #### Audio and Media
+
 - mpd (Music Player Daemon)
 - pavucontrol (Volume Control)
 
 #### Virtualization
+
 - virt-manager
 - qemu-kvm
 - libvirt
 
 #### Security
+
 - pam-u2f
 - lynis
 
 **Example**:
+
 ```bash
 @test "Audio and media packages should be installed" {
     run buildah run "$CONTAINER" -- rpm -q mpd
     assert_success "MPD should be installed"
-    
+
     run buildah run "$CONTAINER" -- rpm -q pavucontrol
     assert_success "pavucontrol should be installed"
 }
@@ -218,6 +235,7 @@ graph TD
 **Purpose**: Confirm replaced packages are not present
 
 **Tests**:
+
 - foot (replaced by kitty)
 - dunst (replaced by swaync)
 - rofi-wayland (replaced by fuzzel)
@@ -227,6 +245,7 @@ graph TD
 **Purpose**: Verify Flatpak repository setup
 
 **Tests**:
+
 - Flathub remote added
 - Correct repository URL
 - Remote accessibility
@@ -236,6 +255,7 @@ graph TD
 **Purpose**: Validate Sway window manager setup
 
 **Tests**:
+
 - Configuration files present
 - Greetd configuration valid
 - Session files (conditional on fedora-bootc)
@@ -243,6 +263,7 @@ graph TD
 - start-sway script properly configured
 
 **Example**:
+
 ```bash
 @test "Sway session files should be present for fedora-bootc base" {
     if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
@@ -259,11 +280,13 @@ graph TD
 **Purpose**: Validate YubiKey authentication setup
 
 **Tests**:
+
 - PAM U2F configuration files present (u2f-required, u2f-sufficient)
 - sudo configured with U2F support
 - pam-u2f package installed
 
 **Example**:
+
 ```bash
 @test "PAM U2F configuration files should exist" {
     run test -f "$MOUNT_POINT/etc/pam.d/u2f-required"
@@ -283,6 +306,7 @@ graph TD
 **Purpose**: Ensure image meets bootc requirements
 
 **Tests**:
+
 - bootc container lint passes
 - ComposeFS enabled
 - OSTree configuration valid
@@ -292,6 +316,7 @@ graph TD
 **Purpose**: Validate system user creation
 
 **Tests**:
+
 - greeter user exists with correct UID/GID
 - greetd user exists
 - rtkit user exists
@@ -299,6 +324,7 @@ graph TD
 - Home directories exist with proper permissions
 
 **Example**:
+
 ```bash
 @test "Greeter user should have correct UID/GID and shell" {
     run chroot "$MOUNT_POINT" getent passwd greeter
@@ -315,20 +341,24 @@ graph TD
 #### fedora-bootc Specific
 
 **Directory Structure**:
+
 - `/var/roothome` exists
 - `/var/opt` exists
 - `/usr/lib/extensions` exists
 - `/opt` symlinks to `/var/opt`
 
 **Service Enablement**:
+
 - greetd.service enabled
 - libvirtd.service enabled
 - graphical.target is default
 
 **Sway Installation**:
+
 - Sway packages installed from packages.sway
 
 **Example**:
+
 ```bash
 @test "Directory structure should be correct for image type" {
     if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
@@ -466,10 +496,10 @@ buildah rm "$CONTAINER"
 ```bash
 @test "Descriptive test name" {
     # Arrange: Setup test data/conditions
-    
+
     # Act: Perform action/check
     run command_to_test
-    
+
     # Assert: Verify results
     assert_success "Helpful error message"
     assert_output "expected output"
@@ -547,7 +577,7 @@ assert_dir_exists "$MOUNT_POINT/var/lib/greeter"
 
 @test "New package 'example-pkg' should have correct configuration" {
     assert_file_exists "$MOUNT_POINT/etc/example-pkg/config.conf"
-    
+
     run grep -q 'setting=value' "$MOUNT_POINT/etc/example-pkg/config.conf"
     assert_success "Configuration should contain 'setting=value'"
 }
@@ -566,7 +596,7 @@ Conditional testing allows a single test suite to validate multiple image config
 ```bash
 setup_file() {
     # ... container setup ...
-    
+
     # Detect image type from environment variable
     IMAGE_TYPE=$(buildah run "$CONTAINER" -- printenv BUILD_IMAGE_TYPE 2>/dev/null || echo "unknown")
     export IMAGE_TYPE
@@ -582,7 +612,7 @@ setup_file() {
     if [[ "$IMAGE_TYPE" != "fedora-bootc" ]]; then
         skip "Only applicable to fedora-bootc base"
     fi
-    
+
     # Test logic here
 }
 ```
@@ -615,11 +645,13 @@ setup_file() {
 ### When to Use Conditional Tests
 
 **Use conditionals when:**
+
 - Feature only exists in one base image
 - Configuration differs significantly between types
 - Installation location varies by base
 
 **Avoid conditionals when:**
+
 - Same test applies to both types
 - Behavior should be identical
 - Testing custom additions (not base image features)
@@ -635,6 +667,7 @@ setup_file() {
 **Cause**: Required environment variable not exported
 
 **Solution**:
+
 ```bash
 export TEST_IMAGE_TAG=localhost:5000/exousia:latest
 buildah unshare -- bats -r tests/
@@ -645,6 +678,7 @@ buildah unshare -- bats -r tests/
 **Cause**: Tests need rootless container access via buildah
 
 **Solution**:
+
 ```bash
 # Always use buildah unshare
 buildah unshare -- bats -r tests/
@@ -655,6 +689,7 @@ buildah unshare -- bats -r tests/
 **Cause**: Environment differences (CI vs local)
 
 **Solution**:
+
 - Check CI environment variables
 - Verify file permissions in artifact
 - Review CI-specific conditionals
@@ -664,6 +699,7 @@ buildah unshare -- bats -r tests/
 **Cause**: Environment variable not set in container
 
 **Solution**:
+
 - Verify Containerfile sets `ENV BUILD_IMAGE_TYPE=${IMAGE_TYPE}`
 - Check build args passed correctly
 - Rebuild image with proper configuration
@@ -673,6 +709,7 @@ buildah unshare -- bats -r tests/
 **Cause**: Image type detection failing
 
 **Debug**:
+
 ```bash
 # Check detection
 buildah run "$CONTAINER" -- printenv BUILD_IMAGE_TYPE
@@ -745,6 +782,7 @@ The test suite integrates with GitHub Actions via the workflow:
 ### CI Environment Variables
 
 Tests have access to:
+
 - `CI=true` - Indicates CI environment
 - `TEST_IMAGE_TAG` - Image to test
 - `BATS_LIB_PATH` - Bats library location
@@ -754,7 +792,7 @@ Tests have access to:
 
 #### Success
 
-```
+```text
 ✓ OS should be Fedora Linux
 ✓ Package installation verified
 ...
@@ -763,11 +801,11 @@ Tests have access to:
 
 #### Failure
 
-```
+```text
 ✗ Package 'example' should be installed
   (in test file tests/image_content.bats, line 234)
   `assert_success "example should be installed"' failed
-  
+
   -- command failed --
   status : 1
   output : package example is not installed

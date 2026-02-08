@@ -10,9 +10,7 @@ The `yaml-to-containerfile.py` script converts a BlueBuild-compatible YAML confi
 
 - **BlueBuild-inspired specification** - Compatible with BlueBuild module syntax
 - **Multi-distro support** - Generate Containerfiles for:
-  - **Fedora Atomic variants**: fedora-bootc, fedora-silverblue, fedora-kinoite, fedora-sway-atomic, and 7 community variants
-  - **Bootcrew distros**: Arch Linux, Gentoo, Debian, Ubuntu, OpenSUSE, and Proxmox
-- **Bootcrew-setup module** - Automated bootc source builds for non-Fedora distros with distro-specific optimizations
+  - **Fedora Atomic variants**: fedora-bootc and fedora-sway-atomic
 - **Conditional logic** - Support for image-type and distro-specific configurations
 - **Plymouth integration** - Handle Plymouth configuration for all supported base images
 - **Validation** - Built-in YAML schema validation
@@ -97,9 +95,9 @@ python3 tools/yaml-to-containerfile.py \
 ### Supported Image Types
 
 **Fedora Atomic variants (supported):**
+
 - `fedora-bootc` - Minimal Fedora bootc base
 - `fedora-sway-atomic` - Sway (Wayland) desktop
-- `fedora-lxqt` - LXQt desktop
 
 ## YAML Configuration Structure
 
@@ -139,7 +137,7 @@ The transpiler supports the following module types:
 ```yaml
 - type: files
   files:
-    - src: custom-configs/sway
+    - src: overlays/sway/configs/sway
       dst: /etc/sway
       mode: "0644"
 ```
@@ -197,20 +195,23 @@ Modules can include conditions to control when they run:
 ### Supported Conditions
 
 **Image type conditions:**
+
 - `image-type == "fedora-bootc"` - Minimal Fedora bootc
 - `image-type == "fedora-sway-atomic"` - Fedora Sway Atomic
-- `image-type == "fedora-lxqt"` - Fedora LXQt
 
 **Distro family conditions:**
+
 - `distro == "fedora"` - Any Fedora-based image
 
 **Feature conditions:**
+
 - `enable_plymouth == true` - Plymouth enabled
 - `enable_plymouth == false` - Plymouth disabled
 
 Conditions can be combined with `&&` (AND) and `||` (OR) operators.
 
 **Example:**
+
 ```yaml
 - type: script
   condition: distro == "fedora"
@@ -230,6 +231,7 @@ The transpiler is integrated into the GitHub Actions workflow:
 6. **Build** - Generated Containerfile is built with Buildah
 
 The workflow automatically uses the correct configuration based on:
+
 - Workflow dispatch inputs (manual trigger)
 - `.fedora-version` file (automated builds)
 - Default values (fallback)
@@ -270,16 +272,19 @@ Containerized workflows can also call the validator inside a build container bef
 ### Local Testing
 
 1. **Edit YAML configuration**:
+
    ```bash
    vim adnyeus.yml
    ```
 
 2. **Validate changes**:
+
    ```bash
    python3 tools/yaml-to-containerfile.py --config adnyeus.yml --validate
    ```
 
 3. **Generate Containerfile**:
+
    ```bash
    python3 tools/yaml-to-containerfile.py \
      --config adnyeus.yml \
@@ -288,6 +293,7 @@ Containerized workflows can also call the validator inside a build container bef
    ```
 
 4. **Test build locally**:
+
    ```bash
    buildah build -f Containerfile.test -t exousia:test .
    ```
@@ -311,7 +317,7 @@ Add file copy operations to the `files` module:
 ```yaml
 - type: files
   files:
-    - src: custom-configs/your-config
+    - src: overlays/sway/configs/your-config
       dst: /etc/your-config
       mode: "0644"
 ```
@@ -321,6 +327,7 @@ Add file copy operations to the `files` module:
 ### Validation Errors
 
 If validation fails, check:
+
 1. YAML syntax is correct (proper indentation, no tabs)
 2. Required fields are present (`name`, `description`, `modules`)
 3. Module types are spelled correctly
@@ -329,6 +336,7 @@ If validation fails, check:
 ### Generation Errors
 
 If Containerfile generation fails:
+
 1. Run with `--verbose` to see detailed output
 2. Check condition syntax if using conditional modules
 3. Verify Python version is 3.8 or higher
@@ -337,6 +345,7 @@ If Containerfile generation fails:
 ### Build Errors
 
 If the generated Containerfile fails to build:
+
 1. Check the generated Containerfile for syntax errors
 2. Verify file paths are correct
 3. Test shell scripts individually

@@ -7,35 +7,33 @@ Manages Fedora COPR repositories for package installations.
 Automatically aligns repo URLs with the Fedora version being built.
 """
 
-from pathlib import Path
-from typing import List, Dict, Optional
 import subprocess
-
+from typing import Any
 
 # COPR repositories needed for specific packages
 COPR_REPOS = {
-    'swaync': {
-        'owner': 'erikreider',
-        'repo': 'SwayNotificationCenter',
-        'packages': ['swaync'],
-        'description': 'Sway Notification Center'
+    "swaync": {
+        "owner": "erikreider",
+        "repo": "SwayNotificationCenter",
+        "packages": ["swaync"],
+        "description": "Sway Notification Center",
     },
-    'nwg-shell': {
-        'owner': 'tofik',
-        'repo': 'nwg-shell',
-        'packages': ['nwg-displays', 'nwg-look'],
-        'description': 'nwg-shell utilities for Wayland'
+    "nwg-shell": {
+        "owner": "tofik",
+        "repo": "nwg-shell",
+        "packages": ["nwg-displays", "nwg-look"],
+        "description": "nwg-shell utilities for Wayland",
     },
-    'wallust': {
-        'owner': 'errornointernet',
-        'repo': 'packages',
-        'packages': ['wallust'],
-        'description': 'Wallpaper color scheme generator'
+    "wallust": {
+        "owner": "errornointernet",
+        "repo": "packages",
+        "packages": ["wallust"],
+        "description": "Wallpaper color scheme generator",
     },
 }
 
 
-def get_fedora_version() -> Optional[str]:
+def get_fedora_version() -> str | None:
     """
     Get the current Fedora version.
 
@@ -43,10 +41,10 @@ def get_fedora_version() -> Optional[str]:
         Version string (e.g., "43", "42") or None if not Fedora
     """
     try:
-        with open('/etc/os-release', 'r') as f:
+        with open("/etc/os-release") as f:
             for line in f:
-                if line.startswith('VERSION_ID='):
-                    version = line.split('=')[1].strip().strip('"')
+                if line.startswith("VERSION_ID="):
+                    version = line.split("=")[1].strip().strip('"')
                     return version
     except FileNotFoundError:
         pass
@@ -96,10 +94,7 @@ def is_copr_enabled(owner: str, repo: str) -> bool:
     """
     try:
         result = subprocess.run(
-            ['dnf', 'repolist', '--enabled'],
-            capture_output=True,
-            text=True,
-            timeout=10
+            ["dnf", "repolist", "--enabled"], capture_output=True, text=True, timeout=10
         )
         repo_name = get_copr_repo_name(owner, repo)
         return repo_name in result.stdout
@@ -107,7 +102,7 @@ def is_copr_enabled(owner: str, repo: str) -> bool:
         return False
 
 
-def enable_copr_repo(owner: str, repo: str, fedora_version: Optional[str] = None) -> tuple[bool, str]:
+def enable_copr_repo(owner: str, repo: str, fedora_version: str | None = None) -> tuple[bool, str]:
     """
     Enable a COPR repository using dnf copr enable.
 
@@ -129,10 +124,10 @@ def enable_copr_repo(owner: str, repo: str, fedora_version: Optional[str] = None
     try:
         # Use dnf copr enable - it handles $releasever automatically
         result = subprocess.run(
-            ['dnf', 'copr', 'enable', '-y', f'{owner}/{repo}'],
+            ["dnf", "copr", "enable", "-y", f"{owner}/{repo}"],
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=60,
         )
 
         if result.returncode != 0:
@@ -145,7 +140,7 @@ def enable_copr_repo(owner: str, repo: str, fedora_version: Optional[str] = None
         return False, f"Error enabling COPR repo: {e}"
 
 
-def get_required_coprs_for_packages(packages: List[str]) -> List[Dict]:
+def get_required_coprs_for_packages(packages: list[str]) -> list[dict]:
     """
     Get list of COPR repos needed for a set of packages.
 
@@ -160,22 +155,25 @@ def get_required_coprs_for_packages(packages: List[str]) -> List[Dict]:
 
     for pkg in packages:
         for copr_name, copr_info in COPR_REPOS.items():
-            if pkg in copr_info['packages']:
+            if pkg in copr_info["packages"]:
                 key = f"{copr_info['owner']}/{copr_info['repo']}"
                 if key not in seen:
-                    required_coprs.append({
-                        'name': copr_name,
-                        'owner': copr_info['owner'],
-                        'repo': copr_info['repo'],
-                        'description': copr_info['description']
-                    })
+                    required_coprs.append(
+                        {
+                            "name": copr_name,
+                            "owner": copr_info["owner"],
+                            "repo": copr_info["repo"],
+                            "description": copr_info["description"],
+                        }
+                    )
                     seen.add(key)
 
     return required_coprs
 
 
-def setup_coprs_for_packages(packages: List[str], fedora_version: Optional[str] = None,
-                            dry_run: bool = False) -> Dict:
+def setup_coprs_for_packages(
+    packages: list[str], fedora_version: str | None = None, dry_run: bool = False
+) -> dict:
     """
     Setup all required COPR repos for a list of packages.
 
@@ -190,45 +188,45 @@ def setup_coprs_for_packages(packages: List[str], fedora_version: Optional[str] 
     if not fedora_version:
         fedora_version = get_fedora_version()
 
-    result = {
-        'success': True,
-        'fedora_version': fedora_version,
-        'enabled': [],
-        'failed': [],
-        'skipped': [],
-        'messages': []
+    result: dict[str, Any] = {
+        "success": True,
+        "fedora_version": fedora_version,
+        "enabled": [],
+        "failed": [],
+        "skipped": [],
+        "messages": [],
     }
 
     if not fedora_version:
-        result['success'] = False
-        result['messages'].append("Could not determine Fedora version")
+        result["success"] = False
+        result["messages"].append("Could not determine Fedora version")
         return result
 
     required_coprs = get_required_coprs_for_packages(packages)
 
     if not required_coprs:
-        result['messages'].append("No COPR repos required for these packages")
+        result["messages"].append("No COPR repos required for these packages")
         return result
 
-    result['messages'].append(f"Found {len(required_coprs)} COPR repo(s) needed")
+    result["messages"].append(f"Found {len(required_coprs)} COPR repo(s) needed")
 
     for copr in required_coprs:
-        owner = copr['owner']
-        repo = copr['repo']
+        owner = copr["owner"]
+        repo = copr["repo"]
 
         if dry_run:
-            result['messages'].append(f"[DRY RUN] Would enable {owner}/{repo}")
-            result['skipped'].append(f"{owner}/{repo}")
+            result["messages"].append(f"[DRY RUN] Would enable {owner}/{repo}")
+            result["skipped"].append(f"{owner}/{repo}")
             continue
 
         success, message = enable_copr_repo(owner, repo, fedora_version)
-        result['messages'].append(message)
+        result["messages"].append(message)
 
         if success:
-            result['enabled'].append(f"{owner}/{repo}")
+            result["enabled"].append(f"{owner}/{repo}")
         else:
-            result['failed'].append(f"{owner}/{repo}")
-            result['success'] = False
+            result["failed"].append(f"{owner}/{repo}")
+            result["success"] = False
 
     return result
 
@@ -254,30 +252,32 @@ Examples:
 
   # Dry run (don't actually enable)
   python3 copr_manager.py --packages swaync --enable --dry-run
-        """
+        """,
     )
 
-    parser.add_argument('--check-version', action='store_true',
-                       help='Check current Fedora version')
-    parser.add_argument('--packages', nargs='+',
-                       help='Package names to check COPR requirements')
-    parser.add_argument('--enable', action='store_true',
-                       help='Enable required COPR repos (requires root)')
-    parser.add_argument('--enable-copr', nargs=2, metavar=('OWNER', 'REPO'),
-                       help='Enable specific COPR repo (requires root)')
-    parser.add_argument('--fedora-version', type=str,
-                       help='Override Fedora version detection')
-    parser.add_argument('--dry-run', action='store_true',
-                       help='Show what would be done without doing it')
-    parser.add_argument('--json', action='store_true',
-                       help='Output as JSON')
+    parser.add_argument("--check-version", action="store_true", help="Check current Fedora version")
+    parser.add_argument("--packages", nargs="+", help="Package names to check COPR requirements")
+    parser.add_argument(
+        "--enable", action="store_true", help="Enable required COPR repos (requires root)"
+    )
+    parser.add_argument(
+        "--enable-copr",
+        nargs=2,
+        metavar=("OWNER", "REPO"),
+        help="Enable specific COPR repo (requires root)",
+    )
+    parser.add_argument("--fedora-version", type=str, help="Override Fedora version detection")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would be done without doing it"
+    )
+    parser.add_argument("--json", action="store_true", help="Output as JSON")
 
     args = parser.parse_args()
 
     if args.check_version:
         version = args.fedora_version or get_fedora_version()
         if args.json:
-            print(json.dumps({'fedora_version': version}))
+            print(json.dumps({"fedora_version": version}))
         else:
             if version:
                 print(f"Fedora version: {version}")
@@ -299,11 +299,16 @@ Examples:
         required_coprs = get_required_coprs_for_packages(args.packages)
 
         if args.json and not args.enable:
-            print(json.dumps({
-                'packages': args.packages,
-                'required_coprs': required_coprs,
-                'fedora_version': args.fedora_version or get_fedora_version()
-            }, indent=2))
+            print(
+                json.dumps(
+                    {
+                        "packages": args.packages,
+                        "required_coprs": required_coprs,
+                        "fedora_version": args.fedora_version or get_fedora_version(),
+                    },
+                    indent=2,
+                )
+            )
             return 0
 
         if not required_coprs:
@@ -323,14 +328,14 @@ Examples:
         if args.json:
             print(json.dumps(result, indent=2))
         else:
-            for msg in result['messages']:
+            for msg in result["messages"]:
                 print(msg)
 
-        return 0 if result['success'] else 1
+        return 0 if result["success"] else 1
 
     parser.print_help()
     return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     exit(main())

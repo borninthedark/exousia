@@ -29,10 +29,6 @@ flag_management:
     carryforward_mode: labels
 
 flags:
-  api:
-    carryforward_mode: labels
-    paths:
-      - api/
   tools:
     carryforward_mode: labels
     paths:

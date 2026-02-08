@@ -14,6 +14,7 @@ Unlike traditional package managers, bootc treats your entire OS as a container 
 4. Keeping the old system available for rollback
 
 This approach provides:
+
 - **Atomic updates**: All-or-nothing upgrades
 - **Automatic rollback**: If boot fails, previous version is used
 - **Predictable state**: Same image everywhere (dev, test, prod)
@@ -47,13 +48,13 @@ sudo systemctl reboot
 
 ```bash
 # Switch to a specific tag
-sudo bootc switch docker.io/borninthedark/exousia:v1.2.0
+sudo bootc switch docker.io/1borninthedark/exousia:v1.2.0
 
 # Switch to nightly builds
-sudo bootc switch docker.io/borninthedark/exousia:nightly
+sudo bootc switch docker.io/1borninthedark/exousia:nightly
 
 # Switch back to latest
-sudo bootc switch docker.io/borninthedark/exousia:latest
+sudo bootc switch docker.io/1borninthedark/exousia:latest
 ```
 
 ## Upgrade Workflow Best Practices
@@ -61,24 +62,27 @@ sudo bootc switch docker.io/borninthedark/exousia:latest
 ### Pre-Upgrade Checklist
 
 1. **Backup important data** (even though rollback is available)
+
    ```bash
    # Example: backup home directory configs
    tar -czf ~/backup-configs-$(date +%Y%m%d).tar.gz ~/.config
    ```
 
 2. **Check current status**
+
    ```bash
    bootc status
    ```
 
 3. **Verify image availability**
+
    ```bash
    # Check if newer image exists
-   skopeo inspect docker://docker.io/borninthedark/exousia:latest
+   skopeo inspect docker://docker.io/1borninthedark/exousia:latest
    ```
 
 4. **Review changelog/release notes**
-   - Check GitHub releases: https://github.com/borninthedark/exousia/releases
+   - Check GitHub releases: <https://github.com/borninthedark/exousia/releases>
    - Review commit history for breaking changes
 
 ### Performing the Upgrade
@@ -99,6 +103,7 @@ sudo systemctl reboot
 After rebooting:
 
 1. **Verify you're on the new image**
+
    ```bash
    bootc status
    # Check "Booted:" line shows new image/version
@@ -111,6 +116,7 @@ After rebooting:
    - Applications launch successfully
 
 3. **Check logs for issues**
+
    ```bash
    journalctl -b -p err
    ```
@@ -206,21 +212,6 @@ ostree admin status
 sudo ostree admin pin -u 0
 ```
 
-## Upgrade from GitHub Container Registry
-
-If using GHCR instead of Docker Hub:
-
-```bash
-# First time switch
-sudo bootc switch ghcr.io/borninthedark/exousia:latest
-
-# Subsequent upgrades
-sudo bootc upgrade
-sudo systemctl reboot
-```
-
-**Note**: Currently experiencing authentication issues with GHCR. Use Docker Hub for bootc operations until resolved. See [Known Issues](../README.md#known-issues).
-
 ## Monitoring and Maintenance
 
 ### Check for Available Updates
@@ -232,7 +223,7 @@ Create a script to check for updates:
 # check-updates.sh
 
 CURRENT_DIGEST=$(bootc status --json | jq -r '.status.booted.image.imageDigest')
-LATEST_DIGEST=$(skopeo inspect docker://docker.io/borninthedark/exousia:latest | jq -r '.Digest')
+LATEST_DIGEST=$(skopeo inspect docker://docker.io/1borninthedark/exousia:latest | jq -r '.Digest')
 
 if [ "$CURRENT_DIGEST" != "$LATEST_DIGEST" ]; then
     echo "Update available!"
@@ -260,7 +251,7 @@ sudo ostree admin cleanup
 **Solution**: Ensure you're logged into the container registry:
 
 ```bash
-# For Docker Hub
+# For DockerHub
 podman login docker.io
 
 # Copy credentials for bootc
@@ -272,6 +263,7 @@ sudo cp ~/.config/containers/auth.json /etc/ostree/auth.json
 **Cause**: New deployment may have failed boot, triggering automatic rollback
 
 **Solution**:
+
 1. Check boot logs: `journalctl -b -1`
 2. Identify the failure
 3. Report issue or wait for fix
@@ -282,6 +274,7 @@ sudo cp ~/.config/containers/auth.json /etc/ostree/auth.json
 **Cause**: Attempting to switch to a non-bootc container image
 
 **Solution**: Only use images built with bootc-compatible base images:
+
 - `quay.io/fedora/fedora-bootc`
 - `quay.io/fedora/fedora-sway-atomic`
 - `quay.io/fedora-ostree-desktops/*-atomic`
@@ -293,6 +286,7 @@ the requested version tag to avoid pulling a moving `latest` build.
 ### Issue: Disk space full after multiple upgrades
 
 **Solution**: Clean up old deployments:
+
 ```bash
 sudo ostree admin cleanup
 sudo bootc upgrade --apply

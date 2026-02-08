@@ -33,7 +33,7 @@ modules:
   # System users configuration
   - type: files
     files:
-      - src: sysusers/bootc.conf
+      - src: overlays/base/sysusers/bootc.conf
         dst: /usr/lib/sysusers.d/bootc.conf
         mode: "0644"
 
@@ -86,28 +86,49 @@ modules:
   - type: files
     condition: enable_plymouth == true
     files:
-      - src: custom-configs/plymouth/themes/bgrt-better-luks/
+      - src: overlays/sway/configs/plymouth/themes/bgrt-better-luks/
         dst: /usr/share/plymouth/themes/bgrt-better-luks/
         mode: "0644"
 
   # Custom repositories
   - type: files
     files:
-      - src: custom-repos/
+      - src: overlays/sway/repos/
         dst: /etc/yum.repos.d/
         mode: "0644"
 
-  # Custom configurations
+  # Base configurations (PAM, polkit, tmpfiles)
   - type: files
     files:
-      - src: custom-configs/
+      - src: overlays/base/configs/
         dst: /etc/
         mode: "0644"
 
-  # Custom scripts
+  # Sway configurations (greetd, sway, swaylock)
   - type: files
     files:
-      - src: custom-scripts/
+      - src: overlays/sway/configs/
+        dst: /etc/
+        mode: "0644"
+
+  # Base scripts
+  - type: files
+    files:
+      - src: overlays/base/tools/
+        dst: /usr/local/bin/
+        mode: "0755"
+
+  # Sway setup scripts
+  - type: files
+    files:
+      - src: overlays/sway/scripts/setup/
+        dst: /usr/local/bin/
+        mode: "0755"
+
+  # Sway runtime scripts
+  - type: files
+    files:
+      - src: overlays/sway/scripts/runtime/
         dst: /usr/local/bin/
         mode: "0755"
 
@@ -117,19 +138,19 @@ modules:
   # window_manager variable is not propagated to module conditions.
   - type: files
     files:
-      - src: custom-configs/sway/sway.desktop
+      - src: overlays/sway/session/sway.desktop
         dst: /usr/share/wayland-sessions/sway.desktop
         mode: "0644"
-      - src: custom-configs/sway/environment
+      - src: overlays/sway/session/environment
         dst: /etc/sway/environment
         mode: "0644"
-      - src: custom-configs/sway/start-sway
+      - src: overlays/sway/session/start-sway
         dst: /usr/bin/start-sway
         mode: "0755"
-      - src: custom-scripts/layered-include
+      - src: overlays/sway/scripts/runtime/layered-include
         dst: /usr/libexec/sway/layered-include
         mode: "0755"
-      - src: custom-scripts/volume-helper
+      - src: overlays/sway/scripts/runtime/volume-helper
         dst: /usr/libexec/sway/volume-helper
         mode: "0755"
 

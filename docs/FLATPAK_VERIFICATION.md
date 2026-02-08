@@ -7,12 +7,14 @@ This guide explains how to verify that flatpak applications are installed correc
 Exousia uses a two-phase approach for flatpak installation:
 
 ### Phase 1: Build Time
+
 - ✅ Flathub remote is configured and downloaded
 - ✅ Remote repository is registered with flatpak
 - ✅ Flatpak binary and dependencies are included
 - ✅ default-flatpaks module configuration is embedded
 
 ### Phase 2: First Boot
+
 - 🚀 The `default-flatpaks` systemd service runs automatically
 - 🚀 All configured flatpak applications are installed (~20+ apps)
 - 🚀 All required runtimes are installed (Freedesktop, GNOME, KDE)
@@ -31,6 +33,7 @@ sudo verify-flatpak-installation
 ```
 
 This script will:
+
 - Check if Flathub remote is configured
 - Count installed applications and runtimes
 - Verify core applications are present
@@ -38,7 +41,8 @@ This script will:
 - Generate a detailed log file
 
 **Output Example:**
-```
+
+```text
 =========================================
 Flatpak Installation Verification
 =========================================
@@ -67,27 +71,33 @@ All checks passed!
 ### Method 2: Manual Verification
 
 #### Check Flathub Remote
+
 ```bash
 flatpak remotes
 ```
+
 Expected output should include `flathub`.
 
 #### List Installed Applications
+
 ```bash
 flatpak list --app
 ```
 
 #### List Installed Runtimes
+
 ```bash
 flatpak list --runtime
 ```
 
 #### Check Specific Applications
+
 ```bash
 flatpak list | grep -E "(firefox|chrome|vlc|libreoffice|zoom)"
 ```
 
 Expected applications (from packages/common/flatpaks.yml):
+
 - com.bitwarden.desktop
 - com.github.tchx84.Flatseal
 - com.google.Chrome
@@ -118,11 +128,11 @@ journalctl -u bluebuild-default-flatpaks.service
 
 ```bash
 # Pull or load your built image
-podman pull ghcr.io/borninthedark/exousia:latest
+podman pull docker.io/1borninthedark/exousia:latest
 
 # Export to a directory
 mkdir -p /tmp/exousia-test
-podman export $(podman create ghcr.io/borninthedark/exousia:latest) | tar -C /tmp/exousia-test -xf -
+podman export $(podman create docker.io/1borninthedark/exousia:latest) | tar -C /tmp/exousia-test -xf -
 
 # Boot with systemd-nspawn
 sudo systemd-nspawn -D /tmp/exousia-test --boot
@@ -147,7 +157,7 @@ sudo podman run --rm -it --privileged \
   -v /var/lib/containers/storage:/var/lib/containers/storage \
   quay.io/centos-bootc/bootc-image-builder:latest \
   --type qcow2 \
-  ghcr.io/borninthedark/exousia:latest
+  docker.io/1borninthedark/exousia:latest
 
 # Boot the VM and verify
 ssh user@vm-ip
@@ -170,6 +180,7 @@ After deploying to physical hardware:
 **Symptom:** `flatpak list --app` returns empty or very few apps
 
 **Check:**
+
 ```bash
 # Is the service enabled?
 systemctl is-enabled bluebuild-default-flatpaks.service
@@ -182,6 +193,7 @@ journalctl -u bluebuild-default-flatpaks.service -b
 ```
 
 **Fix:**
+
 ```bash
 # Manually trigger the service
 sudo systemctl start bluebuild-default-flatpaks.service
@@ -195,6 +207,7 @@ journalctl -u bluebuild-default-flatpaks.service -f
 **Symptom:** `flatpak remotes` doesn't show flathub
 
 **Fix:**
+
 ```bash
 # Add Flathub remote manually
 flatpak remote-add --if-not-exists flathub \
@@ -211,6 +224,7 @@ sudo flatpak remote-add --if-not-exists --system flathub \
 
 **Check:**
 The service name may vary depending on the BlueBuild version. Try:
+
 ```bash
 systemctl list-units | grep -i flatpak
 systemctl list-unit-files | grep -i flatpak
@@ -218,6 +232,7 @@ systemctl list-unit-files | grep -i flatpak
 
 **Alternative:**
 If the service doesn't exist, you can manually install flatpaks using the list from `packages/common/flatpaks.yml`:
+
 ```bash
 # Install core apps
 flatpak install -y flathub com.bitwarden.desktop
@@ -233,6 +248,7 @@ flatpak install -y flathub org.videolan.VLC
 **Explanation:** Flatpak installation can take 5-15 minutes depending on network speed and number of packages.
 
 **Check Progress:**
+
 ```bash
 # Watch the journal in real-time
 journalctl -u bluebuild-default-flatpaks.service -f
@@ -271,11 +287,13 @@ Large applications like Blender, LibreOffice, and GIMP can take several minutes 
 ## Logs and Diagnostics
 
 ### Verification Log
+
 ```bash
 cat /var/log/flatpak-installation-verification.log
 ```
 
 ### Service Logs
+
 ```bash
 # All flatpak-related services
 journalctl -b | grep -i flatpak
@@ -288,6 +306,7 @@ journalctl -u bluebuild-default-flatpaks.service -b
 ```
 
 ### System Status
+
 ```bash
 # Overall system boot time
 systemd-analyze

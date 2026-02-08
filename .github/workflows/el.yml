@@ -1,0 +1,111 @@
+# El - King of the Phoenician Gods - Orchestrator Workflow
+# Calls Anat (CI) + Resheph (security) in parallel, then Kothar (build), then gate.
+#
+# Phoenician Pantheon:
+#   El        -> Orchestrator (king of the gods)
+#   Anat      -> CI: lint + test (goddess of war & wisdom)
+#   Resheph   -> Security scanning (god of protection)
+#   Kothar    -> Build + push (god of craftsmanship)
+#   Eshmun    -> Release: semver + retag (god of healing/renewal)
+
+name: "El - Orchestrator"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_type:
+        description: "Fedora image type to build"
+        required: true
+        type: choice
+        options:
+          - "fedora-sway-atomic"
+          - "fedora-bootc"
+        default: "fedora-sway-atomic"
+      distro_version:
+        description: "Fedora version"
+        required: true
+        type: choice
+        options:
+          - "43"
+          - "44"
+          - "rawhide"
+        default: "43"
+      enable_plymouth:
+        description: "Enable Plymouth boot splash"
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Anat (CI) + Resheph (Security) run in parallel ──
+  anat:
+    name: "Anat (CI)"
+    uses: ./.github/workflows/anat.yml
+    permissions:
+      contents: read
+
+  resheph:
+    name: "Resheph (Security)"
+    uses: ./.github/workflows/resheph.yml
+    permissions:
+      contents: read
+
+  # ── Kothar (Build) runs after both pass ──
+  kothar:
+    name: "Kothar (Build)"
+    needs: [anat, resheph]
+    uses: ./.github/workflows/kothar.yml
+    with:
+      image_type: ${{ inputs.image_type || 'fedora-sway-atomic' }}
+      distro_version: ${{ inputs.distro_version || '43' }}
+      enable_plymouth: ${{ inputs.enable_plymouth == '' && true || inputs.enable_plymouth }}
+    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+
+  # ── Gate: summary of all jobs ──
+  gate:
+    name: "Gate (Summary)"
+    needs: [anat, resheph, kothar]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Pipeline summary
+        run: |
+          echo "## El Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Workflow | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Anat (CI) | ${{ needs.anat.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Resheph (Security) | ${{ needs.resheph.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Kothar (Build) | ${{ needs.kothar.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if any job failed
+        if: >-
+          needs.anat.result == 'failure' ||
+          needs.resheph.result == 'failure' ||
+          needs.kothar.result == 'failure'
+        run: exit 1
+
+  # ── Eshmun (Release) runs after gate on main pushes ──
+  eshmun:
+    name: "Eshmun (Release)"
+    needs: [gate]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/eshmun.yml
+    secrets: inherit
+    permissions:
+      contents: write
+      packages: write

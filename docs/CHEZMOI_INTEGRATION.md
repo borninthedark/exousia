@@ -16,6 +16,7 @@ Exousia uses the [BlueBuild chezmoi module](https://blue-build.org/reference/mod
 ### Phase 1: Build Time
 
 During image build, the chezmoi module:
+
 - ✅ Downloads the latest chezmoi binary from GitHub releases (amd64)
 - ✅ Installs it to `/usr/bin/chezmoi`
 - ✅ Creates systemd user services for initialization and updates
@@ -25,6 +26,7 @@ During image build, the chezmoi module:
 ### Phase 2: First User Login
 
 When a user logs in for the first time:
+
 - 🚀 The `chezmoi-init.service` runs automatically
 - 🚀 Dotfiles repository is cloned to `~/.local/share/chezmoi`
 - 🚀 Initial dotfiles are applied to the home directory
@@ -33,6 +35,7 @@ When a user logs in for the first time:
 ### Phase 3: Automatic Updates
 
 After initialization:
+
 - 🔄 The `chezmoi-update.timer` runs daily (configurable)
 - 🔄 Waits 5 minutes after boot before first update (configurable)
 - 🔄 Updates dotfiles from the repository
@@ -41,10 +44,10 @@ After initialization:
 ## Configuration
 
 The chezmoi module is configured in the following files:
+
 - `adnyeus.yml:157-165`
 - `yaml-definitions/sway-atomic.yml:202-208`
 - `yaml-definitions/sway-bootc.yml:152-158`
-- `yaml-definitions/fedora-kinoite.yml:60-66`
 
 ### Current Settings
 
@@ -81,6 +84,7 @@ wait-after-boot: "5m"          # Wait 5 minutes after boot
 #### Update Intervals
 
 You can customize update frequency using systemd time syntax:
+
 - `1d` - Once per day (default)
 - `6h` - Every 6 hours
 - `1w` - Once per week
@@ -220,6 +224,7 @@ journalctl --user -u chezmoi-update.service -f
 **Symptom:** `~/.local/share/chezmoi` doesn't exist after login
 
 **Check:**
+
 ```bash
 # Is the service enabled?
 systemctl --user is-enabled chezmoi-init.service
@@ -232,6 +237,7 @@ journalctl --user -u chezmoi-init.service
 ```
 
 **Fix:**
+
 ```bash
 # Manually start the service
 systemctl --user start chezmoi-init.service
@@ -245,6 +251,7 @@ chezmoi init --apply https://github.com/borninthedark/dotfiles
 **Symptom:** Service fails with git clone errors
 
 **Check:**
+
 ```bash
 # Check network connectivity
 ping github.com
@@ -257,6 +264,7 @@ journalctl --user -u chezmoi-init.service -n 50
 ```
 
 **Fix:**
+
 ```bash
 # Try with different protocol (SSH)
 chezmoi init --apply git@github.com:borninthedark/dotfiles.git
@@ -270,6 +278,7 @@ chezmoi init --apply https://github.com/borninthedark/dotfiles
 **Symptom:** Dotfiles never update automatically
 
 **Check:**
+
 ```bash
 # Is the timer enabled?
 systemctl --user is-enabled chezmoi-update.timer
@@ -282,6 +291,7 @@ systemctl --user list-timers chezmoi-update.timer
 ```
 
 **Fix:**
+
 ```bash
 # Enable and start the timer
 systemctl --user enable --now chezmoi-update.timer
@@ -297,17 +307,21 @@ systemctl --user start chezmoi-update.service
 **Explanation:** This is expected behavior with `file-conflict-policy: skip`
 
 **Workflow for local changes:**
+
 1. **Make changes locally** - Edit your dotfiles as needed
 2. **Commit to local repository**
+
    ```bash
    cd ~/.local/share/chezmoi
    git add .
    git commit -m "Local customizations"
    git push
    ```
+
 3. **Future updates** will pull these changes on other systems
 
 **To force update a specific file:**
+
 ```bash
 # Re-apply from repository, overwriting local changes
 chezmoi apply --force ~/.config/specific-file
@@ -315,6 +329,7 @@ chezmoi apply --force ~/.config/specific-file
 
 **To always override local changes:**
 Change the conflict policy in `yaml-definitions/*.yml`:
+
 ```yaml
 file-conflict-policy: replace
 ```
@@ -324,6 +339,7 @@ file-conflict-policy: replace
 **Symptom:** `systemctl --user status chezmoi-init.service` shows "not found"
 
 **Check:**
+
 ```bash
 # List all chezmoi services
 systemctl --user list-unit-files | grep chezmoi
@@ -335,6 +351,7 @@ ls -l /usr/bin/chezmoi
 
 **Fix:**
 If services don't exist, the module may not have run during build. Check:
+
 ```bash
 # View build logs for chezmoi module errors
 # In your CI/CD pipeline or local build logs
@@ -348,9 +365,11 @@ To use your own dotfiles repository:
 
 1. Fork or create your dotfiles repository on GitHub
 2. Update the repository URL in YAML configurations:
+
    ```yaml
    repository: "https://github.com/YOUR_USERNAME/dotfiles"
    ```
+
 3. Rebuild the image
 
 ### Using a Specific Branch
@@ -379,6 +398,7 @@ all-users: false  # Don't enable services by default
 ```
 
 Users will need to manually enable services:
+
 ```bash
 systemctl --user enable chezmoi-init.service chezmoi-update.timer
 ```
@@ -402,7 +422,8 @@ These tests run during CI/CD builds to ensure the module installed correctly.
 ### Repository Structure
 
 Organize your dotfiles repository for chezmoi:
-```
+
+```text
 dotfiles/
 ├── .chezmoi.toml.tmpl      # Config with templates
 ├── .chezmoiignore          # Files to ignore
@@ -447,12 +468,10 @@ dotfiles/
 ## Images Using Chezmoi
 
 The chezmoi module is enabled in:
-- ✅ **Adnyeus** (`adnyeus.yml`) - DevSecOps-hardened Fedora bootc image with Sway
-- ✅ **Sway Atomic** (`yaml-definitions/sway-atomic.yml`)
-- ✅ **Sway Bootc** (`yaml-definitions/sway-bootc.yml`)
-- ✅ **Fedora Kinoite** (`yaml-definitions/fedora-kinoite.yml`)
 
-The RKE2 bootc image does **not** include chezmoi, as it's a minimal server image without desktop environments.
+- **Adnyeus** (`adnyeus.yml`) - DevSecOps-hardened Fedora bootc image with Sway
+- **Sway Atomic** (`yaml-definitions/sway-atomic.yml`)
+- **Sway Bootc** (`yaml-definitions/sway-bootc.yml`)
 
 ## References
 

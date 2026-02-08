@@ -98,13 +98,9 @@ assert_config_present() {
     return 1
 }
 
-# Helper function to get package manager
+# Helper function to get package manager (Fedora-only)
 get_package_manager() {
-    if is_fedora; then
-        echo "rpm"
-    else
-        echo "unknown"
-    fi
+    echo "rpm"
 }
 
 # --- OS / Distro version checks ---
@@ -115,33 +111,22 @@ get_package_manager() {
     assert_success "os-release should contain OS ID"
 }
 
-@test "OS should be Fedora Linux (Fedora-specific)" {
-    if ! is_fedora; then
-        skip "Test only applies to Fedora-based images"
-    fi
+@test "OS should be Fedora Linux" {
     run grep 'ID=fedora' "$MOUNT_POINT/etc/os-release"
     assert_success "Should be running Fedora Linux"
 }
 
-@test "OS version should match expected Fedora versions (41–44 or rawhide)" {
-    if ! is_fedora; then
-        skip "Test only applies to Fedora-based images"
-    fi
+@test "OS version should match expected Fedora versions (41-44 or rawhide)" {
     run grep -E 'VERSION_ID=(41|42|43|44)' "$MOUNT_POINT/etc/os-release"
     if [ "$status" -ne 0 ]; then
         run grep 'VARIANT_ID=rawhide' "$MOUNT_POINT/etc/os-release"
-        assert_success "Should be Fedora 41–44 or rawhide"
+        assert_success "Should be Fedora 41-44 or rawhide"
     fi
 }
 
 @test "Detected OS version is valid" {
     if [[ "$OS_VERSION_ID" == "unknown" ]]; then
         skip "Could not detect OS version"
-    fi
-
-    # OS-specific version validation
-    if ! is_fedora; then
-        skip "Test only applies to Fedora-based images"
     fi
 
     [[ "$OS_VERSION_ID" =~ ^(41|42|43|44|rawhide)$ ]]
@@ -181,15 +166,15 @@ get_package_manager() {
     else
         skip "Skipping /var/roothome check: directory not provisioned in this image"
     fi
-    
+
     # /opt symlink should exist in fedora-bootc builds
     run test -L "$MOUNT_POINT/opt"
     assert_success "/opt should be a symlink in fedora-bootc"
-    
+
     run readlink "$MOUNT_POINT/opt"
     # Accept both relative and absolute paths
     assert_output --partial "var/opt"
-    
+
     # /usr/lib/extensions should exist in fedora-bootc builds
     assert_dir_exists "$MOUNT_POINT/usr/lib/extensions"
 }
@@ -198,7 +183,7 @@ get_package_manager() {
     if ! is_fedora_sway_atomic; then
         skip "Test only applies to fedora-sway-atomic builds"
     fi
-    
+
     # /var/roothome should NOT exist for fedora-sway-atomic
     run test -d "$MOUNT_POINT/var/roothome"
     assert_failure "/var/roothome should not exist in fedora-sway-atomic"
@@ -389,27 +374,18 @@ get_package_manager() {
 
 # --- Repositories and package config ---
 
-@test "RPM Fusion repositories should be configured (Fedora only)" {
-    if ! is_fedora; then
-        skip "Test only applies to Fedora-based images"
-    fi
+@test "RPM Fusion repositories should be configured" {
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-free.repo"
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-nonfree.repo"
 }
 
-@test "Custom repositories should be configured (Fedora only)" {
-    if ! is_fedora; then
-        skip "Test only applies to Fedora-based images"
-    fi
+@test "Custom repositories should be configured" {
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/nwg-shell.repo"
 }
 
 # --- Key packages ---
 
-@test "DNF5 should be installed and symlinked as default dnf (Fedora only)" {
-    if ! is_fedora; then
-        skip "Test only applies to Fedora-based images"
-    fi
+@test "DNF5 should be installed and symlinked as default dnf" {
     run buildah run "$CONTAINER" -- rpm -q dnf5
     assert_success
     run test -L "$MOUNT_POINT/usr/bin/dnf"
@@ -417,19 +393,12 @@ get_package_manager() {
 }
 
 @test "bootc should be installed" {
-    # Check for bootc binary regardless of package manager
     if [[ -x "$MOUNT_POINT/usr/bin/bootc" ]]; then
-        # Found the binary
         run test -x "$MOUNT_POINT/usr/bin/bootc"
         assert_success
     else
-        # Try package manager query as fallback
-        if is_fedora || [[ "$OS_ID" =~ ^(opensuse|suse)$ ]]; then
-            run buildah run "$CONTAINER" -- rpm -q bootc
-            assert_success
-        else
-            skip "Cannot verify bootc installation on this distro (bootc may be built from source)"
-        fi
+        run buildah run "$CONTAINER" -- rpm -q bootc
+        assert_success
     fi
 }
 
@@ -508,7 +477,7 @@ get_package_manager() {
 
     assert_file_exists "$MOUNT_POINT/usr/share/wayland-sessions/sway.desktop"
 
-    # The adnyeus manifest copies custom-configs/sway/environment to /etc/sway/environment
+    # The adnyeus manifest copies overlays/sway/session/environment to /etc/sway/environment
     assert_file_exists "$MOUNT_POINT/etc/sway/environment"
 
     # Exousia always installs custom start-sway script
@@ -731,122 +700,10 @@ get_package_manager() {
     assert_success "bootc.conf should contain greetd and rtkit definitions"
 }
 
-# --- RKE2 Integration Tests ---
-
-# Helper function to check if RKE2 is enabled
-is_rke2_enabled() {
-    [[ "${ENABLE_RKE2:-true}" == "true" ]]
-}
-
-@test "RKE2 binary should be installed when enabled" {
-    if ! is_rke2_enabled; then
-        skip "RKE2 is disabled (ENABLE_RKE2=false)"
-    fi
-
-    # Installer in adnyeus.yml creates a /usr/local/bin/rke2 symlink to the installed binary
-    if [ -x "$MOUNT_POINT/usr/local/bin/rke2" ]; then
-        assert_file_executable "$MOUNT_POINT/usr/local/bin/rke2"
-    elif [ -x "$MOUNT_POINT/usr/bin/rke2" ]; then
-        assert_file_executable "$MOUNT_POINT/usr/bin/rke2"
-    else
-        assert_file_executable "$MOUNT_POINT/var/lib/rancher/rke2/bin/rke2"
-    fi
-}
-
-@test "RKE2 kubectl should be installed when enabled" {
-    if ! is_rke2_enabled; then
-        skip "RKE2 is disabled (ENABLE_RKE2=false)"
-    fi
-
-    assert_file_executable "$MOUNT_POINT/var/lib/rancher/rke2/bin/kubectl"
-}
-
-@test "RKE2 configuration files should exist when enabled" {
-    if ! is_rke2_enabled; then
-        skip "RKE2 is disabled (ENABLE_RKE2=false)"
-    fi
-
-    rke2_conf_dir="$MOUNT_POINT/etc/rancher/rke2"
-
-    assert_dir_exists "$rke2_conf_dir"
-    assert_file_exists "$rke2_conf_dir/config.yaml"
-    assert_file_exists "$rke2_conf_dir/registries.yaml"
-}
-
-@test "RKE2 systemd drop-in directory should exist when enabled" {
-    if ! is_rke2_enabled; then
-        skip "RKE2 is disabled (ENABLE_RKE2=false)"
-    fi
-
-    assert_dir_exists "$MOUNT_POINT/etc/systemd/system/rke2-server.service.d"
-}
-
-@test "RKE2 management tool rke2_ops should be installed when enabled" {
-    if ! is_rke2_enabled; then
-        skip "RKE2 is disabled (ENABLE_RKE2=false)"
-    fi
-
-    assert_file_executable "$MOUNT_POINT/usr/local/bin/rke2_ops"
-}
-
-@test "RKE2 bootc kargs should be configured when enabled" {
-    if ! is_rke2_enabled; then
-        skip "RKE2 is disabled (ENABLE_RKE2=false)"
-    fi
-
-    assert_file_exists "$MOUNT_POINT/usr/lib/bootc/kargs.d/99-rke2.toml"
-    run grep -q "systemd.unified_cgroup_hierarchy=1" "$MOUNT_POINT/usr/lib/bootc/kargs.d/99-rke2.toml"
-    assert_success "RKE2 kargs should include cgroups v2"
-}
-
-@test "RKE2 data directory should exist when enabled" {
-    if ! is_rke2_enabled; then
-        skip "RKE2 is disabled (ENABLE_RKE2=false)"
-    fi
-
-    assert_dir_exists "$MOUNT_POINT/var/lib/rancher/rke2"
-}
-
-@test "RKE2 MOTD should be configured when enabled" {
-    if ! is_rke2_enabled; then
-        skip "RKE2 is disabled (ENABLE_RKE2=false)"
-    fi
-
-    assert_file_exists "$MOUNT_POINT/etc/motd"
-    run grep -q "Exousia RKE2" "$MOUNT_POINT/etc/motd"
-    assert_success "MOTD should contain RKE2 information"
-}
-
-@test "RKE2 dependencies should be installed when enabled" {
-    if ! is_rke2_enabled; then
-        skip "RKE2 is disabled (ENABLE_RKE2=false)"
-    fi
-
-    # Note: iptables-nft is the modern replacement for iptables on Fedora
-    for pkg in curl iptables-nft container-selinux policycoreutils-python-utils cryptsetup python3; do
-        run buildah run "$CONTAINER" -- rpm -q "$pkg"
-        assert_success "$pkg should be installed"
-    done
-}
-
-@test "Kubernetes repository should be configured when enabled" {
-    if ! is_rke2_enabled; then
-        skip "RKE2 is disabled (ENABLE_RKE2=false)"
-    fi
-
-    assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/kubernetes.repo"
-    run grep -q "pkgs.k8s.io" "$MOUNT_POINT/etc/yum.repos.d/kubernetes.repo"
-    assert_success "kubernetes.repo should contain k8s package repository URL"
-}
-
 # --- Chezmoi dotfiles management ---
 
 # Helper function to check if chezmoi should be enabled for this image
 is_chezmoi_enabled() {
-    # RKE2 minimal server image doesn't include chezmoi
-    if is_rke2_enabled; then
-        return 1
-    fi
     # All desktop images include chezmoi
     return 0
 }
@@ -1033,4 +890,75 @@ is_chezmoi_enabled() {
     else
         skip "/etc/sway/environment not found"
     fi
+}
+
+# --- ZFS (conditional) ---
+
+# Helper function to check if ZFS is enabled in this build
+is_zfs_enabled() {
+    # ZFS is enabled if the zfs.ko module or zfs command is present
+    [[ -x "$MOUNT_POINT/usr/sbin/zfs" ]] || [[ -x "$MOUNT_POINT/usr/bin/zfs" ]]
+}
+
+@test "ZFS kernel module should exist for installed kernel" {
+    if ! is_zfs_enabled; then
+        skip "ZFS is not enabled in this image"
+    fi
+
+    # Find kernel version
+    local kver
+    if [[ -d "$MOUNT_POINT/usr/lib/modules" ]]; then
+        kver=$(find "$MOUNT_POINT/usr/lib/modules" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -n1)
+    fi
+
+    if [[ -z "${kver:-}" ]] || [[ "${kver}" == "*" ]]; then
+        skip "No kernel modules found"
+    fi
+
+    # Check for zfs.ko in expected locations
+    local found=false
+    for ext in ko ko.xz ko.zst; do
+        if [ -f "$MOUNT_POINT/usr/lib/modules/$kver/extra/zfs/zfs.$ext" ] || \
+           [ -f "$MOUNT_POINT/usr/lib/modules/$kver/weak-updates/zfs/zfs.$ext" ]; then
+            found=true
+            break
+        fi
+    done
+
+    if [ "$found" = false ]; then
+        echo "zfs.ko not found for kernel $kver" >&3
+        return 1
+    fi
+}
+
+@test "ZFS userspace tools should be available" {
+    if ! is_zfs_enabled; then
+        skip "ZFS is not enabled in this image"
+    fi
+
+    run buildah run "$CONTAINER" -- which zfs
+    assert_success "zfs command should be available"
+
+    run buildah run "$CONTAINER" -- which zpool
+    assert_success "zpool command should be available"
+}
+
+@test "depmod should have been run for ZFS kernel" {
+    if ! is_zfs_enabled; then
+        skip "ZFS is not enabled in this image"
+    fi
+
+    local kver
+    if [[ -d "$MOUNT_POINT/usr/lib/modules" ]]; then
+        kver=$(find "$MOUNT_POINT/usr/lib/modules" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -n1)
+    fi
+
+    if [[ -z "${kver:-}" ]] || [[ "${kver}" == "*" ]]; then
+        skip "No kernel modules found"
+    fi
+
+    # modules.dep should exist and mention zfs
+    assert_file_exists "$MOUNT_POINT/usr/lib/modules/$kver/modules.dep"
+    run grep -q "zfs" "$MOUNT_POINT/usr/lib/modules/$kver/modules.dep"
+    assert_success "modules.dep should reference zfs"
 }

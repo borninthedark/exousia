@@ -1,15 +1,10 @@
 # Exousia: Declarative Bootc Builder
 
-[![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
-[![Last Build: Fedora 43 • Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%E2%80%A2%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/build.yml?query=branch%3Amain+is%3Asuccess)
-[![Code Quality](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/build.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Code%20Quality)](https://github.com/borninthedark/exousia/actions/workflows/build.yml)
-[![Code Coverage](https://img.shields.io/codecov/c/github/borninthedark/exousia?style=for-the-badge&logo=codecov&logoColor=white&label=Coverage&token=G8NS9O5HZB)](https://codecov.io/gh/borninthedark/exousia)
+[![Last Build: Fedora 43 • Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%E2%80%A2%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](#build--release-workflow)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
-<img src=".github/blue-sparrow.svg" alt="Blue Sparrow" width="28" />
+[![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
-Build custom, container-based immutable operating systems using the [**bootc project**](https://github.com/bootc-dev/bootc). Images are built, tested, scanned, and published via GitHub Actions.
-
-**Note:** The "Reiatsu" badge is inspired by *BLEACH* by **Tite Kubo** — used as a playful status indicator with full acknowledgment.
+Build custom, container-based immutable operating systems using the [**bootc project**](https://github.com/bootc-dev/bootc). Images are built, tested, and published via GitHub Actions to DockerHub.
 
 Exousia builds custom, container-based immutable operating systems using [bootc](https://github.com/bootc-dev/bootc) and GitHub Actions. It focuses on reproducible, security-conscious laptop images with fast iteration cycles.
 
@@ -40,42 +35,44 @@ Exousia builds custom, container-based immutable operating systems using [bootc]
 ## Project Snapshot
 
 - **Purpose:** Declarative laptop images with a DevSecOps-friendly workflow.
-- **Outputs:** bootc base images and atomic desktops (e.g., Sway, KDE) published to GHCR and Docker Hub.
-- **Tooling:** FastAPI webhook entrypoint, Python helpers in `tools/`, and YAML-based blueprints.
-- **Security/Quality:** Linting, scanning, signing, and automated tests baked into CI.
+- **Outputs:** bootc Sway images published to DockerHub.
+- **Tooling:** Python CLI tools in `tools/`, YAML-based blueprints, and `just` task runner.
+- **Security/Quality:** Linting, scanning, and automated tests baked into CI.
 
 ---
 
 ## Build & Release Workflow
 
-### Multi-Environment Strategy
-
-Exousia uses a three-environment branch model with semantic versioning:
-
-| Branch | Environment | Version Format | Purpose |
-|--------|-------------|----------------|---------|
-| `dev` | DEV | `vX.Y.Z-dev.N` | Active development |
-| `uat` | UAT | `vX.Y.Z-rc.N` | User acceptance testing |
-| `main` | PROD | `vX.Y.Z` | Production releases |
-
-**Promotion flow:** `dev` → `uat` → `main`
+### Semantic Versioning
 
 Version bumps are determined automatically from [conventional commits](https://www.conventionalcommits.org/):
+
 - `feat:` → minor bump
 - `fix:` → patch bump
 - `feat!:` or `BREAKING CHANGE:` → major bump
+
+### CI/CD Pipeline (Phoenician Pantheon)
+
+All workflows use Phoenician mythology-themed names and run on GitHub Actions.
+
+| Workflow | Role | Trigger |
+|----------|------|---------|
+| **El** | Orchestrator (king of the gods) | Push to main, PR |
+| **Anat** | CI: lint, test, validate (goddess of wisdom) | Called by El |
+| **Resheph** | Security: Checkov, Trivy, Bandit (god of protection) | Called by El |
+| **Kothar** | Build + push to DockerHub (god of craftsmanship) | Called by El |
+| **Eshmun** | Release: semver, retag, GitHub Release (god of renewal) | After gate on main |
 
 ### Pipeline Stages
 
 | Stage | What happens |
 |-------|--------------|
-| **Build** | Hadolint linting, dynamic tagging, Buildah image build |
-| **Test** | Bats integration tests, ShellCheck, `bootc container lint` |
-| **Scan** | Trivy vulnerability scan, Semgrep static analysis |
-| **Push & Sign** | Push to GHCR/Docker Hub, sign with Cosign |
-| **Release** | Create GitHub release with changelog, tag Docker images |
+| **Anat** | Hadolint, file structure, Containerfile gen, Ruff, Black, pytest + Codecov |
+| **Resheph** | Checkov (Containerfile), Trivy config scan, Bandit SAST |
+| **Kothar** | Buildah image build, DockerHub push, Trivy image scan, Cosign signing |
+| **Eshmun** | Semver from commits, retag image, GitHub Release |
 
-**Triggers:** pushes to `main`/`uat`/`develop`, pull requests, nightly schedule, manual dispatch, and `repository_dispatch` events.
+**Triggers:** pushes to `main`, pull requests, and manual workflow dispatch.
 
 ---
 
@@ -84,7 +81,7 @@ Version bumps are determined automatically from [conventional commits](https://w
 ### Prerequisites
 
 - Fedora system (Atomic variant recommended)
-- Access to Docker Hub or GHCR
+- DockerHub account (or local container registry)
 - Basic familiarity with bootc/container workflows
 
 ### Use a Published Image
@@ -98,21 +95,17 @@ Version bumps are determined automatically from [conventional commits](https://w
 > ```
 
 ```bash
-# From Docker Hub (recommended)
-sudo bootc switch docker.io/borninthedark/exousia:latest
-sudo bootc upgrade && sudo systemctl reboot
-
-# From GHCR
-sudo bootc switch ghcr.io/borninthedark/exousia:latest
+# From DockerHub
+sudo bootc switch docker.io/1borninthedark/exousia:latest
 sudo bootc upgrade && sudo systemctl reboot
 ```
 
 ### Build Locally
 
 ```bash
-git clone https://github.com/borninthedark/exousia.git
+git clone <your-forgejo-url>/exousia.git
 cd exousia
-make build
+just build
 ```
 
 ---
@@ -121,28 +114,25 @@ make build
 
 Trigger builds programmatically via the webhook API.
 
-**Prerequisites:** GitHub PAT with `repo` scope, Python 3.7+ with `requests`
+**Prerequisites:** GitHub API token, Python 3.11+ with `requests`
 
 ### Python CLI
 
 ```bash
-# Set your GitHub token
-export GITHUB_TOKEN="ghp_your_token_here"
+# Set your Forgejo token
+export GITHUB_TOKEN="your_token_here"
 
 # Trigger a build using repo defaults
-python api/webhook_trigger.py
+python tools/webhook_trigger.py
 
 # Trigger specific image type and version
-python api/webhook_trigger.py \
+python tools/webhook_trigger.py \
   --image-type fedora-sway-atomic \
   --distro-version 43 \
   --enable-plymouth
 
 # Build with specific window manager
-python api/webhook_trigger.py --wm sway --distro-version 43
-
-# Build with specific desktop environment
-python api/webhook_trigger.py --de kde --distro-version 44
+python tools/webhook_trigger.py --wm sway --distro-version 43
 ```
 
 <details>
@@ -150,33 +140,28 @@ python api/webhook_trigger.py --de kde --distro-version 44
 
 ```bash
 # Use a YAML definition file
-python api/webhook_trigger.py --yaml sway-bootc.yml --distro-version 44
-
-# Build with combined DE+WM (e.g., LXQt with Sway)
-python api/webhook_trigger.py --de lxqt --wm sway --distro-version 43
-
-# Build with Debian
-python api/webhook_trigger.py --os fedora --image-type fedora-lxqt --de lxqt --distro-version 44
+python tools/webhook_trigger.py --yaml sway-bootc.yml --distro-version 44
 
 # Disable Plymouth
-python api/webhook_trigger.py --yaml sway-atomic.yml --disable-plymouth --verbose
+python tools/webhook_trigger.py --yaml sway-atomic.yml --disable-plymouth --verbose
 ```
+
 </details>
 
 ### cURL API
 
 ```bash
+# Trigger a build via GitHub Actions workflow dispatch
 curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
-  -H "X-GitHub-Api-Version: 2022-11-28" \
-  https://api.github.com/repos/borninthedark/exousia/dispatches \
+  https://api.github.com/repos/borninthedark/exousia/actions/workflows/el.yml/dispatches \
   -d '{
-    "event_type": "api",
-    "client_payload": {
+    "ref": "main",
+    "inputs": {
       "image_type": "fedora-bootc",
-      "distro_version": "44",
-      "enable_plymouth": true
+      "distro_version": "43",
+      "enable_plymouth": "true"
     }
   }'
 ```
@@ -185,27 +170,17 @@ curl -X POST \
 <summary>More cURL examples</summary>
 
 ```bash
-# With specific YAML definition
-curl -X POST -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $GITHUB_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
-  https://api.github.com/repos/borninthedark/exousia/dispatches \
-  -d '{"event_type": "api", "client_payload": {"image_type": "fedora-bootc", "distro_version": "44", "yaml_config": "sway-bootc.yml"}}'
-
-# With window manager
-curl -X POST -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $GITHUB_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
-  https://api.github.com/repos/borninthedark/exousia/dispatches \
-  -d '{"event_type": "api", "client_payload": {"image_type": "fedora-bootc", "distro_version": "43", "window_manager": "sway"}}'
-
-# With desktop environment
-curl -X POST -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $GITHUB_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
-  https://api.github.com/repos/borninthedark/exousia/dispatches \
-  -d '{"event_type": "api", "client_payload": {"image_type": "fedora-bootc", "distro_version": "44", "desktop_environment": "kde"}}'
+# Build Sway Atomic variant
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  https://api.github.com/repos/borninthedark/exousia/actions/workflows/el.yml/dispatches \
+  -d '{"ref": "main", "inputs": {"image_type": "fedora-sway-atomic", "distro_version": "43", "enable_plymouth": "true"}}'
 ```
+
 </details>
 
-View builds: **https://github.com/borninthedark/exousia/actions** | 📚 [Webhook API Guide](docs/WEBHOOK_API.md)
+View builds on [GitHub Actions](https://github.com/borninthedark/exousia/actions) | [Webhook API Guide](docs/WEBHOOK_API.md)
 
 ---
 
@@ -214,34 +189,34 @@ View builds: **https://github.com/borninthedark/exousia/actions** | 📚 [Webhoo
 ### Switch Blueprint Versions
 
 ```bash
-# Via webhook API
-python api/webhook_trigger.py --image-type fedora-bootc --distro-version 44
-python api/webhook_trigger.py --image-type fedora-sway-atomic --distro-version 43
+# Via webhook CLI
+python tools/webhook_trigger.py --image-type fedora-bootc --distro-version 44
+python tools/webhook_trigger.py --image-type fedora-sway-atomic --distro-version 43
 ```
 
-Or use **Actions → Fedora Bootc DevSec CI → Run workflow** in the GitHub UI.
+Or use the manual workflow dispatch in the GitHub Actions UI.
 
 ### Adjust Packages
 
 | Scope | Where to edit | What to change |
 |-------|---------------|----------------|
-| Base packages | `packages/common/*.yml` | Add/remove shared package sets |
-| Window managers | `packages/window-managers/*.yml` | Add to the relevant categories |
-| Desktop environments | `packages/desktop-environments/*.yml` | Add to the relevant categories |
+| Base packages | `overlays/base/packages/common/*.yml` | Add/remove shared package sets |
+| Window managers | `overlays/base/packages/window-managers/*.yml` | Add to the relevant categories |
 
-All package additions are managed from the `packages/` directory via the package loader; avoid editing YAML definitions for package lists.
+All package additions are managed from the `overlays/base/packages/` directory via the package loader; avoid editing YAML definitions for package lists.
 
 ### Configuration Files
 
 | Directory | Purpose |
 |-----------|---------|
-| `custom-configs/sway/` | Sway WM and config.d snippets |
-| `custom-configs/waybar/` | Waybar status bar |
-| `custom-configs/greetd/` | Display manager (bootc) |
-| `custom-configs/plymouth/` | Boot splash themes |
-| `custom-configs/rancher/rke2/` | RKE2 Kubernetes config |
-| `custom-configs/pam.d/` | PAM authentication (YubiKey U2F) |
-| `custom-scripts/` | Scripts copied to `/usr/local/bin/` |
+| `overlays/sway/configs/sway/` | Sway WM and config.d snippets |
+| `overlays/sway/configs/greetd/` | Display manager (greetd) |
+| `overlays/sway/configs/plymouth/` | Boot splash themes |
+| `overlays/sway/configs/swaylock/` | Swaylock screen lock |
+| `overlays/base/configs/pam.d/` | PAM authentication (YubiKey U2F) |
+| `overlays/sway/scripts/runtime/` | Runtime scripts (autotiling, lid, volume-helper) |
+| `overlays/sway/scripts/setup/` | Build-time setup scripts |
+| `overlays/base/tools/` | Shared scripts |
 
 ### Desktop & Boot Experience
 
@@ -250,8 +225,8 @@ All package additions are managed from the `packages/` directory via the package
   - `/etc/sway/config.d/*.conf` — System overrides
   - `~/.config/sway/config.d/*.conf` — User overrides
   - See [Fedora Sericea Configuration Guide](https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/).
-- **Plymouth**: Set `enable_plymouth: true` in YAML; themes live in `custom-configs/plymouth/themes/`.
-- **Display managers**: all images use greetd; SDDM is deprecated.
+- **Plymouth**: Set `enable_plymouth: true` in YAML; themes live in `overlays/sway/configs/plymouth/themes/`.
+- **Display managers**: all images use greetd.
 
 ---
 
@@ -261,7 +236,8 @@ Exousia includes built-in support for YubiKey hardware authentication using PAM 
 
 ### Configuration
 
-The system includes pre-configured PAM modules in `custom-configs/pam.d/`:
+The system includes pre-configured PAM modules in `overlays/base/configs/pam.d/`:
+
 - `u2f-required` — YubiKey authentication is mandatory
 - `u2f-sufficient` — YubiKey OR password authentication (default for sudo)
 
@@ -323,6 +299,7 @@ python3 tools/package_dependency_checker.py --distro gentoo --packages dev-pytho
 # FreeBSD
 python3 tools/package_dependency_checker.py --distro freebsd --packages py311-requests sway
 ```
+
 </details>
 
 ### Validation CLI
@@ -345,14 +322,21 @@ python3 tools/validate_installed_packages.py --wm sway --distro arch
 
 ## Required Secrets
 
-Configure in **Settings → Secrets and variables → Actions**:
+Configure in GitHub repository settings under **Settings → Secrets and variables → Actions**:
+
+**Secrets:**
 
 | Secret | Purpose |
 |--------|---------|
-| `GHCR_PAT` | GHCR with `write:packages` scope |
-| `DOCKERHUB_USERNAME` | Docker Hub username |
-| `DOCKERHUB_TOKEN` | Docker Hub access token |
-| `CODECOV_TOKEN` | Code coverage from [codecov.io](https://codecov.io) |
+| `DOCKERHUB_USERNAME` | DockerHub username |
+| `DOCKERHUB_TOKEN` | DockerHub access token |
+
+**Variables:**
+
+| Variable | Purpose |
+|----------|---------|
+| `DOCKERHUB_IMAGE` | Image path (e.g., `1borninthedark/exousia`) |
+| `REGISTRY_URL` | Registry URL (e.g., `docker.io`) |
 
 ---
 
@@ -363,7 +347,6 @@ Configure in **Settings → Secrets and variables → Actions**:
 | Topic | Links |
 |-------|-------|
 | Getting Started | [Upgrade Guide](docs/BOOTC_UPGRADE.md) &#124; [Image Builder](docs/BOOTC_IMAGE_BUILDER.md) |
-| API | [Overview](docs/api/README.md) &#124; [Endpoints](docs/api/endpoints.md) |
 | Testing | [Guide](docs/testing/README.md) &#124; [Writing Tests](docs/reference/writing-tests.md) |
 | Reference | [Troubleshooting](docs/reference/troubleshooting.md) &#124; [Webhook API](docs/WEBHOOK_API.md) |
 
@@ -372,6 +355,12 @@ Configure in **Settings → Secrets and variables → Actions**:
 ## Contributing
 
 Contributions welcome! Submit PRs or open issues. Use [conventional commits](https://www.conventionalcommits.org/) for automatic versioning.
+
+---
+
+## AI-Assisted Development
+
+This project was developed with assistance from [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [ChatGPT Codex](https://chatgpt.com/codex), and [GitHub Dependabot](https://docs.github.com/en/code-security/dependabot) for automated dependency security updates.
 
 ---
 
@@ -387,16 +376,9 @@ MIT License — see LICENSE file.
 - [Fedora Sway SIG](https://gitlab.com/fedora/sigs/sway/sway-config-fedora) for Sway configs and QoL improvements
 - [openSUSEway](https://github.com/openSUSE/openSUSEway) for Sway enhancements
 - [Universal Blue](https://universal-blue.org/) and [BlueBuild](https://blue-build.org/) for container-native workflows
-- [RKE2](https://docs.rke2.io/) / [Rancher by SUSE](https://www.rancher.com/) for Kubernetes
+- [GitHub Actions](https://github.com/features/actions) for CI/CD pipelines
 - [Buildah](https://buildah.io/), [Skopeo](https://github.com/containers/skopeo), [Podman](https://podman.io/)
 - **Claude** (Anthropic) and **GPT Codex** (OpenAI) for AI-assisted development
-
-### ZFS Feature Planning
-
-- [Building ZFS — OpenZFS Documentation](https://openzfs.github.io/openzfs-docs/Developer%20Resources/Building%20ZFS.html)
-- [Fedora — OpenZFS Documentation](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
-- [ZFS Kernel Compatibility Issues](https://github.com/openzfs/zfs/issues/17265)
-- [ZFS Autobuild for CoreOS](https://github.com/kainzilla/zfs-autobuild)
 
 ### Creative Acknowledgments
 
@@ -404,6 +386,6 @@ MIT License — see LICENSE file.
 
 ---
 
-**Built with [bootc](https://github.com/bootc-dev/bootc)** | [Documentation](https://bootc-dev.github.io/bootc/) | [Fedora bootc](https://docs.fedoraproject.org/en-US/bootc/)
+**Built with [bootc](https://github.com/bootc-dev/bootc)** | [Docs](https://bootc-dev.github.io/bootc/) | [Fedora bootc](https://docs.fedoraproject.org/en-US/bootc/)
 
-*Generated on 2026-01-26 23:07:21 UTC*
+*Generated on 2026-02-08 02:01:46 UTC*

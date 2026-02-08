@@ -7,26 +7,14 @@ Maps image types to package manager distros for the dependency transpiler.
 This ensures package validation uses the correct package manager for each build.
 """
 
-from typing import Optional
-
-
 # ImageType to distro mapping (Fedora only)
 IMAGE_TYPE_TO_DISTRO = {
-    'fedora-bootc': 'fedora',
-    'fedora-sway-atomic': 'fedora',
-    'fedora-kinoite': 'fedora',
-    'fedora-onyx': 'fedora',
-    'fedora-budgie': 'fedora',
-    'fedora-cinnamon': 'fedora',
-    'fedora-cosmic': 'fedora',
-    'fedora-deepin': 'fedora',
-    'fedora-lxqt': 'fedora',
-    'fedora-mate': 'fedora',
-    'fedora-xfce': 'fedora',
+    "fedora-bootc": "fedora",
+    "fedora-sway-atomic": "fedora",
 }
 
 
-def get_distro_for_image_type(image_type: str) -> Optional[str]:
+def get_distro_for_image_type(image_type: str) -> str | None:
     """
     Get the distro identifier for package validation based on image type.
 
@@ -40,7 +28,7 @@ def get_distro_for_image_type(image_type: str) -> Optional[str]:
     return IMAGE_TYPE_TO_DISTRO.get(image_type.lower())
 
 
-def get_package_manager_for_image_type(image_type: str) -> Optional[str]:
+def get_package_manager_for_image_type(image_type: str) -> str | None:
     """
     Get the package manager name for an image type.
 
@@ -56,7 +44,7 @@ def get_package_manager_for_image_type(image_type: str) -> Optional[str]:
         return None
 
     package_manager_map = {
-        'fedora': 'dnf',
+        "fedora": "dnf",
     }
 
     return package_manager_map.get(distro)
@@ -87,8 +75,8 @@ def get_all_supported_distros() -> list[str]:
 
 def main():
     """CLI for testing distro mappings."""
-    import sys
     import argparse
+    import sys
 
     parser = argparse.ArgumentParser(description="Map image types to distros")
     parser.add_argument("image_type", nargs="?", help="Image type to lookup")
@@ -113,11 +101,11 @@ def main():
     if not args.image_type:
         parser.error("Provide image_type or use --list/--all-mappings")
 
-    distro = get_distro_for_image_type(args.image_type)
-    if distro:
+    matched_distro: str | None = get_distro_for_image_type(args.image_type)
+    if matched_distro:
         pkg_mgr = get_package_manager_for_image_type(args.image_type)
         print(f"Image Type: {args.image_type}")
-        print(f"Distro: {distro}")
+        print(f"Distro: {matched_distro}")
         print(f"Package Manager: {pkg_mgr}")
         return 0
     else:

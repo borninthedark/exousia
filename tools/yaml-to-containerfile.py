@@ -15,7 +15,7 @@ import argparse
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 try:
     import yaml
@@ -27,6 +27,7 @@ except ImportError:
 @dataclass
 class DistroConfig:
     """Configuration for a specific distro."""
+
     name: str
     base_image_template: str
     package_manager: str
@@ -35,24 +36,22 @@ class DistroConfig:
     clean_command: str
     build_deps_install: str
     build_deps_remove: str
-    bootc_build_deps: List[str]
+    bootc_build_deps: list[str]
 
 
 # Fedora Atomic Desktop variants
 FEDORA_ATOMIC_VARIANTS = {
-    "fedora-kinoite": "quay.io/fedora-ostree-desktops/kinoite",
     "fedora-sway-atomic": "quay.io/fedora/fedora-sway-atomic",
-    "fedora-lxqt": "quay.io/fedora-ostree-desktops/lxqt",
 }
 
 
 @dataclass
 class BuildContext:
     """Build context for evaluating conditions and generating Containerfile."""
+
     image_type: str
     fedora_version: str  # For Fedora-based images; can be empty for Linux bootc
     enable_plymouth: bool
-    enable_rke2: bool
     use_upstream_sway_config: bool
     base_image: str
     distro: str = "fedora"  # fedora-only
@@ -63,7 +62,7 @@ class BuildContext:
 class ContainerfileGenerator:
     """Generates Containerfile from YAML configuration."""
 
-    def __init__(self, config: Dict[str, Any], context: BuildContext):
+    def __init__(self, config: dict[str, Any], context: BuildContext):
         self.config = config
         self.context = context
 
@@ -73,7 +72,7 @@ class ContainerfileGenerator:
         This method is stateless and can be called multiple times.
         Each call generates a fresh Containerfile.
         """
-        self.lines: List[str] = []
+        self.lines: list[str] = []
         self._add_header()
         self._add_build_args()
         self._add_from()
@@ -84,7 +83,7 @@ class ContainerfileGenerator:
         self._process_modules()
         return "\n".join(self.lines)
 
-    def _load_common_remove_packages(self) -> List[str]:
+    def _load_common_remove_packages(self) -> list[str]:
         """Load the shared removal list from packages/common/remove.yml."""
         try:
             from package_loader import PackageLoader
@@ -96,40 +95,44 @@ class ContainerfileGenerator:
 
     def _add_header(self):
         """Add file header with generation info."""
-        self.lines.extend([
-            "# " + "=" * 70,
-            f"# Auto-generated Containerfile from {self.config.get('name', 'config')}.yml",
-            "# DO NOT EDIT MANUALLY - Changes will be overwritten",
-            f"# Generated for: {self.context.image_type}",
-            "# " + "=" * 70,
-            "",
-        ])
+        self.lines.extend(
+            [
+                "# " + "=" * 70,
+                f"# Auto-generated Containerfile from {self.config.get('name', 'config')}.yml",
+                "# DO NOT EDIT MANUALLY - Changes will be overwritten",
+                f"# Generated for: {self.context.image_type}",
+                "# " + "=" * 70,
+                "",
+            ]
+        )
 
     def _add_build_args(self):
         """Add ARG declarations."""
-        self.lines.extend([
-            "# " + "-" * 30,
-            "# Build arguments",
-            "# " + "-" * 30,
-            f"ARG FEDORA_VERSION={self.context.fedora_version}",
-        ])
+        self.lines.extend(
+            [
+                "# " + "-" * 30,
+                "# Build arguments",
+                "# " + "-" * 30,
+                f"ARG FEDORA_VERSION={self.context.fedora_version}",
+            ]
+        )
 
         if self.context.image_type == "fedora-bootc":
             self.lines.append(f"ARG ENABLE_PLYMOUTH={str(self.context.enable_plymouth).lower()}")
-
-        self.lines.append(f"ARG ENABLE_RKE2={str(self.context.enable_rke2).lower()}")
 
         self.lines.append("")
 
     def _add_from(self):
         """Add FROM instruction."""
-        self.lines.extend([
-            "# " + "-" * 30,
-            "# Base image",
-            "# " + "-" * 30,
-            f"FROM {self.context.base_image}",
-            "",
-        ])
+        self.lines.extend(
+            [
+                "# " + "-" * 30,
+                "# Base image",
+                "# " + "-" * 30,
+                f"FROM {self.context.base_image}",
+                "",
+            ]
+        )
 
     def _add_shell(self):
         """DEPRECATED: SHELL directive not supported in OCI image format.
@@ -158,14 +161,14 @@ class ContainerfileGenerator:
 
     def _add_environment(self):
         """Add environment variables."""
-        self.lines.extend([
-            "# " + "-" * 30,
-            "# Environment",
-            "# " + "-" * 30,
-            f"ENV BUILD_IMAGE_TYPE={self.context.image_type}",
-            f"ENV ENABLE_RKE2={str(self.context.enable_rke2).lower()}",
-            f"ENV enable_rke2={str(self.context.enable_rke2).lower()}",
-        ])
+        self.lines.extend(
+            [
+                "# " + "-" * 30,
+                "# Environment",
+                "# " + "-" * 30,
+                f"ENV BUILD_IMAGE_TYPE={self.context.image_type}",
+            ]
+        )
 
         if self.context.image_type == "fedora-bootc":
             plymouth_val = str(self.context.enable_plymouth).lower()
@@ -173,41 +176,21 @@ class ContainerfileGenerator:
             self.lines.append("")
             self.lines.append(
                 f'RUN echo "BUILD_IMAGE_TYPE={self.context.image_type}" '
-                f'>> /etc/environment && \\'
+                f">> /etc/environment && \\"
             )
             self.lines.append(
                 f'    echo "ENABLE_PLYMOUTH={plymouth_val}" >> /etc/environment && \\'
             )
-            self.lines.append(
-                f'    echo "ENABLE_RKE2={str(self.context.enable_rke2).lower()}" >> /etc/environment && \\'
-            )
-            self.lines.append(
-                f'    echo "enable_rke2={str(self.context.enable_rke2).lower()}" >> /etc/environment && \\'
-            )
-            self.lines.append(
-                f'    echo "LANG=en_US.UTF-8" >> /etc/environment && \\'
-            )
-            self.lines.append(
-                f'    echo "LC_ALL=en_US.UTF-8" >> /etc/environment'
-            )
+            self.lines.append('    echo "LANG=en_US.UTF-8" >> /etc/environment && \\')
+            self.lines.append('    echo "LC_ALL=en_US.UTF-8" >> /etc/environment')
         else:
             self.lines.append("")
             self.lines.append(
                 f'RUN echo "BUILD_IMAGE_TYPE={self.context.image_type}" '
-                f'>> /etc/environment && \\'
+                f">> /etc/environment && \\"
             )
-            self.lines.append(
-                f'    echo "ENABLE_RKE2={str(self.context.enable_rke2).lower()}" >> /etc/environment && \\'
-            )
-            self.lines.append(
-                f'    echo "enable_rke2={str(self.context.enable_rke2).lower()}" >> /etc/environment && \\'
-            )
-            self.lines.append(
-                f'    echo "LANG=en_US.UTF-8" >> /etc/environment && \\'
-            )
-            self.lines.append(
-                f'    echo "LC_ALL=en_US.UTF-8" >> /etc/environment'
-            )
+            self.lines.append('    echo "LANG=en_US.UTF-8" >> /etc/environment && \\')
+            self.lines.append('    echo "LC_ALL=en_US.UTF-8" >> /etc/environment')
 
         self.lines.append("")
 
@@ -224,11 +207,13 @@ class ContainerfileGenerator:
                 continue
 
             # Add section comment
-            self.lines.extend([
-                "# " + "-" * 30,
-                f"# Module {idx}: {module_type}",
-                "# " + "-" * 30,
-            ])
+            self.lines.extend(
+                [
+                    "# " + "-" * 30,
+                    f"# Module {idx}: {module_type}",
+                    "# " + "-" * 30,
+                ]
+            )
 
             # Process based on type
             if module_type == "files":
@@ -248,7 +233,7 @@ class ContainerfileGenerator:
 
             self.lines.append("")
 
-    def _process_files_module(self, module: Dict[str, Any]):
+    def _process_files_module(self, module: dict[str, Any]):
         """Process files module (COPY instructions)."""
         files = module.get("files", [])
 
@@ -264,13 +249,13 @@ class ContainerfileGenerator:
                 else:
                     self.lines.append(f"COPY --chmod={mode} {src} {dst}")
 
-    def _render_script_lines(self, lines: List[str], set_command: str):
+    def _render_script_lines(self, lines: list[str], set_command: str):
         """Render a sequence of shell lines as a single RUN instruction."""
 
         # Keywords that start or are in the middle of compound statements (no semicolon needed)
-        COMPOUND_STARTERS = {'if', 'then', 'else', 'elif', 'do', 'case'}
+        COMPOUND_STARTERS = {"if", "then", "else", "elif", "do", "case"}
         # Keywords that end compound statements (need semicolon before next command)
-        COMPOUND_ENDERS = {'fi', 'done', 'esac'}
+        COMPOUND_ENDERS = {"fi", "done", "esac"}
 
         self.lines.append(f"RUN {set_command}; \\")
 
@@ -279,7 +264,7 @@ class ContainerfileGenerator:
         def has_next_command(idx: int) -> bool:
             """Return True if there is another non-comment line after idx."""
 
-            for next_line in lines[idx + 1:]:
+            for next_line in lines[idx + 1 :]:
                 stripped_next = next_line.strip()
                 if stripped_next and not stripped_next.startswith("#"):
                     return True
@@ -288,7 +273,7 @@ class ContainerfileGenerator:
         for i, line in enumerate(lines):
             stripped = line.strip()
             # Check if line already ends with backslash (line continuation)
-            has_continuation = line.rstrip().endswith('\\')
+            has_continuation = line.rstrip().endswith("\\")
 
             # Check if line ends with a shell keyword
             last_word = line.split()[-1] if line.split() else ""
@@ -329,14 +314,14 @@ class ContainerfileGenerator:
                 # Last line
                 self.lines.append(f"    {line}")
 
-    def _process_script_module(self, module: Dict[str, Any]):
+    def _process_script_module(self, module: dict[str, Any]):
         """Process script module (RUN instructions)."""
         scripts = module.get("scripts", [])
 
         if not scripts:
             return
 
-        def collect_lines(script_block: str) -> List[str]:
+        def collect_lines(script_block: str) -> list[str]:
             return [line.strip() for line in script_block.split("\n") if line.strip()]
 
         if len(scripts) == 1:
@@ -350,19 +335,19 @@ class ContainerfileGenerator:
                 if script:
                     self.lines.append(f"RUN {script}")
         else:
-            lines: List[str] = []
+            all_lines: list[str] = []
             for script in scripts:
                 if "\n" in script:
-                    lines.extend(collect_lines(script))
+                    all_lines.extend(collect_lines(script))
                 else:
                     stripped = script.strip()
                     if stripped:
-                        lines.append(stripped)
+                        all_lines.append(stripped)
 
-            if lines:
-                self._render_script_lines(lines, "set -euxo pipefail")
+            if all_lines:
+                self._render_script_lines(all_lines, "set -euxo pipefail")
 
-    def _process_rpm_module(self, module: Dict[str, Any]):
+    def _process_rpm_module(self, module: dict[str, Any]):
         """Process rpm-ostree module (DNF operations)."""
         self.lines.append("# hadolint ignore=DL3041,SC2086")
         self.lines.append("RUN set -euxo pipefail; \\")
@@ -396,9 +381,7 @@ class ContainerfileGenerator:
                     self.lines.append(
                         f'    echo "==> Installing {len(packages)} conditional packages..."; \\'
                     )
-                    self.lines.append(
-                        f'    dnf install -y --skip-unavailable {pkg_list}; \\'
-                    )
+                    self.lines.append(f"    dnf install -y --skip-unavailable {pkg_list}; \\")
 
         # Regular package installation
         install_packages = module.get("install", [])
@@ -407,7 +390,7 @@ class ContainerfileGenerator:
             self.lines.append(
                 f'    echo "==> Installing {len(install_packages)} custom packages..."; \\'
             )
-            self.lines.append(f'    dnf install -y {pkg_list}; \\')
+            self.lines.append(f"    dnf install -y {pkg_list}; \\")
 
         # Package removal
         remove_packages = list(dict.fromkeys(module.get("remove", [])))
@@ -419,19 +402,17 @@ class ContainerfileGenerator:
 
         if remove_packages:
             pkg_list = " ".join(remove_packages)
-            self.lines.append(
-                f'    echo "==> Removing {len(remove_packages)} packages..."; \\'
-            )
-            self.lines.append(f'    dnf remove -y {pkg_list}; \\')
+            self.lines.append(f'    echo "==> Removing {len(remove_packages)} packages..."; \\')
+            self.lines.append(f"    dnf remove -y {pkg_list}; \\")
 
         # Upgrade and cleanup
         self.lines.append("    dnf upgrade -y; \\")
         self.lines.append("    dnf clean all")
 
-    def _process_package_loader_module(self, module: Dict[str, Any]):
+    def _process_package_loader_module(self, module: dict[str, Any]):
         """Process package-loader module (new YAML-based package management)."""
-        from pathlib import Path
         import sys
+        from pathlib import Path
 
         # Import the package loader
         script_dir = Path(__file__).parent
@@ -471,8 +452,12 @@ class ContainerfileGenerator:
         # Add repositories (RPMFusion for Fedora)
         if self.context.distro == "fedora":
             self.lines.append("    FEDORA_VERSION=$(rpm -E %fedora); \\")
-            self.lines.append("    dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm; \\")
-            self.lines.append("    dnf install -y https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \\")
+            self.lines.append(
+                "    dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm; \\"
+            )
+            self.lines.append(
+                "    dnf install -y https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \\"
+            )
             self.lines.append("    dnf config-manager setopt fedora-cisco-openh264.enabled=1; \\")
 
         # Install package groups (for Fedora-based distros)
@@ -497,17 +482,22 @@ class ContainerfileGenerator:
 
             # Split packages into chunks to avoid command line length issues
             chunk_size = 50
-            chunks = [install_packages[i:i + chunk_size] for i in range(0, len(install_packages), chunk_size)]
+            chunks = [
+                install_packages[i : i + chunk_size]
+                for i in range(0, len(install_packages), chunk_size)
+            ]
 
-            for i, chunk in enumerate(chunks):
+            for _i, chunk in enumerate(chunks):
                 packages_str = " ".join(chunk)
-                self.lines.append(f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\")
+                self.lines.append(
+                    f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\"
+                )
 
         # Upgrade and cleanup
         self.lines.append("    dnf upgrade -y; \\")
         self.lines.append("    dnf clean all")
 
-    def _process_systemd_module(self, module: Dict[str, Any]):
+    def _process_systemd_module(self, module: dict[str, Any]):
         """Process systemd module (service management)."""
         system = module.get("system", {})
         enabled = system.get("enabled", [])
@@ -524,71 +514,73 @@ class ContainerfileGenerator:
         if commands:
             self.lines.append("RUN " + " && \\\n    ".join(commands))
 
-    def _process_sddm_themes_module(self, module: Dict[str, Any]):
+    def _process_sddm_themes_module(self, module: dict[str, Any]):
         """Process sddm-themes module for automatic theme extraction and configuration."""
-        themes_source = module.get("source", "/tmp/sddm-themes-source")
+        themes_source = module.get("source", "/tmp/sddm-themes-source")  # nosec B108
         themes_dest = module.get("destination", "/usr/share/sddm/themes")
         config_file = module.get("config", "/etc/sddm.conf.d/99-theme.conf")
 
-        self.lines.extend([
-            "RUN set -eux; \\",
-            f"    THEMES_SOURCE='{themes_source}'; \\",
-            f"    THEMES_DEST='{themes_dest}'; \\",
-            f"    SDDM_CONF='{config_file}'; \\",
-            "    echo '==> Setting up SDDM themes'; \\",
-            "    mkdir -p \"$THEMES_DEST\"; \\",
-            "    if [ ! -d \"$THEMES_SOURCE\" ] || [ -z \"$(ls -A \"$THEMES_SOURCE\" 2>/dev/null || true)\" ]; then \\",
-            "        echo 'No SDDM theme bundles found, skipping theme setup'; \\",
-            "        exit 0; \\",
-            "    fi; \\",
-            "    EXTRACTED_THEMES=(); \\",
-            "    for bundle in \"$THEMES_SOURCE\"/*.zip \"$THEMES_SOURCE\"/*.tar \"$THEMES_SOURCE\"/*.tar.gz \"$THEMES_SOURCE\"/*.tgz \"$THEMES_SOURCE\"/*.tar.bz2 \"$THEMES_SOURCE\"/*.tar.xz 2>/dev/null || true; do \\",
-            "        [ -e \"$bundle\" ] || continue; \\",
-            "        echo \"Processing theme bundle: $(basename \"$bundle\")\"; \\",
-            "        case \"$bundle\" in \\",
-            "            *.zip) \\",
-            "                unzip -q \"$bundle\" -d \"$THEMES_DEST\"; \\",
-            "                ;; \\",
-            "            *.tar.gz|*.tgz) \\",
-            "                tar -xzf \"$bundle\" -C \"$THEMES_DEST\"; \\",
-            "                ;; \\",
-            "            *.tar.bz2) \\",
-            "                tar -xjf \"$bundle\" -C \"$THEMES_DEST\"; \\",
-            "                ;; \\",
-            "            *.tar.xz) \\",
-            "                tar -xJf \"$bundle\" -C \"$THEMES_DEST\"; \\",
-            "                ;; \\",
-            "            *.tar) \\",
-            "                tar -xf \"$bundle\" -C \"$THEMES_DEST\"; \\",
-            "                ;; \\",
-            "        esac; \\",
-            "        echo \"  Extracted: $(basename \"$bundle\")\"; \\",
-            "    done; \\",
-            "    for theme_dir in \"$THEMES_DEST\"/*; do \\",
-            "        [ -d \"$theme_dir\" ] || continue; \\",
-            "        if [ -f \"$theme_dir/metadata.desktop\" ]; then \\",
-            "            theme_name=$(basename \"$theme_dir\"); \\",
-            "            EXTRACTED_THEMES+=(\"$theme_name\"); \\",
-            "            echo \"  Found valid theme: $theme_name\"; \\",
-            "        fi; \\",
-            "    done; \\",
-            "    if [ ${#EXTRACTED_THEMES[@]} -gt 0 ]; then \\",
-            "        DEFAULT_THEME=\"${EXTRACTED_THEMES[0]}\"; \\",
-            "        echo \"==> Setting default SDDM theme: $DEFAULT_THEME\"; \\",
-            "        mkdir -p \"$(dirname \"$SDDM_CONF\")\"; \\",
-            "        printf '[Theme]\\\\n# Auto-configured by sddm-themes module\\\\nCurrent=%s\\\\n' \"$DEFAULT_THEME\" > \"$SDDM_CONF\"; \\",
-            "        echo \"  Theme configuration written to: $SDDM_CONF\"; \\",
-            "        echo \"  Total themes installed: ${#EXTRACTED_THEMES[@]}\"; \\",
-            "    else \\",
-            "        echo 'No valid SDDM themes found in bundles'; \\",
-            "    fi; \\",
-            "    echo '==> SDDM theme setup complete'"
-        ])
+        self.lines.extend(
+            [
+                "RUN set -eux; \\",
+                f"    THEMES_SOURCE='{themes_source}'; \\",
+                f"    THEMES_DEST='{themes_dest}'; \\",
+                f"    SDDM_CONF='{config_file}'; \\",
+                "    echo '==> Setting up SDDM themes'; \\",
+                '    mkdir -p "$THEMES_DEST"; \\',
+                '    if [ ! -d "$THEMES_SOURCE" ] || [ -z "$(ls -A "$THEMES_SOURCE" 2>/dev/null || true)" ]; then \\',
+                "        echo 'No SDDM theme bundles found, skipping theme setup'; \\",
+                "        exit 0; \\",
+                "    fi; \\",
+                "    EXTRACTED_THEMES=(); \\",
+                '    for bundle in "$THEMES_SOURCE"/*.zip "$THEMES_SOURCE"/*.tar "$THEMES_SOURCE"/*.tar.gz "$THEMES_SOURCE"/*.tgz "$THEMES_SOURCE"/*.tar.bz2 "$THEMES_SOURCE"/*.tar.xz 2>/dev/null || true; do \\',
+                '        [ -e "$bundle" ] || continue; \\',
+                '        echo "Processing theme bundle: $(basename "$bundle")"; \\',
+                '        case "$bundle" in \\',
+                "            *.zip) \\",
+                '                unzip -q "$bundle" -d "$THEMES_DEST"; \\',
+                "                ;; \\",
+                "            *.tar.gz|*.tgz) \\",
+                '                tar -xzf "$bundle" -C "$THEMES_DEST"; \\',
+                "                ;; \\",
+                "            *.tar.bz2) \\",
+                '                tar -xjf "$bundle" -C "$THEMES_DEST"; \\',
+                "                ;; \\",
+                "            *.tar.xz) \\",
+                '                tar -xJf "$bundle" -C "$THEMES_DEST"; \\',
+                "                ;; \\",
+                "            *.tar) \\",
+                '                tar -xf "$bundle" -C "$THEMES_DEST"; \\',
+                "                ;; \\",
+                "        esac; \\",
+                '        echo "  Extracted: $(basename "$bundle")"; \\',
+                "    done; \\",
+                '    for theme_dir in "$THEMES_DEST"/*; do \\',
+                '        [ -d "$theme_dir" ] || continue; \\',
+                '        if [ -f "$theme_dir/metadata.desktop" ]; then \\',
+                '            theme_name=$(basename "$theme_dir"); \\',
+                '            EXTRACTED_THEMES+=("$theme_name"); \\',
+                '            echo "  Found valid theme: $theme_name"; \\',
+                "        fi; \\",
+                "    done; \\",
+                "    if [ ${#EXTRACTED_THEMES[@]} -gt 0 ]; then \\",
+                '        DEFAULT_THEME="${EXTRACTED_THEMES[0]}"; \\',
+                '        echo "==> Setting default SDDM theme: $DEFAULT_THEME"; \\',
+                '        mkdir -p "$(dirname "$SDDM_CONF")"; \\',
+                '        printf \'[Theme]\\\\n# Auto-configured by sddm-themes module\\\\nCurrent=%s\\\\n\' "$DEFAULT_THEME" > "$SDDM_CONF"; \\',
+                '        echo "  Theme configuration written to: $SDDM_CONF"; \\',
+                '        echo "  Total themes installed: ${#EXTRACTED_THEMES[@]}"; \\',
+                "    else \\",
+                "        echo 'No valid SDDM themes found in bundles'; \\",
+                "    fi; \\",
+                "    echo '==> SDDM theme setup complete'",
+            ]
+        )
 
     def _evaluate_condition(self, condition: str) -> bool:
         """Evaluate a condition string against current context."""
         # Simple condition evaluation
-        # Supports: image-type == "value", enable_plymouth == true/false, enable_rke2 == true/false,
+        # Supports: image-type == "value", enable_plymouth == true/false,
         #          use_upstream_sway_config == true/false, distro == "value",
         #          desktop_environment == "value", window_manager == "value"
 
@@ -607,7 +599,7 @@ class ContainerfileGenerator:
         # Simple equality check
         if "==" in condition:
             left, right = [x.strip() for x in condition.split("==", 1)]
-            right = right.strip('"\'')
+            right = right.strip("\"'")
 
             if left == "image-type":
                 return self.context.image_type == right
@@ -615,8 +607,6 @@ class ContainerfileGenerator:
                 return self.context.distro == right
             if left == "enable_plymouth":
                 return self.context.enable_plymouth == (right.lower() == "true")
-            if left == "enable_rke2":
-                return self.context.enable_rke2 == (right.lower() == "true")
             if left == "use_upstream_sway_config":
                 return self.context.use_upstream_sway_config == (right.lower() == "true")
             if left == "desktop_environment":
@@ -627,11 +617,11 @@ class ContainerfileGenerator:
         return False
 
 
-def load_yaml_config(config_path: Path) -> Dict[str, Any]:
+def load_yaml_config(config_path: Path) -> dict[str, Any]:
     """Load and validate YAML configuration."""
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config = yaml.safe_load(f)
+        with open(config_path, encoding="utf-8") as f:
+            config: dict[str, Any] = yaml.safe_load(f)
         return config
     except FileNotFoundError:
         print(f"Error: Config file not found: {config_path}", file=sys.stderr)
@@ -641,7 +631,7 @@ def load_yaml_config(config_path: Path) -> Dict[str, Any]:
         sys.exit(1)
 
 
-def determine_base_image(config: Dict[str, Any], image_type: str, version: str) -> str:
+def determine_base_image(config: dict[str, Any], image_type: str, version: str) -> str:
     """Determine the base image URL based on configuration."""
     preferred_base = config.get("base-image")
 
@@ -677,7 +667,7 @@ def determine_base_image(config: Dict[str, Any], image_type: str, version: str) 
     return preferred_base or f"quay.io/fedora/fedora-bootc:{version}"
 
 
-def validate_config(config: Dict[str, Any]) -> bool:
+def validate_config(config: dict[str, Any]) -> bool:
     """Validate YAML configuration structure."""
     required_fields = ["name", "description", "modules"]
 
@@ -704,28 +694,34 @@ Examples:
 
   # Validate only
   python3 yaml-to-containerfile.py --config adnyeus.yml --validate
-        """
+        """,
     )
 
-    parser.add_argument("-c", "--config", type=Path, required=True,
-                        help="Path to YAML configuration file")
-    parser.add_argument("-o", "--output", type=Path,
-                        help="Output Containerfile path (default: stdout)")
+    parser.add_argument(
+        "-c", "--config", type=Path, required=True, help="Path to YAML configuration file"
+    )
+    parser.add_argument(
+        "-o", "--output", type=Path, help="Output Containerfile path (default: stdout)"
+    )
     # Build the list of all supported image types dynamically
     all_image_types = ["fedora-bootc", *FEDORA_ATOMIC_VARIANTS.keys()]
 
-    parser.add_argument("--image-type", choices=all_image_types,
-                        help="Base image type (default: from config)")
-    parser.add_argument("--fedora-version", default="43",
-                        help="Fedora version (default: 43, ignored for Linux bootc distros)")
-    parser.add_argument("--enable-plymouth", action="store_true", default=True,
-                        help="Enable Plymouth")
-    parser.add_argument("--disable-plymouth", action="store_true",
-                        help="Disable Plymouth")
-    parser.add_argument("--validate", action="store_true",
-                        help="Validate config only, don't generate")
-    parser.add_argument("-v", "--verbose", action="store_true",
-                        help="Verbose output")
+    parser.add_argument(
+        "--image-type", choices=all_image_types, help="Base image type (default: from config)"
+    )
+    parser.add_argument(
+        "--fedora-version",
+        default="43",
+        help="Fedora version (default: 43, ignored for Linux bootc distros)",
+    )
+    parser.add_argument(
+        "--enable-plymouth", action="store_true", default=True, help="Enable Plymouth"
+    )
+    parser.add_argument("--disable-plymouth", action="store_true", help="Disable Plymouth")
+    parser.add_argument(
+        "--validate", action="store_true", help="Validate config only, don't generate"
+    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
 
     args = parser.parse_args()
 
@@ -749,7 +745,6 @@ Examples:
 
     # Extract build configuration
     build_config = config.get("build", {})
-    enable_rke2 = build_config.get("enable_rke2", False)
     use_upstream_sway_config = build_config.get("use_upstream_sway_config", False)
 
     try:
@@ -772,7 +767,6 @@ Examples:
         print(f"  Distro: {distro}")
         print(f"  Fedora version: {fedora_version}")
         print(f"  Plymouth: {enable_plymouth}")
-        print(f"  RKE2: {enable_rke2}")
         print(f"  Sway Config: {'upstream' if use_upstream_sway_config else 'custom'}")
         print(f"  Base image: {base_image}")
         print(f"  Desktop Environment: {desktop_environment}")
@@ -782,12 +776,11 @@ Examples:
         image_type=image_type,
         fedora_version=fedora_version,
         enable_plymouth=enable_plymouth,
-        enable_rke2=enable_rke2,
         use_upstream_sway_config=use_upstream_sway_config,
         base_image=base_image,
         distro=distro,
         desktop_environment=desktop_environment,
-        window_manager=window_manager
+        window_manager=window_manager,
     )
 
     # Generate Containerfile

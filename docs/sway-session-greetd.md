@@ -4,7 +4,7 @@ This note documents the resilient Sway session staging fix that satisfies the BA
 
 ## ensure-sway-session helper
 
-`custom-scripts/ensure-sway-session` stages or verifies the Sway desktop entry, launcher, and environment file without relying on inline YAML scripts. Key behaviors:
+`overlays/sway/scripts/setup/ensure-sway-session` stages or verifies the Sway desktop entry, launcher, and environment file without relying on inline YAML scripts. Key behaviors:
 
 - Prefers the Exousia-provided assets in `/etc/sway` and falls back to upstream defaults when needed.
 - Generates a minimal `/etc/sway/environment` when it is not already present, ensuring the Wayland session check passes.

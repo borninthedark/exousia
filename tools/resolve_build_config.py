@@ -3,18 +3,17 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
-# Add parent directory to path to import from api package
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add tools directory to path for local imports
+sys.path.insert(0, str(Path(__file__).parent))
 
 YAML_SELECTOR_AVAILABLE = True
-YAML_SELECTOR_IMPORT_ERROR: Optional[Exception] = None
+YAML_SELECTOR_IMPORT_ERROR: Exception | None = None
 
 try:
-    from api.services.yaml_selector_service import YamlSelectorService
+    from yaml_selector_service import YamlSelectorService
 except Exception as exc:
     YAML_SELECTOR_AVAILABLE = False
     YAML_SELECTOR_IMPORT_ERROR = exc
@@ -29,7 +28,7 @@ def resolve_yaml_config(
     target_image_type: str,
     os_name: str = "",
     window_manager: str = "",
-    desktop_environment: str = ""
+    desktop_environment: str = "",
 ) -> Path:
     """
     Resolve YAML configuration path using YamlSelectorService.
@@ -54,7 +53,9 @@ def resolve_yaml_config(
 
         # Check for path traversal attacks
         if config_path.is_absolute() or any(part == ".." for part in config_path.parts):
-            print(f"::error::Invalid YAML config path (path traversal detected): {input_yaml_config}")
+            print(
+                f"::error::Invalid YAML config path (path traversal detected): {input_yaml_config}"
+            )
             sys.exit(1)
 
         # Try multiple locations in order:
@@ -74,20 +75,23 @@ def resolve_yaml_config(
                 return resolved
 
         # If not found in standard locations, search the repo
-        print(f"::warning::YAML config not found in standard locations, searching repo for: {config_path.name}")
+        print(
+            f"::warning::YAML config not found in standard locations, searching repo for: {config_path.name}"
+        )
         import subprocess
+
         try:
             result = subprocess.run(
                 ["find", ".", "-name", config_path.name, "-type", "f"],
                 capture_output=True,
                 text=True,
                 check=True,
-                timeout=5
+                timeout=5,
             )
-            matches = [p.strip() for p in result.stdout.strip().split('\n') if p.strip()]
+            matches = [p.strip() for p in result.stdout.strip().split("\n") if p.strip()]
             if matches:
                 # Prefer yaml-definitions matches first, then others
-                yaml_def_matches = [m for m in matches if 'yaml-definitions' in m]
+                yaml_def_matches = [m for m in matches if "yaml-definitions" in m]
                 selected_match = yaml_def_matches[0] if yaml_def_matches else matches[0]
                 resolved = Path(selected_match).resolve()
                 print(f"Found YAML config via repo search: {resolved}")
@@ -204,7 +208,6 @@ def render_outputs(
     os_version: str,
     containerfile_path: Path,
     enable_plymouth: bool,
-    enable_rke2: bool,
 ) -> None:
     with output_path.open("a", encoding="utf-8") as output:
         output.write(f"BUILD_VERSION={build_version}\n")
@@ -213,7 +216,6 @@ def render_outputs(
         output.write(f"OS_VERSION={os_version}\n")
         output.write(f"CONTAINERFILE={containerfile_path}\n")
         output.write(f"ENABLE_PLYMOUTH={'true' if enable_plymouth else 'false'}\n")
-        output.write(f"ENABLE_RKE2={'true' if enable_rke2 else 'false'}\n")
 
 
 def main() -> None:
@@ -222,7 +224,6 @@ def main() -> None:
     input_image_type = os.environ.get("INPUT_IMAGE_TYPE", DEFAULT_IMAGE_TYPE)
     input_distro_version = os.environ.get("INPUT_DISTRO_VERSION", DEFAULT_VERSION)
     input_enable_plymouth = os.environ.get("INPUT_ENABLE_PLYMOUTH", "true").lower()
-    input_enable_rke2 = os.environ.get("INPUT_ENABLE_RKE2", "true").lower()
     input_window_manager = os.environ.get("INPUT_WINDOW_MANAGER", "")
     input_desktop_environment = os.environ.get("INPUT_DESKTOP_ENVIRONMENT", "")
     input_os = os.environ.get("INPUT_OS", "")
@@ -232,7 +233,6 @@ def main() -> None:
     print(f"Input distro version: {input_distro_version}")
     print(f"Input OS: {input_os}")
     print(f"Input Plymouth: {input_enable_plymouth}")
-    print(f"Input RKE2: {input_enable_rke2}")
     print(f"Input window manager: {input_window_manager}")
     print(f"Input desktop environment: {input_desktop_environment}")
     print(f"Input YAML config: {input_yaml_config}")
@@ -240,7 +240,6 @@ def main() -> None:
     target_version = input_distro_version
     target_image_type = input_image_type
     enable_plymouth = input_enable_plymouth == "true"
-    enable_rke2 = input_enable_rke2 == "true"
 
     os_name = input_os
 
@@ -252,7 +251,7 @@ def main() -> None:
         target_image_type,
         os_name=os_name,
         window_manager=input_window_manager,
-        desktop_environment=input_desktop_environment
+        desktop_environment=input_desktop_environment,
     )
 
     resolved_yaml = yaml_config
@@ -308,7 +307,6 @@ def main() -> None:
         os_version,
         containerfile_path,
         enable_plymouth,
-        enable_rke2,
     )
 
     print("::endgroup::")

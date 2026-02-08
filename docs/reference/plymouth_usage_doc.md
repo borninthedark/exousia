@@ -12,7 +12,7 @@ The Plymouth boot splash system has been modularized into separate components:
 
 ### Separation of Concerns
 
-```
+```text
 ┌─────────────────────────────────────┐
 │  setup-plymouth-theme                │
 │  - Set theme                         │
@@ -86,7 +86,8 @@ sudo setup-plymouth-theme status
 ```
 
 Output:
-```
+
+```text
 Plymouth Configuration Status
 ==============================
 
@@ -203,7 +204,7 @@ sudo bootc upgrade && sudo systemctl reboot
 
 ### File Locations
 
-```
+```text
 /usr/local/bin/
 ├── setup-plymouth-theme       # Theme configuration script
 └── dracut-rebuild             # Initramfs rebuild script

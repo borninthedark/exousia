@@ -69,6 +69,7 @@ The output will be in `./output/qcow2/disk.qcow2`.
 ### Using virt-manager
 
 1. Build a qcow2 image:
+
 ```bash
 mkdir -p ./output
 sudo podman run \
@@ -84,7 +85,7 @@ sudo podman run \
     localhost:5000/exousia:latest
 ```
 
-2. Import into virt-manager:
+1. Import into virt-manager:
    - Open virt-manager
    - Create New Virtual Machine
    - Choose "Import existing disk image"
@@ -132,18 +133,20 @@ sudo dd if=./output/raw/disk.raw of=/dev/sdX bs=4M status=progress
 sync
 ```
 
-3. Boot from the USB device
+1. Boot from the USB device
 
 ## Best Practices
 
 ### Before Building
 
 1. **Test container first**: Always run your container tests before building disk images
+
    ```bash
    make test
    ```
 
 2. **Check image size**: Review your container image size to estimate disk space needed
+
    ```bash
    podman images localhost:5000/exousia
    ```
@@ -153,6 +156,7 @@ sync
 1. **Use raw format for quick tests**: It's faster to build than qcow2
 2. **Keep output directory**: Reuse VMs for iterative testing
 3. **Test upgrades**: After changes, test `bootc upgrade` workflow
+
    ```bash
    # In the running VM
    sudo bootc upgrade
@@ -175,6 +179,7 @@ sync
 ### Issue: Image build fails with "storage" errors
 
 **Solution**: Ensure podman storage is accessible:
+
 ```bash
 sudo chmod -R a+rX /var/lib/containers/storage
 ```
@@ -182,6 +187,7 @@ sudo chmod -R a+rX /var/lib/containers/storage
 ### Issue: Generated image doesn't boot
 
 **Solution**: Check the container lint passed:
+
 ```bash
 podman run --rm localhost:5000/exousia:latest bootc container lint
 ```
@@ -189,6 +195,7 @@ podman run --rm localhost:5000/exousia:latest bootc container lint
 ### Issue: Out of disk space
 
 **Solution**: Clean up old builds:
+
 ```bash
 rm -rf ./output
 podman system prune -a

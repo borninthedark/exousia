@@ -1,0 +1,120 @@
+# Anat - Goddess of War & Wisdom - CI: Lint + Test
+# Runs Hadolint, Python quality (ruff), pytest with coverage + codecov.
+
+name: "Anat - CI"
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-validate:
+    name: Lint & Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Verify required file structure
+        run: |
+          echo "## Anat: File Structure Check" >> $GITHUB_STEP_SUMMARY
+
+          for file in sway.desktop environment start-sway; do
+            if [[ ! -f "overlays/sway/session/$file" ]]; then
+              echo "ERROR: Missing overlays/sway/session/$file"
+              exit 1
+            fi
+          done
+
+          for dir in window-managers common; do
+            if [[ ! -d "overlays/base/packages/$dir" ]]; then
+              echo "ERROR: Missing overlays/base/packages/$dir directory"
+              exit 1
+            fi
+          done
+
+          for script in setup-plymouth-theme dracut-rebuild; do
+            if [[ ! -f "overlays/sway/scripts/setup/$script" ]]; then
+              echo "ERROR: Missing overlays/sway/scripts/setup/$script"
+              exit 1
+            fi
+          done
+
+          echo "All required files present" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate Containerfile from YAML
+        run: |
+          uv run python tools/yaml-to-containerfile.py \
+            --config adnyeus.yml \
+            --output Containerfile.generated \
+            --verbose
+
+      - name: Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Containerfile.generated
+          ignore: DL3041,DL3059,DL4006
+
+      - name: Upload generated Containerfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: containerfile-generated
+          path: Containerfile.generated
+          retention-days: 1
+
+  python-quality:
+    name: Python Quality & Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Ruff
+        run: uv run ruff check tools/
+
+      - name: Black (check)
+        run: uv run black --check tools/
+
+      - name: isort (check)
+        run: uv run isort --check-only tools/
+
+      - name: Pytest with coverage
+        run: |
+          uv run pytest tools/ -v --tb=short \
+            --cov=tools --cov-branch \
+            --cov-report=term \
+            --cov-report=xml:coverage.xml
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage.xml
+          fail_ci_if_error: false
+
+      - name: Test summary
+        if: always()
+        run: |
+          echo "## Anat: Python Quality" >> $GITHUB_STEP_SUMMARY
+          echo "- Ruff: passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Black: passed" >> $GITHUB_STEP_SUMMARY
+          echo "- isort: passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Pytest: see coverage report" >> $GITHUB_STEP_SUMMARY

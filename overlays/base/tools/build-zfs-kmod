@@ -1,0 +1,228 @@
+#!/usr/bin/env python3
+"""
+build-zfs-kmod -- Build OpenZFS kernel modules for bootc images.
+
+Installs ZFS from the official ZFS on Linux repo for Fedora, builds
+the kernel module via DKMS against the installed kernel, verifies
+the build, runs depmod, and optionally cleans up build-time packages.
+
+Usage:
+    build-zfs-kmod [--keep-build-deps]
+
+Flags:
+    --keep-build-deps  Do not remove compiler/devel packages after build
+
+Environment:
+    KVER  Override kernel version (default: auto-detect from /usr/lib/modules)
+"""
+
+import argparse
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+
+SCRIPT_NAME = Path(__file__).name
+
+BUILD_DEPS = [
+    "gcc",
+    "make",
+    "autoconf",
+    "automake",
+    "libtool",
+    "libuuid-devel",
+    "libblkid-devel",
+    "openssl-devel",
+    "zlib-devel",
+    "libtirpc-devel",
+    "elfutils-libelf-devel",
+]
+
+
+def log(msg: str) -> None:
+    print(f"[{SCRIPT_NAME}] {msg}")
+
+
+def die(msg: str) -> None:
+    print(f"[{SCRIPT_NAME}] ERROR: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def run(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
+    """Run a command, printing it first."""
+    log(f"  $ {' '.join(cmd)}")
+    return subprocess.run(cmd, check=check, text=True, capture_output=False)
+
+
+def detect_kernel_version() -> str:
+    """Detect the newest kernel version from /usr/lib/modules."""
+    modules_dir = Path("/usr/lib/modules")
+    if not modules_dir.is_dir():
+        die("No /usr/lib/modules directory found")
+
+    versions = sorted(
+        (d.name for d in modules_dir.iterdir() if d.is_dir()),
+        key=lambda v: v,
+    )
+    if not versions:
+        die("No kernel directories found in /usr/lib/modules")
+
+    return versions[-1]
+
+
+def verify_kernel_headers(kver: str) -> None:
+    """Verify kernel-devel headers exist for the target kernel."""
+    build_dir = Path(f"/usr/lib/modules/{kver}/build")
+    src_dir = Path(f"/usr/src/kernels/{kver}")
+    if not build_dir.exists() and not src_dir.exists():
+        die(
+            f"Kernel headers not found for {kver}. "
+            "Install kernel-devel matching this version."
+        )
+
+
+def add_zfs_repo() -> None:
+    """Add the ZFS on Linux repository for Fedora."""
+    log("Adding ZFS on Linux repository for Fedora")
+
+    result = subprocess.run(
+        ["rpm", "-q", "zfs-release"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        log("ZFS repository already present")
+        return
+
+    dist = subprocess.run(
+        ["rpm", "--eval", "%{dist}"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+
+    repo_url = f"https://zfsonlinux.org/fedora/zfs-release-3-0{dist}.noarch.rpm"
+    run(["dnf", "install", "-y", repo_url])
+
+
+def install_zfs() -> None:
+    """Install ZFS packages."""
+    log("Installing ZFS packages")
+    run(["dnf", "install", "-y", "zfs"])
+
+
+def build_modules(kver: str) -> None:
+    """Build ZFS kernel modules via DKMS."""
+    log(f"Building ZFS kernel modules via DKMS for {kver}")
+    run(["dkms", "autoinstall", "-k", kver])
+
+
+def find_zfs_module(kver: str) -> str | None:
+    """Find the built ZFS kernel module."""
+    search_dirs = [
+        Path(f"/usr/lib/modules/{kver}/extra/zfs"),
+        Path(f"/usr/lib/modules/{kver}/extra"),
+        Path(f"/usr/lib/modules/{kver}/weak-updates/zfs"),
+    ]
+    extensions = ["ko", "ko.xz", "ko.zst"]
+
+    for search_dir in search_dirs:
+        for ext in extensions:
+            candidate = search_dir / f"zfs.{ext}"
+            if candidate.exists():
+                return str(candidate)
+
+    return None
+
+
+def show_build_log() -> None:
+    """Show tail of DKMS build log for debugging."""
+    log("Checking DKMS build log for errors...")
+    dkms_dir = Path("/var/lib/dkms/zfs")
+    if dkms_dir.exists():
+        for log_file in dkms_dir.rglob("build/make.log"):
+            log(f"  Log: {log_file}")
+            try:
+                lines = log_file.read_text().splitlines()
+                for line in lines[-20:]:
+                    print(f"    {line}")
+            except OSError:
+                pass
+
+
+def cleanup_build_deps() -> None:
+    """Remove build-time-only packages to reduce image size."""
+    log("Cleaning up build-time dependencies")
+    run(["dnf", "remove", "-y"] + BUILD_DEPS, check=False)
+
+    # Clean DKMS build cache but keep the built modules
+    dkms_build = Path("/var/lib/dkms/zfs")
+    if dkms_build.exists():
+        for build_dir in dkms_build.rglob("build"):
+            if build_dir.is_dir():
+                log(f"  Removing DKMS build cache: {build_dir}")
+                subprocess.run(["rm", "-rf", str(build_dir)], check=False)
+
+
+def cleanup_caches() -> None:
+    """Clean dnf caches."""
+    run(["dnf", "clean", "all"], check=False)
+    for cache_dir in ["/var/cache/dnf", "/var/cache/libdnf5"]:
+        path = Path(cache_dir)
+        if path.exists():
+            subprocess.run(["rm", "-rf", str(path)], check=False)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Build OpenZFS kernel modules for bootc images",
+    )
+    parser.add_argument(
+        "--keep-build-deps",
+        action="store_true",
+        help="Do not remove compiler/devel packages after build",
+    )
+    args = parser.parse_args()
+
+    # Detect kernel version
+    kver = os.environ.get("KVER", "")
+    if not kver:
+        kver = detect_kernel_version()
+
+    log(f"Building ZFS modules for kernel {kver}")
+
+    # Verify headers
+    verify_kernel_headers(kver)
+
+    # Add repo and install
+    add_zfs_repo()
+    install_zfs()
+
+    # Build
+    build_modules(kver)
+
+    # Verify
+    zfs_ko = find_zfs_module(kver)
+    if not zfs_ko:
+        show_build_log()
+        die("ZFS kernel module not found after DKMS build")
+
+    log(f"ZFS module built: {zfs_ko}")
+
+    # Run depmod
+    log(f"Running depmod for {kver}")
+    run(["depmod", "-a", kver])
+
+    # Cleanup
+    if not args.keep_build_deps:
+        cleanup_build_deps()
+
+    cleanup_caches()
+
+    log(f"ZFS kmod build complete for kernel {kver}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

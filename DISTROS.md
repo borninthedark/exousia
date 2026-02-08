@@ -1,6 +1,6 @@
 # Supported Distributions
 
-Exousia focuses exclusively on Fedora bootc images, with presets for Sway and LXQt desktops.
+Exousia focuses exclusively on Fedora bootc images with Sway as the window manager.
 
 ## Fedora Atomic Variants
 
@@ -8,7 +8,6 @@ Exousia focuses exclusively on Fedora bootc images, with presets for Sway and LX
 |------------|---------------------|------------|
 | `fedora-bootc` | None (minimal) | `quay.io/fedora/fedora-bootc` |
 | `fedora-sway-atomic` | Sway (Wayland) | `quay.io/fedora/fedora-sway-atomic` |
-| `fedora-lxqt` | LXQt | `quay.io/fedora-ostree-desktops/lxqt` |
 
 ## Building Images
 
@@ -21,6 +20,7 @@ Exousia focuses exclusively on Fedora bootc images, with presets for Sway and LX
 5. Click **Run workflow**
 
 Images are tagged with:
+
 - OS family and version (e.g., `fedora-43`)
 - Image type (e.g., `fedora-sway-atomic`)
 - Git commit SHA

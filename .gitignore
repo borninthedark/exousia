@@ -17,6 +17,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
+*.egg-info/
 
 # OS-generated files
 .DS_Store
@@ -31,3 +32,6 @@ Thumbs.db
 # Local environment files (e.g., for secrets)
 .env
 env
+
+# Ansible (not yet tracked)
+ansible/

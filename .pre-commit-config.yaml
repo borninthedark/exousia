@@ -1,0 +1,124 @@
+# Pre-commit hooks for code quality (shift-left strategy)
+# Everything that can run locally runs at commit time.
+# CI only does integration tests, builds, and deploys.
+#
+# Install: uv run pre-commit install
+# Run: uv run pre-commit run --all-files
+
+repos:
+  # File hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: check-merge-conflict
+      - id: check-json
+      - id: check-toml
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: detect-private-key
+
+  # Code formatting
+  - repo: https://github.com/psf/black
+    rev: 26.1.0
+    hooks:
+      - id: black
+        language_version: python3.13
+        args: [--line-length=100]
+
+  # Import sorting
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=100]
+
+  # Linting with ruff (supersedes flake8)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.0
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+  # Type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.19.1
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - types-PyYAML
+          - types-requests
+        args: [--ignore-missing-imports]
+
+  # Pylint (errors-only for fast pre-commit)
+  - repo: https://github.com/PyCQA/pylint
+    rev: v3.2.6
+    hooks:
+      - id: pylint
+        args: [--errors-only, --disable=import-error]
+        files: ^tools/
+
+  # YAML linting (critical for YAML-heavy project)
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.33.0
+    hooks:
+      - id: yamllint
+        args: [-d, "{extends: relaxed, rules: {line-length: {max: 200}}}"]
+
+  # Shell scripts
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        args: [-x]
+
+  # Containerfile linting
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        args: [--ignore, DL3041, --ignore, DL3059, --ignore, DL4006]
+        files: (Containerfile.*|Dockerfile)
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml, -r, tools, -ll]
+        additional_dependencies: ["bandit[toml]"]
+        pass_filenames: false
+
+  # Markdown
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.41.0
+    hooks:
+      - id: markdownlint
+        args: [--fix]
+
+  # Pytest (shift-left: catch failures before push)
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: uv run pytest -q --tb=short --no-cov
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+
+  # DRY check for tools/ directory
+  - repo: local
+    hooks:
+      - id: dry-check
+        name: dry-check (tools/)
+        entry: bash -c 'duplicates=$(find tools/ -name "*.py" -exec md5sum {} + | sort | uniq -D -w32); if [ -n "$duplicates" ]; then echo "Duplicate files found:" && echo "$duplicates" && exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true

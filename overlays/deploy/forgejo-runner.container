@@ -1,0 +1,20 @@
+[Unit]
+Description=Forgejo Actions runner
+After=forgejo.service
+
+[Container]
+Image=codeberg.org/forgejo/runner:latest
+ContainerName=forgejo-runner
+Volume=forgejo-runner-data.volume:/data
+Volume=/var/run/podman/podman.sock:/var/run/docker.sock:ro
+Network=exousia.network
+Label=io.containers.autoupdate=registry
+Environment=FORGEJO_INSTANCE_URL=http://forgejo:3000
+Environment=FORGEJO_RUNNER_LABELS=ubuntu-latest:docker://node:20
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Local container registry for development
+After=network-online.target
+
+[Container]
+Image=docker.io/library/registry:2
+ContainerName=exousia-registry
+PublishPort=5000:5000
+Volume=exousia-registry-data.volume:/var/lib/registry
+Network=exousia.network
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

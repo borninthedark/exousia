@@ -12,6 +12,7 @@ This document explains how to run different kernel versions on your Exousia boot
 - **Requires: x86-64-v3 CPU** (Intel Haswell 2013+, AMD Excavator 2015+)
 
 ### Previous Default (Fedora Stable)
+
 - **fedora-bootc:43** → Fedora 43 stable kernel (~6.11.x)
 - Most tested and stable, but older
 - Use if your CPU doesn't support x86-64-v3
@@ -23,6 +24,7 @@ This document explains how to run different kernel versions on your Exousia boot
 Performance-optimized kernel with BORE scheduler and sched-ext support.
 
 **Pros:**
+
 - ✅ **Best performance** (desktop, gaming, general workloads)
 - ✅ BORE (Burst-Oriented Response Enhancer) scheduler
 - ✅ sched-ext support for custom schedulers
@@ -31,6 +33,7 @@ Performance-optimized kernel with BORE scheduler and sched-ext support.
 - ✅ Secure Boot signed
 
 **Cons:**
+
 - ❌ Requires x86-64-v3 CPU (2013+ for Intel, 2015+ for AMD)
 - ❌ Slightly less tested than Fedora stable
 
@@ -46,6 +49,7 @@ This is now the default! But if you need to re-enable:
 ```
 
 **Runtime Override:**
+
 ```bash
 sudo dnf copr enable -y bieszczaders/kernel-cachyos
 sudo rpm-ostree override replace \
@@ -60,11 +64,13 @@ sudo systemctl reboot
 Add the latest stable kernel.org kernel to your image at build time.
 
 **Pros:**
+
 - ✅ Latest features and hardware support
 - ✅ Baked into image (consistent across deployments)
 - ✅ Easier to test in VMs before deploying
 
 **Cons:**
+
 - ❌ Less tested than Fedora kernel
 - ❌ May have regressions
 - ❌ Requires rebuilding image for kernel updates
@@ -88,19 +94,21 @@ modules:
       - dnf install -y --allowerasing kernel kernel-core kernel-modules kernel-modules-core kernel-modules-extra
 ```
 
-2. **Rebuild your image**
-3. **Test in VM first!** (See BOOTC_IMAGE_BUILDER.md)
+1. **Rebuild your image**
+2. **Test in VM first!** (See BOOTC_IMAGE_BUILDER.md)
 
 ### Option 2: Runtime Kernel Override (Recommended for Testing)
 
 Override the kernel on a running system without rebuilding the image.
 
 **Pros:**
+
 - ✅ Quick to test
 - ✅ Easy to rollback
 - ✅ No image rebuild needed
 
 **Cons:**
+
 - ❌ Not persistent across bootc upgrades
 - ❌ Needs to be applied on each system
 
@@ -142,6 +150,7 @@ For developers who want to test upcoming kernel features.
 Fedora's development kernel with debug options.
 
 **Not recommended** for bootc due to:
+
 - Slower performance (debug enabled)
 - Extreme instability
 - May not match Fedora 43 userspace
@@ -151,6 +160,7 @@ Fedora's development kernel with debug options.
 **CachyOS is now the default!** But if you want to test other kernels:
 
 1. **Test locally first:**
+
    ```bash
    # For vanilla mainline:
    sudo rpm-ostree override replace \
@@ -179,6 +189,7 @@ Fedora's development kernel with debug options.
 | Rawhide | 6.13-git | ⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ |
 
 **Notes:**
+
 - **CachyOS**: Best overall for desktop/gaming, BORE scheduler excels at interactive workloads
 - **Fedora Stable**: Most tested, but older features
 - **Mainline**: Latest upstream, but no special optimizations
@@ -192,6 +203,7 @@ Fedora's development kernel with debug options.
 bootc will automatically rollback to previous deployment.
 
 Manual rollback:
+
 ```bash
 # At GRUB menu, select previous deployment
 # Or after booting to old deployment:
@@ -213,6 +225,7 @@ If you get firmware warnings:
 Mainline kernels from COPR are **signed for Secure Boot**.
 
 For custom kernels, you'll need to:
+
 1. Disable Secure Boot, OR
 2. Sign the kernel with your own MOK key
 

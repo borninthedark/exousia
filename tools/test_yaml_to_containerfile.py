@@ -4,17 +4,17 @@ Unit tests for yaml-to-containerfile transpiler
 ================================================
 """
 
-import sys
 import importlib.util
 from pathlib import Path
 
-import pytest
 import yaml
 
 # Load module from file path (handles hyphens in filename)
 script_path = Path(__file__).parent / "yaml-to-containerfile.py"
 spec = importlib.util.spec_from_file_location("yaml_to_containerfile", script_path)
+assert spec is not None, f"Could not load module spec from {script_path}"
 yaml_to_containerfile = importlib.util.module_from_spec(spec)
+assert spec.loader is not None, "Module spec has no loader"
 spec.loader.exec_module(yaml_to_containerfile)
 
 ContainerfileGenerator = yaml_to_containerfile.ContainerfileGenerator
@@ -28,25 +28,17 @@ def test_generator_is_stateless():
     config = {
         "name": "test-config",
         "description": "Test configuration",
-        "labels": {
-            "org.opencontainers.image.title": "test-image"
-        },
-        "modules": [
-            {
-                "type": "script",
-                "scripts": ["echo 'Hello World'"]
-            }
-        ]
+        "labels": {"org.opencontainers.image.title": "test-image"},
+        "modules": [{"type": "script", "scripts": ["echo 'Hello World'"]}],
     }
 
     context = BuildContext(
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=False,
-        enable_rke2=False,
         use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-sway-atomic:43",
-        distro="fedora"
+        distro="fedora",
     )
 
     generator = ContainerfileGenerator(config, context)
@@ -73,7 +65,9 @@ def test_generator_is_stateless():
 def test_rpm_module_includes_common_remove_packages():
     """Ensure rpm-ostree modules respect the shared removal list."""
 
-    remove_file = Path(__file__).parent.parent / "packages" / "common" / "remove.yml"
+    remove_file = (
+        Path(__file__).parent.parent / "overlays" / "base" / "packages" / "common" / "remove.yml"
+    )
     common_remove = (yaml.safe_load(remove_file.read_text()) or {}).get("packages", [])
 
     config = {
@@ -92,7 +86,6 @@ def test_rpm_module_includes_common_remove_packages():
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=False,
-        enable_rke2=False,
         use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-sway-atomic:43",
         distro="fedora",
@@ -117,12 +110,7 @@ def test_generator_with_different_contexts():
     config = {
         "name": "multi-build",
         "description": "Multi-build test",
-        "modules": [
-            {
-                "type": "script",
-                "scripts": ["echo 'Build step'"]
-            }
-        ]
+        "modules": [{"type": "script", "scripts": ["echo 'Build step'"]}],
     }
 
     # First context - fedora-sway-atomic
@@ -130,10 +118,9 @@ def test_generator_with_different_contexts():
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=False,
-        enable_rke2=False,
         use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-sway-atomic:43",
-        distro="fedora"
+        distro="fedora",
     )
 
     generator = ContainerfileGenerator(config, context1)
@@ -144,10 +131,9 @@ def test_generator_with_different_contexts():
         image_type="fedora-bootc",
         fedora_version="43",
         enable_plymouth=True,
-        enable_rke2=False,
         use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-bootc:43",
-        distro="fedora"
+        distro="fedora",
     )
 
     # Use same generator instance with new context
@@ -166,15 +152,6 @@ def test_generator_with_different_contexts():
 
 def test_custom_base_image_sources_are_respected():
     """Ensure custom base images from supported registries are preserved."""
-    config = {
-        "name": "custom-base",
-        "description": "Custom base image test",
-        "base-image": "quay.io/fedora/fedora-lxqt:43",
-    }
-
-    base = determine_base_image(config, "fedora-lxqt", "43")
-    assert base == "quay.io/fedora/fedora-lxqt:43"
-
     sway_config = {
         "name": "fedora-sway",
         "description": "Fedora sway atomic test",
@@ -199,15 +176,6 @@ def test_custom_bases_without_tags_are_versioned():
     sway_base = determine_base_image(untagged_sway, "fedora-sway-atomic", "43")
     assert sway_base == "quay.io/fedora/fedora-sway-atomic:43"
 
-    untagged_lxqt = {
-        "name": "fedora-lxqt-no-tag",
-        "description": "LXQt atomic images also require explicit tags",
-        "base-image": "quay.io/fedora/fedora-lxqt",
-    }
-
-    lxqt_base = determine_base_image(untagged_lxqt, "fedora-lxqt", "43")
-    assert lxqt_base == "quay.io/fedora/fedora-lxqt:43"
-
     print("✓ Untagged custom bases are pinned to the requested version")
 
 
@@ -228,10 +196,7 @@ def test_script_comments_do_not_chain_into_next_run():
                     """
                 ],
             },
-            {
-                "type": "script",
-                "scripts": ["echo 'second'"]
-            },
+            {"type": "script", "scripts": ["echo 'second'"]},
         ],
     }
 
@@ -239,7 +204,6 @@ def test_script_comments_do_not_chain_into_next_run():
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=False,
-        enable_rke2=False,
         use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-sway-atomic:43",
         distro="fedora",
@@ -254,25 +218,32 @@ def test_script_comments_do_not_chain_into_next_run():
     # The line running the first command should not end with a continuation, even
     # though comments follow. This prevents the next RUN from being merged when
     # builders strip comment-only lines.
-    assert not lines[first_echo_idx].rstrip().endswith("\\"), "First command should not have trailing backslash"
+    assert (
+        not lines[first_echo_idx].rstrip().endswith("\\")
+    ), "First command should not have trailing backslash"
 
-    next_run_idx = next(i for i, line in enumerate(lines[first_echo_idx + 1:], start=first_echo_idx + 1) if line.startswith("RUN"))
-    snippet = " ".join(lines[first_echo_idx:next_run_idx + 1])
+    next_run_idx = next(
+        i
+        for i, line in enumerate(lines[first_echo_idx + 1 :], start=first_echo_idx + 1)
+        if line.startswith("RUN")
+    )
+    snippet = " ".join(lines[first_echo_idx : next_run_idx + 1])
 
-    assert "echo 'first'; RUN" not in snippet, "Comments should not chain into the following RUN instruction"
+    assert (
+        "echo 'first'; RUN" not in snippet
+    ), "Comments should not chain into the following RUN instruction"
 
     print("✓ Script comments do not leak into subsequent RUN commands")
 
 
 def test_fedora_atomic_variants():
     """Test that all Fedora Atomic variants are recognized."""
-    assert "fedora-kinoite" in FEDORA_ATOMIC_VARIANTS
     assert "fedora-sway-atomic" in FEDORA_ATOMIC_VARIANTS
-    assert "fedora-lxqt" in FEDORA_ATOMIC_VARIANTS
+    assert len(FEDORA_ATOMIC_VARIANTS) == 1
 
-    base_kinoite = determine_base_image({}, "fedora-kinoite", "43")
-    assert "kinoite:43" in base_kinoite
-    assert base_kinoite.startswith("quay.io/")
+    base_sway = determine_base_image({}, "fedora-sway-atomic", "43")
+    assert "fedora-sway-atomic:43" in base_sway
+    assert base_sway.startswith("quay.io/")
 
     print("✓ Fedora Atomic variants are recognized")
 
@@ -284,10 +255,9 @@ def test_distro_detection():
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=True,
-        enable_rke2=False,
         use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-sway-atomic:43",
-        distro="fedora"
+        distro="fedora",
     )
     assert fedora_context.distro == "fedora"
 
@@ -299,33 +269,35 @@ def test_enable_plymouth_generates_env():
     config = {
         "name": "plymouth-test",
         "description": "Test ENABLE_PLYMOUTH generation",
-        "modules": []
+        "modules": [],
     }
 
     context = BuildContext(
         image_type="fedora-bootc",
         fedora_version="43",
         enable_plymouth=True,
-        enable_rke2=False,
         use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-bootc:43",
-        distro="fedora"
+        distro="fedora",
     )
 
     generator = ContainerfileGenerator(config, context)
     output = generator.generate()
 
     # Should have ENV instruction for ENABLE_PLYMOUTH
-    assert "ENV ENABLE_PLYMOUTH=true" in output, \
-        "ENABLE_PLYMOUTH should be generated as ENV instruction"
+    assert (
+        "ENV ENABLE_PLYMOUTH=true" in output
+    ), "ENABLE_PLYMOUTH should be generated as ENV instruction"
 
     # Should NOT have standalone ENABLE_PLYMOUTH
-    lines = output.split('\n')
+    lines = output.split("\n")
     for line in lines:
         stripped = line.strip()
         # Check for standalone instruction (not part of ENV or RUN)
-        if stripped.startswith("ENABLE_PLYMOUTH") and not stripped.startswith("ENV ENABLE_PLYMOUTH"):
-            assert False, f"Found standalone ENABLE_PLYMOUTH instruction: {stripped}"
+        if stripped.startswith("ENABLE_PLYMOUTH") and not stripped.startswith(
+            "ENV ENABLE_PLYMOUTH"
+        ):
+            raise AssertionError(f"Found standalone ENABLE_PLYMOUTH instruction: {stripped}")
 
     print("✓ ENABLE_PLYMOUTH generates correct ENV instruction")
 
@@ -335,23 +307,16 @@ def test_package_loader_module():
     config = {
         "name": "package-loader-test",
         "description": "Test package-loader module",
-        "modules": [
-            {
-                "type": "package-loader",
-                "window_manager": "sway",
-                "include_common": True
-            }
-        ]
+        "modules": [{"type": "package-loader", "window_manager": "sway", "include_common": True}],
     }
 
     context = BuildContext(
         image_type="fedora-bootc",
         fedora_version="43",
         enable_plymouth=True,
-        enable_rke2=False,
         use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-bootc:43",
-        distro="fedora"
+        distro="fedora",
     )
 
     generator = ContainerfileGenerator(config, context)
@@ -374,64 +339,27 @@ def test_plymouth_not_generated_for_sway_atomic():
     config = {
         "name": "sway-atomic-test",
         "description": "Test Sway Atomic without Plymouth ENV",
-        "modules": []
+        "modules": [],
     }
 
     context = BuildContext(
         image_type="fedora-sway-atomic",
         fedora_version="43",
         enable_plymouth=True,  # Even if enabled
-        enable_rke2=False,
         use_upstream_sway_config=False,
         base_image="quay.io/fedora/fedora-sway-atomic:43",
-        distro="fedora"
+        distro="fedora",
     )
 
     generator = ContainerfileGenerator(config, context)
     output = generator.generate()
 
     # Should NOT have ENV ENABLE_PLYMOUTH for non-bootc images
-    assert "ENV ENABLE_PLYMOUTH" not in output, \
-        "ENABLE_PLYMOUTH ENV should only be for fedora-bootc images"
+    assert (
+        "ENV ENABLE_PLYMOUTH" not in output
+    ), "ENABLE_PLYMOUTH ENV should only be for fedora-bootc images"
 
     print("✓ ENABLE_PLYMOUTH not generated for non-bootc images")
-
-
-def test_group_install_on_fedora_distros():
-    """Test that package groups are installed on all Fedora distros, not just bootc."""
-    config = {
-        "name": "kde-sway-atomic-test",
-        "description": "Test KDE group install on sway-atomic",
-        "modules": [
-            {
-                "type": "package-loader",
-                "desktop_environment": "kde",
-                "include_common": False
-            }
-        ]
-    }
-
-    # Test with fedora-sway-atomic (should support groups)
-    context = BuildContext(
-        image_type="fedora-sway-atomic",
-        fedora_version="43",
-        enable_plymouth=False,
-        enable_rke2=False,
-        use_upstream_sway_config=False,
-        base_image="quay.io/fedora/fedora-sway-atomic:43",
-        distro="fedora"
-    )
-
-    generator = ContainerfileGenerator(config, context)
-    output = generator.generate()
-
-    # Should install KDE group on any Fedora distro
-    assert "@kde-desktop-environment" in output, \
-        "KDE group should be installed on fedora-sway-atomic"
-    assert "dnf install -y @kde-desktop-environment" in output, \
-        "Should generate group install command"
-
-    print("✓ Group installs work on all Fedora distros")
 
 
 if __name__ == "__main__":
@@ -444,5 +372,4 @@ if __name__ == "__main__":
     test_enable_plymouth_generates_env()
     test_package_loader_module()
     test_plymouth_not_generated_for_sway_atomic()
-    test_group_install_on_fedora_distros()
     print("\n✅ All tests passed!")
