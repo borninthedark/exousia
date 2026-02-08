@@ -76,6 +76,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
 
   # -- Gate: summary of all jobs --
   gate:
@@ -111,3 +112,4 @@ jobs:
     permissions:
       contents: write
       packages: write
+      id-token: write
