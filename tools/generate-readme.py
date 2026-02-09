@@ -114,8 +114,8 @@ def generate_readme(root: Path) -> str:
 >
 > **BLEACH** by **Tite Kubo** -- The Shinigami Pipeline, Espada Pipeline,
 > Reiatsu badge, and all captain/arrancar naming are inspired by the Gotei 13
-> and Hueco Mundo from *BLEACH*. Every workflow carries the spirit pressure of
-> its namesake. All rights belong to Tite Kubo and respective copyright holders.
+> and Hueco Mundo from *BLEACH*. All rights belong to Tite Kubo and
+> respective copyright holders.
 
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/{REPO}/aizen.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/{REPO}/actions/workflows/aizen.yml)
 [![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/{REPO}/actions/workflows/aizen.yml?query=branch%3Amain+is%3Asuccess)
