@@ -121,16 +121,6 @@ modules:
         dst: /usr/local/bin/
         mode: "0755"
 
-  # Git-sourced tools (pulled at build time from public repos)
-  - type: git-clone
-    repos:
-      - url: https://github.com/nwg-piotr/autotiling
-        branch: master
-        files:
-          - src: autotiling/main.py
-            dst: /usr/local/bin/autotiling
-            mode: "0755"
-
   # Sway session files (custom Exousia configs)
   - type: files
     files:
@@ -155,6 +145,12 @@ modules:
   - type: package-loader
     window_manager: sway  # Loaded from overlays/base/packages/window-managers/sway.yml
     include_common: true  # Also loads overlays/base/packages/common/base.yml including Fedora Wayland build deps
+
+  # NOTE: git-clone module type is deprecated pending compilation support.
+  # Autotiling installed via uv after package-loader makes it available
+  - type: script
+    scripts:
+      - UV_CACHE_DIR=/tmp/uv-cache uv pip install --system autotiling && rm -rf /tmp/uv-cache
 
   # Flatpak setup - Add Flathub remote at build time for testing
   # The remote must be present for tests to verify configuration

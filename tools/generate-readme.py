@@ -111,18 +111,25 @@ def generate_readme(root: Path) -> str:
 # Exousia - Declarative Bootc Image Builder
 
 > *Can't Fear Your Own OS*
+>
+> **BLEACH** by **Tite Kubo** -- The Shinigami Pipeline, Espada Pipeline,
+> Reiatsu badge, and all captain/arrancar naming are inspired by the Gotei 13
+> and Hueco Mundo from *BLEACH*. Every workflow carries the spirit pressure of
+> its namesake. All rights belong to Tite Kubo and respective copyright holders.
 
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/{REPO}/aizen.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/{REPO}/actions/workflows/aizen.yml)
 [![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/{REPO}/actions/workflows/aizen.yml?query=branch%3Amain+is%3Asuccess)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 
-Declarative, container-based immutable operating systems built on
+DevSecOps-hardened, container-based immutable operating systems built on
 [**bootc**](https://github.com/bootc-dev/bootc). YAML blueprints define OS
 images, Python tools transpile them to Containerfiles, Buildah builds them, and
 GitHub Actions pushes signed images to DockerHub.
 
-**Note:** The "Reiatsu" badge is inspired by *BLEACH* by **Tite Kubo** --
-used as a playful status indicator with full acknowledgment.
+Development follows a **TDD-first, shift-left** methodology: tests are written
+before implementation, pre-commit hooks enforce quality and security gates
+locally, and CI validates what cannot run on a developer machine. Every tool
+change requires 50% branch coverage to merge (ratcheting toward 75%).
 
 ## Table of Contents
 
@@ -326,9 +333,12 @@ Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 
 ## Contributing
 
-Contributions welcome. Submit PRs or open issues. Use
-[conventional commits](https://www.conventionalcommits.org/) for automatic
-versioning.
+Contributions welcome. Development rules:
+
+- **TDD mandatory** -- write tests before implementation, 50% branch coverage floor (ratcheting toward 75%)
+- **[Conventional commits](https://www.conventionalcommits.org/)** -- enforced by pre-commit hook
+- **Shift-left** -- `uv run pre-commit install && uv run pre-commit install --hook-type commit-msg`
+- Security gates (Bandit, Gitleaks) and quality checks (Ruff, Black, mypy) run locally before push
 
 ## License
 
@@ -350,13 +360,6 @@ This project uses AI-assisted development tools:
 - **[ChatGPT Codex](https://openai.com/index/openai-codex/)** (OpenAI)
 - **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)**
 - **[github-actions[bot]](https://github.com/apps/github-actions)** -- automated releases and tagging
-
-### Creative
-
-**Tite Kubo** -- Creator of *BLEACH*. The CI/CD naming scheme (Shinigami Pipeline)
-and Reiatsu status indicator are inspired by the Gotei 13 and themes from BLEACH,
-used respectfully as a playful aesthetic. All rights belong to Tite Kubo and
-respective copyright holders.
 
 ---
 
