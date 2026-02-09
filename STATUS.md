@@ -1,6 +1,6 @@
 # Exousia CI Status
 
-> Last updated: 2026-02-09 00:23:29 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/21808113030)
+> Last updated: 2026-02-09 00:37:58 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/21808169666)
 
 ## Pipeline: Aizen
 
@@ -8,17 +8,17 @@
 |---------|----------|------|--------|
 | Mayuri | 12th (R&D) | CI: lint + test | success |
 | Byakuya | 6th (Law) | Security scanning | success |
-| Kyoraku | Captain-Commander | Build & Release | cancelled |
+| Kyoraku | Captain-Commander | Build & Release | success |
 
-**Result:** cancelled
+**Result:** success
 
 ## Build
 
 | Property | Value |
 |----------|-------|
-| Version | `v0.1.0` |
+| Version | `v0.2.0` |
 | Image Type | fedora-bootc |
 | Fedora Version | 43 |
 | Window Manager | sway |
-| Commit | `76af9fab` |
+| Commit | `9585d934` |
 | Triggered By | push |
