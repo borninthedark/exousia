@@ -150,7 +150,7 @@ modules:
   # Autotiling installed via uv after package-loader makes it available
   - type: script
     scripts:
-      - uv pip install --system autotiling
+      - UV_CACHE_DIR=/tmp/uv-cache uv pip install --system autotiling && rm -rf /tmp/uv-cache
 
   # Flatpak setup - Add Flathub remote at build time for testing
   # The remote must be present for tests to verify configuration
