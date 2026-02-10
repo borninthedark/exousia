@@ -219,9 +219,6 @@ modules:
         - NetworkManager.service
         - greetd.service
         - bootc-fetch-apply-updates.timer
-        - forgejo.service
-        - forgejo-runner.service
-        - exousia-registry.service
     user:
       enabled:
         - chezmoi-init.service
