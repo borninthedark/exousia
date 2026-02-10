@@ -54,6 +54,7 @@ class BuildContext:
     enable_plymouth: bool
     use_upstream_sway_config: bool
     base_image: str
+    enable_zfs: bool = False
     distro: str = "fedora"  # fedora-only
     desktop_environment: str = ""  # kde, gnome, mate, etc.
     window_manager: str = ""  # sway, kwin, etc.
@@ -119,6 +120,9 @@ class ContainerfileGenerator:
 
         if self.context.image_type == "fedora-bootc":
             self.lines.append(f"ARG ENABLE_PLYMOUTH={str(self.context.enable_plymouth).lower()}")
+
+        if self.context.enable_zfs:
+            self.lines.append(f"ARG ENABLE_ZFS={str(self.context.enable_zfs).lower()}")
 
         self.lines.append("")
 
@@ -708,6 +712,8 @@ class ContainerfileGenerator:
                 return self.context.distro == right
             if left == "enable_plymouth":
                 return self.context.enable_plymouth == (right.lower() == "true")
+            if left == "enable_zfs":
+                return self.context.enable_zfs == (right.lower() == "true")
             if left == "use_upstream_sway_config":
                 return self.context.use_upstream_sway_config == (right.lower() == "true")
             if left == "desktop_environment":
@@ -820,6 +826,10 @@ Examples:
     )
     parser.add_argument("--disable-plymouth", action="store_true", help="Disable Plymouth")
     parser.add_argument(
+        "--enable-zfs", action="store_true", default=False, help="Enable ZFS support"
+    )
+    parser.add_argument("--disable-zfs", action="store_true", help="Disable ZFS support")
+    parser.add_argument(
         "--validate", action="store_true", help="Validate config only, don't generate"
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
@@ -843,6 +853,7 @@ Examples:
     image_type = args.image_type or config.get("image-type", "fedora-sway-atomic")
     fedora_version = args.fedora_version or str(config.get("image-version", "43"))
     enable_plymouth = args.enable_plymouth and not args.disable_plymouth
+    enable_zfs = args.enable_zfs and not args.disable_zfs
 
     # Extract build configuration
     build_config = config.get("build", {})
@@ -868,6 +879,7 @@ Examples:
         print(f"  Distro: {distro}")
         print(f"  Fedora version: {fedora_version}")
         print(f"  Plymouth: {enable_plymouth}")
+        print(f"  ZFS: {enable_zfs}")
         print(f"  Sway Config: {'upstream' if use_upstream_sway_config else 'custom'}")
         print(f"  Base image: {base_image}")
         print(f"  Desktop Environment: {desktop_environment}")
@@ -879,6 +891,7 @@ Examples:
         enable_plymouth=enable_plymouth,
         use_upstream_sway_config=use_upstream_sway_config,
         base_image=base_image,
+        enable_zfs=enable_zfs,
         distro=distro,
         desktop_environment=desktop_environment,
         window_manager=window_manager,

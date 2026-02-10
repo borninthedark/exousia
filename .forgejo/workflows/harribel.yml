@@ -31,6 +31,7 @@ jobs:
           INPUT_IMAGE_TYPE: fedora-sway-atomic
           INPUT_DISTRO_VERSION: "43"
           INPUT_ENABLE_PLYMOUTH: "true"
+          INPUT_ENABLE_ZFS: "false"
 
       - name: Download generated Containerfile
         uses: actions/download-artifact@v4
@@ -52,6 +53,7 @@ jobs:
             --build-arg FEDORA_VERSION=43 \
             --build-arg IMAGE_TYPE=fedora-sway-atomic \
             --build-arg ENABLE_PLYMOUTH=true \
+            --build-arg ENABLE_ZFS=false \
             -t ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} \
             -f Containerfile.generated .
 

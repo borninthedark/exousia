@@ -18,6 +18,10 @@ on:
         description: "Enable Plymouth boot splash"
         type: boolean
         default: true
+      enable_zfs:
+        description: "Enable ZFS kernel module build"
+        type: boolean
+        default: false
 
 env:
   REGISTRY_URL: ${{ vars.REGISTRY_URL || 'docker.io' }}
@@ -38,6 +42,7 @@ jobs:
       image_digest: ${{ steps.build-push.outputs.digest }}
       build_type: ${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
       enable_plymouth: ${{ steps.config.outputs.ENABLE_PLYMOUTH }}
+      enable_zfs: ${{ steps.config.outputs.ENABLE_ZFS }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -54,6 +59,7 @@ jobs:
           INPUT_IMAGE_TYPE: ${{ inputs.image_type }}
           INPUT_DISTRO_VERSION: ${{ inputs.distro_version }}
           INPUT_ENABLE_PLYMOUTH: ${{ inputs.enable_plymouth }}
+          INPUT_ENABLE_ZFS: ${{ inputs.enable_zfs }}
         run: uv run python tools/resolve_build_config.py
 
       - name: Download generated Containerfile
@@ -98,6 +104,7 @@ jobs:
             FEDORA_VERSION=${{ steps.config.outputs.BUILD_VERSION }}
             IMAGE_TYPE=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
             ENABLE_PLYMOUTH=${{ steps.config.outputs.ENABLE_PLYMOUTH }}
+            ENABLE_ZFS=${{ steps.config.outputs.ENABLE_ZFS }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -111,6 +118,7 @@ jobs:
           echo "| Image | \`${{ env.IMAGE_PATH }}:${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Type | ${{ steps.config.outputs.BUILD_IMAGE_TYPE }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Plymouth | ${{ steps.config.outputs.ENABLE_PLYMOUTH }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ZFS | ${{ steps.config.outputs.ENABLE_ZFS }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Digest | \`${{ steps.build-push.outputs.digest }}\` |" >> $GITHUB_STEP_SUMMARY
 
   # -- Scan + Sign run in parallel after build --
