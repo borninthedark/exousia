@@ -78,7 +78,7 @@ jobs:
       image_type: ${{ inputs.image_type || 'fedora-sway-atomic' }}
       distro_version: ${{ inputs.distro_version || '43' }}
       enable_plymouth: ${{ inputs.enable_plymouth == '' && true || inputs.enable_plymouth }}
-      enable_zfs: ${{ inputs.enable_zfs == '' && false || inputs.enable_zfs }}
+      enable_zfs: ${{ inputs.enable_zfs == true }}
     secrets: inherit
     permissions:
       contents: write
