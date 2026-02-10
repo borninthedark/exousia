@@ -50,8 +50,8 @@ sudo systemctl reboot
 # Switch to a specific tag
 sudo bootc switch docker.io/1borninthedark/exousia:v1.2.0
 
-# Switch to nightly builds
-sudo bootc switch docker.io/1borninthedark/exousia:nightly
+# Switch to the rolling daily build
+sudo bootc switch docker.io/1borninthedark/exousia:current
 
 # Switch back to latest
 sudo bootc switch docker.io/1borninthedark/exousia:latest
