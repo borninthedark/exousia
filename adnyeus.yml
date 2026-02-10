@@ -202,6 +202,13 @@ modules:
         kver=$(basename /usr/lib/modules/*)
         dracut -vf "/usr/lib/modules/${kver}/initramfs.img" "$kver"
 
+  # Podman Quadlet definitions (container services)
+  - type: files
+    files:
+      - src: overlays/deploy/
+        dst: /usr/share/containers/systemd/
+        mode: "0644"
+
   # System services (common to all image types)
   - type: systemd
     system:

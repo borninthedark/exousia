@@ -70,7 +70,6 @@ SUBDIR_ENTRIES: list[tuple[str, str, str]] = [
     ("overlays/deploy/", "Deploy Overlay", "Podman Quadlet container definitions"),
     ("custom-tests/", "Test Suite", "Bats integration tests for built images"),
     ("yaml-definitions/", "YAML Definitions", "Alternative build blueprints"),
-    ("ansible/", "Ansible", "Post-deployment Ansible playbooks"),
     ("docs/", "Documentation", "Full documentation"),
     (".github/workflows/", "Shinigami Pipeline", "GitHub Actions CI/CD"),
     (".forgejo/workflows/", "Espada Pipeline", "Forgejo Actions CI/CD"),
@@ -184,7 +183,7 @@ curl -X POST \\
   -H "Accept: application/vnd.github+json" \\
   -H "Authorization: Bearer $GITHUB_TOKEN" \\
   https://api.github.com/repos/{REPO}/actions/workflows/aizen.yml/dispatches \\
-  -d '{{"ref":"main","inputs":{{"image_type":"fedora-bootc","distro_version":"43","enable_plymouth":"true"}}}}'
+  -d '{{"ref":"main","inputs":{{"image_type":"fedora-bootc","distro_version":"43","enable_plymouth":"true","enable_zfs":"false"}}}}'
 ```
 
 Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://github.com/{REPO}/actions).
@@ -196,12 +195,23 @@ Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://githu
 ```mermaid
 %%{{init: {{'theme': 'base', 'themeVariables': {{'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}}}}%%
 graph LR
-    A["adnyeus.yml<br/>(blueprint)"] --> B["Python transpiler<br/>(tools/*.py)"]
+    subgraph Input
+        A["adnyeus.yml"]
+        O["overlays/"]
+        P["packages/*.yml"]
+    end
+    subgraph Transpiler
+        G["resolve_build_config.py"]
+        F["package_loader.py"]
+        B["yaml-to-containerfile.py"]
+    end
+    A --> G --> B
+    O --> B
+    P --> F --> B
     B --> C["Containerfile"]
-    C --> D["Buildah build"]
-    D --> E["DockerHub<br/>(signed image)"]
-    B -.-> F["package_loader.py"]
-    B -.-> G["resolve_build_config.py"]
+    C --> D["Buildah"]
+    D --> T["Bats tests"]
+    T --> E["Registry"]
 ```
 
 | Component | Description |
@@ -219,12 +229,12 @@ division maps to the workflow's role:
 ```mermaid
 %%{{init: {{'theme': 'base', 'themeVariables': {{'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}}}}%%
 graph TD
-    A["Aizen<br/>(orchestrator)"] --> B["Mayuri<br/>(CI: lint+test)"]
-    A --> C["Byakuya<br/>(security scan)"]
-    B --> D["Kyoraku<br/>(build, sign, release)"]
-    C --> D
-    D --> E["Gate"]
-    E --> F["Yoruichi<br/>(status report)"]
+    A["Aizen"] --> B["Mayuri"] & C["Byakuya"]
+    B & C --> K["Kyoraku: build"]
+    K --> S["scan"] & SG["sign"]
+    S & SG --> R["release"]
+    R --> G["Gate"]
+    G --> Y["Yoruichi"]
 ```
 
 | Captain | Division | Role | Key Tools |
@@ -232,7 +242,7 @@ graph TD
 | **Aizen** | -- | Orchestrator | Calls Mayuri + Byakuya in parallel, then Kyoraku |
 | **Mayuri** | 12th (R&D) | CI | Ruff, Black, isort, pytest |
 | **Byakuya** | 6th (Law) | Security | Hadolint, Checkov, Trivy config scan, Bandit |
-| **Kyoraku** | Captain-Commander | Build & Release | Docker Buildx, Cosign (OIDC), Trivy image scan, semver |
+| **Kyoraku** | Captain-Commander | Build & Release | Buildah, Cosign (OIDC), Trivy image scan, semver |
 | **Yoruichi** | 2nd (Stealth) | Status Report | Generates STATUS.md, updates badges |
 
 ### Versioning

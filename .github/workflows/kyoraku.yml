@@ -18,6 +18,10 @@ on:
         description: "Enable Plymouth boot splash"
         type: boolean
         default: true
+      enable_zfs:
+        description: "Enable ZFS kernel module build"
+        type: boolean
+        default: false
 
 env:
   REGISTRY_URL: ${{ vars.REGISTRY_URL || 'docker.io' }}
@@ -38,6 +42,7 @@ jobs:
       image_digest: ${{ steps.build-push.outputs.digest }}
       build_type: ${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
       enable_plymouth: ${{ steps.config.outputs.ENABLE_PLYMOUTH }}
+      enable_zfs: ${{ steps.config.outputs.ENABLE_ZFS }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -54,6 +59,7 @@ jobs:
           INPUT_IMAGE_TYPE: ${{ inputs.image_type }}
           INPUT_DISTRO_VERSION: ${{ inputs.distro_version }}
           INPUT_ENABLE_PLYMOUTH: ${{ inputs.enable_plymouth }}
+          INPUT_ENABLE_ZFS: ${{ inputs.enable_zfs }}
         run: uv run python tools/resolve_build_config.py
 
       - name: Download generated Containerfile
@@ -67,10 +73,12 @@ jobs:
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
           TAG="${{ steps.config.outputs.BUILD_IMAGE_TYPE }}-${SHORT_SHA}"
           BRANCH="${GITHUB_REF_NAME//\//-}"
-          NIGHTLY=$([[ "${{ github.event_name }}" == "schedule" ]] && echo "true" || echo "false")
+          DAILY=$([[ "${{ github.event_name }}" == "schedule" ]] && echo "true" || echo "false")
+          DAILY_TAG="daily-$(date -u +%Y%m%d)"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-          echo "nightly=$NIGHTLY" >> $GITHUB_OUTPUT
+          echo "daily=$DAILY" >> $GITHUB_OUTPUT
+          echo "daily_tag=$DAILY_TAG" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -92,12 +100,14 @@ jobs:
           tags: |
             ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:${{ steps.tag.outputs.tag }}
             ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:${{ steps.tag.outputs.branch }}
-            ${{ steps.tag.outputs.nightly == 'true' && format('{0}/{1}:nightly', env.REGISTRY_URL, env.IMAGE_PATH) || '' }}
+            ${{ steps.tag.outputs.daily == 'true' && format('{0}/{1}:{2}', env.REGISTRY_URL, env.IMAGE_PATH, steps.tag.outputs.daily_tag) || '' }}
+            ${{ steps.tag.outputs.daily == 'true' && format('{0}/{1}:current', env.REGISTRY_URL, env.IMAGE_PATH) || '' }}
             ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:latest
           build-args: |
             FEDORA_VERSION=${{ steps.config.outputs.BUILD_VERSION }}
             IMAGE_TYPE=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
             ENABLE_PLYMOUTH=${{ steps.config.outputs.ENABLE_PLYMOUTH }}
+            ENABLE_ZFS=${{ steps.config.outputs.ENABLE_ZFS }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -111,6 +121,7 @@ jobs:
           echo "| Image | \`${{ env.IMAGE_PATH }}:${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Type | ${{ steps.config.outputs.BUILD_IMAGE_TYPE }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Plymouth | ${{ steps.config.outputs.ENABLE_PLYMOUTH }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ZFS | ${{ steps.config.outputs.ENABLE_ZFS }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Digest | \`${{ steps.build-push.outputs.digest }}\` |" >> $GITHUB_STEP_SUMMARY
 
   # -- Scan + Sign run in parallel after build --

@@ -49,7 +49,8 @@ Built images use the following patterns:
 - **Main**: `main` (for main branch builds)
 - **SHA**: `sha-{git-commit-sha}`
 - **Branch**: `{branch-name}` (for branch builds)
-- **Nightly**: `nightly` (for scheduled builds)
+- **Daily**: `daily-YYYYMMDD` (date-stamped snapshot from scheduled builds)
+- **Current**: `current` (rolling tag, always points to the latest daily build)
 
 ## Creating Custom Configs
 

@@ -17,6 +17,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: "10 12 * * *"  # 7:10 AM EST -- daily rolling build
 
 jobs:
   szayelaporro:

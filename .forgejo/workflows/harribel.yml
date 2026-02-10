@@ -31,6 +31,7 @@ jobs:
           INPUT_IMAGE_TYPE: fedora-sway-atomic
           INPUT_DISTRO_VERSION: "43"
           INPUT_ENABLE_PLYMOUTH: "true"
+          INPUT_ENABLE_ZFS: "false"
 
       - name: Download generated Containerfile
         uses: actions/download-artifact@v4
@@ -52,23 +53,32 @@ jobs:
             --build-arg FEDORA_VERSION=43 \
             --build-arg IMAGE_TYPE=fedora-sway-atomic \
             --build-arg ENABLE_PLYMOUTH=true \
+            --build-arg ENABLE_ZFS=false \
             -t ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} \
             -f Containerfile.generated .
 
-      - name: Tag latest
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Tag latest and current
+        if: (github.event_name == 'push' || github.event_name == 'schedule') && github.ref == 'refs/heads/main'
         run: |
-          buildah tag \
-            ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} \
-            ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          IMAGE="${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}"
+          buildah tag "${IMAGE}:${{ steps.tag.outputs.tag }}" "${IMAGE}:latest"
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            DAILY_TAG="daily-$(date -u +%Y%m%d)"
+            buildah tag "${IMAGE}:${{ steps.tag.outputs.tag }}" "${IMAGE}:${DAILY_TAG}"
+            buildah tag "${IMAGE}:${{ steps.tag.outputs.tag }}" "${IMAGE}:current"
+          fi
 
       - name: Push to local registry
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: (github.event_name == 'push' || github.event_name == 'schedule') && github.ref == 'refs/heads/main'
         run: |
-          buildah push --tls-verify=false \
-            ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
-          buildah push --tls-verify=false \
-            ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          IMAGE="${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}"
+          buildah push --tls-verify=false "${IMAGE}:${{ steps.tag.outputs.tag }}"
+          buildah push --tls-verify=false "${IMAGE}:latest"
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            DAILY_TAG="daily-$(date -u +%Y%m%d)"
+            buildah push --tls-verify=false "${IMAGE}:${DAILY_TAG}"
+            buildah push --tls-verify=false "${IMAGE}:current"
+          fi
 
       - name: Build summary
         if: always()

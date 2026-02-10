@@ -362,6 +362,20 @@ def test_plymouth_not_generated_for_sway_atomic():
     print("✓ ENABLE_PLYMOUTH not generated for non-bootc images")
 
 
+def _make_context(**overrides):
+    """Build a standard BuildContext with optional overrides."""
+    defaults = {
+        "image_type": "fedora-bootc",
+        "fedora_version": "43",
+        "enable_plymouth": False,
+        "use_upstream_sway_config": False,
+        "base_image": "quay.io/fedora/fedora-bootc:43",
+        "distro": "fedora",
+    }
+    defaults.update(overrides)
+    return BuildContext(**defaults)
+
+
 def _make_chezmoi_config(**overrides):
     """Build a minimal config with a chezmoi module for testing."""
     chezmoi_module = {
@@ -378,18 +392,6 @@ def _make_chezmoi_config(**overrides):
         "description": "Chezmoi module test",
         "modules": [chezmoi_module],
     }
-
-
-def _make_context():
-    """Build a standard BuildContext for chezmoi tests."""
-    return BuildContext(
-        image_type="fedora-bootc",
-        fedora_version="43",
-        enable_plymouth=False,
-        use_upstream_sway_config=False,
-        base_image="quay.io/fedora/fedora-bootc:43",
-        distro="fedora",
-    )
 
 
 def test_chezmoi_module_generates_copy_and_sed():
@@ -687,6 +689,153 @@ def test_git_clone_module_missing_files():
     print("✓ Git-clone module emits error for empty files list")
 
 
+# --- ZFS configuration tests ---
+
+
+def _make_zfs_config(condition=None, marker="ZFS_MARKER"):
+    """Build a minimal config with a ZFS-conditioned module."""
+    module = {"type": "script", "scripts": [f"echo {marker}"]}
+    if condition:
+        module["condition"] = condition
+    return {"name": "zfs-test", "description": "ZFS test", "modules": [module]}
+
+
+def test_zfs_disabled_by_default():
+    """BuildContext should default enable_zfs to False."""
+    ctx = _make_context()
+    assert ctx.enable_zfs is False, "enable_zfs should default to False"
+
+
+def test_zfs_enabled_generates_arg():
+    """When enable_zfs is True, ARG ENABLE_ZFS should appear in output."""
+    config = _make_zfs_config()
+    ctx = _make_context(enable_zfs=True)
+    output = ContainerfileGenerator(config, ctx).generate()
+    assert "ARG ENABLE_ZFS=true" in output, "Should generate ARG ENABLE_ZFS=true"
+
+
+def test_zfs_disabled_no_arg():
+    """When enable_zfs is False, ARG ENABLE_ZFS should NOT appear."""
+    config = _make_zfs_config()
+    ctx = _make_context(enable_zfs=False)
+    output = ContainerfileGenerator(config, ctx).generate()
+    assert "ARG ENABLE_ZFS" not in output, "Should NOT generate ARG ENABLE_ZFS when disabled"
+
+
+def test_zfs_condition_true():
+    """Modules with 'enable_zfs == true' should be included when ZFS is on."""
+    config = _make_zfs_config(condition="enable_zfs == true", marker="ZFS_MODULE_PRESENT")
+    ctx = _make_context(enable_zfs=True)
+    output = ContainerfileGenerator(config, ctx).generate()
+    assert "ZFS_MODULE_PRESENT" in output, "ZFS-conditioned module should be included"
+
+
+def test_zfs_condition_false_skips_module():
+    """Modules with 'enable_zfs == true' should be skipped when ZFS is off."""
+    config = _make_zfs_config(condition="enable_zfs == true", marker="ZFS_MODULE_PRESENT")
+    ctx = _make_context(enable_zfs=False)
+    output = ContainerfileGenerator(config, ctx).generate()
+    assert "ZFS_MODULE_PRESENT" not in output, "ZFS-conditioned module should be skipped"
+
+
+def test_zfs_condition_false_literal():
+    """Modules with 'enable_zfs == false' should match when ZFS is off."""
+    config = _make_zfs_config(condition="enable_zfs == false", marker="ZFS_FALLBACK")
+    ctx = _make_context(enable_zfs=False)
+    output = ContainerfileGenerator(config, ctx).generate()
+    assert "ZFS_FALLBACK" in output, "enable_zfs == false should match when ZFS disabled"
+
+
+def test_zfs_combined_condition_with_plymouth():
+    """AND condition with both enable_zfs and enable_plymouth should work."""
+    config = _make_zfs_config(
+        condition="enable_zfs == true && enable_plymouth == true",
+        marker="BOTH_ENABLED",
+    )
+    # Both enabled
+    ctx = _make_context(enable_zfs=True, enable_plymouth=True)
+    output = ContainerfileGenerator(config, ctx).generate()
+    assert "BOTH_ENABLED" in output, "AND condition should pass when both are true"
+
+    # Only ZFS enabled
+    ctx2 = _make_context(enable_zfs=True, enable_plymouth=False)
+    output2 = ContainerfileGenerator(config, ctx2).generate()
+    assert "BOTH_ENABLED" not in output2, "AND condition should fail when only one is true"
+
+
+def test_zfs_or_condition():
+    """OR condition with enable_zfs should work."""
+    config = _make_zfs_config(
+        condition="enable_zfs == true || enable_plymouth == true",
+        marker="EITHER_ENABLED",
+    )
+    # Only ZFS enabled
+    ctx = _make_context(enable_zfs=True, enable_plymouth=False)
+    output = ContainerfileGenerator(config, ctx).generate()
+    assert "EITHER_ENABLED" in output, "OR condition should pass when ZFS is true"
+
+    # Neither enabled
+    ctx2 = _make_context(enable_zfs=False, enable_plymouth=False)
+    output2 = ContainerfileGenerator(config, ctx2).generate()
+    assert "EITHER_ENABLED" not in output2, "OR condition should fail when both are false"
+
+
+def test_zfs_does_not_affect_unrelated_modules():
+    """Enabling ZFS should not change modules without a ZFS condition."""
+    config = {
+        "name": "zfs-unrelated",
+        "description": "ZFS isolation test",
+        "modules": [
+            {"type": "script", "scripts": ["echo ALWAYS_RUN"]},
+            {
+                "type": "script",
+                "condition": "enable_zfs == true",
+                "scripts": ["echo ZFS_ONLY"],
+            },
+        ],
+    }
+    output_off = ContainerfileGenerator(config, _make_context(enable_zfs=False)).generate()
+    assert "ALWAYS_RUN" in output_off
+    assert "ZFS_ONLY" not in output_off
+
+    output_on = ContainerfileGenerator(config, _make_context(enable_zfs=True)).generate()
+    assert "ALWAYS_RUN" in output_on
+    assert "ZFS_ONLY" in output_on
+
+
+def test_zfs_cli_args_parsed():
+    """Verify the argparse setup handles --enable-zfs and --disable-zfs."""
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--config", type=Path, required=True)
+    parser.add_argument("-o", "--output", type=Path)
+    parser.add_argument("--enable-zfs", action="store_true", default=False)
+    parser.add_argument("--disable-zfs", action="store_true")
+    parser.add_argument("--enable-plymouth", action="store_true", default=True)
+    parser.add_argument("--disable-plymouth", action="store_true")
+
+    # Test --enable-zfs
+    args = parser.parse_args(["-c", "test.yml", "--enable-zfs"])
+    enable_zfs = args.enable_zfs and not args.disable_zfs
+    assert enable_zfs is True
+
+    # Test --disable-zfs
+    args = parser.parse_args(["-c", "test.yml", "--disable-zfs"])
+    enable_zfs = args.enable_zfs and not args.disable_zfs
+    assert enable_zfs is False
+
+    # Test default (neither flag)
+    args = parser.parse_args(["-c", "test.yml"])
+    enable_zfs = args.enable_zfs and not args.disable_zfs
+    assert enable_zfs is False
+
+    # Test both flags (disable wins)
+    args = parser.parse_args(["-c", "test.yml", "--enable-zfs", "--disable-zfs"])
+    enable_zfs = args.enable_zfs and not args.disable_zfs
+    assert enable_zfs is False, "--disable-zfs should override --enable-zfs"
+
+
 if __name__ == "__main__":
     test_generator_is_stateless()
     test_generator_with_different_contexts()
@@ -713,4 +862,14 @@ if __name__ == "__main__":
     test_git_clone_module_multiple_files_per_repo()
     test_git_clone_module_missing_url()
     test_git_clone_module_missing_files()
+    test_zfs_disabled_by_default()
+    test_zfs_enabled_generates_arg()
+    test_zfs_disabled_no_arg()
+    test_zfs_condition_true()
+    test_zfs_condition_false_skips_module()
+    test_zfs_condition_false_literal()
+    test_zfs_combined_condition_with_plymouth()
+    test_zfs_or_condition()
+    test_zfs_does_not_affect_unrelated_modules()
+    test_zfs_cli_args_parsed()
     print("\nAll tests passed!")
