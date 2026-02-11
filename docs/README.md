@@ -26,6 +26,7 @@ Exousia uses a Shinigami-themed GitHub Actions pipeline (Gotei 13 captains):
 | **Mayuri** | `mayuri.yml` | CI -- Ruff, Black, isort, pytest |
 | **Byakuya** | `byakuya.yml` | Security -- Hadolint, Checkov, Trivy config scan, Bandit |
 | **Kyoraku** | `kyoraku.yml` | Build, Cosign, Trivy scan, semver release |
+| **Unohana** | `unohana.yml` | Weekly ZFS build -- mirrors Aizen with `enable_zfs: true` |
 | **Yoruichi** | `yoruichi.yml` | Post-CI -- STATUS.md, badge updates |
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):

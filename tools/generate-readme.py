@@ -235,6 +235,12 @@ graph TD
     S & SG --> R["release"]
     R --> G["Gate"]
     G --> Y["Yoruichi"]
+
+    U["Unohana (weekly)"] --> B2["Mayuri"] & C2["Byakuya"]
+    B2 & C2 --> K2["Kyoraku: ZFS build"]
+    K2 --> S2["scan"] & SG2["sign"]
+    S2 & SG2 --> R2["release"]
+    R2 --> G2["Gate"]
 ```
 
 | Captain | Division | Role | Key Tools |
@@ -243,6 +249,7 @@ graph TD
 | **Mayuri** | 12th (R&D) | CI | Ruff, Black, isort, pytest |
 | **Byakuya** | 6th (Law) | Security | Hadolint, Checkov, Trivy config scan, Bandit |
 | **Kyoraku** | Captain-Commander | Build & Release | Buildah, Cosign (OIDC), Trivy image scan, semver |
+| **Unohana** | 4th (Relief) | Weekly ZFS Build | Mirrors Aizen with `enable_zfs: true` |
 | **Yoruichi** | 2nd (Stealth) | Status Report | Generates STATUS.md, updates badges |
 
 ### Versioning

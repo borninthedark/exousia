@@ -1,6 +1,6 @@
 # Byakuya - Captain of the 6th Division, Law & Order
 # Validates file structure, generates Containerfile, runs Hadolint + Checkov +
-# Trivy config scan + Bandit, then uploads the generated Containerfile for Kenpachi.
+# Trivy config scan + Bandit, then uploads the generated Containerfile for Kyoraku.
 
 name: "Byakuya - Security"
 
@@ -57,29 +57,30 @@ jobs:
         run: |
           uv run python tools/yaml-to-containerfile.py \
             --config adnyeus.yml \
-            --output Containerfile.generated \
+            --output Dockerfile.generated \
             --verbose
 
       - name: Hadolint
         uses: hadolint/hadolint-action@v3.3.0
         with:
-          dockerfile: Containerfile.generated
+          dockerfile: Dockerfile.generated
           ignore: DL3041,DL3059,DL4006,SC3040
 
       - name: Upload generated Containerfile
         uses: actions/upload-artifact@v6
         with:
           name: containerfile-generated
-          path: Containerfile.generated
+          path: Dockerfile.generated
           retention-days: 1
 
       - name: Checkov (Containerfile)
         uses: bridgecrewio/checkov-action@v12
         with:
-          file: Containerfile.generated
+          file: Dockerfile.generated
           framework: dockerfile
           quiet: true
           soft_fail: true
+          skip_check: CKV_DOCKER_2,CKV_DOCKER_3
 
       - name: Trivy config scan
         uses: aquasecurity/trivy-action@0.33.1

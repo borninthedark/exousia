@@ -51,20 +51,20 @@ jobs:
         run: |
           uv run python tools/yaml-to-containerfile.py \
             --config adnyeus.yml \
-            --output Containerfile.generated \
+            --output Dockerfile.generated \
             --verbose
 
       - name: Hadolint
         run: |
           podman run --rm -i docker.io/hadolint/hadolint \
             hadolint --ignore DL3041 --ignore DL3059 --ignore DL4006 --ignore SC3040 \
-            - < Containerfile.generated
+            - < Dockerfile.generated
 
       - name: Upload generated Containerfile
         uses: actions/upload-artifact@v4
         with:
           name: containerfile-generated
-          path: Containerfile.generated
+          path: Dockerfile.generated
           retention-days: 1
 
       - name: Bandit (Python SAST)

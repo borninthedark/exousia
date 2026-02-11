@@ -25,7 +25,7 @@ All commands use `uv run` (never raw `python` or `pip`):
 # Generate a Containerfile from the blueprint
 uv run python tools/yaml-to-containerfile.py \
   --config adnyeus.yml \
-  --output Containerfile.generated
+  --output Dockerfile.generated
 
 # Validate config without generating output
 uv run python tools/yaml-to-containerfile.py \
@@ -37,7 +37,7 @@ uv run python tools/yaml-to-containerfile.py \
   --config adnyeus.yml \
   --image-type fedora-sway-atomic \
   --fedora-version 43 \
-  --output Containerfile.generated
+  --output Dockerfile.generated
 
 # Run DRY check on tools/
 uv run python tools/dry_check.py --functions-only --path tools

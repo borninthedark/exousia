@@ -39,14 +39,14 @@ clean:
     find . -type d -name .ruff_cache -exec rm -rf {} + 2>/dev/null || true
     find . -type f -name "*.pyc" -delete
     rm -rf htmlcov/ .coverage coverage.xml
-    rm -f Containerfile.*.generated
+    rm -f Dockerfile.*.generated Dockerfile.generated
 
 # Build atomic Containerfile from YAML
 build-atomic:
     uv run python tools/yaml-to-containerfile.py \
         --config adnyeus.yml \
         --image-type fedora-sway-atomic \
-        --output Containerfile.atomic.generated
+        --output Dockerfile.atomic.generated
 
 # Build bootc Containerfile from YAML
 build-bootc:
@@ -54,7 +54,7 @@ build-bootc:
         --config adnyeus.yml \
         --image-type fedora-bootc \
         --enable-plymouth \
-        --output Containerfile.bootc.generated
+        --output Dockerfile.bootc.generated
 
 # Validate YAML configuration
 validate:
@@ -138,9 +138,9 @@ local-build tag="latest":
     uv run python tools/yaml-to-containerfile.py \
         --config adnyeus.yml \
         --image-type fedora-sway-atomic \
-        --output Containerfile.local.generated
+        --output Dockerfile.local.generated
     @echo "==> Building image with buildah..."
-    buildah bud -t localhost:5000/exousia:{{ tag }} -f Containerfile.local.generated .
+    buildah bud -t localhost:5000/exousia:{{ tag }} -f Dockerfile.local.generated .
     @echo "==> Pushing to local registry..."
     skopeo copy \
         containers-storage:localhost:5000/exousia:{{ tag }} \
@@ -156,6 +156,11 @@ local-push tag="latest" image="1borninthedark/exousia":
         docker://docker.io/{{ image }}:{{ tag }} \
         --src-tls-verify=false
     @echo "==> Pushed to docker.io/{{ image }}:{{ tag }}"
+
+# Run pre-build overlay tests (no image required)
+overlay-test:
+    @echo "==> Running overlay content tests..."
+    bats custom-tests/overlay_content.bats
 
 # Run bats tests against locally built image
 local-test tag="latest":
