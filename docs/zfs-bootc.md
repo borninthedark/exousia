@@ -55,28 +55,39 @@ includes the ZFS userspace tools plus all build dependencies needed for DKMS.
 Exousia uses DKMS because bootc images pin the kernel at build time, and DKMS
 guarantees the module matches exactly.
 
-## ZFS Pool Import on bootc Systems
+## ZFS at Boot
 
-After booting an image with ZFS support:
+When ZFS is enabled, the image includes automatic module loading and pool import.
+No manual steps are required after the first boot.
 
-```bash
-# Load the module
-sudo modprobe zfs
+### What happens at boot
 
-# Import existing pools
-sudo zpool import -a
+1. `systemd-modules-load.service` reads `/etc/modules-load.d/zfs.conf` and runs
+   `modprobe zfs`.
+2. `zfs-import-scan.service` scans all visible block devices and imports every
+   pool it finds (`zpool import -a -N`).
+3. `zfs.target` marks ZFS as fully ready so dependent services can start.
 
-# Auto-load ZFS at boot
-echo zfs | sudo tee /etc/modules-load.d/zfs.conf
-```
+All three are baked into ZFS-enabled images via conditional modules in
+`adnyeus.yml` (gated by `enable_zfs == true`).
 
 ### Persistent Mounts
 
-Add ZFS datasets to `/etc/fstab` or use the ZFS `canmount` property:
+Use the ZFS `canmount` property or add datasets to `/etc/fstab`:
 
 ```bash
 # Set a dataset to auto-mount
 sudo zfs set canmount=on mountpoint=/data tank/data
+```
+
+### Manual fallback
+
+If automatic import does not work (e.g., pools on detachable storage), load
+and import manually:
+
+```bash
+sudo modprobe zfs
+sudo zpool import -a
 ```
 
 ## Limitations

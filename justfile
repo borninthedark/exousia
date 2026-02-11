@@ -157,6 +157,11 @@ local-push tag="latest" image="1borninthedark/exousia":
         --src-tls-verify=false
     @echo "==> Pushed to docker.io/{{ image }}:{{ tag }}"
 
+# Run pre-build overlay tests (no image required)
+overlay-test:
+    @echo "==> Running overlay content tests..."
+    bats custom-tests/overlay_content.bats
+
 # Run bats tests against locally built image
 local-test tag="latest":
     @echo "==> Running bats tests against localhost:5000/exousia:{{ tag }}..."

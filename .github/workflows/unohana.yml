@@ -1,21 +1,16 @@
-# Aizen - The Mastermind - Orchestrator
-# Calls Mayuri (CI) + Byakuya (security) in parallel, then Kyoraku, then gate.
+# Unohana Retsu - 4th Division Captain - Weekly ZFS Build
+# The first Kenpachi -- destroyer turned healer, serene exterior masking
+# immense power. ZFS builds are heavyweight (DKMS compilation), requiring
+# quiet precision. Mirrors Aizen's structure but hardcodes enable_zfs: true.
 #
 # Shinigami Pipeline:
-#   Aizen     -> Orchestrator (the one who sees everything)
-#   Mayuri    -> CI: lint + test (12th Division, Research & Development)
-#   Byakuya  -> Security scanning (6th Division, law & order)
-#   Kyoraku  -> Build -> scan + sign -> release (Captain-Commander, master strategist)
+#   Unohana   -> ZFS build orchestrator (4th Division, destroyer turned healer)
 
-name: "Aizen - Orchestrator"
+name: "Unohana - ZFS Build"
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   schedule:
-    - cron: "10 */6 * * *"  # Every 6 hours: 00:10, 06:10, 12:10, 18:10 UTC
+    - cron: "10 4 * * 0"  # Weekly: Sunday 04:10 UTC
   workflow_dispatch:
     inputs:
       image_type:
@@ -40,11 +35,6 @@ on:
         required: true
         type: boolean
         default: true
-      enable_zfs:
-        description: "Enable ZFS kernel module build"
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -69,16 +59,16 @@ jobs:
     permissions:
       contents: read
 
-  # -- Kyoraku (Build) runs after both pass --
+  # -- Kyoraku (Build) runs after both pass, with ZFS forced on --
   kyoraku:
-    name: "Kyoraku (Build)"
+    name: "Kyoraku (ZFS Build)"
     needs: [mayuri, byakuya]
     uses: ./.github/workflows/kyoraku.yml
     with:
       image_type: ${{ inputs.image_type || 'fedora-sway-atomic' }}
       distro_version: ${{ inputs.distro_version || '43' }}
       enable_plymouth: ${{ inputs.enable_plymouth == '' && true || inputs.enable_plymouth }}
-      enable_zfs: ${{ inputs.enable_zfs == true }}
+      enable_zfs: true
     secrets: inherit
     permissions:
       contents: write
@@ -94,13 +84,13 @@ jobs:
     steps:
       - name: Pipeline summary
         run: |
-          echo "## Aizen Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Unohana ZFS Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Workflow | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Mayuri (CI) | ${{ needs.mayuri.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Byakuya (Security) | ${{ needs.byakuya.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Kyoraku (Build) | ${{ needs.kyoraku.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Kyoraku (ZFS Build) | ${{ needs.kyoraku.result }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if any job failed
         if: >-

@@ -1,6 +1,6 @@
 # Byakuya - Captain of the 6th Division, Law & Order
 # Validates file structure, generates Containerfile, runs Hadolint + Checkov +
-# Trivy config scan + Bandit, then uploads the generated Containerfile for Kenpachi.
+# Trivy config scan + Bandit, then uploads the generated Containerfile for Kyoraku.
 
 name: "Byakuya - Security"
 

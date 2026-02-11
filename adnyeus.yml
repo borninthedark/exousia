@@ -209,6 +209,21 @@ modules:
         dst: /usr/share/containers/systemd/
         mode: "0644"
 
+  # ZFS boot automation (modprobe + pool import)
+  - type: files
+    condition: enable_zfs == true
+    files:
+      - src: overlays/base/configs-zfs/modules-load.d/zfs.conf
+        dst: /etc/modules-load.d/zfs.conf
+        mode: "0644"
+
+  - type: systemd
+    condition: enable_zfs == true
+    system:
+      enabled:
+        - zfs-import-scan.service
+        - zfs.target
+
   # System services (common to all image types)
   - type: systemd
     system:

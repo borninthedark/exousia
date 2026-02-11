@@ -49,8 +49,10 @@ Built images use the following patterns:
 - **Main**: `main` (for main branch builds)
 - **SHA**: `sha-{git-commit-sha}`
 - **Branch**: `{branch-name}` (for branch builds)
-- **Daily**: `daily-YYYYMMDD` (date-stamped snapshot from scheduled builds)
-- **Current**: `current` (rolling tag, always points to the latest daily build)
+- **Rolling**: `rolling-YYYYMMDD-HHMM` (time-stamped snapshot from scheduled builds)
+- **Current**: `current` (rolling tag, always points to the latest scheduled build)
+- **ZFS**: `zfs-YYYYMMDD` (date-stamped ZFS build from weekly schedule)
+- **ZFS Latest**: `zfs-latest` (rolling tag, always points to the latest ZFS build)
 
 ## Creating Custom Configs
 

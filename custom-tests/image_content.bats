@@ -950,3 +950,34 @@ is_zfs_enabled() {
     run grep -q "zfs" "$MOUNT_POINT/usr/lib/modules/$kver/modules.dep"
     assert_success "modules.dep should reference zfs"
 }
+
+@test "zfs-import-scan.service should be enabled" {
+    if ! is_zfs_enabled; then
+        skip "ZFS is not enabled in this image"
+    fi
+
+    # Check for the symlink in multi-user.target.wants (standard enable location)
+    local enabled=false
+    for base in "$MOUNT_POINT/etc/systemd/system" "$MOUNT_POINT/usr/lib/systemd/system"; do
+        if [ -L "$base/multi-user.target.wants/zfs-import-scan.service" ] || \
+           [ -L "$base/zfs-import.target.wants/zfs-import-scan.service" ]; then
+            enabled=true
+            break
+        fi
+    done
+
+    if [ "$enabled" = false ]; then
+        # Fallback: check via preset or systemctl in the container
+        run buildah run "$CONTAINER" -- systemctl is-enabled zfs-import-scan.service
+        assert_success "zfs-import-scan.service should be enabled"
+    fi
+}
+
+@test "zfs.target should be enabled" {
+    if ! is_zfs_enabled; then
+        skip "ZFS is not enabled in this image"
+    fi
+
+    run buildah run "$CONTAINER" -- systemctl is-enabled zfs.target
+    assert_success "zfs.target should be enabled"
+}

@@ -7,6 +7,11 @@ name: "Harribel - Build"
 
 on:
   workflow_call:
+    inputs:
+      enable_zfs:
+        description: "Enable ZFS kernel module build"
+        type: boolean
+        default: false
 
 env:
   LOCAL_REGISTRY: localhost:5000
@@ -31,7 +36,7 @@ jobs:
           INPUT_IMAGE_TYPE: fedora-sway-atomic
           INPUT_DISTRO_VERSION: "43"
           INPUT_ENABLE_PLYMOUTH: "true"
-          INPUT_ENABLE_ZFS: "false"
+          INPUT_ENABLE_ZFS: "${{ inputs.enable_zfs }}"
 
       - name: Download generated Containerfile
         uses: actions/download-artifact@v4
@@ -53,7 +58,7 @@ jobs:
             --build-arg FEDORA_VERSION=43 \
             --build-arg IMAGE_TYPE=fedora-sway-atomic \
             --build-arg ENABLE_PLYMOUTH=true \
-            --build-arg ENABLE_ZFS=false \
+            --build-arg ENABLE_ZFS=${{ inputs.enable_zfs || 'false' }} \
             -t ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} \
             -f Containerfile.generated .
 
@@ -63,9 +68,14 @@ jobs:
           IMAGE="${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}"
           buildah tag "${IMAGE}:${{ steps.tag.outputs.tag }}" "${IMAGE}:latest"
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
-            DAILY_TAG="daily-$(date -u +%Y%m%d)"
-            buildah tag "${IMAGE}:${{ steps.tag.outputs.tag }}" "${IMAGE}:${DAILY_TAG}"
+            ROLLING_TAG="rolling-$(date -u +%Y%m%d-%H%M)"
+            buildah tag "${IMAGE}:${{ steps.tag.outputs.tag }}" "${IMAGE}:${ROLLING_TAG}"
             buildah tag "${IMAGE}:${{ steps.tag.outputs.tag }}" "${IMAGE}:current"
+          fi
+          if [[ "${{ inputs.enable_zfs }}" == "true" ]]; then
+            ZFS_TAG="zfs-$(date -u +%Y%m%d)"
+            buildah tag "${IMAGE}:${{ steps.tag.outputs.tag }}" "${IMAGE}:${ZFS_TAG}"
+            buildah tag "${IMAGE}:${{ steps.tag.outputs.tag }}" "${IMAGE}:zfs-latest"
           fi
 
       - name: Push to local registry
@@ -75,9 +85,14 @@ jobs:
           buildah push --tls-verify=false "${IMAGE}:${{ steps.tag.outputs.tag }}"
           buildah push --tls-verify=false "${IMAGE}:latest"
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
-            DAILY_TAG="daily-$(date -u +%Y%m%d)"
-            buildah push --tls-verify=false "${IMAGE}:${DAILY_TAG}"
+            ROLLING_TAG="rolling-$(date -u +%Y%m%d-%H%M)"
+            buildah push --tls-verify=false "${IMAGE}:${ROLLING_TAG}"
             buildah push --tls-verify=false "${IMAGE}:current"
+          fi
+          if [[ "${{ inputs.enable_zfs }}" == "true" ]]; then
+            ZFS_TAG="zfs-$(date -u +%Y%m%d)"
+            buildah push --tls-verify=false "${IMAGE}:${ZFS_TAG}"
+            buildah push --tls-verify=false "${IMAGE}:zfs-latest"
           fi
 
       - name: Build summary
