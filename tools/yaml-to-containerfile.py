@@ -794,10 +794,10 @@ def main():
         epilog="""
 Examples:
   # Generate Containerfile for fedora-sway-atomic
-  python3 yaml-to-containerfile.py --config adnyeus.yml --output Containerfile.generated
+  python3 yaml-to-containerfile.py --config adnyeus.yml --output Dockerfile.generated
 
   # Generate for fedora-bootc with Plymouth enabled
-  python3 yaml-to-containerfile.py --config adnyeus.yml --image-type fedora-bootc --enable-plymouth --output Containerfile.bootc.generated
+  python3 yaml-to-containerfile.py --config adnyeus.yml --image-type fedora-bootc --enable-plymouth --output Dockerfile.bootc.generated
 
   # Validate only
   python3 yaml-to-containerfile.py --config adnyeus.yml --validate

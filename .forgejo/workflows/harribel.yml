@@ -60,7 +60,7 @@ jobs:
             --build-arg ENABLE_PLYMOUTH=true \
             --build-arg ENABLE_ZFS=${{ inputs.enable_zfs || 'false' }} \
             -t ${{ env.LOCAL_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} \
-            -f Containerfile.generated .
+            -f Dockerfile.generated .
 
       - name: Tag latest and current
         if: (github.event_name == 'push' || github.event_name == 'schedule') && github.ref == 'refs/heads/main'

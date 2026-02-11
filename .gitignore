@@ -3,8 +3,8 @@ image.tar
 *.log
 
 # Generated Containerfiles (test artifacts)
-Containerfile.*.generated
-Containerfile.generated
+Dockerfile.*.generated
+Dockerfile.generated
 Containerfile.test
 
 # Deprecated documentation (auto-generated)

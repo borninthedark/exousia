@@ -57,26 +57,26 @@ jobs:
         run: |
           uv run python tools/yaml-to-containerfile.py \
             --config adnyeus.yml \
-            --output Containerfile.generated \
+            --output Dockerfile.generated \
             --verbose
 
       - name: Hadolint
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: Containerfile.generated
+          dockerfile: Dockerfile.generated
           ignore: DL3041,DL3059,DL4006,SC3040
 
       - name: Upload generated Containerfile
         uses: actions/upload-artifact@v6
         with:
           name: containerfile-generated
-          path: Containerfile.generated
+          path: Dockerfile.generated
           retention-days: 1
 
       - name: Checkov (Containerfile)
         uses: bridgecrewio/checkov-action@v12
         with:
-          file: Containerfile.generated
+          file: Dockerfile.generated
           framework: dockerfile
           quiet: true
           soft_fail: true

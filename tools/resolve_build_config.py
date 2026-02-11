@@ -273,7 +273,7 @@ def main() -> None:
     print("::group::YAML to Containerfile Transpilation")
     print(f"Generating Containerfile from {resolved_yaml}...")
 
-    containerfile_path = Path("Containerfile.generated")
+    containerfile_path = Path("Dockerfile.generated")
     cmd = [
         "python3",
         "tools/yaml-to-containerfile.py",

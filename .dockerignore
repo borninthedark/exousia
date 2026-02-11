@@ -5,7 +5,7 @@
 # Ignore project and development files
 .gitignore
 .dockerignore
-Makefile
+justfile
 README.md
 LICENSE
 
@@ -14,6 +14,8 @@ custom-tests/
 
 # Ignore local build artifacts
 image.tar
+Dockerfile.*.generated
+Dockerfile.generated
 
 # Ignore Editor and IDE directories
 .vscode/

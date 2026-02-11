@@ -18,7 +18,7 @@ to the transpiler directly.
 ```bash
 uv run python tools/yaml-to-containerfile.py \
   --config yaml-definitions/sway-bootc.yml \
-  --output Containerfile.generated
+  --output Dockerfile.generated
 ```
 
 ## See Also
