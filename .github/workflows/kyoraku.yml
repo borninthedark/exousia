@@ -217,16 +217,18 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Retag image with semver
+      - name: Retag image with semver and update latest
         if: steps.version.outputs.skip != 'true'
         id: retag
         run: |
           IMAGE="${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}"
           VERSION="${{ steps.version.outputs.version }}"
 
-          docker pull "${IMAGE}:latest"
-          docker tag "${IMAGE}:latest" "${IMAGE}:${VERSION}"
+          docker pull "${IMAGE}:${{ needs.build.outputs.image_tag }}"
+          docker tag "${IMAGE}:${{ needs.build.outputs.image_tag }}" "${IMAGE}:${VERSION}"
+          docker tag "${IMAGE}:${{ needs.build.outputs.image_tag }}" "${IMAGE}:latest"
           docker push "${IMAGE}:${VERSION}"
+          docker push "${IMAGE}:latest"
 
           DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE}:${VERSION}" | cut -d@ -f2)
           echo "digest=$DIGEST" >> $GITHUB_OUTPUT
