@@ -17,6 +17,3 @@ Environment=FORGEJO_RUNNER_TOKEN=
 [Service]
 Restart=always
 TimeoutStartSec=300
-
-[Install]
-WantedBy=default.target
