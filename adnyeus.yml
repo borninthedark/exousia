@@ -28,7 +28,7 @@ labels:
 # Build configuration
 build:
   enable_plymouth: true
-  enable_zfs: true
+  enable_zfs: false
 
   # Sway Configuration
   # See: https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/
