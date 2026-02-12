@@ -210,6 +210,12 @@ modules:
         dst: /usr/share/containers/systemd/
         mode: "0644"
 
+  # ZFS kernel module build (DKMS)
+  - type: script
+    condition: enable_zfs == true
+    scripts:
+      - /usr/local/bin/build-zfs-kmod
+
   # ZFS boot automation (modprobe + pool import)
   - type: files
     condition: enable_zfs == true
