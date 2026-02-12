@@ -5,7 +5,7 @@
 # Ignore project and development files
 .gitignore
 .dockerignore
-justfile
+Makefile
 README.md
 LICENSE
 

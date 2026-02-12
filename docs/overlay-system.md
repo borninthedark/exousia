@@ -118,7 +118,7 @@ Quadlet files for local development infrastructure. See
 1. Place the file under the appropriate directory (`base/` or `sway/`)
 2. Update the YAML blueprint (`adnyeus.yml`) to reference the new overlay path
 3. The transpiler will generate the corresponding `COPY` directive
-4. Run `just build-bootc` or `just build-atomic` to verify
+4. Run `make build-bootc` or `make build-atomic` to verify
 5. Add Bats tests in `custom-tests/image_content.bats` to validate the file
    exists in the built image
 

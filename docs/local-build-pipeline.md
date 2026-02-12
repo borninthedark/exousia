@@ -55,8 +55,8 @@ These tools are already included in the bootc image:
 ### Install and start Quadlet services
 
 ```bash
-just quadlet-install
-just quadlet-start
+make quadlet-install
+make quadlet-start
 ```
 
 This copies all `.container`, `.volume`, and `.network` files to
@@ -66,7 +66,7 @@ local registry.
 ### Verify services are running
 
 ```bash
-just quadlet-status
+make quadlet-status
 
 # Registry health check
 curl -s localhost:5000/v2/
@@ -102,8 +102,8 @@ systemctl --user start forgejo-runner
 ### Build and push to local registry
 
 ```bash
-just local-build              # tags as localhost:5000/exousia:latest
-just local-build v1.2.3       # tags as localhost:5000/exousia:v1.2.3
+make local-build              # tags as localhost:5000/exousia:latest
+make local-build TAG=v1.2.3   # tags as localhost:5000/exousia:v1.2.3
 ```
 
 This runs the full pipeline:
@@ -115,15 +115,15 @@ This runs the full pipeline:
 ### Test the local image
 
 ```bash
-just local-test               # runs bats tests against latest
-just local-test v1.2.3        # runs bats tests against specific tag
+make local-test               # runs bats tests against latest
+make local-test TAG=v1.2.3    # runs bats tests against specific tag
 ```
 
 ### Promote to DockerHub
 
 ```bash
-just local-push               # copies latest to docker.io/1borninthedark/exousia:latest
-just local-push v1.2.3        # copies specific tag
+make local-push               # copies latest to docker.io/1borninthedark/exousia:latest
+make local-push TAG=v1.2.3    # copies specific tag
 ```
 
 ### Verify
@@ -139,10 +139,10 @@ skopeo list-tags docker://localhost:5000/exousia --tls-verify=false
 ## Service Management
 
 ```bash
-just quadlet-start             # Start Forgejo + registry
-just quadlet-stop              # Stop all services
-just quadlet-status            # Show service status
-just quadlet-logs              # Follow logs (all services)
+make quadlet-start             # Start Forgejo + registry
+make quadlet-stop              # Stop all services
+make quadlet-status            # Show service status
+make quadlet-logs              # Follow logs (all services)
 ```
 
 ## Troubleshooting

@@ -21,18 +21,9 @@ ZFS support baked in -- no runtime compilation required on the target host.
 
 ## Enabling ZFS
 
-ZFS is **disabled by default**. To enable it, add the ZFS build step to
-`adnyeus.yml`:
-
-```yaml
-# Optional: ZFS filesystem support
-- type: script
-  condition: enable_zfs == true
-  scripts:
-    - /usr/local/bin/build-zfs-kmod
-```
-
-Then set `enable_zfs: true` in the `build:` section:
+ZFS is **disabled by default**. The build step, boot automation, and systemd
+services are already wired up in `adnyeus.yml` behind a condition gate. To
+enable ZFS, set `enable_zfs: true` in the `build:` section:
 
 ```yaml
 build:

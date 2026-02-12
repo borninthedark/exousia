@@ -238,7 +238,7 @@ sudo bootc upgrade && sudo systemctl reboot
 
 ```bash
 git clone https://github.com/borninthedark/exousia.git && cd exousia
-just build
+make build
 ```
 
 ### Trigger a remote build

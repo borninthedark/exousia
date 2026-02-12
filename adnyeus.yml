@@ -28,6 +28,7 @@ labels:
 # Build configuration
 build:
   enable_plymouth: true
+  enable_zfs: false
 
   # Sway Configuration
   # See: https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/
@@ -208,6 +209,12 @@ modules:
       - src: overlays/deploy/
         dst: /usr/share/containers/systemd/
         mode: "0644"
+
+  # ZFS kernel module build (DKMS)
+  - type: script
+    condition: enable_zfs == true
+    scripts:
+      - /usr/local/bin/build-zfs-kmod
 
   # ZFS boot automation (modprobe + pool import)
   - type: files

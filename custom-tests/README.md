@@ -5,9 +5,9 @@ Bats-based integration tests for bootc container images.
 ## Running Tests
 
 ```bash
-# Build and test via justfile
-just build
-just test
+# Build and test via Makefile
+make build
+make test
 
 # Or run directly
 export TEST_IMAGE_TAG=localhost:5000/exousia:latest

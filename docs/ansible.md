@@ -166,12 +166,12 @@ ansible-playbook ansible/site.yml --tags ci_build \
   --extra-vars "ci_build_image_type=fedora-bootc ci_build_distro_version=44"
 ```
 
-### Using just
+### Using make
 
 ```bash
-just ansible-lint            # Lint playbooks
-just ansible-run             # Dry run (--check)
-just ansible-apply           # Apply changes
+make ansible-lint            # Lint playbooks
+make ansible-run             # Dry run (--check)
+make ansible-apply           # Apply changes
 ```
 
 ## Variables Reference
