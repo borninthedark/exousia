@@ -13,8 +13,8 @@ Podman Quadlet container definitions for local infrastructure services.
 ## Usage
 
 ```bash
-just quadlet-install   # Install quadlet files to systemd
-just quadlet-start     # Start all services
+make quadlet-install   # Install quadlet files to systemd
+make quadlet-start     # Start all services
 ```
 
 Quadlets are systemd-native: Podman generates `.service` units from the

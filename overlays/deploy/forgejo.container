@@ -17,3 +17,6 @@ Environment=FORGEJO__server__SSH_PORT=2222
 [Service]
 Restart=always
 TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target

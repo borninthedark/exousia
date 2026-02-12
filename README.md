@@ -64,7 +64,7 @@ sudo bootc upgrade && sudo systemctl reboot
 
 ```bash
 git clone https://github.com/borninthedark/exousia.git && cd exousia
-just build
+make build
 ```
 
 ### Trigger a remote build
@@ -185,10 +185,10 @@ the blueprint directly.
 Build images locally with Podman Quadlet services before promoting to DockerHub:
 
 ```bash
-just quadlet-install && just quadlet-start   # start Forgejo + local registry
-just local-build                             # generate containerfile, buildah build, push to local registry
-just local-test                              # run bats tests against local image
-just local-push                              # promote to DockerHub via skopeo
+make quadlet-install && make quadlet-start   # start Forgejo + local registry
+make local-build                             # generate containerfile, buildah build, push to local registry
+make local-test                              # run bats tests against local image
+make local-push                              # promote to DockerHub via skopeo
 ```
 
 See [Local Build Pipeline docs](docs/local-build-pipeline.md) for the full
