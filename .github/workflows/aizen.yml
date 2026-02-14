@@ -60,6 +60,7 @@ jobs:
   mayuri:
     name: "Mayuri (CI)"
     uses: ./.github/workflows/mayuri.yml
+    secrets: inherit
     permissions:
       contents: read
 
