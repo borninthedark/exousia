@@ -39,7 +39,14 @@ jobs:
           uv run pytest tools/ -v --tb=short \
             --cov=tools --cov-branch \
             --cov-report=term \
-            --cov-report=xml:coverage.xml
+            --cov-report=xml:coverage.xml \
+            --junitxml=junit.xml
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Test summary
         if: always()
