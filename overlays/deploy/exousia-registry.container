@@ -15,5 +15,5 @@ Environment=REGISTRY_STORAGE_DELETE_ENABLED=true
 Restart=always
 TimeoutStartSec=120
 
-[Install]
-WantedBy=default.target
+# [Install]
+# WantedBy=default.target

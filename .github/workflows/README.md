@@ -25,7 +25,7 @@ Unohana (weekly) -> Mayuri + Byakuya (parallel) -> Kyoraku (ZFS) -> Gate
 
 ## Triggers
 
-- **Aizen**: push/PR to main, 6-hour schedule, manual dispatch
+- **Aizen**: push/PR to main, 8-hour schedule, manual dispatch
 - **Unohana**: weekly schedule (Sunday 04:10 UTC), manual dispatch
 - **Yoruichi**: `workflow_run` after Aizen completes on main
 
