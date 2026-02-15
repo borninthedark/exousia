@@ -18,15 +18,13 @@ overlays/
 │   │   ├── common/
 │   │   │   ├── base.yml               # Core packages (dnf install)
 │   │   │   ├── flatpaks.yml           # Flatpak application list
-│   │   │   ├── remove.yml             # Packages to remove (processed first)
-│   │   │   └── zfs.yml                # ZFS packages (optional)
+│   │   │   └── remove.yml             # Packages to remove (processed first)
 │   │   └── window-managers/
 │   │       └── sway.yml               # Sway-specific packages
 │   ├── sysusers/
 │   │   ├── atomic.conf                # sysusers.d for atomic images
 │   │   └── bootc.conf                 # sysusers.d for bootc images
 │   └── tools/
-│       ├── build-zfs-kmod             # ZFS DKMS build script (Python)
 │       ├── generate-readme            # README generator (Python)
 │       └── verify-flatpak-installation # Flatpak verification script
 ├── sway/                               # Sway desktop environment
@@ -94,8 +92,7 @@ Packages are declared in YAML files under `base/packages/`. The package loader
 1. `common/remove.yml` -- packages removed first to avoid conflicts
 2. `common/base.yml` -- core system packages
 3. `window-managers/sway.yml` -- desktop-specific packages
-4. `common/zfs.yml` -- ZFS packages (only if `build.enable_zfs: true`)
-5. `common/flatpaks.yml` -- Flatpak applications (installed post-build)
+4. `common/flatpaks.yml` -- Flatpak applications (installed post-build)
 
 See `overlays/base/packages/README.md` for the package list format.
 

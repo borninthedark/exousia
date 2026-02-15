@@ -40,27 +40,21 @@ jobs:
     outputs:
       image_tag: ${{ steps.tag.outputs.tag }}
       image_digest: ${{ steps.build-push.outputs.digest }}
-      build_type: ${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
-      enable_plymouth: ${{ steps.config.outputs.ENABLE_PLYMOUTH }}
-      enable_zfs: ${{ steps.config.outputs.ENABLE_ZFS }}
+      build_type: ${{ steps.config.outputs.build_image_type }}
+      enable_plymouth: ${{ steps.config.outputs.enable_plymouth }}
+      enable_zfs: ${{ steps.config.outputs.enable_zfs }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Detect and resolve distro configuration
+      - name: Transpile YAML blueprint
         id: config
-        env:
-          INPUT_IMAGE_TYPE: ${{ inputs.image_type }}
-          INPUT_DISTRO_VERSION: ${{ inputs.distro_version }}
-          INPUT_ENABLE_PLYMOUTH: ${{ inputs.enable_plymouth }}
-          INPUT_ENABLE_ZFS: ${{ inputs.enable_zfs }}
-        run: uv run python tools/resolve_build_config.py
+        uses: ./.github/actions/transpile
+        with:
+          image_type: ${{ inputs.image_type }}
+          distro_version: ${{ inputs.distro_version }}
+          enable_plymouth: ${{ inputs.enable_plymouth }}
+          enable_zfs: ${{ inputs.enable_zfs }}
 
       - name: Download generated Containerfile
         uses: actions/download-artifact@v4
@@ -71,7 +65,7 @@ jobs:
         id: tag
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
-          TAG="${{ steps.config.outputs.BUILD_IMAGE_TYPE }}-${SHORT_SHA}"
+          TAG="${{ steps.config.outputs.build_image_type }}-${SHORT_SHA}"
           BRANCH="${GITHUB_REF_NAME//\//-}"
           ROLLING=$([[ "${{ github.event_name }}" == "schedule" ]] && echo "true" || echo "false")
           ROLLING_TAG="rolling-$(date -u +%Y%m%d-%H%M)"
@@ -99,7 +93,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ${{ steps.config.outputs.CONTAINERFILE }}
+          file: ${{ steps.config.outputs.containerfile }}
           push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
           tags: |
             ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:${{ steps.tag.outputs.tag }}
@@ -110,10 +104,10 @@ jobs:
             ${{ steps.tag.outputs.zfs == 'true' && format('{0}/{1}:zfs-latest', env.REGISTRY_URL, env.IMAGE_PATH) || '' }}
             ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:latest
           build-args: |
-            FEDORA_VERSION=${{ steps.config.outputs.BUILD_VERSION }}
-            IMAGE_TYPE=${{ steps.config.outputs.BUILD_IMAGE_TYPE }}
-            ENABLE_PLYMOUTH=${{ steps.config.outputs.ENABLE_PLYMOUTH }}
-            ENABLE_ZFS=${{ steps.config.outputs.ENABLE_ZFS }}
+            FEDORA_VERSION=${{ steps.config.outputs.build_version }}
+            IMAGE_TYPE=${{ steps.config.outputs.build_image_type }}
+            ENABLE_PLYMOUTH=${{ steps.config.outputs.enable_plymouth }}
+            ENABLE_ZFS=${{ steps.config.outputs.enable_zfs }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -125,9 +119,9 @@ jobs:
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Image | \`${{ env.IMAGE_PATH }}:${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Type | ${{ steps.config.outputs.BUILD_IMAGE_TYPE }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Plymouth | ${{ steps.config.outputs.ENABLE_PLYMOUTH }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| ZFS | ${{ steps.config.outputs.ENABLE_ZFS }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Type | ${{ steps.config.outputs.build_image_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Plymouth | ${{ steps.config.outputs.enable_plymouth }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ZFS | ${{ steps.config.outputs.enable_zfs }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Digest | \`${{ steps.build-push.outputs.digest }}\` |" >> $GITHUB_STEP_SUMMARY
 
   # -- Scan + Sign run in parallel after build --

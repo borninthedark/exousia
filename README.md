@@ -13,8 +13,8 @@
 
 DevSecOps-hardened, container-based immutable operating systems built on
 [**bootc**](https://github.com/bootc-dev/bootc). YAML blueprints define OS
-images, Python tools transpile them to Containerfiles, Buildah builds them, and
-GitHub Actions pushes signed images to DockerHub.
+images, Python tools transpile them to Containerfiles, Docker Buildx builds them,
+and GitHub Actions pushes signed images to DockerHub.
 
 Development follows a **TDD-first, shift-left** methodology: tests are written
 before implementation, pre-commit hooks enforce quality and security gates
@@ -100,7 +100,7 @@ graph LR
     O --> B
     P --> F --> B
     B --> C["Containerfile"]
-    C --> D["Buildah"]
+    C --> D["Docker Buildx"]
     D --> T["Bats tests"]
     T --> E["Registry"]
 ```
@@ -126,12 +126,6 @@ graph TD
     S & SG --> R["release"]
     R --> G["Gate"]
     G --> Y["Yoruichi"]
-
-    U["Unohana (weekly)"] --> B2["Mayuri"] & C2["Byakuya"]
-    B2 & C2 --> K2["Kyoraku: ZFS build"]
-    K2 --> S2["scan"] & SG2["sign"]
-    S2 & SG2 --> R2["release"]
-    R2 --> G2["Gate"]
 ```
 
 | Captain | Division | Role | Key Tools |
@@ -139,8 +133,7 @@ graph TD
 | **Aizen** | -- | Orchestrator | Calls Mayuri + Byakuya in parallel, then Kyoraku |
 | **Mayuri** | 12th (R&D) | CI | Ruff, Black, isort, pytest |
 | **Byakuya** | 6th (Law) | Security | Hadolint, Checkov, Trivy config scan, Bandit |
-| **Kyoraku** | Captain-Commander | Build & Release | Buildah, Cosign (OIDC), Trivy image scan, semver |
-| **Unohana** | 4th (Relief) | Weekly ZFS Build | Mirrors Aizen with `enable_zfs: true` |
+| **Kyoraku** | Captain-Commander | Build & Release | Docker Buildx, Cosign (OIDC), Trivy image scan, semver |
 | **Yoruichi** | 2nd (Stealth) | Status Report | Generates STATUS.md, updates badges |
 
 ### Versioning
@@ -178,7 +171,6 @@ the blueprint directly.
   Configuration references drawn from [openSUSEway](https://github.com/openSUSE/openSUSEway).
 - **Plymouth** is toggled via `enable_plymouth: true` in the blueprint.
 - **greetd** is the login manager for all image types.
-- **ZFS** is optional -- enable via `build.enable_zfs: true`. See [ZFS docs](docs/zfs-bootc.md).
 
 ## Local Build Pipeline
 
@@ -241,7 +233,6 @@ Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 | [Overlay System](docs/overlay-system.md) | Overlay directory structure and how files map into images |
 | [Local Build Pipeline](docs/local-build-pipeline.md) | Quadlet services, local build, and promotion to DockerHub |
 | [Sway + greetd](docs/sway-session-greetd.md) | Sway session with greetd login manager |
-| [ZFS Support](docs/zfs-bootc.md) | Optional ZFS kernel module build process |
 | [Test Suite](docs/testing/README.md) | Test architecture, categories, and writing guide |
 | [Troubleshooting](docs/reference/troubleshooting.md) | Common issues and fixes |
 | [Security Policy](SECURITY.md) | Vulnerability reporting and security model |

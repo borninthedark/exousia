@@ -25,8 +25,7 @@ Exousia uses a Shinigami-themed GitHub Actions pipeline (Gotei 13 captains):
 | **Aizen** | `aizen.yml` | Orchestrator -- calls Mayuri + Byakuya in parallel, then Kyoraku, then gate |
 | **Mayuri** | `mayuri.yml` | CI -- Ruff, Black, isort, pytest |
 | **Byakuya** | `byakuya.yml` | Security -- Hadolint, Checkov, Trivy config scan, Bandit |
-| **Kyoraku** | `kyoraku.yml` | Build, Cosign, Trivy scan, semver release |
-| **Unohana** | `unohana.yml` | Weekly ZFS build -- mirrors Aizen with `enable_zfs: true` |
+| **Kyoraku** | `kyoraku.yml` | Docker Buildx, Cosign, Trivy scan, semver release |
 | **Yoruichi** | `yoruichi.yml` | Post-CI -- STATUS.md, badge updates |
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):
@@ -70,7 +69,6 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Aizen.
 
 - **[chezmoi-integration.md](chezmoi-integration.md)** -- Dotfile management with chezmoi
 - **[kernel-options.md](kernel-options.md)** -- Kernel boot parameters and overrides
-- **[zfs-bootc.md](zfs-bootc.md)** -- ZFS kernel module build process (optional)
 
 ## Testing
 

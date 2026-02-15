@@ -1,0 +1,70 @@
+name: 'Transpile YAML Blueprint'
+description: 'Transpile bootc YAML blueprints to Containerfiles'
+
+inputs:
+  yaml_config:
+    description: 'Path to YAML blueprint (or "auto")'
+    default: 'auto'
+  image_type:
+    description: 'Image type (fedora-bootc, fedora-sway-atomic)'
+    default: 'fedora-sway-atomic'
+  distro_version:
+    description: 'Fedora version'
+    default: '43'
+  enable_plymouth:
+    description: 'Enable Plymouth boot splash'
+    default: 'true'
+  enable_zfs:
+    description: 'Enable ZFS kernel module build'
+    default: 'false'
+  output_path:
+    description: 'Output Containerfile path'
+    default: 'Dockerfile.generated'
+
+outputs:
+  containerfile:
+    description: 'Path to generated Containerfile'
+    value: ${{ steps.transpile.outputs.CONTAINERFILE }}
+  build_version:
+    description: 'Resolved build version'
+    value: ${{ steps.resolve.outputs.BUILD_VERSION }}
+  build_image_type:
+    description: 'Resolved image type'
+    value: ${{ steps.resolve.outputs.BUILD_IMAGE_TYPE }}
+  enable_plymouth:
+    description: 'Plymouth flag'
+    value: ${{ steps.resolve.outputs.ENABLE_PLYMOUTH }}
+  enable_zfs:
+    description: 'ZFS flag'
+    value: ${{ steps.resolve.outputs.ENABLE_ZFS }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+
+    - name: Install dependencies
+      shell: bash
+      run: uv sync
+
+    - name: Resolve build configuration
+      id: resolve
+      shell: bash
+      env:
+        INPUT_YAML_CONFIG: ${{ inputs.yaml_config }}
+        INPUT_IMAGE_TYPE: ${{ inputs.image_type }}
+        INPUT_DISTRO_VERSION: ${{ inputs.distro_version }}
+        INPUT_ENABLE_PLYMOUTH: ${{ inputs.enable_plymouth }}
+        INPUT_ENABLE_ZFS: ${{ inputs.enable_zfs }}
+      run: uv run python tools/resolve_build_config.py
+
+    - name: Generate Containerfile
+      id: transpile
+      shell: bash
+      run: |
+        uv run python tools/yaml-to-containerfile.py \
+          --config adnyeus.yml \
+          --output "${{ inputs.output_path }}" \
+          --verbose
+        echo "CONTAINERFILE=${{ inputs.output_path }}" >> $GITHUB_OUTPUT

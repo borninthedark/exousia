@@ -19,9 +19,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: uv sync --dev
-
       - name: Verify required file structure
         run: |
           for file in sway.desktop environment start-sway; do
@@ -47,12 +44,9 @@ jobs:
 
           echo "All required files present"
 
-      - name: Generate Containerfile from YAML
-        run: |
-          uv run python tools/yaml-to-containerfile.py \
-            --config adnyeus.yml \
-            --output Dockerfile.generated \
-            --verbose
+      - name: Transpile YAML blueprint
+        id: transpile
+        uses: ./.github/actions/transpile
 
       - name: Hadolint
         run: |
