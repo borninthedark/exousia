@@ -139,7 +139,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:${{ needs.build.outputs.image_tag }}
           severity: HIGH,CRITICAL
