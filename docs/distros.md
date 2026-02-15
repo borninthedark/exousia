@@ -51,8 +51,6 @@ Built images use the following patterns:
 - **Branch**: `{branch-name}` (for branch builds)
 - **Rolling**: `rolling-YYYYMMDD-HHMM` (time-stamped snapshot from scheduled builds)
 - **Current**: `current` (rolling tag, always points to the latest scheduled build)
-- **ZFS**: `zfs-YYYYMMDD` (date-stamped ZFS build from weekly schedule)
-- **ZFS Latest**: `zfs-latest` (rolling tag, always points to the latest ZFS build)
 
 ## Creating Custom Configs
 

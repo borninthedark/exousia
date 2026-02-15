@@ -9,8 +9,7 @@ GitHub Actions CI/CD workflows named after Gotei 13 captains from BLEACH.
 | **Aizen** | `aizen.yml` | -- | Orchestrator: calls Mayuri + Byakuya in parallel, then Kyoraku, then gate |
 | **Mayuri** | `mayuri.yml` | 12th (R&D) | CI: Ruff, Black, isort, pytest |
 | **Byakuya** | `byakuya.yml` | 6th (Law) | Security: Hadolint, Checkov, Trivy config scan, Bandit |
-| **Kyoraku** | `kyoraku.yml` | Captain-Commander | Build, Cosign, Trivy image scan, semver release |
-| **Unohana** | `unohana.yml` | 4th (Relief) | Weekly ZFS build: mirrors Aizen with `enable_zfs: true` |
+| **Kyoraku** | `kyoraku.yml` | Captain-Commander | Docker Buildx, Cosign, Trivy image scan, semver release |
 | **Yoruichi** | `yoruichi.yml` | 2nd (Stealth) | Post-CI: generates STATUS.md, updates README badges |
 
 ## Pipeline Flow
@@ -19,14 +18,11 @@ GitHub Actions CI/CD workflows named after Gotei 13 captains from BLEACH.
 Aizen -> Mayuri + Byakuya (parallel) -> Kyoraku -> Gate
                                                     |
 Yoruichi (on Aizen completion, main only) <---------+
-
-Unohana (weekly) -> Mayuri + Byakuya (parallel) -> Kyoraku (ZFS) -> Gate
 ```
 
 ## Triggers
 
-- **Aizen**: push/PR to main, 8-hour schedule, manual dispatch
-- **Unohana**: weekly schedule (Sunday 04:10 UTC), manual dispatch
+- **Aizen**: push/PR to main, 6-hour schedule, manual dispatch
 - **Yoruichi**: `workflow_run` after Aizen completes on main
 
 ## See Also

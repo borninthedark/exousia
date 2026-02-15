@@ -197,8 +197,8 @@ def generate_readme(config: Config) -> str:
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
 Declarative bootc image builder for Fedora Linux. YAML blueprints define OS
-images, Python tools transpile them to Containerfiles, Buildah builds them, and
-GitHub Actions pushes signed images to DockerHub.
+images, Python tools transpile them to Containerfiles, Docker Buildx builds them,
+and GitHub Actions pushes signed images to DockerHub.
 
 > **Warning** -- This project is highly experimental. There are no guarantees
 > about stability, data safety, or fitness for any purpose.
@@ -262,7 +262,7 @@ Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://githu
 graph LR
     A["adnyeus.yml<br/>(blueprint)"] --> B["Python transpiler<br/>(tools/*.py)"]
     B --> C["Containerfile"]
-    C --> D["Buildah build"]
+    C --> D["Docker Buildx"]
     D --> E["DockerHub<br/>(signed image)"]
     B -.-> F["package_loader.py"]
     B -.-> G["resolve_build_config.py"]
@@ -334,7 +334,6 @@ the blueprint directly.
   Configuration references drawn from [openSUSEway](https://github.com/openSUSE/openSUSEway).
 - **Plymouth** is toggled via `enable_plymouth: true` in the blueprint.
 - **greetd** is the login manager for all image types.
-- **ZFS** is optional -- enable via `build.enable_zfs: true`. See [ZFS docs](docs/zfs-bootc.md).
 
 ---
 

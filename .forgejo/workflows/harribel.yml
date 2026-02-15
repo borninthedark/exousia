@@ -27,16 +27,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Resolve build configuration
-        run: uv run python tools/resolve_build_config.py
-        env:
-          INPUT_IMAGE_TYPE: fedora-sway-atomic
-          INPUT_DISTRO_VERSION: "43"
-          INPUT_ENABLE_PLYMOUTH: "true"
-          INPUT_ENABLE_ZFS: "${{ inputs.enable_zfs }}"
+      - name: Transpile YAML blueprint
+        id: config
+        uses: ./.github/actions/transpile
+        with:
+          enable_zfs: ${{ inputs.enable_zfs }}
 
       - name: Download generated Containerfile
         uses: actions/download-artifact@v4
