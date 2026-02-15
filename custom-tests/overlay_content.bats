@@ -292,8 +292,9 @@ assert_has_shebang() {
     assert_file_exists "$OVERLAY_ROOT/deploy/forgejo.container"
     run grep -q "^\[Container\]" "$OVERLAY_ROOT/deploy/forgejo.container"
     assert_success "forgejo.container should have [Container] section"
-    run grep -q "^\[Install\]" "$OVERLAY_ROOT/deploy/forgejo.container"
-    assert_success "forgejo.container should have [Install] section"
+    # [Install] is commented out -- services are user-activated post-install
+    run grep -q "\[Install\]" "$OVERLAY_ROOT/deploy/forgejo.container"
+    assert_success "forgejo.container should have [Install] section (commented or active)"
 }
 
 @test "Forgejo quadlet should have autoupdate label" {
