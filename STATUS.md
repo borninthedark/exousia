@@ -1,6 +1,6 @@
 # Exousia CI Status
 
-> Last updated: 2026-02-18 19:16:43 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/22153936683)
+> Last updated: 2026-02-19 03:28:58 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/22167044169)
 
 ## Pipeline: Aizen
 
@@ -20,5 +20,5 @@
 | Image Type | fedora-bootc |
 | Fedora Version | 43 |
 | Window Manager | sway |
-| Commit | `6827ffac` |
+| Commit | `03140ce1` |
 | Triggered By | schedule |
