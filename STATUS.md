@@ -1,6 +1,6 @@
 # Exousia CI Status
 
-> Last updated: 2026-02-20 19:05:50 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/22237324473)
+> Last updated: 2026-02-20 21:42:03 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/22237324473)
 
 ## Pipeline: Aizen
 
@@ -8,9 +8,9 @@
 |---------|----------|------|--------|
 | Mayuri | 12th (R&D) | CI: lint + test | success |
 | Byakuya | 6th (Law) | Security scanning | success |
-| Kyoraku | Captain-Commander | Build & Release | failure |
+| Kyoraku | Captain-Commander | Build & Release | success |
 
-**Result:** failure
+**Result:** success
 
 ## Build
 
