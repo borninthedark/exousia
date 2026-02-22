@@ -1,8 +1,8 @@
-# Byakuya - Captain of the 6th Division, Law & Order
+# Gin Ichimaru - Captain of the 3rd Division, Deception & Insight
 # Validates file structure, generates Containerfile, runs Hadolint + Checkov +
 # Trivy config scan + Bandit, then uploads the generated Containerfile for Kyoraku.
 
-name: "Byakuya - Security"
+name: "Gin - Security"
 
 on:
   workflow_call:
@@ -22,7 +22,7 @@ jobs:
 
       - name: Verify required file structure
         run: |
-          echo "## Byakuya: File Structure Check" >> $GITHUB_STEP_SUMMARY
+          echo "## Gin: File Structure Check" >> $GITHUB_STEP_SUMMARY
 
           for file in sway.desktop environment start-sway; do
             if [[ ! -f "overlays/sway/session/$file" ]]; then
@@ -87,7 +87,7 @@ jobs:
       - name: Security summary
         if: always()
         run: |
-          echo "## Byakuya: Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "## Gin: Security Scan Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Scanner | Target |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY

@@ -11,8 +11,18 @@ Containerfile.test
 yaml-definitions/DEPRECATED-README.md
 custom-pkgs/README.md
 
+# Virtual environments
+.venv/
+venv/
+
 # Python cache and bytecode
 __pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+junit.xml
 *.py[cod]
 *$py.class
 *.so

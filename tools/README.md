@@ -64,7 +64,7 @@ uv run python tools/dry_check.py --functions-only --path tools
 | `test_package_loader.py` | Package loading, merging, YAML parsing |
 | `test_distro_mapper.py` | Image type to base image mapping |
 | `test_package_dependency_checker.py` | Dependency resolution and conflict detection |
-| `test_build_zfs_kmod.py` | ZFS kernel module build script |
+| `test_dry_check.py` | DRY enforcement tool |
 
 Run tests:
 

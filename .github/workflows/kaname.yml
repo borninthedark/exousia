@@ -1,7 +1,7 @@
-# Mayuri - Captain of the 12th Division, Research & Development
+# Kaname Tosen - Captain of the 9th Division, Justice
 # Runs Python quality checks (ruff, black, isort) and pytest with coverage.
 
-name: "Mayuri - CI"
+name: "Kaname - CI"
 
 on:
   workflow_call:
@@ -57,7 +57,7 @@ jobs:
       - name: Test summary
         if: always()
         run: |
-          echo "## Mayuri: CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "## Kaname: CI Results" >> $GITHUB_STEP_SUMMARY
           echo "- Ruff: passed" >> $GITHUB_STEP_SUMMARY
           echo "- Black: passed" >> $GITHUB_STEP_SUMMARY
           echo "- isort: passed" >> $GITHUB_STEP_SUMMARY

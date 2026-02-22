@@ -124,12 +124,10 @@ omit = [
     "*/__init__.py",
     "*/conftest.py",
     "tools/test_*.py",
-    "tools/dry_check.py",
     "tools/generate-readme.py",
-    "tools/copr_manager.py",
     "tools/resolve_build_config.py",
-    "tools/validate_installed_packages.py",
     "tools/yaml_selector_service.py",
+    "tools/distro_mapper.py",
 ]
 
 [tool.coverage.report]

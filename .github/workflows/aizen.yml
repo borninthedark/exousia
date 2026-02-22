@@ -1,10 +1,10 @@
 # Aizen - The Mastermind - Orchestrator
-# Calls Mayuri (CI) + Byakuya (security) in parallel, then Kyoraku, then gate.
+# Calls Kaname (CI) + Gin (security) in parallel, then Kyoraku, then gate.
 #
 # Shinigami Pipeline:
 #   Aizen     -> Orchestrator (the one who sees everything)
-#   Mayuri    -> CI: lint + test (12th Division, Research & Development)
-#   Byakuya  -> Security scanning (6th Division, law & order)
+#   Kaname    -> CI: lint + test (9th Division, Justice)
+#   Gin       -> Security scanning (3rd Division, Deception & Insight)
 #   Kyoraku  -> Build -> scan + sign -> release (Captain-Commander, master strategist)
 
 name: "Aizen - Orchestrator"
@@ -15,7 +15,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: "10 */6 * * *"  # Every 6 hours: 00:10, 06:10, 12:10, 18:10 UTC
+    - cron: "10 */8 * * *"  # Every 8 hours: 00:10, 08:10, 16:10 UTC
   workflow_dispatch:
     inputs:
       image_type:
@@ -40,11 +40,6 @@ on:
         required: true
         type: boolean
         default: true
-      enable_zfs:
-        description: "Enable ZFS kernel module build"
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -56,30 +51,29 @@ permissions:
   id-token: write
 
 jobs:
-  # -- Mayuri (CI) + Byakuya (Security) run in parallel --
-  mayuri:
-    name: "Mayuri (CI)"
-    uses: ./.github/workflows/mayuri.yml
+  # -- Kaname (CI) + Gin (Security) run in parallel --
+  kaname:
+    name: "Kaname (CI)"
+    uses: ./.github/workflows/kaname.yml
     secrets: inherit
     permissions:
       contents: read
 
-  byakuya:
-    name: "Byakuya (Security)"
-    uses: ./.github/workflows/byakuya.yml
+  gin:
+    name: "Gin (Security)"
+    uses: ./.github/workflows/gin.yml
     permissions:
       contents: read
 
   # -- Kyoraku (Build) runs after both pass --
   kyoraku:
     name: "Kyoraku (Build)"
-    needs: [mayuri, byakuya]
+    needs: [kaname, gin]
     uses: ./.github/workflows/kyoraku.yml
     with:
       image_type: ${{ inputs.image_type || 'fedora-sway-atomic' }}
       distro_version: ${{ inputs.distro_version || '43' }}
       enable_plymouth: ${{ inputs.enable_plymouth == '' && true || inputs.enable_plymouth }}
-      enable_zfs: ${{ inputs.enable_zfs == true }}
     secrets: inherit
     permissions:
       contents: write
@@ -89,7 +83,7 @@ jobs:
   # -- Gate: summary of all jobs --
   gate:
     name: "Gate (Summary)"
-    needs: [mayuri, byakuya, kyoraku]
+    needs: [kaname, gin, kyoraku]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -99,13 +93,13 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Workflow | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Mayuri (CI) | ${{ needs.mayuri.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Byakuya (Security) | ${{ needs.byakuya.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Kaname (CI) | ${{ needs.kaname.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Gin (Security) | ${{ needs.gin.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Kyoraku (Build) | ${{ needs.kyoraku.result }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if any job failed
         if: >-
-          needs.mayuri.result == 'failure' ||
-          needs.byakuya.result == 'failure' ||
+          needs.kaname.result == 'failure' ||
+          needs.gin.result == 'failure' ||
           needs.kyoraku.result == 'failure'
         run: exit 1

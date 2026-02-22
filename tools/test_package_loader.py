@@ -166,15 +166,78 @@ def test_no_duplicate_packages():
     print("✓ Package lists are deduplicated correctly")
 
 
-if __name__ == "__main__":
-    test_package_loader_initialization()
-    test_load_sway_packages()
-    test_load_common_packages()
-    test_load_remove_packages()
-    test_get_package_list_with_wm()
-    test_package_list_without_common()
-    test_flatten_packages()
-    test_list_available_wms()
-    test_list_available_des()
-    test_no_duplicate_packages()
-    print("\n✅ All package_loader tests passed!")
+def test_custom_packages_dir(tmp_path):
+    """Test PackageLoader with a custom packages directory."""
+    common = tmp_path / "common"
+    common.mkdir()
+    (common / "base.yml").write_text("core:\n  - testpkg\n")
+    (common / "remove.yml").write_text("packages:\n  - badpkg\n")
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    assert loader.packages_dir == tmp_path
+    pkgs = loader.load_common("base")
+    assert "testpkg" in pkgs
+
+
+def test_load_yaml_file_not_found(tmp_path):
+    """Test that missing YAML files raise FileNotFoundError."""
+    import pytest
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    with pytest.raises(FileNotFoundError, match="not found"):
+        loader.load_yaml(tmp_path / "nonexistent.yml")
+
+
+def test_load_yaml_invalid_yaml(tmp_path):
+    """Test that invalid YAML raises ValueError."""
+    import pytest
+
+    bad = tmp_path / "bad.yml"
+    bad.write_text(":\n  invalid: [\n")
+    loader = PackageLoader(packages_dir=tmp_path)
+    with pytest.raises(ValueError, match="Invalid YAML"):
+        loader.load_yaml(bad)
+
+
+def test_get_groups():
+    """Test extracting groups from config."""
+    loader = PackageLoader()
+    config = {"groups": ["group-a", "group-b"], "core": ["pkg1"]}
+    groups = loader.get_groups(config)
+    assert groups == ["group-a", "group-b"]
+
+
+def test_get_groups_missing():
+    """Test get_groups returns empty list when no groups key."""
+    loader = PackageLoader()
+    assert loader.get_groups({"core": ["pkg1"]}) == []
+
+
+def test_get_package_list_includes_groups(tmp_path):
+    """Test that get_package_list collects groups from WM config."""
+    common = tmp_path / "common"
+    common.mkdir()
+    (common / "base.yml").write_text("core:\n  - basepkg\n")
+    (common / "remove.yml").write_text("packages: []\n")
+
+    wm_dir = tmp_path / "window-managers"
+    wm_dir.mkdir()
+    (wm_dir / "test.yml").write_text("groups:\n  - sway-group\ncore:\n  - wmpkg\n")
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    result = loader.get_package_list(wm="test")
+    assert "sway-group" in result["groups"]
+    assert "basepkg" in result["install"]
+    assert "wmpkg" in result["install"]
+
+
+def test_list_wms_empty_dir(tmp_path):
+    """Test list_available_wms with no wm directory."""
+    loader = PackageLoader(packages_dir=tmp_path)
+    assert loader.list_available_wms() == []
+
+
+def test_list_des_empty_dir(tmp_path):
+    """Test list_available_des with no de directory."""
+    loader = PackageLoader(packages_dir=tmp_path)
+    assert loader.list_available_des() == []
