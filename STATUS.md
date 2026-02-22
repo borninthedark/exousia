@@ -1,14 +1,14 @@
 # Exousia CI Status
 
-> Last updated: 2026-02-22 14:16:51 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/22278618206)
+> Last updated: 2026-02-22 14:25:25 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/22278905989)
 
 ## Pipeline: Aizen
 
 | Captain | Division | Role | Status |
 |---------|----------|------|--------|
-| Kaname | 9th (Justice) | CI: lint + test | success |
-| Gin | 3rd (Insight) | Security scanning | success |
-| Kyoraku | Captain-Commander | Build & Release | success |
+| Kaname | 9th (Oblivion) | CI: lint + test | success |
+| Gin | 3rd (Despair) | Security scanning | success |
+| Kyoraku | 1st (Truth and Innocence) | Build & Release | success |
 
 **Result:** success
 
@@ -20,5 +20,5 @@
 | Image Type | fedora-bootc |
 | Fedora Version | 43 |
 | Window Manager | sway |
-| Commit | `83bc4e97` |
+| Commit | `2386f2a4` |
 | Triggered By | push |
