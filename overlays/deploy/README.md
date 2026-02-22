@@ -6,7 +6,7 @@ Podman Quadlet container definitions for local infrastructure services.
 
 | File | Service | Purpose |
 |------|---------|---------|
-| `forgejo.container` | Forgejo | Local Git forge for the Espada CI pipeline |
+| `forgejo.container` | Forgejo | Local Git forge for development |
 | `forgejo-runner.container` | Forgejo Runner | Executes Forgejo Actions workflows |
 | `exousia-registry.container` | Container Registry | Local OCI registry at `localhost:5000` |
 

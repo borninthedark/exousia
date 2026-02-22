@@ -287,14 +287,14 @@ division maps to the workflow's role in the pipeline:
 ```mermaid
 %%{{init: {{'theme': 'base', 'themeVariables': {{'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}}}}%%
 graph TD
-    A["Aizen<br/>(orchestrator)"] --> B["Mayuri<br/>(CI: lint+test)"]
-    A --> C["Byakuya<br/>(security scan)"]
+    A["Aizen<br/>(orchestrator)"] --> B["Kaname<br/>(CI: lint+test)"]
+    A --> C["Gin<br/>(security scan)"]
     B --> D["Kyoraku<br/>(build, sign, release)"]
     C --> D
     D --> E["Gate"]
 ```
 
-Aizen calls Mayuri and Byakuya in parallel. When both pass, Kyoraku builds,
+Aizen calls Kaname and Gin in parallel. When both pass, Kyoraku builds,
 signs, scans, and cuts a semver release on `main`.
 
 ### Versioning

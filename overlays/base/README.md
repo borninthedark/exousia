@@ -11,7 +11,7 @@ base/
 │   ├── polkit/     # Polkit rules
 │   └── tmpfiles/   # tmpfiles.d entries
 ├── packages/       # YAML package definitions
-│   ├── common/     # Base, remove, flatpaks, ZFS
+│   ├── common/     # Base, remove, flatpaks
 │   └── window-managers/  # Sway packages
 ├── sysusers/       # systemd-sysusers configs
 │   └── bootc.conf  # System user definitions

@@ -9,8 +9,7 @@ packages/
 ├── common/            # Shared package sets
 │   ├── base.yml       # Base packages for all builds
 │   ├── flatpaks.yml   # Flatpak applications (installed at first boot)
-│   ├── remove.yml     # Packages to remove before installs
-│   └── zfs.yml        # ZFS support packages (optional)
+│   └── remove.yml     # Packages to remove before installs
 └── window-managers/
     └── sway.yml       # Sway WM packages
 ```

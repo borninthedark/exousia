@@ -18,10 +18,6 @@ on:
         description: "Enable Plymouth boot splash"
         type: boolean
         default: true
-      enable_zfs:
-        description: "Enable ZFS kernel module build"
-        type: boolean
-        default: false
 
 env:
   REGISTRY_URL: ${{ vars.REGISTRY_URL || 'docker.io' }}
@@ -42,7 +38,6 @@ jobs:
       image_digest: ${{ steps.build-push.outputs.digest }}
       build_type: ${{ steps.config.outputs.build_image_type }}
       enable_plymouth: ${{ steps.config.outputs.enable_plymouth }}
-      enable_zfs: ${{ steps.config.outputs.enable_zfs }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -54,7 +49,6 @@ jobs:
           image_type: ${{ inputs.image_type }}
           distro_version: ${{ inputs.distro_version }}
           enable_plymouth: ${{ inputs.enable_plymouth }}
-          enable_zfs: ${{ inputs.enable_zfs }}
 
       - name: Download generated Containerfile
         uses: actions/download-artifact@v4
@@ -69,14 +63,10 @@ jobs:
           BRANCH="${GITHUB_REF_NAME//\//-}"
           ROLLING=$([[ "${{ github.event_name }}" == "schedule" ]] && echo "true" || echo "false")
           ROLLING_TAG="rolling-$(date -u +%Y%m%d-%H%M)"
-          ZFS=$([[ "${{ inputs.enable_zfs }}" == "true" ]] && echo "true" || echo "false")
-          ZFS_TAG="zfs-$(date -u +%Y%m%d)"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
           echo "rolling=$ROLLING" >> $GITHUB_OUTPUT
           echo "rolling_tag=$ROLLING_TAG" >> $GITHUB_OUTPUT
-          echo "zfs=$ZFS" >> $GITHUB_OUTPUT
-          echo "zfs_tag=$ZFS_TAG" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -100,14 +90,11 @@ jobs:
             ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:${{ steps.tag.outputs.branch }}
             ${{ steps.tag.outputs.rolling == 'true' && format('{0}/{1}:{2}', env.REGISTRY_URL, env.IMAGE_PATH, steps.tag.outputs.rolling_tag) || '' }}
             ${{ steps.tag.outputs.rolling == 'true' && format('{0}/{1}:current', env.REGISTRY_URL, env.IMAGE_PATH) || '' }}
-            ${{ steps.tag.outputs.zfs == 'true' && format('{0}/{1}:{2}', env.REGISTRY_URL, env.IMAGE_PATH, steps.tag.outputs.zfs_tag) || '' }}
-            ${{ steps.tag.outputs.zfs == 'true' && format('{0}/{1}:zfs-latest', env.REGISTRY_URL, env.IMAGE_PATH) || '' }}
             ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:latest
           build-args: |
             FEDORA_VERSION=${{ steps.config.outputs.build_version }}
             IMAGE_TYPE=${{ steps.config.outputs.build_image_type }}
             ENABLE_PLYMOUTH=${{ steps.config.outputs.enable_plymouth }}
-            ENABLE_ZFS=${{ steps.config.outputs.enable_zfs }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -121,7 +108,6 @@ jobs:
           echo "| Image | \`${{ env.IMAGE_PATH }}:${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Type | ${{ steps.config.outputs.build_image_type }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Plymouth | ${{ steps.config.outputs.enable_plymouth }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| ZFS | ${{ steps.config.outputs.enable_zfs }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Digest | \`${{ steps.build-push.outputs.digest }}\` |" >> $GITHUB_STEP_SUMMARY
 
   # -- Scan + Sign run in parallel after build --

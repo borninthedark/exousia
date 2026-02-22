@@ -22,9 +22,9 @@ Exousia uses a Shinigami-themed GitHub Actions pipeline (Gotei 13 captains):
 
 | Workflow | File | Role |
 |----------|------|------|
-| **Aizen** | `aizen.yml` | Orchestrator -- calls Mayuri + Byakuya in parallel, then Kyoraku, then gate |
-| **Mayuri** | `mayuri.yml` | CI -- Ruff, Black, isort, pytest |
-| **Byakuya** | `byakuya.yml` | Security -- Hadolint, Checkov, Trivy config scan, Bandit |
+| **Aizen** | `aizen.yml` | Orchestrator -- calls Kaname + Gin in parallel, then Kyoraku, then gate |
+| **Kaname** | `kaname.yml` | CI -- Ruff, Black, isort, pytest |
+| **Gin** | `gin.yml` | Security -- Hadolint, Checkov, Trivy config scan, Bandit |
 | **Kyoraku** | `kyoraku.yml` | Docker Buildx, Cosign, Trivy scan, semver release |
 | **Yoruichi** | `yoruichi.yml` | Post-CI -- STATUS.md, badge updates |
 
