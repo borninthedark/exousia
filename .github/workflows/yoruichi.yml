@@ -5,8 +5,8 @@
 #
 # Shinigami Pipeline:
 #   Aizen     -> Orchestrator (the one who sees everything)
-#   Mayuri    -> CI: lint + test (12th Division, Research & Development)
-#   Byakuya  -> Security scanning (6th Division, law & order)
+#   Kaname    -> CI: lint + test (9th Division, Justice)
+#   Gin       -> Security scanning (3rd Division, Deception & Insight)
 #   Kyoraku  -> Build, scan, sign, release (Captain-Commander)
 #   Yoruichi -> Status report (2nd Division, Stealth Force)
 
@@ -48,12 +48,12 @@ jobs:
               ][0].conclusion // "skipped"'
           }
 
-          MAYURI=$(get_conclusion "Mayuri")
-          BYAKUYA=$(get_conclusion "Byakuya")
+          KANAME=$(get_conclusion "Kaname")
+          GIN=$(get_conclusion "Gin")
           KYORAKU=$(get_conclusion "Kyoraku")
 
-          echo "mayuri=${MAYURI}" >> "$GITHUB_OUTPUT"
-          echo "byakuya=${BYAKUYA}" >> "$GITHUB_OUTPUT"
+          echo "kaname=${KANAME}" >> "$GITHUB_OUTPUT"
+          echo "gin=${GIN}" >> "$GITHUB_OUTPUT"
           echo "kyoraku=${KYORAKU}" >> "$GITHUB_OUTPUT"
           echo "run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
 
@@ -81,8 +81,8 @@ jobs:
         env:
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
-          MAYURI: ${{ steps.jobs.outputs.mayuri }}
-          BYAKUYA: ${{ steps.jobs.outputs.byakuya }}
+          KANAME: ${{ steps.jobs.outputs.kaname }}
+          GIN: ${{ steps.jobs.outputs.gin }}
           KYORAKU: ${{ steps.jobs.outputs.kyoraku }}
           IMAGE_TYPE: ${{ steps.meta.outputs.image_type }}
           IMAGE_VERSION: ${{ steps.meta.outputs.image_version }}
@@ -101,8 +101,8 @@ jobs:
 
           | Captain | Division | Role | Status |
           |---------|----------|------|--------|
-          | Mayuri | 12th (R&D) | CI: lint + test | ${MAYURI} |
-          | Byakuya | 6th (Law) | Security scanning | ${BYAKUYA} |
+          | Kaname | 9th (Justice) | CI: lint + test | ${KANAME} |
+          | Gin | 3rd (Insight) | Security scanning | ${GIN} |
           | Kyoraku | Captain-Commander | Build & Release | ${KYORAKU} |
 
           **Result:** ${CONCLUSION}

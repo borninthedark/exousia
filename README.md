@@ -2,9 +2,9 @@
 
 > *Can't Fear Your Own OS*
 >
-> **BLEACH** by **Tite Kubo** -- The Shinigami Pipeline, Espada Pipeline,
-> Reiatsu badge, and all captain/arrancar naming are inspired by the Gotei 13
-> and Hueco Mundo from *BLEACH*. All rights belong to Tite Kubo and
+> **BLEACH** by **Tite Kubo** -- The Shinigami Pipeline,
+> Reiatsu badge, and all captain naming are inspired by the Gotei 13
+> from *BLEACH*. All rights belong to Tite Kubo and
 > respective copyright holders.
 
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/aizen.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/aizen.yml)
@@ -74,7 +74,7 @@ curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
   https://api.github.com/repos/borninthedark/exousia/actions/workflows/aizen.yml/dispatches \
-  -d '{"ref":"main","inputs":{"image_type":"fedora-bootc","distro_version":"43","enable_plymouth":"true","enable_zfs":"false"}}'
+  -d '{"ref":"main","inputs":{"image_type":"fedora-bootc","distro_version":"43","enable_plymouth":"true"}}'
 ```
 
 Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://github.com/borninthedark/exousia/actions).
@@ -120,7 +120,7 @@ division maps to the workflow's role:
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}%%
 graph TD
-    A["Aizen"] --> B["Mayuri"] & C["Byakuya"]
+    A["Aizen"] --> B["Kaname"] & C["Gin"]
     B & C --> K["Kyoraku: build"]
     K --> S["scan"] & SG["sign"]
     S & SG --> R["release"]
@@ -130,9 +130,9 @@ graph TD
 
 | Captain | Division | Role | Key Tools |
 |---------|----------|------|-----------|
-| **Aizen** | -- | Orchestrator | Calls Mayuri + Byakuya in parallel, then Kyoraku |
-| **Mayuri** | 12th (R&D) | CI | Ruff, Black, isort, pytest |
-| **Byakuya** | 6th (Law) | Security | Hadolint, Checkov, Trivy config scan, Bandit |
+| **Aizen** | -- | Orchestrator | Calls Kaname + Gin in parallel, then Kyoraku |
+| **Kaname** | 9th (Justice) | CI | Ruff, Black, isort, pytest |
+| **Gin** | 3rd (Insight) | Security | Hadolint, Checkov, Trivy config scan, Bandit |
 | **Kyoraku** | Captain-Commander | Build & Release | Docker Buildx, Cosign (OIDC), Trivy image scan, semver |
 | **Yoruichi** | 2nd (Stealth) | Status Report | Generates STATUS.md, updates badges |
 
@@ -250,7 +250,6 @@ Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 | [`yaml-definitions/`](yaml-definitions/) | Alternative build blueprints | [README](yaml-definitions/README.md) |
 | [`docs/`](docs/) | Full documentation | [README](docs/README.md) |
 | [`.github/workflows/`](.github/workflows/) | GitHub Actions CI/CD | [README](.github/workflows/README.md) |
-| [`.forgejo/workflows/`](.forgejo/workflows/) | Forgejo Actions CI/CD | [README](.forgejo/workflows/README.md) |
 
 ## Contributing
 
