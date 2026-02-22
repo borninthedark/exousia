@@ -1,14 +1,14 @@
 ---
-# Yoruichi Shihoin - Former Captain of the 2nd Division - Goddess of Flash
+# Yoruichi Shihoin - 2nd Division, Tulip (Seek Nothing) - Goddess of Flash
 # Post-CI housekeeping: generates STATUS.md and updates README badges
 # after the Aizen pipeline completes on main.
 #
 # Shinigami Pipeline:
-#   Aizen     -> Orchestrator (the one who sees everything)
-#   Kaname    -> CI: lint + test (9th Division, Justice)
-#   Gin       -> Security scanning (3rd Division, Deception & Insight)
-#   Kyoraku  -> Build, scan, sign, release (Captain-Commander)
-#   Yoruichi -> Status report (2nd Division, Stealth Force)
+#   Aizen     -> Orchestrator (5th Division, Lily of the Valley -- Sacrifice)
+#   Kaname    -> CI: lint + test (9th Division, Buttercup -- Oblivion)
+#   Gin       -> Security scanning (3rd Division, Marigold -- Despair)
+#   Kyoraku  -> Build, scan, sign, release (1st Division, Chrysanthemums -- Truth and Innocence)
+#   Yoruichi -> Status report (2nd Division, Tulip -- Seek Nothing)
 
 name: "Yoruichi - Status Report"
 
@@ -101,9 +101,9 @@ jobs:
 
           | Captain | Division | Role | Status |
           |---------|----------|------|--------|
-          | Kaname | 9th (Justice) | CI: lint + test | ${KANAME} |
-          | Gin | 3rd (Insight) | Security scanning | ${GIN} |
-          | Kyoraku | Captain-Commander | Build & Release | ${KYORAKU} |
+          | Kaname | 9th (Oblivion) | CI: lint + test | ${KANAME} |
+          | Gin | 3rd (Despair) | Security scanning | ${GIN} |
+          | Kyoraku | 1st (Truth and Innocence) | Build & Release | ${KYORAKU} |
 
           **Result:** ${CONCLUSION}
 

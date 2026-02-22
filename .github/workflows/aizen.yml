@@ -1,11 +1,11 @@
-# Aizen - The Mastermind - Orchestrator
+# Aizen - 5th Division, Lily of the Valley (Sacrifice) - Orchestrator
 # Calls Kaname (CI) + Gin (security) in parallel, then Kyoraku, then gate.
 #
 # Shinigami Pipeline:
-#   Aizen     -> Orchestrator (the one who sees everything)
-#   Kaname    -> CI: lint + test (9th Division, Justice)
-#   Gin       -> Security scanning (3rd Division, Deception & Insight)
-#   Kyoraku  -> Build -> scan + sign -> release (Captain-Commander, master strategist)
+#   Aizen     -> Orchestrator (5th Division, Lily of the Valley -- Sacrifice)
+#   Kaname    -> CI: lint + test (9th Division, Buttercup -- Oblivion)
+#   Gin       -> Security scanning (3rd Division, Marigold -- Despair)
+#   Kyoraku  -> Build -> scan + sign -> release (1st Division, Chrysanthemums -- Truth and Innocence)
 
 name: "Aizen - Orchestrator"
 

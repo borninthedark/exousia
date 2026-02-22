@@ -1,4 +1,4 @@
-# Kyoraku - Captain-Commander of the Gotei 13 - Build, Sign & Release
+# Kyoraku - 1st Division, Chrysanthemums (Truth and Innocence) - Build, Sign & Release
 # Builds image, scans with Trivy, signs with cosign (OIDC keyless),
 # and cuts semver releases from conventional commits.
 name: "Kyoraku - Build & Release"

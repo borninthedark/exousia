@@ -1,4 +1,4 @@
-# Gin Ichimaru - Captain of the 3rd Division, Deception & Insight
+# Gin Ichimaru - Captain of the 3rd Division, Marigold (Despair)
 # Validates file structure, generates Containerfile, runs Hadolint + Checkov +
 # Trivy config scan + Bandit, then uploads the generated Containerfile for Kyoraku.
 
