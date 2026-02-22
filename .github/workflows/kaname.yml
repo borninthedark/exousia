@@ -1,4 +1,4 @@
-# Kaname Tosen - Captain of the 9th Division, Justice
+# Kaname Tosen - Captain of the 9th Division, Buttercup (Oblivion)
 # Runs Python quality checks (ruff, black, isort) and pytest with coverage.
 
 name: "Kaname - CI"

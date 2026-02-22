@@ -130,11 +130,11 @@ graph TD
 
 | Captain | Division | Role | Key Tools |
 |---------|----------|------|-----------|
-| **Aizen** | -- | Orchestrator | Calls Kaname + Gin in parallel, then Kyoraku |
-| **Kaname** | 9th (Justice) | CI | Ruff, Black, isort, pytest |
-| **Gin** | 3rd (Insight) | Security | Hadolint, Checkov, Trivy config scan, Bandit |
-| **Kyoraku** | Captain-Commander | Build & Release | Docker Buildx, Cosign (OIDC), Trivy image scan, semver |
-| **Yoruichi** | 2nd (Stealth) | Status Report | Generates STATUS.md, updates badges |
+| **Aizen** | 5th (Sacrifice) | Orchestrator | Calls Kaname + Gin in parallel, then Kyoraku |
+| **Kaname** | 9th (Oblivion) | CI | Ruff, Black, isort, pytest |
+| **Gin** | 3rd (Despair) | Security | Hadolint, Checkov, Trivy config scan, Bandit |
+| **Kyoraku** | 1st (Truth and Innocence) | Build & Release | Docker Buildx, Cosign (OIDC), Trivy image scan, semver |
+| **Yoruichi** | 2nd (Seek Nothing) | Status Report | Generates STATUS.md, updates badges |
 
 ### Versioning
 
