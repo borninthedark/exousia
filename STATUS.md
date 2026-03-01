@@ -1,6 +1,6 @@
 # Exousia CI Status
 
-> Last updated: 2026-03-01 03:31:15 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/22534921286)
+> Last updated: 2026-03-01 04:16:41 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/22535681679)
 
 ## Pipeline: Aizen
 
@@ -8,9 +8,9 @@
 |---------|----------|------|--------|
 | Kaname | 9th (Oblivion) | CI: lint + test | success |
 | Gin | 3rd (Despair) | Security scanning | success |
-| Kyoraku | 1st (Truth and Innocence) | Build & Release | success |
+| Kyoraku | 1st (Truth and Innocence) | Build & Release | failure |
 
-**Result:** success
+**Result:** failure
 
 ## Build
 
@@ -20,5 +20,5 @@
 | Image Type | fedora-bootc |
 | Fedora Version | 43 |
 | Window Manager | sway |
-| Commit | `83eb8c0d` |
-| Triggered By | schedule |
+| Commit | `0b969960` |
+| Triggered By | push |
