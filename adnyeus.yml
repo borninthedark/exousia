@@ -87,6 +87,11 @@ modules:
         dst: /etc/yum.repos.d/
         mode: "0644"
 
+  # Import GPG keys for third-party repos
+  - type: script
+    scripts:
+      - rpm --import https://dl.google.com/linux/linux_signing_key.pub
+
   # Base configurations (PAM, polkit, tmpfiles)
   - type: files
     files:
