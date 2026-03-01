@@ -95,10 +95,6 @@ shell:
 infrastructure:
   - opentofu
 
-# Browsers
-browsers:
-  - google-chrome-stable
-
 # Extra utilities
 extra:
   - cava

@@ -71,6 +71,7 @@ fonts:
   - google-noto-serif-fonts
   - dejavu-sans-fonts
   - dejavu-sans-mono-fonts
+  - liberation-fonts-all
 
 # File manager
 file_manager:
