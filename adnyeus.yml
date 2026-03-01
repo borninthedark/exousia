@@ -158,7 +158,7 @@ modules:
   # Google Chrome (installed separately from main batch to isolate GPG/repo setup)
   - type: script
     scripts:
-      - dnf install -y google-chrome-stable
+      - dnf install -y google-chrome-stable && dnf clean all
 
   # NOTE: git-clone module type is deprecated pending compilation support.
   # Autotiling installed via uv after package-loader makes it available
