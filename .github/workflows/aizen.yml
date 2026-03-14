@@ -15,7 +15,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: "10 */8 * * *"  # Every 8 hours: 00:10, 08:10, 16:10 UTC
+    - cron: "10 0,8,16 * * *"  # Every 8 hours: 00:10, 08:10, 16:10 UTC
   workflow_dispatch:
     inputs:
       image_type:
