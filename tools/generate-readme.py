@@ -110,8 +110,8 @@ def generate_readme(root: Path) -> str:
 > from *BLEACH*. All rights belong to Tite Kubo and
 > respective copyright holders.
 
-[![Reiatsu](https://img.shields.io/github/actions/workflow/status/{REPO}/aizen.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/{REPO}/actions/workflows/aizen.yml)
-[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/{REPO}/actions/workflows/aizen.yml?query=branch%3Amain+is%3Asuccess)
+[![Reiatsu](https://img.shields.io/github/actions/workflow/status/{REPO}/urahara.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/{REPO}/actions/workflows/urahara.yml)
+[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/{REPO}/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 
 DevSecOps-hardened, container-based immutable operating systems built on
@@ -130,7 +130,7 @@ change requires 50% branch coverage to merge (ratcheting toward 75%).
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
   - [Build Flow](#build-flow)
-  - [The Shinigami Pipeline](#the-shinigami-pipeline)
+  - [The 12th Division Pipeline](#the-12th-division-pipeline)
   - [Versioning](#versioning)
 - [Customizing Builds](#customizing-builds)
 - [Local Build Pipeline](#local-build-pipeline)
@@ -176,7 +176,7 @@ make build
 curl -X POST \\
   -H "Accept: application/vnd.github+json" \\
   -H "Authorization: Bearer $GITHUB_TOKEN" \\
-  https://api.github.com/repos/{REPO}/actions/workflows/aizen.yml/dispatches \\
+  https://api.github.com/repos/{REPO}/actions/workflows/urahara.yml/dispatches \\
   -d '{{"ref":"main","inputs":{{"image_type":"fedora-bootc","distro_version":"43","enable_plymouth":"true"}}}}'
 ```
 
@@ -215,29 +215,29 @@ graph LR
 | **Overlays** | Static files, configs, and scripts under `overlays/base/` (shared) and `overlays/sway/` (desktop) |
 | **Tests** | Bats tests in `custom-tests/` validate the built image |
 
-### The Shinigami Pipeline
+### The 12th Division Pipeline
 
-Every CI workflow is named after a captain from the Gotei 13. Each captain's
-division maps to the workflow's role:
+Every CI workflow is named after a 12th Division captain or member (Shinigami Research
+and Development Institute). Division flower: Calendula — Despair in Your Heart.
 
 ```mermaid
 %%{{init: {{'theme': 'base', 'themeVariables': {{'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}}}}%%
 graph TD
-    A["Aizen"] --> B["Kaname"] & C["Gin"]
-    B & C --> K["Kyoraku: build"]
+    A["Urahara"] --> B["Hikifune"] & C["Uhin"]
+    B & C --> K["Hiyori: build"]
     K --> S["scan"] & SG["sign"]
     S & SG --> R["release"]
     R --> G["Gate"]
-    G --> Y["Yoruichi"]
+    G --> Y["Nemu"]
 ```
 
 | Captain | Division | Role | Key Tools |
 |---------|----------|------|-----------|
-| **Aizen** | 5th (Sacrifice) | Orchestrator | Calls Kaname + Gin in parallel, then Kyoraku |
-| **Kaname** | 9th (Oblivion) | CI | Ruff, Black, isort, pytest |
-| **Gin** | 3rd (Despair) | Security | Hadolint, Checkov, Trivy config scan, Bandit |
-| **Kyoraku** | 1st (Truth and Innocence) | Build & Release | Docker Buildx, Cosign (OIDC), Trivy image scan, semver |
-| **Yoruichi** | 2nd (Seek Nothing) | Status Report | Generates STATUS.md, updates badges |
+| **Urahara** | 12th (Despair in Your Heart) | Orchestrator | Calls Hikifune + Uhin in parallel, then Hiyori |
+| **Hikifune** | 12th (Despair in Your Heart) | CI | Ruff, Black, isort, pytest |
+| **Uhin** | 12th (Despair in Your Heart) | Security | Hadolint, Checkov, Trivy config scan, Bandit |
+| **Hiyori** | 12th (Despair in Your Heart) | Build & Release | Docker Buildx, Cosign (OIDC), Trivy image scan, semver |
+| **Nemu** | 12th (Despair in Your Heart) | Status Report | Generates STATUS.md |
 
 ### Versioning
 
@@ -322,7 +322,7 @@ Configure in GitHub **Settings > Secrets and variables > Actions**.
 | `DOCKERHUB_USERNAME` | DockerHub username | Yes |
 | `REGISTRY_URL` | Registry URL (defaults to `docker.io`) | No |
 
-Secrets propagate to child workflows via `secrets: inherit` in Aizen.
+Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 
 ## Documentation
 

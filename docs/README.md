@@ -18,16 +18,16 @@ Comprehensive documentation for building, testing, and deploying custom Fedora b
 
 ## CI/CD Workflows
 
-Exousia uses a Shinigami-themed GitHub Actions pipeline (Gotei 13 captains):
+Exousia uses a 12th Division-themed GitHub Actions pipeline (Shinigami Research and Development Institute):
 
 | Workflow | File | Role |
 |----------|------|------|
-| **Aizen** | `aizen.yml` | 5th (Sacrifice) -- Orchestrator: calls Kaname + Gin in parallel, then Kyoraku, then gate |
-| **Kaname** | `kaname.yml` | 9th (Oblivion) -- CI: Ruff, Black, isort, pytest |
-| **Gin** | `gin.yml` | 3rd (Despair) -- Security: Hadolint, Checkov, Trivy config scan, Bandit |
-| **Kyoraku** | `kyoraku.yml` | 1st (Truth and Innocence) -- Buildah, Cosign, Trivy scan, semver release |
-| **Yoruichi** | `yoruichi.yml` | 2nd (Seek Nothing) -- Post-CI: STATUS.md, badge updates |
-| **Mayuri** | `mayuri.yml` | 12th (R&D) -- Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Aizen on change |
+| **Urahara** | `urahara.yml` | 12th (Despair in Your Heart) -- Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate |
+| **Hikifune** | `hikifune.yml` | 12th (Despair in Your Heart) -- CI: Ruff, Black, isort, pytest |
+| **Uhin** | `uhin.yml` | 12th (Despair in Your Heart) -- Security: Hadolint, Checkov, Trivy config scan, Bandit |
+| **Hiyori** | `hiyori.yml` | 12th (Despair in Your Heart) -- Build, Cosign, Trivy scan, semver release |
+| **Nemu** | `nemu.yml` | 12th (Despair in Your Heart) -- Post-CI: STATUS.md |
+| **Mayuri** | `mayuri.yml` | 12th (Despair in Your Heart) -- Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):
 `feat:` minor, `fix:` patch, `feat!:` major.
@@ -51,7 +51,7 @@ Configure in GitHub repository settings under **Settings > Secrets and variables
 | `DOCKERHUB_USERNAME` | DockerHub username | Yes |
 | `REGISTRY_URL` | Registry URL (defaults to `docker.io`) | No |
 
-Secrets are passed to reusable workflows via `secrets: inherit` in Aizen.
+Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 
 ---
 

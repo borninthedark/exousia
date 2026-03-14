@@ -1,13 +1,13 @@
-# Aizen - 5th Division, Lily of the Valley (Sacrifice) - Orchestrator
-# Calls Kaname (CI) + Gin (security) in parallel, then Kyoraku, then gate.
+# Kisuke Urahara - 12th Division, Calendula (Despair in Your Heart) - Orchestrator
+# Calls Hikifune (CI) + Uhin (Security) in parallel, then Hiyori, then gate.
 #
-# Shinigami Pipeline:
-#   Aizen     -> Orchestrator (5th Division, Lily of the Valley -- Sacrifice)
-#   Kaname    -> CI: lint + test (9th Division, Buttercup -- Oblivion)
-#   Gin       -> Security scanning (3rd Division, Marigold -- Despair)
-#   Kyoraku  -> Build -> scan + sign -> release (1st Division, Chrysanthemums -- Truth and Innocence)
+# 12th Division Pipeline:
+#   Urahara  -> Orchestrator (12th Division, Calendula -- Despair in Your Heart)
+#   Hikifune -> CI: lint + test (12th Division, Calendula -- Despair in Your Heart)
+#   Uhin     -> Security scanning (12th Division, Calendula -- Despair in Your Heart)
+#   Hiyori   -> Build -> scan + sign -> release (12th Division, Calendula -- Despair in Your Heart)
 
-name: "Aizen - Orchestrator"
+name: "Urahara - Orchestrator"
 
 on:
   push:
@@ -51,25 +51,25 @@ permissions:
   id-token: write
 
 jobs:
-  # -- Kaname (CI) + Gin (Security) run in parallel --
-  kaname:
-    name: "Kaname (CI)"
-    uses: ./.github/workflows/kaname.yml
+  # -- Hikifune (CI) + Uhin (Security) run in parallel --
+  hikifune:
+    name: "Hikifune (CI)"
+    uses: ./.github/workflows/hikifune.yml
     secrets: inherit
     permissions:
       contents: read
 
-  gin:
-    name: "Gin (Security)"
-    uses: ./.github/workflows/gin.yml
+  uhin:
+    name: "Uhin (Security)"
+    uses: ./.github/workflows/uhin.yml
     permissions:
       contents: read
 
-  # -- Kyoraku (Build) runs after both pass --
-  kyoraku:
-    name: "Kyoraku (Build)"
-    needs: [kaname, gin]
-    uses: ./.github/workflows/kyoraku.yml
+  # -- Hiyori (Build) runs after both pass --
+  hiyori:
+    name: "Hiyori (Build)"
+    needs: [hikifune, uhin]
+    uses: ./.github/workflows/hiyori.yml
     with:
       image_type: ${{ inputs.image_type || 'fedora-sway-atomic' }}
       distro_version: ${{ inputs.distro_version || '43' }}
@@ -83,23 +83,23 @@ jobs:
   # -- Gate: summary of all jobs --
   gate:
     name: "Gate (Summary)"
-    needs: [kaname, gin, kyoraku]
+    needs: [hikifune, uhin, hiyori]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Pipeline summary
         run: |
-          echo "## Aizen Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Urahara Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Workflow | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Kaname (CI) | ${{ needs.kaname.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Gin (Security) | ${{ needs.gin.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Kyoraku (Build) | ${{ needs.kyoraku.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Hikifune (CI) | ${{ needs.hikifune.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Uhin (Security) | ${{ needs.uhin.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Hiyori (Build) | ${{ needs.hiyori.result }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if any job failed
         if: >-
-          needs.kaname.result == 'failure' ||
-          needs.gin.result == 'failure' ||
-          needs.kyoraku.result == 'failure'
+          needs.hikifune.result == 'failure' ||
+          needs.uhin.result == 'failure' ||
+          needs.hiyori.result == 'failure'
         run: exit 1

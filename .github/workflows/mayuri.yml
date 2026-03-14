@@ -1,21 +1,21 @@
 ---
 # Mayuri Kurotsuchi - 12th Division, Calendula (Despair in Your Heart) - R&D / Watcher
-# Polls borninthedark/dotfiles for new commits; triggers the Aizen pipeline
+# Polls borninthedark/dotfiles for new commits; triggers the Urahara pipeline
 # when changes are detected.
 #
-# Shinigami Pipeline:
-#   Aizen    -> Orchestrator (5th Division, Lily of the Valley -- Sacrifice)
-#   Kaname   -> CI: lint + test (9th Division, Buttercup -- Oblivion)
-#   Gin      -> Security scanning (3rd Division, Marigold -- Despair)
-#   Kyoraku  -> Build, scan, sign, release (1st Division, Chrysanthemums -- Truth and Innocence)
-#   Yoruichi -> Status report (2nd Division, Tulip -- Seek Nothing)
+# 12th Division Pipeline:
+#   Urahara  -> Orchestrator (12th Division, Calendula -- Despair in Your Heart)
+#   Hikifune -> CI: lint + test (12th Division, Calendula -- Despair in Your Heart)
+#   Uhin     -> Security scanning (12th Division, Calendula -- Despair in Your Heart)
+#   Hiyori   -> Build, scan, sign, release (12th Division, Calendula -- Despair in Your Heart)
+#   Nemu     -> Status report (12th Division, Calendula -- Despair in Your Heart)
 #   Mayuri   -> Dotfiles watcher / R&D trigger (12th Division, Calendula -- Despair in Your Heart)
 
 name: "Mayuri - Dotfiles Watcher"
 
 on:
   schedule:
-    - cron: "10 4,12,20 * * *"  # 04:10, 12:10, 20:10 UTC — midpoint between Aizen runs
+    - cron: "10 4,12,20 * * *"  # 04:10, 12:10, 20:10 UTC — midpoint between Urahara runs
   workflow_dispatch:
 
 permissions:
@@ -58,7 +58,7 @@ jobs:
             echo "No changes detected — skipping build."
           fi
 
-      - name: Trigger Aizen pipeline
+      - name: Trigger Urahara pipeline
         if: steps.compare.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -67,13 +67,13 @@ jobs:
             -X POST \
             -H "Authorization: token ${GH_TOKEN}" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/borninthedark/exousia/actions/workflows/aizen.yml/dispatches" \
+            "https://api.github.com/repos/borninthedark/exousia/actions/workflows/urahara.yml/dispatches" \
             -d '{"ref":"main"}')
           if [ "${HTTP_STATUS}" != "204" ]; then
             echo "ERROR: workflow dispatch returned HTTP ${HTTP_STATUS}" >&2
             exit 1
           fi
-          echo "Aizen pipeline triggered (dotfiles changed)."
+          echo "Urahara pipeline triggered (dotfiles changed)."
 
       - name: Update tracked SHA
         if: steps.compare.outputs.changed == 'true'
