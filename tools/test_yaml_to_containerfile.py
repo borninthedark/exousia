@@ -500,8 +500,9 @@ def test_chezmoi_module_run_every_substituted():
 
     # The sed replacement delimiter is '|' so the value appears after the placeholder:
     # sed -i 's|%CHEZMOI_RUN_EVERY%|6h|g' ...
-    assert "%CHEZMOI_RUN_EVERY%|6h|" in output, \
-        "sed command should substitute %CHEZMOI_RUN_EVERY% with the configured value '6h'"
+    assert (
+        "%CHEZMOI_RUN_EVERY%|6h|" in output
+    ), "sed command should substitute %CHEZMOI_RUN_EVERY% with the configured value '6h'"
 
     print("✓ Chezmoi run-every value is substituted")
 
@@ -512,8 +513,9 @@ def test_chezmoi_module_wait_after_boot_substituted():
     generator = ContainerfileGenerator(config, _make_context())
     output = generator.generate()
 
-    assert "%CHEZMOI_WAIT_AFTER_BOOT%|10m|" in output, \
-        "sed command should substitute %CHEZMOI_WAIT_AFTER_BOOT% with the configured value '10m'"
+    assert (
+        "%CHEZMOI_WAIT_AFTER_BOOT%|10m|" in output
+    ), "sed command should substitute %CHEZMOI_WAIT_AFTER_BOOT% with the configured value '10m'"
 
     print("✓ Chezmoi wait-after-boot value is substituted")
 
@@ -524,8 +526,9 @@ def test_chezmoi_module_disable_init_with_empty_repo_is_valid():
     generator = ContainerfileGenerator(config, _make_context())
     output = generator.generate()
 
-    assert "# ERROR:" not in output, \
-        "disable-init=True with empty repo should be valid (init service won't be installed)"
+    assert (
+        "# ERROR:" not in output
+    ), "disable-init=True with empty repo should be valid (init service won't be installed)"
 
     print("✓ Chezmoi disable-init=True with empty repo is valid")
 
