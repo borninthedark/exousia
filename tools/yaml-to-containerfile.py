@@ -561,6 +561,7 @@ class ContainerfileGenerator:
 
         sed_commands = [
             f"sed -i 's|%CHEZMOI_REPO%|{repo_arg}|g' /usr/lib/systemd/user/chezmoi-init.service",
+            f"sed -i 's|%CHEZMOI_REPO%|{repository}|g' /usr/lib/systemd/user/chezmoi-update.service",
             f"sed -i 's|%CHEZMOI_UPDATE_ARGS%|{update_args}|g' /usr/lib/systemd/user/chezmoi-update.service",
             f"sed -i 's|%CHEZMOI_WAIT_AFTER_BOOT%|{wait_after_boot}|g' /usr/lib/systemd/user/chezmoi-update.timer",
             f"sed -i 's|%CHEZMOI_RUN_EVERY%|{run_every}|g' /usr/lib/systemd/user/chezmoi-update.timer",

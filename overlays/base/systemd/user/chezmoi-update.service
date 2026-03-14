@@ -6,4 +6,5 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+ExecStartPre=/usr/bin/git -C %h/.local/share/chezmoi config remote.origin.url %CHEZMOI_REPO%
 ExecStart=/usr/bin/chezmoi update --no-tty %CHEZMOI_UPDATE_ARGS%

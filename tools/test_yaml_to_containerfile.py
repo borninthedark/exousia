@@ -411,6 +411,49 @@ def test_chezmoi_module_generates_copy_and_sed():
     print("✓ Chezmoi module generates COPY, sed, and systemctl commands")
 
 
+def test_chezmoi_update_service_pins_fetch_url():
+    """chezmoi-update service must pin the fetch URL to HTTPS before pulling.
+
+    Users who push via SSH will have their remote URL changed to SSH, which
+    breaks headless timer-triggered pulls. ExecStartPre must restore the HTTPS
+    fetch URL without touching any push URL override.
+    """
+    config = _make_chezmoi_config()
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    repo_url = "https://github.com/borninthedark/dotfiles"
+    assert (
+        f"sed -i 's|%CHEZMOI_REPO%|{repo_url}|g' /usr/lib/systemd/user/chezmoi-update.service"
+        in output
+    ), "update service must have %CHEZMOI_REPO% substituted with the bare HTTPS URL"
+
+    print("✓ Chezmoi update service pins fetch URL to HTTPS via ExecStartPre")
+
+
+def test_chezmoi_update_service_repo_has_no_branch_flag():
+    """The fetch URL substituted into chezmoi-update.service must be the bare repo URL.
+
+    The --branch flag is valid for chezmoi init but not for git config remote.origin.url.
+    """
+    config = _make_chezmoi_config(branch="main")
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    # Find the sed line targeting chezmoi-update.service that substitutes %CHEZMOI_REPO%
+    update_sed_lines = [
+        line
+        for line in output.splitlines()
+        if "chezmoi-update.service" in line and "CHEZMOI_REPO" in line
+    ]
+    assert update_sed_lines, "sed line for chezmoi-update.service not found"
+    assert (
+        "--branch" not in update_sed_lines[0]
+    ), "bare repo URL for chezmoi-update.service must not include --branch"
+
+    print("✓ Chezmoi update service repo URL does not include --branch flag")
+
+
 def test_chezmoi_module_skip_policy():
     """Skip conflict policy should produce --keep-going."""
     config = _make_chezmoi_config(**{"file-conflict-policy": "skip"})
