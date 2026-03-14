@@ -492,6 +492,44 @@ def test_chezmoi_module_with_branch():
     print("✓ Chezmoi branch option emitted in sed command")
 
 
+def test_chezmoi_module_run_every_substituted():
+    """run-every value should appear as the replacement in the timer sed command."""
+    config = _make_chezmoi_config(**{"run-every": "6h"})
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    # The sed replacement delimiter is '|' so the value appears after the placeholder:
+    # sed -i 's|%CHEZMOI_RUN_EVERY%|6h|g' ...
+    assert "%CHEZMOI_RUN_EVERY%|6h|" in output, \
+        "sed command should substitute %CHEZMOI_RUN_EVERY% with the configured value '6h'"
+
+    print("✓ Chezmoi run-every value is substituted")
+
+
+def test_chezmoi_module_wait_after_boot_substituted():
+    """wait-after-boot value should appear as the replacement in the timer sed command."""
+    config = _make_chezmoi_config(**{"wait-after-boot": "10m"})
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "%CHEZMOI_WAIT_AFTER_BOOT%|10m|" in output, \
+        "sed command should substitute %CHEZMOI_WAIT_AFTER_BOOT% with the configured value '10m'"
+
+    print("✓ Chezmoi wait-after-boot value is substituted")
+
+
+def test_chezmoi_module_disable_init_with_empty_repo_is_valid():
+    """disable-init=True with no repository should not emit an error comment."""
+    config = _make_chezmoi_config(repository="", **{"disable-init": True})
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "# ERROR:" not in output, \
+        "disable-init=True with empty repo should be valid (init service won't be installed)"
+
+    print("✓ Chezmoi disable-init=True with empty repo is valid")
+
+
 def test_systemd_module_user_services():
     """Systemd module should process user.enabled with systemctl --global enable."""
     config = {
@@ -854,6 +892,9 @@ if __name__ == "__main__":
     test_chezmoi_module_disable_update()
     test_chezmoi_module_missing_repo()
     test_chezmoi_module_with_branch()
+    test_chezmoi_module_run_every_substituted()
+    test_chezmoi_module_wait_after_boot_substituted()
+    test_chezmoi_module_disable_init_with_empty_repo_is_valid()
     test_systemd_module_user_services()
     test_git_clone_module_generates_clone_and_install()
     test_git_clone_module_with_branch()

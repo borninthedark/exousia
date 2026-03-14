@@ -330,6 +330,63 @@ assert_has_shebang() {
     assert_file_exists "$OVERLAY_ROOT/base/systemd/user/chezmoi-update.timer"
 }
 
+@test "chezmoi-init.service should contain CHEZMOI_REPO placeholder" {
+    # The transpiler uses sed to substitute this at build time.
+    # If the placeholder is absent, sed silently no-ops and the service
+    # starts chezmoi with a literal %CHEZMOI_REPO% argument.
+    run grep -q "%CHEZMOI_REPO%" \
+        "$OVERLAY_ROOT/base/systemd/user/chezmoi-init.service"
+    assert_success "chezmoi-init.service must contain %CHEZMOI_REPO% placeholder"
+}
+
+@test "chezmoi-update.service should contain CHEZMOI_UPDATE_ARGS placeholder" {
+    run grep -q "%CHEZMOI_UPDATE_ARGS%" \
+        "$OVERLAY_ROOT/base/systemd/user/chezmoi-update.service"
+    assert_success "chezmoi-update.service must contain %CHEZMOI_UPDATE_ARGS% placeholder"
+}
+
+@test "chezmoi-update.timer should contain CHEZMOI_WAIT_AFTER_BOOT placeholder" {
+    run grep -q "%CHEZMOI_WAIT_AFTER_BOOT%" \
+        "$OVERLAY_ROOT/base/systemd/user/chezmoi-update.timer"
+    assert_success "chezmoi-update.timer must contain %CHEZMOI_WAIT_AFTER_BOOT% placeholder"
+}
+
+@test "chezmoi-update.timer should contain CHEZMOI_RUN_EVERY placeholder" {
+    run grep -q "%CHEZMOI_RUN_EVERY%" \
+        "$OVERLAY_ROOT/base/systemd/user/chezmoi-update.timer"
+    assert_success "chezmoi-update.timer must contain %CHEZMOI_RUN_EVERY% placeholder"
+}
+
+@test "chezmoi-init.service should have [Install] section for systemctl enable" {
+    # Without WantedBy= in [Install], systemctl --global enable emits a warning
+    # and creates no symlink, so the service never runs on login.
+    run grep -q "^\[Install\]" \
+        "$OVERLAY_ROOT/base/systemd/user/chezmoi-init.service"
+    assert_success "chezmoi-init.service must have an [Install] section"
+
+    run grep -q "WantedBy=" \
+        "$OVERLAY_ROOT/base/systemd/user/chezmoi-init.service"
+    assert_success "chezmoi-init.service [Install] must declare WantedBy="
+}
+
+@test "chezmoi-update.timer should have [Install] section for systemctl enable" {
+    run grep -q "^\[Install\]" \
+        "$OVERLAY_ROOT/base/systemd/user/chezmoi-update.timer"
+    assert_success "chezmoi-update.timer must have an [Install] section"
+
+    run grep -q "WantedBy=" \
+        "$OVERLAY_ROOT/base/systemd/user/chezmoi-update.timer"
+    assert_success "chezmoi-update.timer [Install] must declare WantedBy="
+}
+
+@test "chezmoi-update.service should declare a network dependency" {
+    # chezmoi update pulls from a remote git repository; without a network
+    # dependency the service races against network-online at boot.
+    run grep -qE "After=.*network-online|Wants=.*network-online" \
+        "$OVERLAY_ROOT/base/systemd/user/chezmoi-update.service"
+    assert_success "chezmoi-update.service must depend on network-online.target"
+}
+
 # ============================================================
 # ZFS overlay files (conditional)
 # ============================================================

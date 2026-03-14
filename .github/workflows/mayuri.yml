@@ -1,0 +1,86 @@
+---
+# Mayuri Kurotsuchi - 12th Division, Calendula (Despair in Your Heart) - R&D / Watcher
+# Polls borninthedark/dotfiles for new commits; triggers the Aizen pipeline
+# when changes are detected.
+#
+# Shinigami Pipeline:
+#   Aizen    -> Orchestrator (5th Division, Lily of the Valley -- Sacrifice)
+#   Kaname   -> CI: lint + test (9th Division, Buttercup -- Oblivion)
+#   Gin      -> Security scanning (3rd Division, Marigold -- Despair)
+#   Kyoraku  -> Build, scan, sign, release (1st Division, Chrysanthemums -- Truth and Innocence)
+#   Yoruichi -> Status report (2nd Division, Tulip -- Seek Nothing)
+#   Mayuri   -> Dotfiles watcher / R&D trigger (12th Division, Calendula -- Despair in Your Heart)
+
+name: "Mayuri - Dotfiles Watcher"
+
+on:
+  schedule:
+    - cron: "30 1,9,17 * * *"  # 01:30, 09:30, 17:30 UTC — offset from Aizen's 8-hour schedule
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  watch-dotfiles:
+    name: "Watch borninthedark/dotfiles"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Fetch latest dotfiles commit SHA
+        id: dotfiles
+        run: |
+          LATEST_SHA=$(curl -sf \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/borninthedark/dotfiles/commits/main" \
+            | jq -r '.sha')
+          if [ -z "${LATEST_SHA}" ] || [ "${LATEST_SHA}" = "null" ]; then
+            echo "ERROR: Failed to fetch dotfiles SHA" >&2
+            exit 1
+          fi
+          echo "latest_sha=${LATEST_SHA}" >> "$GITHUB_OUTPUT"
+          echo "Dotfiles HEAD: ${LATEST_SHA}"
+
+      - name: Compare with last-seen SHA
+        id: compare
+        run: |
+          LAST_SHA=$(cat .dotfiles-sha 2>/dev/null || echo "")
+          LATEST_SHA="${{ steps.dotfiles.outputs.latest_sha }}"
+          echo "Last seen: ${LAST_SHA:-<none>}"
+          echo "Latest:    ${LATEST_SHA}"
+          if [ "${LAST_SHA}" != "${LATEST_SHA}" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No changes detected — skipping build."
+          fi
+
+      - name: Trigger Aizen pipeline
+        if: steps.compare.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          HTTP_STATUS=$(curl -sf -o /dev/null -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: token ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/borninthedark/exousia/actions/workflows/aizen.yml/dispatches" \
+            -d '{"ref":"main"}')
+          if [ "${HTTP_STATUS}" != "204" ]; then
+            echo "ERROR: workflow dispatch returned HTTP ${HTTP_STATUS}" >&2
+            exit 1
+          fi
+          echo "Aizen pipeline triggered (dotfiles changed)."
+
+      - name: Update tracked SHA
+        if: steps.compare.outputs.changed == 'true'
+        run: |
+          echo "${{ steps.dotfiles.outputs.latest_sha }}" > .dotfiles-sha
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .dotfiles-sha
+          git commit -m "chore: update dotfiles tracking SHA [skip ci]"
+          git push

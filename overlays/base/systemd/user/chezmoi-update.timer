@@ -5,3 +5,6 @@ Description=Periodically update chezmoi dotfiles
 OnBootSec=%CHEZMOI_WAIT_AFTER_BOOT%
 OnUnitInactiveSec=%CHEZMOI_RUN_EVERY%
 Unit=chezmoi-update.service
+
+[Install]
+WantedBy=timers.target

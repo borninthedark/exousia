@@ -813,6 +813,101 @@ is_chezmoi_enabled() {
     assert_success "chezmoi should be installed as RPM from base packages"
 }
 
+@test "chezmoi-init.service should have CHEZMOI_REPO placeholder replaced" {
+    if ! is_chezmoi_enabled; then
+        skip "Chezmoi not enabled for this image type"
+    fi
+
+    local svc_path
+    for candidate in \
+        "$MOUNT_POINT/usr/lib/systemd/user/chezmoi-init.service" \
+        "$MOUNT_POINT/etc/systemd/user/chezmoi-init.service"; do
+        [ -f "$candidate" ] && svc_path="$candidate" && break
+    done
+    [ -n "$svc_path" ] || { echo "chezmoi-init.service not found" >&2; return 1; }
+
+    # If sed substitution worked, the literal placeholder must not be present
+    run grep -c "%CHEZMOI_REPO%" "$svc_path"
+    assert_output "0" "chezmoi-init.service must not contain unsubstituted %CHEZMOI_REPO%"
+
+    # The actual dotfiles URL must be present instead
+    run grep -q "borninthedark/dotfiles" "$svc_path"
+    assert_success "chezmoi-init.service ExecStart should reference the dotfiles repository"
+}
+
+@test "chezmoi-update.service should have CHEZMOI_UPDATE_ARGS placeholder replaced" {
+    if ! is_chezmoi_enabled; then
+        skip "Chezmoi not enabled for this image type"
+    fi
+
+    local svc_path
+    for candidate in \
+        "$MOUNT_POINT/usr/lib/systemd/user/chezmoi-update.service" \
+        "$MOUNT_POINT/etc/systemd/user/chezmoi-update.service"; do
+        [ -f "$candidate" ] && svc_path="$candidate" && break
+    done
+    [ -n "$svc_path" ] || { echo "chezmoi-update.service not found" >&2; return 1; }
+
+    run grep -c "%CHEZMOI_UPDATE_ARGS%" "$svc_path"
+    assert_output "0" "chezmoi-update.service must not contain unsubstituted %CHEZMOI_UPDATE_ARGS%"
+
+    # Conflict policy determines the flag; at minimum chezmoi update must be invoked
+    run grep -q "chezmoi update" "$svc_path"
+    assert_success "chezmoi-update.service ExecStart should invoke chezmoi update"
+}
+
+@test "chezmoi-update.timer should have timing placeholders replaced" {
+    if ! is_chezmoi_enabled; then
+        skip "Chezmoi not enabled for this image type"
+    fi
+
+    local timer_path
+    for candidate in \
+        "$MOUNT_POINT/usr/lib/systemd/user/chezmoi-update.timer" \
+        "$MOUNT_POINT/etc/systemd/user/chezmoi-update.timer"; do
+        [ -f "$candidate" ] && timer_path="$candidate" && break
+    done
+    [ -n "$timer_path" ] || { echo "chezmoi-update.timer not found" >&2; return 1; }
+
+    run grep -c "%CHEZMOI_WAIT_AFTER_BOOT%\|%CHEZMOI_RUN_EVERY%" "$timer_path"
+    assert_output "0" "chezmoi-update.timer must not contain unsubstituted timing placeholders"
+}
+
+@test "chezmoi-init.service should be globally enabled" {
+    if ! is_chezmoi_enabled; then
+        skip "Chezmoi not enabled for this image type"
+    fi
+
+    # systemctl --global enable creates a symlink under
+    # /etc/systemd/user/<target>.wants/
+    local wants_link
+    wants_link=$(find "$MOUNT_POINT/etc/systemd/user" -name "chezmoi-init.service" 2>/dev/null | head -1)
+    if [ -z "$wants_link" ]; then
+        # Acceptable alternative: /usr/lib/systemd/user/<target>.wants/
+        wants_link=$(find "$MOUNT_POINT/usr/lib/systemd/user" -path "*wants/chezmoi-init.service" 2>/dev/null | head -1)
+    fi
+    [ -n "$wants_link" ] || {
+        echo "chezmoi-init.service enable symlink not found" >&2
+        return 1
+    }
+}
+
+@test "chezmoi-update.timer should be globally enabled" {
+    if ! is_chezmoi_enabled; then
+        skip "Chezmoi not enabled for this image type"
+    fi
+
+    local wants_link
+    wants_link=$(find "$MOUNT_POINT/etc/systemd/user" -name "chezmoi-update.timer" 2>/dev/null | head -1)
+    if [ -z "$wants_link" ]; then
+        wants_link=$(find "$MOUNT_POINT/usr/lib/systemd/user" -path "*wants/chezmoi-update.timer" 2>/dev/null | head -1)
+    fi
+    [ -n "$wants_link" ] || {
+        echo "chezmoi-update.timer enable symlink not found" >&2
+        return 1
+    }
+}
+
 # --- Systemd services enablement ---
 
 @test "bootc-fetch-apply-updates.timer should be installed" {
