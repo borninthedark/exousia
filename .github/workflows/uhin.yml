@@ -1,8 +1,8 @@
-# Gin Ichimaru - Captain of the 3rd Division, Marigold (Despair)
+# Uhin Zenjoji - 12th Division, Calendula (Despair in Your Heart)
 # Validates file structure, generates Containerfile, runs Hadolint + Checkov +
-# Trivy config scan + Bandit, then uploads the generated Containerfile for Kyoraku.
+# Trivy config scan + Bandit, then uploads the generated Containerfile for Hiyori.
 
-name: "Gin - Security"
+name: "Uhin - Security"
 
 on:
   workflow_call:
@@ -22,7 +22,7 @@ jobs:
 
       - name: Verify required file structure
         run: |
-          echo "## Gin: File Structure Check" >> $GITHUB_STEP_SUMMARY
+          echo "## Uhin: File Structure Check" >> $GITHUB_STEP_SUMMARY
 
           for file in sway.desktop environment start-sway; do
             if [[ ! -f "overlays/sway/session/$file" ]]; then
@@ -87,7 +87,7 @@ jobs:
       - name: Security summary
         if: always()
         run: |
-          echo "## Gin: Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "## Uhin: Security Scan Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Scanner | Target |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY

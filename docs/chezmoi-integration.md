@@ -475,10 +475,10 @@ dotfiles/
 
 The **Mayuri** workflow (`.github/workflows/mayuri.yml`) automatically triggers a new image build when the dotfiles repository changes:
 
-1. Runs at 04:10, 12:10, and 20:10 UTC — midway between scheduled Aizen builds
+1. Runs at 04:10, 12:10, and 20:10 UTC — midway between scheduled Urahara builds
 2. Fetches the latest commit SHA from `borninthedark/dotfiles` via the GitHub API
 3. Compares it against the last-seen SHA stored in `.dotfiles-sha`
-4. If they differ: triggers the Aizen pipeline via `workflow_dispatch` and commits the new SHA
+4. If they differ: triggers the Urahara pipeline via `workflow_dispatch` and commits the new SHA
 
 This means a push to the dotfiles repository will result in a rebuilt image within ~4 hours.
 

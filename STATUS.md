@@ -2,13 +2,13 @@
 
 > Last updated: 2026-03-14 21:33:37 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/23096648615)
 
-## Pipeline: Aizen
+## Pipeline: Urahara
 
 | Captain | Division | Role | Status |
 |---------|----------|------|--------|
-| Kaname | 9th (Oblivion) | CI: lint + test | success |
-| Gin | 3rd (Despair) | Security scanning | success |
-| Kyoraku | 1st (Truth and Innocence) | Build & Release | success |
+| Hikifune | 12th (Despair in Your Heart) | CI: lint + test | success |
+| Uhin | 12th (Despair in Your Heart) | Security scanning | success |
+| Hiyori | 12th (Despair in Your Heart) | Build & Release | success |
 
 **Result:** success
 

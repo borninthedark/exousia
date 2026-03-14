@@ -1,20 +1,20 @@
 ---
-# Yoruichi Shihoin - 2nd Division, Tulip (Seek Nothing) - Goddess of Flash
-# Post-CI housekeeping: generates STATUS.md and updates README badges
-# after the Aizen pipeline completes on main.
+# Nemu Kurotsuchi - 12th Division, Calendula (Despair in Your Heart)
+# Post-CI housekeeping: generates STATUS.md after the Urahara pipeline
+# completes on main. README is managed by the generate-readme pre-commit hook.
 #
-# Shinigami Pipeline:
-#   Aizen     -> Orchestrator (5th Division, Lily of the Valley -- Sacrifice)
-#   Kaname    -> CI: lint + test (9th Division, Buttercup -- Oblivion)
-#   Gin       -> Security scanning (3rd Division, Marigold -- Despair)
-#   Kyoraku  -> Build, scan, sign, release (1st Division, Chrysanthemums -- Truth and Innocence)
-#   Yoruichi -> Status report (2nd Division, Tulip -- Seek Nothing)
+# 12th Division Pipeline:
+#   Urahara  -> Orchestrator (12th Division, Calendula -- Despair in Your Heart)
+#   Hikifune -> CI: lint + test (12th Division, Calendula -- Despair in Your Heart)
+#   Uhin     -> Security scanning (12th Division, Calendula -- Despair in Your Heart)
+#   Hiyori   -> Build, scan, sign, release (12th Division, Calendula -- Despair in Your Heart)
+#   Nemu     -> Status report (12th Division, Calendula -- Despair in Your Heart)
 
-name: "Yoruichi - Status Report"
+name: "Nemu - Status Report"
 
 on:
   workflow_run:
-    workflows: ["Aizen - Orchestrator"]
+    workflows: ["Urahara - Orchestrator"]
     types: [completed]
     branches: [main]
 
@@ -48,13 +48,13 @@ jobs:
               ][0].conclusion // "skipped"'
           }
 
-          KANAME=$(get_conclusion "Kaname")
-          GIN=$(get_conclusion "Gin")
-          KYORAKU=$(get_conclusion "Kyoraku")
+          HIKIFUNE=$(get_conclusion "Hikifune")
+          UHIN=$(get_conclusion "Uhin")
+          HIYORI=$(get_conclusion "Hiyori")
 
-          echo "kaname=${KANAME}" >> "$GITHUB_OUTPUT"
-          echo "gin=${GIN}" >> "$GITHUB_OUTPUT"
-          echo "kyoraku=${KYORAKU}" >> "$GITHUB_OUTPUT"
+          echo "hikifune=${HIKIFUNE}" >> "$GITHUB_OUTPUT"
+          echo "uhin=${UHIN}" >> "$GITHUB_OUTPUT"
+          echo "hiyori=${HIYORI}" >> "$GITHUB_OUTPUT"
           echo "run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
 
       - name: Extract build metadata
@@ -81,9 +81,9 @@ jobs:
         env:
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
-          KANAME: ${{ steps.jobs.outputs.kaname }}
-          GIN: ${{ steps.jobs.outputs.gin }}
-          KYORAKU: ${{ steps.jobs.outputs.kyoraku }}
+          HIKIFUNE: ${{ steps.jobs.outputs.hikifune }}
+          UHIN: ${{ steps.jobs.outputs.uhin }}
+          HIYORI: ${{ steps.jobs.outputs.hiyori }}
           IMAGE_TYPE: ${{ steps.meta.outputs.image_type }}
           IMAGE_VERSION: ${{ steps.meta.outputs.image_version }}
           WM: ${{ steps.meta.outputs.wm }}
@@ -97,13 +97,13 @@ jobs:
 
           > Last updated: ${TIMESTAMP} | [View Run](${RUN_URL})
 
-          ## Pipeline: Aizen
+          ## Pipeline: Urahara
 
           | Captain | Division | Role | Status |
           |---------|----------|------|--------|
-          | Kaname | 9th (Oblivion) | CI: lint + test | ${KANAME} |
-          | Gin | 3rd (Despair) | Security scanning | ${GIN} |
-          | Kyoraku | 1st (Truth and Innocence) | Build & Release | ${KYORAKU} |
+          | Hikifune | 12th (Despair in Your Heart) | CI: lint + test | ${HIKIFUNE} |
+          | Uhin | 12th (Despair in Your Heart) | Security scanning | ${UHIN} |
+          | Hiyori | 12th (Despair in Your Heart) | Build & Release | ${HIYORI} |
 
           **Result:** ${CONCLUSION}
 
@@ -120,23 +120,12 @@ jobs:
           EOF
           sed -i 's/^          //' STATUS.md
 
-      - name: Update README badge
-        env:
-          IMAGE_VERSION: ${{ steps.meta.outputs.image_version }}
-          WM: ${{ steps.meta.outputs.wm }}
-        run: |
-          WM_DISPLAY=$(echo "${WM}" | sed 's/./\U&/')
-          BADGE_TEXT="Fedora%20${IMAGE_VERSION}%20%2F%20${WM_DISPLAY}"
-          sed -i \
-            "s|\(Last%20Build-\)[^?]*\(-0A74DA\)|\1${BADGE_TEXT}\2|" \
-            README.md
-
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           BOT_EMAIL="41898282+github-actions[bot]"
           git config user.email "${BOT_EMAIL}@users.noreply.github.com"
-          git add STATUS.md README.md
+          git add STATUS.md
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else

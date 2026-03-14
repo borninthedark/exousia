@@ -1,7 +1,7 @@
-# Kyoraku - 1st Division, Chrysanthemums (Truth and Innocence) - Build, Sign & Release
+# Hiyori Sarugaki - 12th Division, Calendula (Despair in Your Heart) - Build, Sign & Release
 # Builds image, scans with Trivy, signs with cosign (OIDC keyless),
 # and cuts semver releases from conventional commits.
-name: "Kyoraku - Build & Release"
+name: "Hiyori - Build & Release"
 
 on:
   workflow_call:
@@ -101,7 +101,7 @@ jobs:
       - name: Build summary
         if: always()
         run: |
-          echo "## Kyoraku: Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "## Hiyori: Build Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
@@ -238,7 +238,7 @@ jobs:
       - name: Release summary
         if: always()
         run: |
-          echo "## Kyoraku: Release Results" >> $GITHUB_STEP_SUMMARY
+          echo "## Hiyori: Release Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ steps.version.outputs.skip }}" == "true" ]]; then
             echo "No release needed (no conventional commits)" >> $GITHUB_STEP_SUMMARY
