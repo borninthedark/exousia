@@ -36,6 +36,7 @@ audio_media:
 
 # Development and power user tools
 development:
+  - gh
   - bat
   - wf-recorder
   - lsd
