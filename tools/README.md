@@ -9,12 +9,11 @@ Python tools for managing the Exousia bootc image build process.
 | `yaml-to-containerfile.py` | Transpiles YAML blueprints into Containerfiles |
 | `resolve_build_config.py` | Resolves CI build parameters from inputs and `adnyeus.yml` |
 | `package_loader.py` | Loads and merges YAML package definitions for the transpiler |
-| `validate_installed_packages.py` | Validates package sets against the generated Containerfile |
 | `package_dependency_checker.py` | Checks for missing or conflicting package dependencies |
 | `yaml_selector_service.py` | Selects the correct YAML definition for a given build target |
 | `constants.py` | Shared constants and enums (`ImageType`, `BuildStatus`) |
 | `distro_mapper.py` | Maps image types to base images and package managers |
-| `copr_manager.py` | Manages Copr repository integration |
+| `generate-readme.py` | Auto-generates README content from build configuration |
 | `dry_check.py` | DRY enforcement -- detects code duplication via AST analysis |
 
 ## Usage
@@ -65,6 +64,7 @@ uv run python tools/dry_check.py --functions-only --path tools
 | `test_distro_mapper.py` | Image type to base image mapping |
 | `test_package_dependency_checker.py` | Dependency resolution and conflict detection |
 | `test_dry_check.py` | DRY enforcement tool |
+| `test_resolve_build_config.py` | CI build parameter resolution |
 
 Run tests:
 

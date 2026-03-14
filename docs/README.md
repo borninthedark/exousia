@@ -25,8 +25,9 @@ Exousia uses a Shinigami-themed GitHub Actions pipeline (Gotei 13 captains):
 | **Aizen** | `aizen.yml` | 5th (Sacrifice) -- Orchestrator: calls Kaname + Gin in parallel, then Kyoraku, then gate |
 | **Kaname** | `kaname.yml` | 9th (Oblivion) -- CI: Ruff, Black, isort, pytest |
 | **Gin** | `gin.yml` | 3rd (Despair) -- Security: Hadolint, Checkov, Trivy config scan, Bandit |
-| **Kyoraku** | `kyoraku.yml` | 1st (Truth and Innocence) -- Docker Buildx, Cosign, Trivy scan, semver release |
+| **Kyoraku** | `kyoraku.yml` | 1st (Truth and Innocence) -- Buildah, Cosign, Trivy scan, semver release |
 | **Yoruichi** | `yoruichi.yml` | 2nd (Seek Nothing) -- Post-CI: STATUS.md, badge updates |
+| **Mayuri** | `mayuri.yml` | 12th (R&D) -- Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Aizen on change |
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):
 `feat:` minor, `fix:` patch, `feat!:` major.

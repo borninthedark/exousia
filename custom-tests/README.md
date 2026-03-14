@@ -21,11 +21,15 @@ buildah unshare -- bats -r custom-tests/ --verbose-run
 
 ```text
 custom-tests/
-└── image_content.bats     # Main test suite
+├── overlay_content.bats   # Pre-build: validates overlay source files before the image is built
+└── image_content.bats     # Post-build: validates the built container image
 ```
 
-Tests mount the built container image with `buildah` and assert on filesystem
-contents, installed packages, enabled services, and configuration files.
+`overlay_content.bats` runs against the local source tree (no container needed) and
+catches missing files, bad placeholders, or misconfigured unit files before a build starts.
+
+`image_content.bats` mounts the built container image with `buildah` and asserts on
+filesystem contents, installed packages, enabled services, and configuration files.
 
 ## Filtering
 

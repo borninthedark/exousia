@@ -4,12 +4,12 @@ This guide explains how Exousia integrates chezmoi for automated dotfiles manage
 
 ## Overview
 
-Exousia uses the [BlueBuild chezmoi module](https://blue-build.org/reference/modules/chezmoi/) to provide automated dotfiles management across all desktop images. This integration handles:
+Exousia automates dotfiles management using a custom chezmoi module. This integration handles:
 
-- **Build-time installation**: chezmoi binary is installed to `/usr/bin/chezmoi` during image build
-- **Automatic initialization**: Dotfiles repository is cloned on first user login
-- **Automatic updates**: Dotfiles are updated daily via systemd timer
-- **Conflict resolution**: Configured to replace local changes with repository version
+- **Build-time installation**: chezmoi is installed as an RPM package during the image build
+- **Automatic initialization**: the dotfiles repository is cloned on first user login
+- **Automatic updates**: dotfiles are updated daily via a systemd timer
+- **Conflict handling**: configured to skip files with local changes (keeps your customizations)
 
 ## How It Works
 
@@ -17,10 +17,9 @@ Exousia uses the [BlueBuild chezmoi module](https://blue-build.org/reference/mod
 
 During image build, the chezmoi module:
 
-- ✅ Downloads the latest chezmoi binary from GitHub releases (amd64)
-- ✅ Installs it to `/usr/bin/chezmoi`
-- ✅ Creates systemd user services for initialization and updates
-- ✅ Configures the repository URL and update policy
+- ✅ Installs chezmoi from Fedora RPM repos to `/usr/bin/chezmoi`
+- ✅ Copies systemd user unit files with placeholder values
+- ✅ Substitutes the repository URL, conflict policy, and timer intervals into the unit files
 - ✅ Enables services globally for all users via `systemctl --global enable`
 
 ### Phase 2: First User Login
@@ -43,11 +42,11 @@ After initialization:
 
 ## Configuration
 
-The chezmoi module is configured in the following files:
+The chezmoi module is declared in the blueprint files:
 
-- `adnyeus.yml:157-165`
-- `yaml-definitions/sway-atomic.yml:202-208`
-- `yaml-definitions/sway-bootc.yml:152-158`
+- `adnyeus.yml`
+- `yaml-definitions/sway-atomic.yml`
+- `yaml-definitions/sway-bootc.yml`
 
 ### Current Settings
 
@@ -405,17 +404,24 @@ systemctl --user enable chezmoi-init.service chezmoi-update.timer
 
 ## Build-Time Tests
 
-The repository includes automated tests in `custom-tests/image_content.bats` that verify:
+Tests in `custom-tests/` verify chezmoi integration at two stages:
 
-1. **chezmoi binary is installed** - Verifies `/usr/bin/chezmoi` exists
-2. **chezmoi is executable** - Confirms binary has execute permissions
-3. **chezmoi version works** - Tests `chezmoi --version` command
-4. **Systemd init service exists** - Checks `chezmoi-init.service` is installed
-5. **Systemd update service exists** - Checks `chezmoi-update.service` is installed
-6. **Systemd update timer exists** - Checks `chezmoi-update.timer` is installed
-7. **Not installed as RPM package** - Verifies chezmoi isn't installed via RPM (module handles it)
+**`overlay_content.bats`** (before build — checks source files):
 
-These tests run during CI/CD builds to ensure the module installed correctly.
+1. All three unit files exist in `overlays/base/systemd/user/`
+2. Each unit file contains the expected placeholder strings (so sed substitution has something to replace)
+3. Each unit file has an `[Install]` section (required for `systemctl --global enable` to work)
+4. `chezmoi-update.service` declares a `network-online.target` dependency
+
+**`image_content.bats`** (after build — checks the built image):
+
+1. chezmoi binary exists at `/usr/bin/chezmoi` and is executable
+2. `chezmoi --version` runs successfully
+3. chezmoi is installed as an RPM package
+4. All three unit files are present in the image
+5. No placeholder strings remain in the unit files (confirms sed substitution ran)
+6. The dotfiles repository URL appears in `chezmoi-init.service`
+7. Enable symlinks exist for `chezmoi-init.service` and `chezmoi-update.timer`
 
 ## Best Practices
 
@@ -464,6 +470,17 @@ dotfiles/
 3. **Use `run_once` scripts**
    - Scripts in `run_once_*.sh` only execute once
    - Great for initial setup without slowing updates
+
+## Dotfiles Change Detection (Mayuri)
+
+The **Mayuri** workflow (`.github/workflows/mayuri.yml`) automatically triggers a new image build when the dotfiles repository changes:
+
+1. Runs at 04:10, 12:10, and 20:10 UTC — midway between scheduled Aizen builds
+2. Fetches the latest commit SHA from `borninthedark/dotfiles` via the GitHub API
+3. Compares it against the last-seen SHA stored in `.dotfiles-sha`
+4. If they differ: triggers the Aizen pipeline via `workflow_dispatch` and commits the new SHA
+
+This means a push to the dotfiles repository will result in a rebuilt image within ~4 hours.
 
 ## Images Using Chezmoi
 
