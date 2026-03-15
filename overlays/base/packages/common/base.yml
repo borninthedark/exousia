@@ -92,10 +92,6 @@ shell:
   - zsh-autosuggestions
   - zsh-syntax-highlighting
 
-# Infrastructure
-infrastructure:
-  - opentofu
-
 # Extra utilities
 extra:
   - cava
