@@ -2,8 +2,7 @@
 YAML Selector Service
 =====================
 
-Service for automatically selecting appropriate YAML definitions based on
-OS, desktop environment, and window manager inputs.
+Service for loading YAML build definitions.
 
 Standalone version (no FastAPI dependencies).
 """
@@ -17,24 +16,11 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[1]
 YAML_DEFINITIONS_DIR = REPO_ROOT / "yaml-definitions"
 
+DEFINITION_FILENAME = "sway.yml"
+
 
 class YamlSelectorService:
     """Service for selecting and loading YAML definitions."""
-
-    DISTRO_DEFINITIONS = {
-        "fedora-bootc": "sway-bootc.yml",
-        "fedora-atomic": "sway-atomic.yml",
-        "fedora-sway-atomic": "sway-atomic.yml",
-    }
-
-    DE_DEFINITIONS: dict[str, str] = {}
-
-    WM_DEFINITIONS = {
-        "sway": {
-            "bootc": "sway-bootc.yml",
-            "atomic": "sway-atomic.yml",
-        },
-    }
 
     def __init__(self, definitions_dir: Path | None = None):
         provided_dir = definitions_dir.resolve() if definitions_dir else None
@@ -81,44 +67,15 @@ class YamlSelectorService:
         desktop_environment: str | None = None,
         window_manager: str | None = None,
     ) -> str | None:
-        """Select appropriate YAML definition based on inputs."""
-        if desktop_environment:
-            de_def: str | None = self.DE_DEFINITIONS.get(desktop_environment.lower())
-            if de_def and (self.definitions_dir / de_def).exists():
-                return de_def
+        """Select appropriate YAML definition."""
+        # Single consolidated definition
+        if (self.definitions_dir / DEFINITION_FILENAME).exists():
+            return DEFINITION_FILENAME
 
-        if window_manager and image_type:
-            wm_key = window_manager.lower()
-            if wm_key in self.WM_DEFINITIONS:
-                img_variant = "bootc" if "bootc" in image_type else "atomic"
-                wm_def = self.WM_DEFINITIONS[wm_key].get(img_variant)
-                if wm_def and (self.definitions_dir / wm_def).exists():
-                    return wm_def
-
-        if os and image_type:
-            combined_key = f"{os}-{image_type}"
-            if combined_key in self.DISTRO_DEFINITIONS:
-                distro_def = self.DISTRO_DEFINITIONS[combined_key]
-                if (self.definitions_dir / distro_def).exists():
-                    return distro_def
-
-        if image_type and image_type in self.DISTRO_DEFINITIONS:
-            distro_def = self.DISTRO_DEFINITIONS[image_type]
-            if (self.definitions_dir / distro_def).exists():
-                return distro_def
-
-        if os and os in self.DISTRO_DEFINITIONS:
-            distro_def = self.DISTRO_DEFINITIONS[os]
-            if (self.definitions_dir / distro_def).exists():
-                return distro_def
-
+        # Fallback to adnyeus.yml in repo root
         adnyeus_default = REPO_ROOT / "adnyeus.yml"
         if adnyeus_default.exists():
             return "adnyeus.yml"
-
-        default_def = "sway-bootc.yml"
-        if (self.definitions_dir / default_def).exists():
-            return default_def
 
         return None
 

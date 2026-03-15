@@ -139,19 +139,11 @@ def resolve_yaml_config(
         print(f"Fallback: using {candidate}")
         return candidate.resolve()
 
-    # Check for common definitions based on image type
-    fallback_map = {
-        "fedora-bootc": "sway-bootc.yml",
-        "fedora-sway-atomic": "sway-atomic.yml",
-        "fedora-atomic": "sway-atomic.yml",
-    }
-
-    if target_image_type in fallback_map:
-        fallback_name = fallback_map[target_image_type]
-        fallback_path = Path("yaml-definitions") / fallback_name
-        if fallback_path.exists():
-            print(f"Fallback: using {fallback_path}")
-            return fallback_path.resolve()
+    # Consolidated fallback definition
+    fallback_path = Path("yaml-definitions") / "sway.yml"
+    if fallback_path.exists():
+        print(f"Fallback: using {fallback_path}")
+        return fallback_path.resolve()
 
     # Last resort: adnyeus.yml
     default_config = Path("adnyeus.yml")

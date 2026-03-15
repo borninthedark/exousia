@@ -1,23 +1,22 @@
 # YAML Definitions
 
-Alternative build blueprints for different image variants.
+Build blueprint for the Exousia image.
 
-## Blueprints
+## Blueprint
 
-| File | Image Type |
-|------|-----------|
-| `sway-bootc.yml` | Full bootc image with Sway desktop |
-| `sway-atomic.yml` | Fedora Sway Atomic base |
+| File | Description |
+|------|-------------|
+| `sway.yml` | Fedora bootc image with Sway desktop |
 
 The primary blueprint is `adnyeus.yml` in the repository root.
-These definitions provide pre-configured variants that can be passed
+This definition provides a pre-configured variant that can be passed
 to the transpiler directly.
 
 ## Usage
 
 ```bash
 uv run python tools/yaml-to-containerfile.py \
-  --config yaml-definitions/sway-bootc.yml \
+  --config yaml-definitions/sway.yml \
   --output Dockerfile.generated
 ```
 
