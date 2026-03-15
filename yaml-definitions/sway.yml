@@ -1,7 +1,8 @@
-# Exousia Sway Bootc Build Configuration
-# Uses the new package structure with DE/WM selection
+# Exousia Sway Build Configuration
+# Consolidated blueprint for Fedora bootc + Sway desktop
+# Used as fallback definition by resolve_build_config.py
 
-name: exousia-sway-bootc
+name: exousia-sway
 description: Custom Fedora bootc image with Sway desktop environment
 image-version: 43
 
@@ -10,15 +11,13 @@ base-image: quay.io/fedora/fedora-bootc:43
 image-type: fedora-bootc
 
 # Desktop environment selection
-# Use either 'window_manager' or 'desktop_environment', not both
 desktop:
   window_manager: sway
-  # desktop_environment: gnome  # Options: gnome
-  include_common: true  # Include common base packages
+  include_common: true
 
 # Container metadata
 labels:
-  org.opencontainers.image.title: "Exousia Sway Bootc"
+  org.opencontainers.image.title: "Exousia Sway"
   org.opencontainers.image.description: "Custom Fedora bootc image with Sway desktop environment"
   org.opencontainers.image.source: "https://github.com/borninthedark/exousia"
   org.opencontainers.image.licenses: "MIT"
@@ -51,9 +50,8 @@ modules:
         chown -R 241:241 /var/lib/greeter || true
         chown -R 240:240 /var/lib/greetd || true
 
-  # Greetd configuration (bootc-specific)
+  # Greetd configuration
   - type: script
-    condition: image-type == "fedora-bootc"
     scripts:
       - |
         mkdir -p /etc/greetd
@@ -66,16 +64,15 @@ modules:
         dst: /usr/lib/tmpfiles.d/containers-auth.conf
         mode: "0644"
 
-  # Directory structure (bootc only)
+  # Directory structure
   - type: script
-    condition: image-type == "fedora-bootc"
     scripts:
       - |
         mkdir -p /var/roothome /var/opt /usr/lib/extensions
         rm -rf /opt
         ln -sf /var/opt /opt
 
-  # Plymouth theme files (toggleable per image type)
+  # Plymouth theme files (toggleable)
   - type: files
     condition: enable_plymouth == true
     files:
@@ -126,9 +123,6 @@ modules:
         mode: "0755"
 
   # Sway session files and helper scripts
-  # Always install these for the fedora-bootc Sway image to ensure
-  # desktop entries and helper scripts are present even if the
-  # window_manager variable is not propagated to module conditions.
   - type: files
     files:
       - src: overlays/sway/session/sway.desktop
@@ -147,13 +141,12 @@ modules:
         dst: /usr/libexec/sway/volume-helper
         mode: "0755"
 
-  # Package management with new loader
+  # Package management with YAML-based loader
   - type: package-loader
     window_manager: sway
     include_common: true
 
-  # Re-stage and validate the Sway session assets via a dedicated helper
-  # instead of inline shell, after package installation.
+  # Re-stage and validate the Sway session assets
   - type: script
     scripts:
       - /usr/local/bin/ensure-sway-session
@@ -163,13 +156,9 @@ modules:
     scripts:
       - |
         set -euxo pipefail
-
-        # Add Flathub remote at build time (safe, no package installation)
-        # This allows tests to verify the remote is configured
         flatpak remote-add --if-not-exists --system flathub \
           https://dl.flathub.org/repo/flathub.flatpakrepo
-
-        echo "✓ Flathub remote configured at build time"
+        echo "Flathub remote configured at build time"
 
   # Chezmoi dotfiles management
   - type: chezmoi
@@ -179,17 +168,22 @@ modules:
     run-every: "1d"
     wait-after-boot: "5m"
 
-  # Enable chezmoi systemd user services for all users
+  # Systemd services
   - type: systemd
     system:
       enabled:
         - bootc-fetch-apply-updates.timer
+        - greetd.service
+        - libvirtd.service
+        - systemd-resolved.service
+        - NetworkManager.service
     user:
       enabled:
         - chezmoi-init.service
         - chezmoi-update.timer
+    default-target: graphical.target
 
-  # Plymouth configuration (all images when enabled)
+  # Plymouth configuration (when enabled)
   - type: script
     condition: enable_plymouth == true
     scripts:
@@ -198,27 +192,18 @@ modules:
         mkdir -p /usr/lib/dracut/dracut.conf.d
         echo 'add_dracutmodules+=" plymouth ostree "' > /usr/lib/dracut/dracut.conf.d/plymouth.conf
         plymouth-set-default-theme bgrt-better-luks
-        kver=$(basename /usr/lib/modules/*)
-        dracut -vf /usr/lib/modules/$kver/initramfs.img $kver
+        for kdir in /usr/lib/modules/*/; do
+          kver=$(basename "$kdir")
+          dracut -vf "/usr/lib/modules/${kver}/initramfs.img" "$kver"
+        done
 
-  # Bootc-specific Plymouth kargs
+  # Plymouth kernel args
   - type: script
-    condition: image-type == "fedora-bootc" && enable_plymouth == true
+    condition: enable_plymouth == true
     scripts:
       - |
         mkdir -p /usr/lib/bootc/kargs.d
         printf 'kargs = ["splash", "quiet"]\nmatch-architectures = ["x86_64", "aarch64"]\n' > /usr/lib/bootc/kargs.d/plymouth.toml
-
-  # System services (bootc-specific)
-  - type: systemd
-    condition: image-type == "fedora-bootc"
-    system:
-      enabled:
-        - greetd.service
-        - libvirtd.service
-        - systemd-resolved.service
-        - NetworkManager.service
-    default-target: graphical.target
 
   # Validation and finalization
   - type: script
