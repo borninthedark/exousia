@@ -63,7 +63,6 @@ modules:
         test -f /etc/passwd || touch /etc/passwd
         test -f /etc/group  || touch /etc/group
         systemd-sysusers || true
-        systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf
 
   # Container authentication
   - type: files
