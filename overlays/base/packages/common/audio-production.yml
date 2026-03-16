@@ -7,9 +7,9 @@ metadata:
   type: common
   description: Fedora Jam audio production suite with PipeWire/JACK and RT tuning
 
-# DNF group install — pulls in the Fedora Jam meta-package
-groups:
-  - audio-production
+# Avoid Fedora comps group installs here.
+# The explicit package list below is stable across build environments,
+# while group metadata can be unavailable in containerized builds.
 
 # PipeWire ↔ JACK bridge (DAW compatibility layer)
 pipewire_jack:
