@@ -1,0 +1,69 @@
+# Audio Production Packages (Fedora Jam)
+# Provides the full professional audio stack: PipeWire/JACK bridge,
+# DAWs, plugins, and real-time scheduling tools.
+
+metadata:
+  name: audio-production
+  type: common
+  description: Fedora Jam audio production suite with PipeWire/JACK and RT tuning
+
+# DNF group install — pulls in the Fedora Jam meta-package
+groups:
+  - audio-production
+
+# PipeWire ↔ JACK bridge (DAW compatibility layer)
+pipewire_jack:
+  - pipewire-jack-audio-connection-kit
+  - pipewire-plugin-libcamera
+
+# Real-time scheduling and IRQ threading
+realtime:
+  - realtime-setup
+  - rtirq
+  - tuned
+  - tuned-profiles-realtime
+
+# DAWs and sequencers (core Fedora Jam selection)
+daws:
+  - ardour
+  - lmms
+  - rosegarden
+  - qtractor
+  - hydrogen
+
+# Audio editors
+editors:
+  - audacity
+
+# Notation
+notation:
+  - musescore
+
+# Synthesizers and instruments
+synths:
+  - yoshimi
+  - zynaddsubfx
+  - fluidsynth
+  - qsynth
+  - soundfont-fluid
+
+# Plugin suites
+plugins:
+  - lsp-plugins
+  - calf
+  - lv2-avw-plugins
+  - lv2-invada-plugins
+  - lv2-swh-plugins
+  - lv2-zynadd-plugins
+  - dssi
+  - vmpk
+
+# MIDI and audio utilities
+utilities:
+  - a2jmidid
+  - jack_capture
+  - jaaa
+  - japa
+  - qjackctl
+  - carla
+  - raysession

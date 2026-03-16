@@ -145,6 +145,8 @@ modules:
   - type: package-loader
     window_manager: sway
     include_common: true
+    extras:
+      - audio-production  # Fedora Jam audio suite
 
   # Re-stage and validate the Sway session assets
   - type: script
