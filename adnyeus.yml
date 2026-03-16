@@ -157,16 +157,16 @@ modules:
         # This makes pipewire-jack-audio-connection-kit the default for all JACK clients
         if [ -x /usr/bin/pw-jack ]; then
           mkdir -p /etc/pipewire/pipewire.conf.d
-          cat > /etc/pipewire/pipewire.conf.d/10-jack-defaults.conf <<'EOF'
-        # PipeWire-JACK defaults for audio production
-        # Low-latency settings suitable for DAW usage
-        context.properties = {
-            default.clock.rate          = 48000
-            default.clock.quantum       = 256
-            default.clock.min-quantum   = 64
-            default.clock.max-quantum   = 2048
-        }
-        EOF
+          printf '%s\n' \
+            '# PipeWire-JACK defaults for audio production' \
+            '# Low-latency settings suitable for DAW usage' \
+            'context.properties = {' \
+            '    default.clock.rate          = 48000' \
+            '    default.clock.quantum       = 256' \
+            '    default.clock.min-quantum   = 64' \
+            '    default.clock.max-quantum   = 2048' \
+            '}' \
+            > /etc/pipewire/pipewire.conf.d/10-jack-defaults.conf
         fi
 
         # Set tuned profile to realtime (if tuned is available)
