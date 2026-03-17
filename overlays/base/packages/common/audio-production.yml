@@ -19,7 +19,6 @@ pipewire_jack:
 # Real-time scheduling and IRQ threading
 realtime:
   - realtime-setup
-  - rtirq
   - tuned
   - tuned-profiles-realtime
 

@@ -270,7 +270,6 @@ modules:
         - NetworkManager.service
         - greetd.service
         - bootc-fetch-apply-updates.timer
-        - rtirq.service
         - tuned.service
     user:
       enabled:
