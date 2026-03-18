@@ -130,7 +130,11 @@ class PackageLoader:
         return pkgs
 
     def get_package_list(
-        self, wm: str | None = None, de: str | None = None, include_common: bool = True
+        self,
+        wm: str | None = None,
+        de: str | None = None,
+        include_common: bool = True,
+        extras: list[str] | None = None,
     ) -> dict[str, list[str]]:
         """Get complete package lists for a build configuration.
 
@@ -138,6 +142,7 @@ class PackageLoader:
             wm: Window manager name (optional)
             de: Desktop environment name (optional)
             include_common: Whether to include common packages (default: True)
+            extras: Additional common package sets to load (e.g., ['audio-production'])
 
         Returns:
             Dictionary with 'install', 'remove', and 'groups' keys containing package lists
@@ -148,6 +153,14 @@ class PackageLoader:
         # Load common packages
         if include_common:
             install_packages.update(self.load_common("base"))
+
+        # Load extra common package sets
+        if extras:
+            for extra in extras:
+                extra_file = self.common_dir / f"{extra}.yml"
+                extra_config = self.load_yaml(extra_file)
+                install_packages.update(self.flatten_packages(extra_config))
+                groups.extend(self.get_groups(extra_config))
 
         # Load WM or DE packages and groups
         if wm:

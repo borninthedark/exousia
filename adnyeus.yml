@@ -28,7 +28,6 @@ labels:
 # Build configuration
 build:
   enable_plymouth: true
-  enable_zfs: false
 
   # Sway Configuration
   # See: https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/
@@ -63,7 +62,6 @@ modules:
         test -f /etc/passwd || touch /etc/passwd
         test -f /etc/group  || touch /etc/group
         systemd-sysusers || true
-        systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf
 
   # Container authentication
   - type: files
@@ -146,6 +144,34 @@ modules:
   - type: package-loader
     window_manager: sway  # Loaded from overlays/base/packages/window-managers/sway.yml
     include_common: true  # Also loads overlays/base/packages/common/base.yml including Fedora Wayland build deps
+    extras:
+      - audio-production  # Fedora Jam audio suite: DAWs, plugins, PipeWire-JACK, RT tuning
+
+  # Audio production: configure PipeWire-JACK and realtime permissions
+  - type: script
+    scripts:
+      - |
+        # Activate PipeWire-JACK as the system-wide JACK implementation
+        # This makes pipewire-jack-audio-connection-kit the default for all JACK clients
+        if [ -x /usr/bin/pw-jack ]; then
+          mkdir -p /etc/pipewire/pipewire.conf.d
+          printf '%s\n' \
+            '# PipeWire-JACK defaults for audio production' \
+            '# Low-latency settings suitable for DAW usage' \
+            'context.properties = {' \
+            '    default.clock.rate          = 48000' \
+            '    default.clock.quantum       = 256' \
+            '    default.clock.min-quantum   = 64' \
+            '    default.clock.max-quantum   = 2048' \
+            '}' \
+            > /etc/pipewire/pipewire.conf.d/10-jack-defaults.conf
+        fi
+
+        # Set tuned profile to realtime (if tuned is available)
+        if [ -x /usr/sbin/tuned-adm ]; then
+          mkdir -p /etc/tuned
+          echo "realtime" > /etc/tuned/active_profile
+        fi
 
   # NOTE: git-clone module type is deprecated pending compilation support.
   # Autotiling installed via uv after package-loader makes it available
@@ -212,26 +238,12 @@ modules:
         dst: /usr/share/containers/systemd/
         mode: "0644"
 
-  # ZFS kernel module build (DKMS)
-  - type: script
-    condition: enable_zfs == true
-    scripts:
-      - /usr/local/bin/build-zfs-kmod
-
-  # ZFS boot automation (modprobe + pool import)
+  # bootc auto-update timer override (daily at 23:15 EST)
   - type: files
-    condition: enable_zfs == true
     files:
-      - src: overlays/base/configs-zfs/modules-load.d/zfs.conf
-        dst: /etc/modules-load.d/zfs.conf
+      - src: overlays/base/systemd/system/bootc-fetch-apply-updates.timer.d/
+        dst: /usr/lib/systemd/system/bootc-fetch-apply-updates.timer.d/
         mode: "0644"
-
-  - type: systemd
-    condition: enable_zfs == true
-    system:
-      enabled:
-        - zfs-import-scan.service
-        - zfs.target
 
   # System services (common to all image types)
   - type: systemd
@@ -243,6 +255,7 @@ modules:
         - NetworkManager.service
         - greetd.service
         - bootc-fetch-apply-updates.timer
+        - tuned.service
     user:
       enabled:
         - chezmoi-init.service

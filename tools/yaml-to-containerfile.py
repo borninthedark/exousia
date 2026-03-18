@@ -437,10 +437,13 @@ class ContainerfileGenerator:
         wm = module.get("window_manager")
         de = module.get("desktop_environment")
         include_common = module.get("include_common", True)
+        extras = module.get("extras", [])
 
         # Load packages
         try:
-            packages = loader.get_package_list(wm=wm, de=de, include_common=include_common)
+            packages = loader.get_package_list(
+                wm=wm, de=de, include_common=include_common, extras=extras
+            )
         except Exception as e:
             self.lines.append(f"# ERROR loading packages: {e}")
             return

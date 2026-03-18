@@ -241,3 +241,36 @@ def test_list_des_empty_dir(tmp_path):
     """Test list_available_des with no de directory."""
     loader = PackageLoader(packages_dir=tmp_path)
     assert loader.list_available_des() == []
+
+
+def test_get_package_list_with_extras(tmp_path):
+    """Test that extras loads additional common package sets."""
+    common = tmp_path / "common"
+    common.mkdir()
+    (common / "base.yml").write_text("core:\n  - basepkg\n")
+    (common / "remove.yml").write_text("packages: []\n")
+    (common / "audio-production.yml").write_text(
+        "groups:\n  - audio-group\nrealtime:\n  - tuned\nplugins:\n  - lsp-plugins\n"
+    )
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    result = loader.get_package_list(extras=["audio-production"])
+
+    assert "basepkg" in result["install"]
+    assert "tuned" in result["install"]
+    assert "lsp-plugins" in result["install"]
+    assert "audio-group" in result["groups"]
+
+
+def test_get_package_list_extras_none(tmp_path):
+    """Test that extras=None does not load extra packages."""
+    common = tmp_path / "common"
+    common.mkdir()
+    (common / "base.yml").write_text("core:\n  - basepkg\n")
+    (common / "remove.yml").write_text("packages: []\n")
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    result = loader.get_package_list(extras=None)
+
+    assert result["install"] == ["basepkg"]
+    assert result["groups"] == []

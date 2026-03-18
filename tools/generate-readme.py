@@ -10,11 +10,6 @@ REPO = "borninthedark/exousia"
 # Documentation entries: (rel_path, title, description)
 DOC_ENTRIES: list[tuple[str, str, str]] = [
     (
-        "docs/README.md",
-        "Documentation Index",
-        "Full docs: getting started, architecture, desktop, testing, reference",
-    ),
-    (
         "docs/bootc-upgrade.md",
         "Upgrade Guide",
         "Switch images and perform bootc upgrades",
@@ -119,10 +114,8 @@ DevSecOps-hardened, container-based immutable operating systems built on
 images, Python tools transpile them to Containerfiles, Docker Buildx builds them,
 and GitHub Actions pushes signed images to DockerHub.
 
-Development follows a **TDD-first, shift-left** methodology: tests are written
-before implementation, pre-commit hooks enforce quality and security gates
-locally, and CI validates what cannot run on a developer machine. Every tool
-change requires 50% branch coverage to merge (ratcheting toward 75%).
+Development follows a **TDD-first, shift-left** methodology — see
+[Contributing](#contributing) for details.
 
 ## Table of Contents
 
@@ -217,8 +210,9 @@ graph LR
 
 ### The 12th Division Pipeline
 
-Every CI workflow is named after a 12th Division captain or member (Shinigami Research
-and Development Institute). Division flower: Calendula — Despair in Your Heart.
+Every CI workflow is named after a member of the **12th Division** — the Shinigami
+Research and Development Institute (SRDI). Division flower: **Calendula** — *Despair
+in Your Heart*.
 
 ```mermaid
 %%{{init: {{'theme': 'base', 'themeVariables': {{'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}}}}%%
@@ -231,13 +225,13 @@ graph TD
     G --> Y["Nemu"]
 ```
 
-| Captain | Division | Role | Key Tools |
-|---------|----------|------|-----------|
-| **Urahara** | 12th (Despair in Your Heart) | Orchestrator | Calls Hikifune + Uhin in parallel, then Hiyori |
-| **Hikifune** | 12th (Despair in Your Heart) | CI | Ruff, Black, isort, pytest |
-| **Uhin** | 12th (Despair in Your Heart) | Security | Hadolint, Checkov, Trivy config scan, Bandit |
-| **Hiyori** | 12th (Despair in Your Heart) | Build & Release | Docker Buildx, Cosign (OIDC), Trivy image scan, semver |
-| **Nemu** | 12th (Despair in Your Heart) | Status Report | Generates STATUS.md |
+| Member | Role | Key Tools |
+|--------|------|-----------|
+| **Urahara** | Orchestrator | Calls Hikifune + Uhin in parallel, then Hiyori |
+| **Hikifune** | CI | Ruff, Black, isort, pytest |
+| **Uhin** | Security | Hadolint, Checkov, Trivy config scan, Bandit |
+| **Hiyori** | Build & Release | Docker Buildx, Cosign (OIDC), Trivy image scan, semver |
+| **Nemu** | Status Report | Generates STATUS.md |
 
 ### Versioning
 
