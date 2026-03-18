@@ -28,7 +28,6 @@ labels:
 # Build configuration
 build:
   enable_plymouth: true
-  enable_zfs: false
 
   # Sway Configuration
   # See: https://docs.fedoraproject.org/en-US/fedora-sericea/configuration-guide/
@@ -239,26 +238,12 @@ modules:
         dst: /usr/share/containers/systemd/
         mode: "0644"
 
-  # ZFS kernel module build (DKMS)
-  - type: script
-    condition: enable_zfs == true
-    scripts:
-      - /usr/local/bin/build-zfs-kmod
-
-  # ZFS boot automation (modprobe + pool import)
+  # bootc auto-update timer override (daily at 23:15 EST)
   - type: files
-    condition: enable_zfs == true
     files:
-      - src: overlays/base/configs-zfs/modules-load.d/zfs.conf
-        dst: /etc/modules-load.d/zfs.conf
+      - src: overlays/base/systemd/system/bootc-fetch-apply-updates.timer.d/
+        dst: /usr/lib/systemd/system/bootc-fetch-apply-updates.timer.d/
         mode: "0644"
-
-  - type: systemd
-    condition: enable_zfs == true
-    system:
-      enabled:
-        - zfs-import-scan.service
-        - zfs.target
 
   # System services (common to all image types)
   - type: systemd
