@@ -61,6 +61,26 @@ uv run python tools/dry_check.py --functions-only --path tools
 | `--validate` | Validate config only | -- |
 | `-v, --verbose` | Verbose output | -- |
 
+## CLI Options (package_loader.py)
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--wm NAME` | Resolve packages for a window manager | -- |
+| `--de NAME` | Resolve packages for a desktop environment | -- |
+| `--json` | Print normalized resolved package plan JSON | -- |
+| `--common NAME` | Include a specific common package set; repeatable | Default `base-*` bundle set when omitted |
+| `--feature NAME` | Include a specific feature package set; repeatable | -- |
+| `--export` | Write legacy `packages.add` and `packages.remove` files | -- |
+| `--output-dir PATH` | Output directory for legacy export mode | `custom-pkgs/` |
+| `--list-wms` | List available window-manager definitions | -- |
+| `--list-des` | List available desktop-environment definitions | -- |
+
+Notes:
+
+- `--json` is the easiest way to inspect RPM and DNF group provenance.
+- If you pass `--common`, the default common bundle set is not added implicitly.
+- Use explicit bundle names like `base-core`; `base` is a logical aggregate, not a real bundle file.
+
 ## Tests
 
 | Test File | Covers |

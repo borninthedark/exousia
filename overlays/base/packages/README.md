@@ -67,10 +67,10 @@ spec:
     features: []
 ```
 
-## Bundle Selection
+## Package-Set Selection
 
-- `common_bundles` selects shared RPM bundles for the image
-- `feature_bundles` selects optional features such as audio or ZFS
+- `common_bundles` selects shared RPM package sets for the image
+- `feature_bundles` selects optional feature package sets such as audio or ZFS
 - Fedora package groups can be installed or removed declaratively through `spec.groups`
 - The transpiler emits `dnf5` group actions and RPM operations from the resolved package plan
 

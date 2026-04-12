@@ -91,15 +91,15 @@ generates `COPY` directives. The general mapping:
 ## Package System
 
 Packages are declared in YAML files under `base/packages/`. The package loader
-(`tools/package_loader.py`) reads typed bundle definitions and emits explicit
+(`tools/package_loader.py`) reads typed package-set definitions and emits explicit
 `dnf5` group operations plus RPM install/remove commands.
 
 **Processing order:**
 
 1. `common/remove.yml` -- packages removed first to avoid conflicts
-2. selected `common/base-*.yml` bundles -- shared RPM bundles for the image
-3. selected feature bundles such as `common/audio-production.yml`
-4. `window-managers/sway.yml` -- desktop-specific packages and replacements
+2. selected `common/base-*.yml` package sets -- shared RPM package sets for the image
+3. selected feature package sets such as `common/audio-production.yml`
+4. `window-managers/sway.yml` -- window-manager package set with desktop-specific packages and replacements
 5. `common/flatpaks.yml` -- Flatpak applications (installed post-build)
 
 See `overlays/base/packages/README.md` for the package list format.

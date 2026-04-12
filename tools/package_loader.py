@@ -700,16 +700,22 @@ def main():
         help="Print normalized resolved package plan as JSON",
     )
     parser.add_argument(
-        "--common-bundle",
+        "--common",
         action="append",
         dest="common_bundles",
-        help="Explicit common bundle to include (repeatable)",
+        help="Explicit common package set to include (repeatable)",
     )
     parser.add_argument(
-        "--feature-bundle",
+        "--feature",
         action="append",
         dest="feature_bundles",
-        help="Explicit feature bundle to include (repeatable)",
+        help="Explicit feature package set to include (repeatable)",
+    )
+    parser.add_argument(
+        "--common-bundle", action="append", dest="common_bundles", help=argparse.SUPPRESS
+    )
+    parser.add_argument(
+        "--feature-bundle", action="append", dest="feature_bundles", help=argparse.SUPPRESS
     )
 
     args = parser.parse_args()

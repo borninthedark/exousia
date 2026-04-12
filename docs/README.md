@@ -70,6 +70,7 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 
 - **[chezmoi-integration.md](chezmoi-integration.md)** -- Dotfile management with chezmoi
 - **[kernel-options.md](kernel-options.md)** -- Kernel boot parameters and overrides
+- **[package-loader-cli.md](package-loader-cli.md)** -- Resolve package sets, inspect provenance, and export legacy manifests
 
 ## Testing
 
@@ -81,6 +82,7 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 ## Architecture
 
 - **[overlay-system.md](overlay-system.md)** -- Overlay directory structure and how files map into images
+- **[package-management-and-container-builds.md](package-management-and-container-builds.md)** -- Typed package-set model and resolved build-plan direction
 - **[local-build-pipeline.md](local-build-pipeline.md)** -- Quadlet services, local build, and promotion to DockerHub
 
 ## Infrastructure

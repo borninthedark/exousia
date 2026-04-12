@@ -533,7 +533,7 @@ def test_main_json_output_uses_explicit_bundle_selection(tmp_path, monkeypatch, 
             "--json",
             "--wm",
             "test",
-            "--common-bundle",
+            "--common",
             "base-core",
         ],
     )
