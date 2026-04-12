@@ -742,6 +742,7 @@ def main():
                 loader.get_package_plan(
                     wm=args.wm,
                     de=args.de,
+                    include_common=args.common_bundles is None,
                     common_bundles=args.common_bundles,
                     feature_bundles=args.feature_bundles,
                 ),

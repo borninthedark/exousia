@@ -10,6 +10,7 @@ from pathlib import Path
 # Add tools directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
+import package_loader as package_loader_module
 from package_loader import DEFAULT_COMMON_BUNDLES, PackageLoader, PackageValidationError
 
 
@@ -452,3 +453,130 @@ def test_package_plan_rejects_conflicting_features(tmp_path):
     loader = PackageLoader(packages_dir=tmp_path)
     with pytest.raises(PackageValidationError, match="conflicts with selected feature"):
         loader.get_package_plan(extras=["audio", "gaming"])
+
+
+def test_export_to_text_files_writes_legacy_outputs(tmp_path):
+    """Legacy export should write both install and remove package lists."""
+    common = tmp_path / "common"
+    common.mkdir()
+    _seed_common_bundles(common, content="core:\n  - basepkg\n")
+    (common / "remove.yml").write_text("packages:\n  - badpkg\n")
+
+    wm_dir = tmp_path / "window-managers"
+    wm_dir.mkdir()
+    (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
+
+    output_dir = tmp_path / "legacy-out"
+    loader = PackageLoader(packages_dir=tmp_path)
+    loader.export_to_text_files(wm="test", output_dir=output_dir)
+
+    add_file = output_dir / "packages.add"
+    remove_file = output_dir / "packages.remove"
+
+    assert add_file.exists()
+    assert remove_file.exists()
+    assert "basepkg" in add_file.read_text()
+    assert "wmpkg" in add_file.read_text()
+    assert "badpkg" in remove_file.read_text()
+
+
+def test_main_lists_available_bundle_targets(tmp_path, monkeypatch, capsys):
+    """CLI should print available WM and DE bundle names."""
+    common = tmp_path / "common"
+    common.mkdir()
+    _seed_common_bundles(common)
+    (common / "remove.yml").write_text("packages: []\n")
+
+    wm_dir = tmp_path / "window-managers"
+    wm_dir.mkdir()
+    (wm_dir / "test-wm.yml").write_text("core:\n  - sway\n")
+
+    de_dir = tmp_path / "desktop-environments"
+    de_dir.mkdir()
+    (de_dir / "test-de.yml").write_text("core:\n  - gnome-shell\n")
+
+    monkeypatch.setattr(
+        package_loader_module, "PackageLoader", lambda: PackageLoader(packages_dir=tmp_path)
+    )
+
+    monkeypatch.setattr(sys, "argv", ["package_loader.py", "--list-wms"])
+    package_loader_module.main()
+    wm_output = capsys.readouterr().out
+
+    monkeypatch.setattr(sys, "argv", ["package_loader.py", "--list-des"])
+    package_loader_module.main()
+    de_output = capsys.readouterr().out
+
+    assert "test-wm" in wm_output
+    assert "test-de" in de_output
+
+
+def test_main_json_output_uses_explicit_bundle_selection(tmp_path, monkeypatch, capsys):
+    """CLI JSON mode should emit the resolved package plan."""
+    common = tmp_path / "common"
+    common.mkdir()
+    _seed_common_bundles(common, content="core:\n  - basepkg\n")
+    (common / "remove.yml").write_text("packages: []\n")
+
+    wm_dir = tmp_path / "window-managers"
+    wm_dir.mkdir()
+    (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
+
+    monkeypatch.setattr(
+        package_loader_module, "PackageLoader", lambda: PackageLoader(packages_dir=tmp_path)
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "package_loader.py",
+            "--json",
+            "--wm",
+            "test",
+            "--common-bundle",
+            "base-core",
+        ],
+    )
+
+    package_loader_module.main()
+    payload = capsys.readouterr().out
+
+    assert '"window_manager": "test"' in payload
+    assert '"common_bundles": [' in payload
+    assert '"base-core"' in payload
+
+
+def test_main_export_command_uses_selected_output_dir(tmp_path, monkeypatch, capsys):
+    """CLI export mode should write legacy output files to the requested directory."""
+    common = tmp_path / "common"
+    common.mkdir()
+    _seed_common_bundles(common, content="core:\n  - basepkg\n")
+    (common / "remove.yml").write_text("packages:\n  - badpkg\n")
+
+    wm_dir = tmp_path / "window-managers"
+    wm_dir.mkdir()
+    (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
+
+    output_dir = tmp_path / "out"
+    monkeypatch.setattr(
+        package_loader_module, "PackageLoader", lambda: PackageLoader(packages_dir=tmp_path)
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "package_loader.py",
+            "--export",
+            "--wm",
+            "test",
+            "--output-dir",
+            str(output_dir),
+        ],
+    )
+
+    package_loader_module.main()
+    output = capsys.readouterr().out
+
+    assert "Exported package lists" in output
+    assert (output_dir / "packages.add").exists()
+    assert (output_dir / "packages.remove").exists()
