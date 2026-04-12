@@ -1,0 +1,43 @@
+apiVersion: exousia.packages/v1alpha1
+kind: PackageBundle
+
+metadata:
+  name: base-devtools
+  type: common
+  description: Development and power-user toolchain packages
+
+spec:
+  source: rpm
+  stage: build
+  packages:
+    - gh
+    - bat
+    - wf-recorder
+    - lsd
+    - fzf
+    - direnv
+    - libxml2
+    - libxslt
+    - libxml2-devel
+    - libxslt-devel
+    - distrobox
+    - ripgrep
+    - zoxide
+    - meson
+    - ninja-build
+    - pkg-config
+    - rust
+    - wayland-devel
+    - wayland-protocols-devel
+    - libxkbcommon-devel
+    - mesa-libEGL
+    - mesa-libEGL-devel
+    - mesa-libwayland-egl
+    - mesa-libwayland-egl-devel
+    - mesa-libGLES
+    - mesa-libGLES-devel
+  conflicts:
+    packages: []
+    features: []
+  requires:
+    features: []

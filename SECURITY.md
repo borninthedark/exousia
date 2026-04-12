@@ -52,6 +52,12 @@ Exousia employs a defense-in-depth approach:
 - Conventional commits for auditable change history
 - TDD with minimum 50% code coverage on Python tools (ratcheting toward 75%)
 
+## Active Remediations
+
+| Package | Minimum Version | Reason | Date Pinned |
+|---------|----------------|--------|-------------|
+| flatpak | >= 1.16.6 | CVE remediation ([release notes](https://github.com/flatpak/flatpak/releases/tag/1.16.6)) | 2026-04-12 |
+
 ## Dependency Management
 
 Dependencies are managed via:

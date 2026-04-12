@@ -20,6 +20,16 @@ DOC_ENTRIES: list[tuple[str, str, str]] = [
         "Build bootable disk images (ISO, raw, qcow2)",
     ),
     (
+        "docs/package-loader-cli.md",
+        "Package Loader CLI",
+        "Resolve package sets, inspect provenance, and export legacy manifests",
+    ),
+    (
+        "docs/package-management-and-container-builds.md",
+        "Package Management Design",
+        "Typed package-set model, resolved build plans, and build-pipeline direction",
+    ),
+    (
         "docs/overlay-system.md",
         "Overlay System",
         "Overlay directory structure and how files map into images",
@@ -126,6 +136,9 @@ Development follows a **TDD-first, shift-left** methodology — see
   - [The 12th Division Pipeline](#the-12th-division-pipeline)
   - [Versioning](#versioning)
 - [Customizing Builds](#customizing-builds)
+  - [Package Workflow](#package-workflow)
+  - [Configuration](#configuration)
+  - [Desktop and boot](#desktop-and-boot)
 - [Local Build Pipeline](#local-build-pipeline)
 - [YubiKey Authentication](#yubikey-authentication)
 - [Required Secrets and Variables](#required-secrets-and-variables)
@@ -204,9 +217,9 @@ graph LR
 | Component | Description |
 |-----------|-------------|
 | **Blueprint** (`adnyeus.yml`) | Declares base image, packages, overlays, scripts, services, and build flags |
-| **Transpiler** (`tools/yaml-to-containerfile.py`) | Reads the blueprint, loads package lists from `overlays/base/packages/`, emits a valid Containerfile |
+| **Transpiler** (`tools/yaml-to-containerfile.py`) | Reads the blueprint, resolves package sets, optionally writes `build/resolved-build-plan*.json`, and emits a valid Containerfile |
 | **Overlays** | Static files, configs, and scripts under `overlays/base/` (shared) and `overlays/sway/` (desktop) |
-| **Tests** | Bats tests in `custom-tests/` validate the built image |
+| **Tests** | Pytest validates the Python tooling and Bats validates the built image |
 
 ### The 12th Division Pipeline
 
@@ -240,16 +253,30 @@ Versions are automatic via [conventional commits](https://www.conventionalcommit
 
 ## Customizing Builds
 
-### Packages
+### Package Workflow
 
 | Scope | Location |
 |-------|----------|
-| Base packages | `overlays/base/packages/common/*.yml` |
-| Window managers | `overlays/base/packages/window-managers/*.yml` |
-| Removals | `overlays/base/packages/common/remove.yml` |
+| Common package sets | `overlays/base/packages/common/base-*.yml` |
+| Feature package sets | `overlays/base/packages/common/*.yml` |
+| Window-manager package sets | `overlays/base/packages/window-managers/*.yml` |
+| Removal list | `overlays/base/packages/common/remove.yml` |
 
-All packages are managed through the package loader. Edit the YAML lists, not
-the blueprint directly.
+All package selection flows through the package loader. Edit package-set YAML under
+`overlays/base/packages/`, then verify the resolved output before building:
+
+```bash
+uv run python tools/package_loader.py --wm sway --json
+uv run python tools/yaml-to-containerfile.py \\
+  --config adnyeus.yml \\
+  --resolved-package-plan build/resolved-build-plan.json \\
+  --output Dockerfile.generated
+```
+
+The resolved plan records package/group install and removal provenance so CI and
+tests can verify what the image is meant to contain. See
+[Package Loader CLI](docs/package-loader-cli.md) and
+[Package Management Design](docs/package-management-and-container-builds.md).
 
 ### Configuration
 
@@ -332,7 +359,8 @@ Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 
 Contributions welcome. Development rules:
 
-- **TDD mandatory** -- write tests before implementation, 50% branch coverage floor (ratcheting toward 75%)
+- **TDD mandatory** -- write tests before implementation and keep test intent close to the change
+- **Coverage floor** -- `tools/` pytest coverage is enforced at 71% and should keep ratcheting upward
 - **[Conventional commits](https://www.conventionalcommits.org/)** -- enforced by pre-commit hook
 - **Shift-left** -- `uv run pre-commit install && uv run pre-commit install --hook-type commit-msg`
 - Security gates (Bandit, Gitleaks) and quality checks (Ruff, Black, mypy) run locally before push

@@ -144,8 +144,15 @@ modules:
   # Package management with YAML-based loader
   - type: package-loader
     window_manager: sway
-    include_common: true
-    extras:
+    common_bundles:
+      - base-core
+      - base-media
+      - base-devtools
+      - base-virtualization
+      - base-security
+      - base-network
+      - base-shell
+    feature_bundles:
       - audio-production  # Fedora Jam audio suite
 
   # Re-stage and validate the Sway session assets

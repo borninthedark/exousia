@@ -41,7 +41,7 @@ Thumbs.db
 
 # Local environment files (e.g., for secrets)
 .env
-env
+env/
 
 # LLM agent context files — local only, never committed (parity with .chezmoiignore)
 CLAUDE.md
@@ -49,4 +49,5 @@ GEMINI.md
 AGENTS.md
 .claude/
 .gemini/
+.codex
 .codex/

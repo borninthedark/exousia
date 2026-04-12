@@ -1,0 +1,1313 @@
+{
+  "image": {
+    "name": "exousia",
+    "base_image": "quay.io/fedora/fedora-sway-atomic:43",
+    "image_type": "fedora-sway-atomic",
+    "fedora_version": "43",
+    "desktop_environment": null,
+    "window_manager": "sway",
+    "enable_plymouth": true,
+    "enable_zfs": false
+  },
+  "package_loader_modules": [
+    {
+      "window_manager": "sway",
+      "desktop_environment": null,
+      "include_common": true,
+      "extras": [
+        "audio-production"
+      ]
+    }
+  ],
+  "bundles": [
+    {
+      "name": "base",
+      "kind": "common",
+      "selected_as": "common:base",
+      "source_file": "/var/home/uryu/Workspaces/exousia/overlays/base/packages/common/base.yml",
+      "groups": [],
+      "packages": [
+        "NetworkManager-openconnect",
+        "NetworkManager-openvpn",
+        "bat",
+        "cargo",
+        "cava",
+        "chezmoi",
+        "container-selinux",
+        "cryptsetup",
+        "curl",
+        "direnv",
+        "distrobox",
+        "etckeeper",
+        "fastfetch",
+        "flatpak",
+        "fuse",
+        "fuse-libs",
+        "fzf",
+        "gh",
+        "git",
+        "glances",
+        "gnome-disk-utility",
+        "htop",
+        "iptables-nft",
+        "k3s",
+        "kubectl",
+        "libvirt",
+        "libxkbcommon-devel",
+        "libxml2",
+        "libxml2-devel",
+        "libxslt",
+        "libxslt-devel",
+        "lsd",
+        "lynis",
+        "mesa-libEGL",
+        "mesa-libEGL-devel",
+        "mesa-libGLES",
+        "mesa-libGLES-devel",
+        "mesa-libwayland-egl",
+        "mesa-libwayland-egl-devel",
+        "meson",
+        "mpd",
+        "neovim",
+        "ninja-build",
+        "openconnect",
+        "openssl",
+        "openvpn",
+        "pam-u2f",
+        "pamu2fcfg",
+        "pkg-config",
+        "podman-compose",
+        "policycoreutils-python-utils",
+        "python3",
+        "qemu-kvm",
+        "ranger",
+        "ripgrep",
+        "rtkit",
+        "rust",
+        "uv",
+        "virt-manager",
+        "wayland-devel",
+        "wayland-protocols-devel",
+        "wf-recorder",
+        "wireguard-tools",
+        "zoxide",
+        "zsh",
+        "zsh-autosuggestions",
+        "zsh-syntax-highlighting"
+      ]
+    },
+    {
+      "name": "audio-production",
+      "kind": "common",
+      "selected_as": "common:audio-production",
+      "source_file": "/var/home/uryu/Workspaces/exousia/overlays/base/packages/common/audio-production.yml",
+      "groups": [],
+      "packages": [
+        "a2jmidid",
+        "ardour",
+        "audacity",
+        "calf",
+        "carla",
+        "dssi",
+        "fluidsynth",
+        "hydrogen",
+        "jaaa",
+        "jack_capture",
+        "japa",
+        "lmms",
+        "lsp-plugins",
+        "lv2-avw-plugins",
+        "lv2-invada-plugins",
+        "lv2-swh-plugins",
+        "lv2-zynadd-plugins",
+        "musescore",
+        "pipewire-jack-audio-connection-kit",
+        "pipewire-plugin-libcamera",
+        "qjackctl",
+        "qsynth",
+        "qtractor",
+        "raysession",
+        "realtime-setup",
+        "rosegarden",
+        "soundfont-fluid",
+        "tuned",
+        "tuned-profiles-realtime",
+        "vmpk",
+        "yoshimi",
+        "zynaddsubfx"
+      ]
+    },
+    {
+      "name": "sway",
+      "kind": "window-manager",
+      "selected_as": "window-manager:sway",
+      "source_file": "/var/home/uryu/Workspaces/exousia/overlays/base/packages/window-managers/sway.yml",
+      "groups": [],
+      "packages": [
+        "ImageMagick",
+        "adwaita-gtk2-theme",
+        "adwaita-icon-theme",
+        "blueman",
+        "bluez-tools",
+        "brightnessctl",
+        "cliphist",
+        "curl",
+        "dejavu-sans-fonts",
+        "dejavu-sans-mono-fonts",
+        "flatpak-xdg-utils",
+        "fuzzel",
+        "gnome-themes-extra",
+        "google-noto-sans-fonts",
+        "google-noto-serif-fonts",
+        "greetd",
+        "grim",
+        "gvfs",
+        "gvfs-gphoto2",
+        "gvfs-mtp",
+        "imv",
+        "jq",
+        "kanshi",
+        "kitty",
+        "liberation-fonts-all",
+        "lxqt-policykit",
+        "mako",
+        "mesa-dri-drivers",
+        "mesa-vulkan-drivers",
+        "network-manager-applet",
+        "nm-connection-editor",
+        "nwg-look",
+        "pamixer",
+        "pavucontrol",
+        "pipewire",
+        "pipewire-alsa",
+        "pipewire-pulseaudio",
+        "pipewire-utils",
+        "playerctl",
+        "plymouth",
+        "plymouth-plugin-two-step",
+        "plymouth-system-theme",
+        "powertop",
+        "python3-i3ipc",
+        "qt6ct",
+        "seatd",
+        "slurp",
+        "swappy",
+        "sway",
+        "swaybg",
+        "swayidle",
+        "swaylock",
+        "swaync",
+        "thunar",
+        "thunar-archive-plugin",
+        "thunar-volman",
+        "tlp",
+        "tuigreet",
+        "waybar",
+        "wev",
+        "wireplumber",
+        "wl-clipboard",
+        "wlogout",
+        "wlroots",
+        "wlsunset",
+        "wob",
+        "xdg-dbus-proxy",
+        "xdg-desktop-portal",
+        "xdg-desktop-portal-lxqt",
+        "xdg-desktop-portal-wlr",
+        "xdg-user-dirs",
+        "xdg-utils",
+        "xorg-x11-server-Xwayland",
+        "zathura",
+        "zathura-pdf-mupdf"
+      ]
+    }
+  ],
+  "rpm": {
+    "install": [
+      {
+        "name": "ImageMagick",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "NetworkManager-openconnect",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "NetworkManager-openvpn",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "a2jmidid",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "adwaita-gtk2-theme",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "adwaita-icon-theme",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "ardour",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "audacity",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "bat",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "blueman",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "bluez-tools",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "brightnessctl",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "calf",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "cargo",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "carla",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "cava",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "chezmoi",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "cliphist",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "container-selinux",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "cryptsetup",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "curl",
+        "from": [
+          "base",
+          "sway"
+        ]
+      },
+      {
+        "name": "dejavu-sans-fonts",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "dejavu-sans-mono-fonts",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "direnv",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "distrobox",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "dssi",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "etckeeper",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "fastfetch",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "flatpak",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "flatpak-xdg-utils",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "fluidsynth",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "fuse",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "fuse-libs",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "fuzzel",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "fzf",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "gh",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "git",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "glances",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "gnome-disk-utility",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "gnome-themes-extra",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "google-noto-sans-fonts",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "google-noto-serif-fonts",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "greetd",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "grim",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "gvfs",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "gvfs-gphoto2",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "gvfs-mtp",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "htop",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "hydrogen",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "imv",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "iptables-nft",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "jaaa",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "jack_capture",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "japa",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "jq",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "k3s",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "kanshi",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "kitty",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "kubectl",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "liberation-fonts-all",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "libvirt",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "libxkbcommon-devel",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "libxml2",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "libxml2-devel",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "libxslt",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "libxslt-devel",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "lmms",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "lsd",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "lsp-plugins",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "lv2-avw-plugins",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "lv2-invada-plugins",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "lv2-swh-plugins",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "lv2-zynadd-plugins",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "lxqt-policykit",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "lynis",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "mako",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "mesa-dri-drivers",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "mesa-libEGL",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "mesa-libEGL-devel",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "mesa-libGLES",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "mesa-libGLES-devel",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "mesa-libwayland-egl",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "mesa-libwayland-egl-devel",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "mesa-vulkan-drivers",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "meson",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "mpd",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "musescore",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "neovim",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "network-manager-applet",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "ninja-build",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "nm-connection-editor",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "nwg-look",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "openconnect",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "openssl",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "openvpn",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "pam-u2f",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "pamixer",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "pamu2fcfg",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "pavucontrol",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "pipewire",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "pipewire-alsa",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "pipewire-jack-audio-connection-kit",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "pipewire-plugin-libcamera",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "pipewire-pulseaudio",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "pipewire-utils",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "pkg-config",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "playerctl",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "plymouth",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "plymouth-plugin-two-step",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "plymouth-system-theme",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "podman-compose",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "policycoreutils-python-utils",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "powertop",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "python3",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "python3-i3ipc",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "qemu-kvm",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "qjackctl",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "qsynth",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "qt6ct",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "qtractor",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "ranger",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "raysession",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "realtime-setup",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "ripgrep",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "rosegarden",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "rtkit",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "rust",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "seatd",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "slurp",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "soundfont-fluid",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "swappy",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "sway",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "swaybg",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "swayidle",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "swaylock",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "swaync",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "thunar",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "thunar-archive-plugin",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "thunar-volman",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "tlp",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "tuigreet",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "tuned",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "tuned-profiles-realtime",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "uv",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "virt-manager",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "vmpk",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "waybar",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "wayland-devel",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "wayland-protocols-devel",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "wev",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "wf-recorder",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "wireguard-tools",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "wireplumber",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "wl-clipboard",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "wlogout",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "wlroots",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "wlsunset",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "wob",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "xdg-dbus-proxy",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "xdg-desktop-portal",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "xdg-desktop-portal-lxqt",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "xdg-desktop-portal-wlr",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "xdg-user-dirs",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "xdg-utils",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "xorg-x11-server-Xwayland",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "yoshimi",
+        "from": [
+          "audio-production"
+        ]
+      },
+      {
+        "name": "zathura",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "zathura-pdf-mupdf",
+        "from": [
+          "sway"
+        ]
+      },
+      {
+        "name": "zoxide",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "zsh",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "zsh-autosuggestions",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "zsh-syntax-highlighting",
+        "from": [
+          "base"
+        ]
+      },
+      {
+        "name": "zynaddsubfx",
+        "from": [
+          "audio-production"
+        ]
+      }
+    ],
+    "remove": [
+      {
+        "name": "dunst",
+        "from": [
+          "remove"
+        ]
+      },
+      {
+        "name": "firefox",
+        "from": [
+          "remove"
+        ]
+      },
+      {
+        "name": "firefox-langpacks",
+        "from": [
+          "remove"
+        ]
+      },
+      {
+        "name": "foot",
+        "from": [
+          "remove"
+        ]
+      },
+      {
+        "name": "rofi",
+        "from": [
+          "remove"
+        ]
+      },
+      {
+        "name": "rofi-wayland",
+        "from": [
+          "remove"
+        ]
+      },
+      {
+        "name": "sddm",
+        "from": [
+          "remove"
+        ]
+      }
+    ],
+    "groups": []
+  }
+}

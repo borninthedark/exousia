@@ -16,7 +16,13 @@ overlays/
 │   │   └── tmpfiles.d/                # systemd-tmpfiles entries
 │   ├── packages/
 │   │   ├── common/
-│   │   │   ├── base.yml               # Core packages (dnf install)
+│   │   │   ├── base-core.yml          # Core packages for all builds
+│   │   │   ├── base-devtools.yml      # Dev and power-user tools
+│   │   │   ├── base-media.yml         # Shared media tools
+│   │   │   ├── base-network.yml       # Shared network tooling
+│   │   │   ├── base-security.yml      # Shared auth and security tooling
+│   │   │   ├── base-shell.yml         # Shared shell environment packages
+│   │   │   ├── base-virtualization.yml # Shared virtualization packages
 │   │   │   ├── flatpaks.yml           # Flatpak application list
 │   │   │   └── remove.yml             # Packages to remove (processed first)
 │   │   └── window-managers/
@@ -85,14 +91,16 @@ generates `COPY` directives. The general mapping:
 ## Package System
 
 Packages are declared in YAML files under `base/packages/`. The package loader
-(`tools/package_loader.py`) reads these files and emits `dnf install` commands.
+(`tools/package_loader.py`) reads typed package-set definitions and emits explicit
+`dnf5` group operations plus RPM install/remove commands.
 
 **Processing order:**
 
 1. `common/remove.yml` -- packages removed first to avoid conflicts
-2. `common/base.yml` -- core system packages
-3. `window-managers/sway.yml` -- desktop-specific packages
-4. `common/flatpaks.yml` -- Flatpak applications (installed post-build)
+2. selected `common/base-*.yml` package sets -- shared RPM package sets for the image
+3. selected feature package sets such as `common/audio-production.yml`
+4. `window-managers/sway.yml` -- window-manager package set with desktop-specific packages and replacements
+5. `common/flatpaks.yml` -- Flatpak applications (installed post-build)
 
 See `overlays/base/packages/README.md` for the package list format.
 

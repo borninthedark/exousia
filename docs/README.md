@@ -70,17 +70,19 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 
 - **[chezmoi-integration.md](chezmoi-integration.md)** -- Dotfile management with chezmoi
 - **[kernel-options.md](kernel-options.md)** -- Kernel boot parameters and overrides
+- **[package-loader-cli.md](package-loader-cli.md)** -- Resolve package sets, inspect provenance, and export legacy manifests
 
 ## Testing
 
 - **[testing/README.md](testing/README.md)** -- Test suite overview
-- **[testing/guide.md](testing/guide.md)** -- Detailed test architecture
-- **[testing/test-suite.md](testing/test-suite.md)** -- Test categories and expected output
+- **[testing/guide.md](testing/guide.md)** -- Canonical test architecture and workflow guide
+- **[testing/test-suite.md](testing/test-suite.md)** -- Compact test category and command reference
 - **[reference/writing-tests.md](reference/writing-tests.md)** -- How to write new tests
 
 ## Architecture
 
 - **[overlay-system.md](overlay-system.md)** -- Overlay directory structure and how files map into images
+- **[package-management-and-container-builds.md](package-management-and-container-builds.md)** -- Typed package-set model and resolved build-plan direction
 - **[local-build-pipeline.md](local-build-pipeline.md)** -- Quadlet services, local build, and promotion to DockerHub
 
 ## Infrastructure

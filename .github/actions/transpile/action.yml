@@ -17,6 +17,9 @@ inputs:
   output_path:
     description: 'Output Containerfile path'
     default: 'Dockerfile.generated'
+  resolved_package_plan_path:
+    description: 'Output path for the resolved package plan JSON artifact'
+    default: 'build/resolved-build-plan.json'
 
 outputs:
   containerfile:
@@ -31,6 +34,9 @@ outputs:
   enable_plymouth:
     description: 'Plymouth flag'
     value: ${{ steps.resolve.outputs.ENABLE_PLYMOUTH }}
+  resolved_package_plan:
+    description: 'Path to generated resolved package plan'
+    value: ${{ steps.transpile.outputs.RESOLVED_PACKAGE_PLAN }}
 
 runs:
   using: 'composite'
@@ -56,8 +62,11 @@ runs:
       id: transpile
       shell: bash
       run: |
+        mkdir -p "$(dirname "${{ inputs.resolved_package_plan_path }}")"
         uv run python tools/yaml-to-containerfile.py \
           --config adnyeus.yml \
           --output "${{ inputs.output_path }}" \
+          --resolved-package-plan "${{ inputs.resolved_package_plan_path }}" \
           --verbose
         echo "CONTAINERFILE=${{ inputs.output_path }}" >> $GITHUB_OUTPUT
+        echo "RESOLVED_PACKAGE_PLAN=${{ inputs.resolved_package_plan_path }}" >> $GITHUB_OUTPUT
