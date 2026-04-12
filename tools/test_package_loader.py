@@ -580,3 +580,53 @@ def test_main_export_command_uses_selected_output_dir(tmp_path, monkeypatch, cap
     assert "Exported package lists" in output
     assert (output_dir / "packages.add").exists()
     assert (output_dir / "packages.remove").exists()
+
+
+def test_export_to_text_files_uses_default_output_dir(tmp_path, monkeypatch):
+    """Legacy export should default to custom-pkgs/ under the repo root."""
+    common = tmp_path / "common"
+    common.mkdir()
+    _seed_common_bundles(common, content="core:\n  - basepkg\n")
+    (common / "remove.yml").write_text("packages:\n  - badpkg\n")
+
+    wm_dir = tmp_path / "window-managers"
+    wm_dir.mkdir()
+    (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
+
+    fake_tools_dir = tmp_path / "tools"
+    fake_tools_dir.mkdir()
+    monkeypatch.setattr(
+        package_loader_module, "__file__", str(fake_tools_dir / "package_loader.py")
+    )
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    loader.export_to_text_files(wm="test")
+
+    assert (tmp_path / "custom-pkgs" / "packages.add").exists()
+    assert (tmp_path / "custom-pkgs" / "packages.remove").exists()
+
+
+def test_main_default_mode_prints_install_and_remove_lists(tmp_path, monkeypatch, capsys):
+    """CLI default mode should print resolved install and removal packages."""
+    common = tmp_path / "common"
+    common.mkdir()
+    _seed_common_bundles(common, content="core:\n  - basepkg\n")
+    (common / "remove.yml").write_text("packages:\n  - badpkg\n")
+
+    wm_dir = tmp_path / "window-managers"
+    wm_dir.mkdir()
+    (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
+
+    monkeypatch.setattr(
+        package_loader_module, "PackageLoader", lambda: PackageLoader(packages_dir=tmp_path)
+    )
+    monkeypatch.setattr(sys, "argv", ["package_loader.py", "--wm", "test"])
+
+    package_loader_module.main()
+    output = capsys.readouterr().out
+
+    assert "Packages to install:" in output
+    assert "basepkg" in output
+    assert "wmpkg" in output
+    assert "Packages to remove:" in output
+    assert "badpkg" in output
