@@ -74,8 +74,8 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 ## Testing
 
 - **[testing/README.md](testing/README.md)** -- Test suite overview
-- **[testing/guide.md](testing/guide.md)** -- Detailed test architecture
-- **[testing/test-suite.md](testing/test-suite.md)** -- Test categories and expected output
+- **[testing/guide.md](testing/guide.md)** -- Canonical test architecture and workflow guide
+- **[testing/test-suite.md](testing/test-suite.md)** -- Compact test category and command reference
 - **[reference/writing-tests.md](reference/writing-tests.md)** -- How to write new tests
 
 ## Architecture

@@ -1,0 +1,22 @@
+apiVersion: exousia.packages/v1alpha1
+kind: PackageBundle
+
+metadata:
+  name: base-network
+  type: common
+  description: Shared VPN and network utility packages
+
+spec:
+  source: rpm
+  stage: build
+  packages:
+    - wireguard-tools
+    - openconnect
+    - NetworkManager-openconnect
+    - openvpn
+    - NetworkManager-openvpn
+  conflicts:
+    packages: []
+    features: []
+  requires:
+    features: []

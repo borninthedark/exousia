@@ -10,7 +10,15 @@ from pathlib import Path
 # Add tools directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from package_loader import PackageLoader
+from package_loader import DEFAULT_COMMON_BUNDLES, PackageLoader, PackageValidationError
+
+
+def _seed_common_bundles(common_dir, content="core:\n  - basepkg\n"):
+    """Create all DEFAULT_COMMON_BUNDLES files so load_common('base') works."""
+    for bundle in DEFAULT_COMMON_BUNDLES:
+        bundle_file = common_dir / f"{bundle}.yml"
+        if not bundle_file.exists():
+            bundle_file.write_text(content)
 
 
 def test_package_loader_initialization():
@@ -49,7 +57,11 @@ def test_load_common_packages():
     assert len(packages) > 0, "Should have packages"
     assert "neovim" in packages, "Should include neovim"
     assert "git" in packages, "Should include git"
-    assert "flatpak" in packages, "Should include flatpak"
+    flatpak_entries = [p for p in packages if p.startswith("flatpak")]
+    assert flatpak_entries, "Should include flatpak"
+    # CVE remediation: flatpak must be version-pinned to >= 1.16.5
+    pinned = [p for p in flatpak_entries if ">=" in p]
+    assert pinned, "flatpak must have a version constraint (>= 1.16.5)"
 
     print("✓ Common base packages load correctly")
 
@@ -62,6 +74,7 @@ def test_load_remove_packages():
 
     assert isinstance(packages, list), "Should return a list of packages"
     assert "firefox-langpacks" in packages, "Should include firefox-langpacks"
+    assert "foot" not in packages, "WM-specific removals should not live in default remove bundle"
 
     print("✓ Remove packages load correctly")
 
@@ -86,6 +99,9 @@ def test_get_package_list_with_wm():
         assert (
             pkg not in result["install"]
         ), f"Package {pkg} should not be in both install and remove"
+
+    for pkg in ("foot", "dunst", "rofi", "rofi-wayland"):
+        assert pkg in result["remove"], f"{pkg} should be removed by the sway bundle"
 
     print("✓ Complete package list generation works correctly")
 
@@ -170,7 +186,7 @@ def test_custom_packages_dir(tmp_path):
     """Test PackageLoader with a custom packages directory."""
     common = tmp_path / "common"
     common.mkdir()
-    (common / "base.yml").write_text("core:\n  - testpkg\n")
+    _seed_common_bundles(common, content="core:\n  - testpkg\n")
     (common / "remove.yml").write_text("packages:\n  - badpkg\n")
 
     loader = PackageLoader(packages_dir=tmp_path)
@@ -213,11 +229,20 @@ def test_get_groups_missing():
     assert loader.get_groups({"core": ["pkg1"]}) == []
 
 
+def test_get_group_actions_with_mapping():
+    """Typed/legacy group mappings should preserve install/remove actions."""
+    loader = PackageLoader()
+    config = {"groups": {"install": ["group-a"], "remove": ["group-b"]}, "core": ["pkg1"]}
+
+    actions = loader.get_group_actions(config)
+    assert actions == {"install": ["group-a"], "remove": ["group-b"]}
+
+
 def test_get_package_list_includes_groups(tmp_path):
     """Test that get_package_list collects groups from WM config."""
     common = tmp_path / "common"
     common.mkdir()
-    (common / "base.yml").write_text("core:\n  - basepkg\n")
+    _seed_common_bundles(common, content="core:\n  - basepkg\n")
     (common / "remove.yml").write_text("packages: []\n")
 
     wm_dir = tmp_path / "window-managers"
@@ -247,7 +272,7 @@ def test_get_package_list_with_extras(tmp_path):
     """Test that extras loads additional common package sets."""
     common = tmp_path / "common"
     common.mkdir()
-    (common / "base.yml").write_text("core:\n  - basepkg\n")
+    _seed_common_bundles(common, content="core:\n  - basepkg\n")
     (common / "remove.yml").write_text("packages: []\n")
     (common / "audio-production.yml").write_text(
         "groups:\n  - audio-group\nrealtime:\n  - tuned\nplugins:\n  - lsp-plugins\n"
@@ -266,7 +291,7 @@ def test_get_package_list_extras_none(tmp_path):
     """Test that extras=None does not load extra packages."""
     common = tmp_path / "common"
     common.mkdir()
-    (common / "base.yml").write_text("core:\n  - basepkg\n")
+    _seed_common_bundles(common, content="core:\n  - basepkg\n")
     (common / "remove.yml").write_text("packages: []\n")
 
     loader = PackageLoader(packages_dir=tmp_path)
@@ -274,3 +299,156 @@ def test_get_package_list_extras_none(tmp_path):
 
     assert result["install"] == ["basepkg"]
     assert result["groups"] == []
+
+
+def test_get_package_plan_includes_provenance(tmp_path):
+    """Resolved plan should retain bundle provenance for installs/removals."""
+    common = tmp_path / "common"
+    common.mkdir()
+    _seed_common_bundles(common, content="core:\n  - basepkg\n")
+    (common / "remove.yml").write_text(
+        "metadata:\n  name: remove\n  type: common\npackages:\n  - badpkg\n"
+    )
+    (common / "audio-production.yml").write_text(
+        "metadata:\n  name: audio-production\n  type: common\nplugins:\n  - tuned\n"
+    )
+
+    wm_dir = tmp_path / "window-managers"
+    wm_dir.mkdir()
+    (wm_dir / "test.yml").write_text(
+        "metadata:\n  name: sway\n  type: window-manager\ncore:\n  - sway\n"
+    )
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    plan = loader.get_package_plan(
+        wm="test",
+        include_common=False,
+        common_bundles=["base-core"],
+        feature_bundles=["audio-production"],
+    )
+
+    install = {item["name"]: item["from"] for item in plan["rpm"]["install"]}
+    remove = {item["name"]: item["from"] for item in plan["rpm"]["remove"]}
+
+    assert install["basepkg"] == ["base-core"]
+    assert install["tuned"] == ["audio-production"]
+    assert install["sway"] == ["sway"]
+    assert remove["badpkg"] == ["remove"]
+
+
+def test_get_package_plan_includes_group_actions(tmp_path):
+    """Resolved plan should preserve group install/remove provenance."""
+    common = tmp_path / "common"
+    common.mkdir()
+    _seed_common_bundles(common, content="core:\n  - basepkg\n")
+    (common / "remove.yml").write_text("packages: []\n")
+
+    wm_dir = tmp_path / "window-managers"
+    wm_dir.mkdir()
+    (wm_dir / "test.yml").write_text(
+        "groups:\n  install:\n    - workstation-product-environment\n  remove:\n    - legacy-xfce-support\ncore:\n  - wmpkg\n"
+    )
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    plan = loader.get_package_plan(wm="test")
+
+    assert plan["rpm"]["groups"]["install"] == [
+        {"name": "workstation-product-environment", "from": ["test"]}
+    ]
+    assert plan["rpm"]["groups"]["remove"] == [{"name": "legacy-xfce-support", "from": ["test"]}]
+
+
+def test_get_package_plan_attributes_sway_conflict_removals():
+    """WM-owned removals should be attributed to the selected WM bundle."""
+    loader = PackageLoader()
+    plan = loader.get_package_plan(wm="sway")
+
+    remove = {item["name"]: item["from"] for item in plan["rpm"]["remove"]}
+
+    assert remove["foot"] == ["wm-sway"]
+    assert remove["dunst"] == ["wm-sway"]
+    assert remove["rofi"] == ["wm-sway"]
+    assert remove["rofi-wayland"] == ["wm-sway"]
+    assert remove["firefox"] == ["remove"]
+
+
+def test_load_yaml_rejects_invalid_package_value_type(tmp_path):
+    """Scalar package values should fail validation."""
+    import pytest
+
+    bad = tmp_path / "bad.yml"
+    bad.write_text("metadata:\n  name: bad\ncore: true\n")
+    loader = PackageLoader(packages_dir=tmp_path)
+
+    with pytest.raises(PackageValidationError, match="Unsupported value type"):
+        loader.load_yaml(bad)
+
+
+def test_load_yaml_accepts_package_objects(tmp_path):
+    """Future-friendly package objects with name should be accepted."""
+    definition = tmp_path / "pkg.yml"
+    definition.write_text("metadata:\n  name: demo\ncore:\n  - name: package-a\n  - package-b\n")
+    loader = PackageLoader(packages_dir=tmp_path)
+    config = loader.load_yaml(definition)
+
+    assert loader.flatten_packages(config) == ["package-a", "package-b"]
+
+
+def test_typed_bundle_schema_loads_and_flattens(tmp_path):
+    """Typed bundles should validate and flatten via spec.packages."""
+    common = tmp_path / "common"
+    common.mkdir()
+    typed_content = (
+        "apiVersion: exousia.packages/v1alpha1\n"
+        "kind: PackageBundle\n"
+        "metadata:\n"
+        "  name: base-core\n"
+        "spec:\n"
+        "  packages:\n"
+        "    - name: pkg-a\n"
+        "    - pkg-b\n"
+    )
+    _seed_common_bundles(common)
+    (common / "base-core.yml").write_text(typed_content)
+    (common / "remove.yml").write_text("packages: []\n")
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    packages = loader.load_common("base")
+
+    assert "pkg-a" in packages
+    assert "pkg-b" in packages
+
+
+def test_package_plan_rejects_conflicting_features(tmp_path):
+    """Typed bundles should reject selected conflicting features."""
+    import pytest
+
+    common = tmp_path / "common"
+    common.mkdir()
+    _seed_common_bundles(common, content="core:\n  - basepkg\n")
+    (common / "remove.yml").write_text("packages: []\n")
+    (common / "audio.yml").write_text(
+        "apiVersion: exousia.packages/v1alpha1\n"
+        "kind: FeatureBundle\n"
+        "metadata:\n"
+        "  name: audio\n"
+        "spec:\n"
+        "  packages:\n"
+        "    - audacity\n"
+        "  conflicts:\n"
+        "    features:\n"
+        "      - gaming\n"
+    )
+    (common / "gaming.yml").write_text(
+        "apiVersion: exousia.packages/v1alpha1\n"
+        "kind: FeatureBundle\n"
+        "metadata:\n"
+        "  name: gaming\n"
+        "spec:\n"
+        "  packages:\n"
+        "    - steam\n"
+    )
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    with pytest.raises(PackageValidationError, match="conflicts with selected feature"):
+        loader.get_package_plan(extras=["audio", "gaming"])

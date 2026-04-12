@@ -1,0 +1,21 @@
+apiVersion: exousia.packages/v1alpha1
+kind: PackageBundle
+
+metadata:
+  name: base-security
+  type: common
+  description: Shared security and authentication packages
+
+spec:
+  source: rpm
+  stage: build
+  packages:
+    - pam-u2f
+    - pamu2fcfg
+    - lynis
+    - openssl
+  conflicts:
+    packages: []
+    features: []
+  requires:
+    features: []

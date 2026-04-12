@@ -7,7 +7,15 @@ YAML-based package definitions for Exousia bootc images.
 ```text
 packages/
 ├── common/            # Shared package sets
-│   ├── base.yml       # Base packages for all builds
+│   ├── base-core.yml
+│   ├── base-devtools.yml
+│   ├── base-media.yml
+│   ├── base-network.yml
+│   ├── base-security.yml
+│   ├── base-shell.yml
+│   ├── base-virtualization.yml
+│   ├── audio-production.yml
+│   ├── zfs.yml
 │   ├── flatpaks.yml   # Flatpak applications (installed at first boot)
 │   └── remove.yml     # Packages to remove before installs
 └── window-managers/
@@ -24,53 +32,54 @@ Removal lists (`remove.yml`) are processed before installs to avoid conflicts.
 modules:
   - type: package-loader
     window_manager: sway
-    include_common: true
+    common_bundles:
+      - base-core
+      - base-shell
+    feature_bundles:
+      - audio-production
 ```
 
 ## Package Format
 
 ```yaml
+apiVersion: exousia.packages/v1alpha1
+kind: PackageBundle
+
 metadata:
   name: package-set-name
   type: window-manager | common
   description: Description of the package set
 
-core:
-  - package1
-  - package2
-
-terminals:
-  - terminal-emulator
+spec:
+  source: rpm
+  stage: build
+  packages:
+    - package1
+    - package2
+  groups:
+    install:
+      - workstation-product-environment
+    remove: []
+  conflicts:
+    packages: []
+    features: []
+  requires:
+    features: []
 ```
 
-## Categories
+## Bundle Selection
 
-| Category | Purpose |
-|----------|---------|
-| `core` | Essential components |
-| `terminals` | Terminal emulators |
-| `launchers` | Application launchers |
-| `notifications` | Notification daemons |
-| `display_manager` | Login managers |
-| `wayland` | Wayland protocol components |
-| `session` | Session and authentication |
-| `audio` | Audio subsystem |
-| `graphics` | Graphics drivers |
-| `fonts` | Font packages |
-| `file_manager` | File managers |
-| `media` | Media viewers and players |
-| `system_controls` | System control utilities |
-| `bluetooth` | Bluetooth support |
-| `power` | Power management |
-| `theme` | Theme and appearance |
-| `utilities` | Miscellaneous utilities |
-| `boot_splash` | Boot splash screen |
+- `common_bundles` selects shared RPM bundles for the image
+- `feature_bundles` selects optional features such as audio or ZFS
+- Fedora package groups can be installed or removed declaratively through `spec.groups`
+- The transpiler emits `dnf5` group actions and RPM operations from the resolved package plan
 
 ## Inspecting Packages
 
 ```bash
 uv run python tools/package_loader.py --list-wms
-uv run python tools/package_loader.py --wm sway
+uv run python tools/package_loader.py --wm sway --common-bundle base-core --common-bundle base-shell
+uv run python tools/package_loader.py --wm sway --common-bundle base-core --feature-bundle audio-production --json
 ```
 
 ## See Also

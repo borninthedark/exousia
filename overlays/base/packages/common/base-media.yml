@@ -1,0 +1,20 @@
+apiVersion: exousia.packages/v1alpha1
+kind: PackageBundle
+
+metadata:
+  name: base-media
+  type: common
+  description: Shared media and CLI utility packages
+
+spec:
+  source: rpm
+  stage: build
+  packages:
+    - mpd
+    - ranger
+    - cava
+  conflicts:
+    packages: []
+    features: []
+  requires:
+    features: []
