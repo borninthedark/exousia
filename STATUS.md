@@ -1,16 +1,16 @@
 # Exousia CI Status
 
-> Last updated: 2026-04-12 09:04:49 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/24303019216)
+> Last updated: 2026-04-12 16:55:57 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/24311670374)
 
 ## Pipeline: Urahara
 
 | Captain | Division | Role | Status |
 |---------|----------|------|--------|
-| Hikifune | 12th (Despair in Your Heart) | CI: lint + test | success |
-| Uhin | 12th (Despair in Your Heart) | Security scanning | success |
-| Hiyori | 12th (Despair in Your Heart) | Build & Release | success |
+| Hikifune | 12th (Despair in Your Heart) | CI: lint + test | cancelled |
+| Uhin | 12th (Despair in Your Heart) | Security scanning | cancelled |
+| Hiyori | 12th (Despair in Your Heart) | Build & Release | skipped |
 
-**Result:** success
+**Result:** cancelled
 
 ## Build
 
@@ -20,5 +20,5 @@
 | Image Type | fedora-bootc |
 | Fedora Version | 43 |
 | Window Manager | sway |
-| Commit | `9793ea49` |
-| Triggered By | schedule |
+| Commit | `ccd640d2` |
+| Triggered By | push |
