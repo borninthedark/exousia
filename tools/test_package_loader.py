@@ -450,6 +450,59 @@ def test_package_plan_rejects_conflicting_features(tmp_path):
         loader.get_package_plan(extras=["audio", "gaming"])
 
 
+def test_load_rpm_overrides(tmp_path):
+    """load_rpm_overrides should return override entries from rpm-overrides.yml."""
+    common = tmp_path / "common"
+    common.mkdir()
+    (common / "rpm-overrides.yml").write_text(
+        "apiVersion: exousia.packages/v1alpha1\n"
+        "kind: PackageOverrideBundle\n"
+        "metadata:\n"
+        "  name: rpm-overrides\n"
+        "spec:\n"
+        "  overrides:\n"
+        "    - package: flatpak\n"
+        "      version: '1.16.6'\n"
+        "      image: ghcr.io/example/flatpak-rpms:1.16.6\n"
+        "      reason: CVE remediation\n"
+        "      replaces:\n"
+        "        - flatpak\n"
+        "        - flatpak-libs\n"
+    )
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    overrides = loader.load_rpm_overrides()
+
+    assert len(overrides) == 1
+    assert overrides[0]["package"] == "flatpak"
+    assert overrides[0]["version"] == "1.16.6"
+    assert overrides[0]["image"] == "ghcr.io/example/flatpak-rpms:1.16.6"
+    assert "flatpak" in overrides[0]["replaces"]
+    assert "flatpak-libs" in overrides[0]["replaces"]
+
+
+def test_load_rpm_overrides_missing_file(tmp_path):
+    """load_rpm_overrides should return empty list when file does not exist."""
+    common = tmp_path / "common"
+    common.mkdir()
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    assert loader.load_rpm_overrides() == []
+
+
+def test_load_rpm_overrides_from_real_spec():
+    """load_rpm_overrides should load the actual rpm-overrides.yml from the repo."""
+    loader = PackageLoader()
+    overrides = loader.load_rpm_overrides()
+
+    assert len(overrides) >= 1
+    flatpak = next((o for o in overrides if o["package"] == "flatpak"), None)
+    assert flatpak is not None
+    assert ">=" in flatpak["version"]
+    assert "1.16.6" in flatpak["version"]
+    assert "ghcr.io" in flatpak["image"]
+
+
 def test_export_to_text_files_writes_legacy_outputs(tmp_path):
     """Legacy export should write both install and remove package lists."""
     common = tmp_path / "common"

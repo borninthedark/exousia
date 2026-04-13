@@ -525,7 +525,7 @@ class ContainerfileGenerator:
         group_removals = [item["name"] for item in package_plan["rpm"]["groups"].get("remove", [])]
 
         # RPM overrides: COPY RPMs from OCI images before the main install
-        rpm_overrides = module.get("rpm_overrides", [])
+        rpm_overrides = loader.load_rpm_overrides()
         override_packages = set()
         for idx, override in enumerate(rpm_overrides):
             image = override["image"]
