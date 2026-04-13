@@ -36,7 +36,7 @@ uv run python tools/yaml-to-containerfile.py \
 uv run python tools/yaml-to-containerfile.py \
   --config adnyeus.yml \
   --image-type fedora-sway-atomic \
-  --fedora-version 43 \
+  --fedora-version 44 \
   --resolved-package-plan build/resolved-build-plan.json \
   --output Dockerfile.generated
 
@@ -54,7 +54,7 @@ uv run python tools/dry_check.py --functions-only --path tools
 | `-c, --config PATH` | Path to YAML configuration file | Required |
 | `-o, --output PATH` | Output Containerfile path | stdout |
 | `--image-type TYPE` | Base image type | From config |
-| `--fedora-version VER` | Fedora version number | `43` |
+| `--fedora-version VER` | Fedora version number (for example `43`, `44`, or `rawhide`) | `43` |
 | `--resolved-package-plan PATH` | Write resolved package plan JSON | -- |
 | `--enable-plymouth` | Enable Plymouth boot splash | `true` |
 | `--disable-plymouth` | Disable Plymouth boot splash | -- |
