@@ -524,6 +524,20 @@ class ContainerfileGenerator:
         group_installs = [item["name"] for item in package_plan["rpm"]["groups"].get("install", [])]
         group_removals = [item["name"] for item in package_plan["rpm"]["groups"].get("remove", [])]
 
+        # RPM overrides: COPY RPMs from OCI images before the main install
+        rpm_overrides = module.get("rpm_overrides", [])
+        override_packages = set()
+        for idx, override in enumerate(rpm_overrides):
+            image = override["image"]
+            stage = f"rpm-override-{idx}"
+            self.lines.append(f"# RPM override: {override.get('reason', image)}")
+            self.lines.append(f"COPY --from={image} /rpms/ /tmp/{stage}/")
+            override_packages.add(stage)
+
+        # Filter version-constrained packages from dnf install (handled by overrides)
+        if override_packages:
+            install_packages = [pkg for pkg in install_packages if not any(c in pkg for c in "><=")]
+
         # Generate installation instructions
         self.lines.append("# hadolint ignore=DL3041,SC2086")
         self.lines.append("RUN set -euxo pipefail; \\")
@@ -581,6 +595,11 @@ class ContainerfileGenerator:
                 self.lines.append(
                     f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\"
                 )
+
+        # Install RPM overrides from staged OCI images
+        for idx in range(len(rpm_overrides)):
+            stage = f"rpm-override-{idx}"
+            self.lines.append(f"    dnf install -y /tmp/{stage}/*.rpm && rm -rf /tmp/{stage}; \\")
 
         # Upgrade and cleanup
         self.lines.append("    dnf upgrade -y; \\")

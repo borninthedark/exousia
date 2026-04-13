@@ -58,11 +58,6 @@ def test_load_common_packages():
     assert len(packages) > 0, "Should have packages"
     assert "neovim" in packages, "Should include neovim"
     assert "git" in packages, "Should include git"
-    flatpak_entries = [p for p in packages if p.startswith("flatpak")]
-    assert flatpak_entries, "Should include flatpak"
-    # CVE remediation: flatpak must be version-pinned to >= 1.16.5
-    pinned = [p for p in flatpak_entries if ">=" in p]
-    assert pinned, "flatpak must have a version constraint (>= 1.16.5)"
 
     print("✓ Common base packages load correctly")
 

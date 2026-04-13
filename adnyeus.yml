@@ -147,12 +147,16 @@ modules:
       - base-core
       - base-media
       - base-devtools
+      - base-rpm-packaging
       - base-virtualization
       - base-security
       - base-network
       - base-shell
     feature_bundles:
       - audio-production  # Fedora Jam audio suite: DAWs, plugins, PipeWire-JACK, RT tuning
+    rpm_overrides:
+      - image: ghcr.io/borninthedark/flatpak-rpms:1.16.6
+        reason: CVE remediation — flatpak >= 1.16.6
 
   # Audio production: configure PipeWire-JACK and realtime permissions
   - type: script

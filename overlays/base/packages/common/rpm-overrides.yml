@@ -1,0 +1,23 @@
+apiVersion: exousia.packages/v1alpha1
+kind: PackageOverrideBundle
+
+metadata:
+  name: rpm-overrides
+  type: common
+  description: >
+    Packages installed from pre-built RPMs hosted on GHCR instead of
+    Fedora repos.  Each entry maps to an OCI image under
+    ghcr.io/borninthedark that contains the RPM artifacts.
+
+spec:
+  stage: build
+  overrides:
+    - package: flatpak
+      version: "1.16.6"
+      image: ghcr.io/borninthedark/flatpak-rpms:1.16.6
+      reason: CVE remediation (disclosed 2026-04-12)
+      replaces:
+        - flatpak
+        - flatpak-libs
+        - flatpak-session-helper
+        - flatpak-selinux
