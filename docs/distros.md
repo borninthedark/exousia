@@ -16,7 +16,7 @@ Exousia focuses exclusively on Fedora bootc images with Sway as the window manag
 1. Go to **Actions** → **Bootc DevSecOps Pipeline**
 2. Click **Run workflow**
 3. Select your desired **image type** (e.g., `fedora-bootc` or `fedora-sway-atomic`)
-4. Select the Fedora version
+4. Select the Fedora version (`43`, `44`, or `rawhide`)
 5. Click **Run workflow**
 
 Images are tagged with:
@@ -34,17 +34,17 @@ Example: build a Fedora Sway Atomic image locally
 uv run python tools/yaml-to-containerfile.py \
   --config yaml-definitions/sway-atomic.yml \
   --image-type fedora-sway-atomic \
-  --fedora-version 43 \
+  --fedora-version 44 \
   --output Containerfile.sway
 
-buildah build -f Containerfile.sway -t localhost/fedora-sway-atomic:43 .
+buildah build -f Containerfile.sway -t localhost/fedora-sway-atomic:44 .
 ```
 
 ### Image Tags
 
 Built images use the following patterns:
 
-- **OS-Version**: `fedora-{version}` (e.g., `fedora-43`)
+- **OS-Version**: `fedora-{version}` (e.g., `fedora-44`)
 - **Image Type**: `{image-type}` (e.g., `fedora-sway-atomic`)
 - **Main**: `main` (for main branch builds)
 - **SHA**: `sha-{git-commit-sha}`
@@ -60,7 +60,7 @@ Create a new YAML file for your custom Fedora image:
 name: my-custom-fedora
 description: Custom Fedora bootc image
 image-type: fedora-bootc
-base-image: quay.io/fedora/fedora-bootc:43
+base-image: quay.io/fedora/fedora-bootc:44
 
 labels:
   org.opencontainers.image.title: "My Custom Fedora"
