@@ -151,6 +151,7 @@ modules:
       - base-virtualization
       - base-security
       - base-network
+      - base-pentest
       - base-shell
     feature_bundles:
       - audio-production  # Fedora Jam audio suite: DAWs, plugins, PipeWire-JACK, RT tuning

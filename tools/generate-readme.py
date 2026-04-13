@@ -127,8 +127,20 @@ and GitHub Actions pushes signed images to DockerHub.
 Development follows a **TDD-first, shift-left** methodology — see
 [Contributing](#contributing) for details.
 
+## CVE Remediations
+
+Exousia ships patched versions of packages ahead of upstream Fedora when
+required. Packages are built from upstream source, hosted as OCI images on
+GHCR, and injected at build time via RPM overrides. See
+[SECURITY.md](SECURITY.md#rpm-override-process) for the full process.
+
+| Package | Patched Version | Reason |
+|---------|----------------|--------|
+| flatpak | 1.16.6 | CVE remediation — fixes disclosed 2026-04-12 ([release notes](https://github.com/flatpak/flatpak/releases/tag/1.16.6)) |
+
 ## Table of Contents
 
+- [CVE Remediations](#cve-remediations)
 - [Highly Experimental Disclaimer](#highly-experimental-disclaimer)
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
@@ -257,6 +269,7 @@ Versions are automatic via [conventional commits](https://www.conventionalcommit
 
 | Scope | Location |
 |-------|----------|
+| RPM overrides | `overlays/base/packages/common/rpm-overrides.yml` |
 | Common package sets | `overlays/base/packages/common/base-*.yml` |
 | Feature package sets | `overlays/base/packages/common/*.yml` |
 | Window-manager package sets | `overlays/base/packages/window-managers/*.yml` |
@@ -335,6 +348,7 @@ Configure in GitHub **Settings > Secrets and variables > Actions**.
 | Name | Purpose |
 |------|---------|
 | `DOCKERHUB_TOKEN` | DockerHub access token |
+| `GHCR_PAT` | GHCR personal access token (`packages:read`) |
 
 **Variables:**
 
