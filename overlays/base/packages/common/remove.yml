@@ -14,4 +14,8 @@ spec:
   packages:
     - firefox
     - firefox-langpacks
+    - flatpak
+    - flatpak-libs
+    - flatpak-session-helper
+    - flatpak-selinux
     - sddm

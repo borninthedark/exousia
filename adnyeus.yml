@@ -147,6 +147,7 @@ modules:
       - base-core
       - base-media
       - base-devtools
+      - base-rpm-packaging
       - base-virtualization
       - base-security
       - base-network

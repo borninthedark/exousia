@@ -11,7 +11,6 @@ spec:
   stage: build
   packages:
     - neovim
-    - name: flatpak >= 1.16.6
     - rtkit
     - gnome-disk-utility
     - cargo

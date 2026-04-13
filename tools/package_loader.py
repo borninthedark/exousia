@@ -19,7 +19,12 @@ class PackageValidationError(ValueError):
 
 
 SUPPORTED_API_VERSIONS = {"exousia.packages/v1alpha1"}
-SUPPORTED_KINDS = {"PackageBundle", "FeatureBundle", "PackageRemovalBundle"}
+SUPPORTED_KINDS = {
+    "PackageBundle",
+    "FeatureBundle",
+    "PackageRemovalBundle",
+    "PackageOverrideBundle",
+}
 DEFAULT_COMMON_BUNDLES = [
     "base-core",
     "base-media",
@@ -392,6 +397,20 @@ class PackageLoader:
             ]
         pkgs = config.get("packages", [])
         return [self._normalize_package_item(pkg, remove_file, "packages") for pkg in pkgs]
+
+    def load_rpm_overrides(self) -> list[dict[str, Any]]:
+        """Load RPM override definitions from rpm-overrides.yml.
+
+        Returns:
+            List of override dicts with image, reason, and replaces keys.
+            Empty list if the file does not exist.
+        """
+        override_file = self.common_dir / "rpm-overrides.yml"
+        if not override_file.exists():
+            return []
+        config = self.load_yaml(override_file)
+        spec = config.get("spec", {}) if self._is_typed_bundle(config) else config
+        return list(spec.get("overrides", []))
 
     def _bundle_record(
         self, file_path: Path, config: dict[str, Any], selected_as: str
