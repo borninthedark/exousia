@@ -1,6 +1,6 @@
 # Exousia CI Status
 
-> Last updated: 2026-04-18 16:56:28 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/24609390356)
+> Last updated: 2026-04-18 22:36:49 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/24609390356)
 
 ## Pipeline: Urahara
 
@@ -10,7 +10,7 @@
 | Uhin | 12th (Despair in Your Heart) | Security scanning | success |
 | Hiyori | 12th (Despair in Your Heart) | Build & Release | success |
 
-**Result:** failure
+**Result:** success
 
 ## Build
 
