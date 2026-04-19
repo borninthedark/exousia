@@ -101,9 +101,9 @@ Deploys Podman Quadlet services for local development:
 
 | Service | Port | Purpose |
 |---------|------|---------|
-| Forgejo | 3000 (HTTP), 2222 (SSH) | Self-hosted git forge |
+| Forgejo | 127.0.0.1:3000 (HTTP), 127.0.0.1:2222 (SSH) | Self-hosted git forge |
 | Forgejo Runner | -- | CI runner for Forgejo Actions |
-| Registry | 5000 | Local container registry |
+| Registry | 127.0.0.1:5000 | Local container registry |
 
 All services use the `exousia.network` (10.89.1.0/24) for inter-service communication.
 See [Local Build Pipeline](local-build-pipeline.md) for Quadlet setup, build
@@ -180,7 +180,7 @@ make ansible-apply           # Apply changes
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `firewall_open_ports` | `[22, 80, 443]` | Ports to open transiently |
+| `firewall_open_ports` | `[22]` | Ports to open transiently (SSH only; dev services bind to localhost) |
 | `network_dns_servers` | `[1.1.1.1, 9.9.9.9]` | DNS servers |
 | `services_runtime_overrides` | `[]` | systemd unit override list |
 | `user_config_scripts` | `[]` | Scripts to deploy to /tmp |

@@ -74,20 +74,25 @@ clean:
 	find . -type f -name "*.pyc" -delete
 	rm -rf htmlcov/ .coverage coverage.xml
 	rm -f Dockerfile.*.generated Dockerfile.generated
+	rm -rf build/resolved-*.json build/resolved-*.yml
 
 # Build atomic Dockerfile from YAML
 build-atomic:
+	mkdir -p build
 	uv run python tools/yaml-to-containerfile.py \
 		--config adnyeus.yml \
 		--image-type fedora-sway-atomic \
+		--resolved-package-plan build/resolved-build-plan.atomic.json \
 		--output Dockerfile.atomic.generated
 
 # Build bootc Dockerfile from YAML
 build-bootc:
+	mkdir -p build
 	uv run python tools/yaml-to-containerfile.py \
 		--config adnyeus.yml \
 		--image-type fedora-bootc \
 		--enable-plymouth \
+		--resolved-package-plan build/resolved-build-plan.bootc.json \
 		--output Dockerfile.bootc.generated
 
 # Validate YAML configuration
@@ -158,9 +163,11 @@ quadlet-status:
 # Build image locally and push to local registry
 local-build:
 	@echo "==> Generating Containerfile..."
+	mkdir -p build
 	uv run python tools/yaml-to-containerfile.py \
 		--config adnyeus.yml \
 		--image-type fedora-sway-atomic \
+		--resolved-package-plan build/resolved-build-plan.local.json \
 		--output Dockerfile.local.generated
 	@echo "==> Building image with buildah..."
 	buildah bud -t localhost:5000/exousia:$(TAG) -f Dockerfile.local.generated .

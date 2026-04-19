@@ -1,0 +1,22 @@
+apiVersion: exousia.packages/v1alpha1
+kind: PackageBundle
+
+metadata:
+  name: base-virtualization
+  type: common
+  description: Shared virtualization packages
+
+spec:
+  source: rpm
+  stage: build
+  packages:
+    - virt-manager
+    - qemu-kvm
+    - libvirt
+    - fuse
+    - fuse-libs
+  conflicts:
+    packages: []
+    features: []
+  requires:
+    features: []

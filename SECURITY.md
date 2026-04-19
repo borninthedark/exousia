@@ -52,6 +52,119 @@ Exousia employs a defense-in-depth approach:
 - Conventional commits for auditable change history
 - TDD with minimum 50% code coverage on Python tools (ratcheting toward 75%)
 
+## Active Remediations
+
+| Package | Minimum Version | Reason | Date Pinned |
+|---------|----------------|--------|-------------|
+| flatpak | >= 1.16.6 | CVE remediation ([release notes](https://github.com/flatpak/flatpak/releases/tag/1.16.6)) | 2026-04-12 |
+
+## RPM Override Process
+
+When Fedora has not yet shipped a patched version of a package, Exousia can
+build the fix from upstream source and inject it into the image at build time.
+This is how the flatpak CVE (disclosed 2026-04-12) was remediated before
+Fedora shipped `>= 1.16.6`.
+
+### 1. Build the RPM from upstream source
+
+Use a Fedora toolbox to isolate the build environment:
+
+```bash
+toolbox enter
+
+# Install build dependencies
+sudo dnf builddep flatpak
+sudo dnf install rpmdevtools rpm-build
+
+# Set up the RPM build tree
+rpmdev-setuptree
+
+# Download the Fedora SRPM as the base spec
+dnf download --source flatpak
+rpm -ivh flatpak-*.src.rpm
+
+# Replace the upstream tarball with the patched release
+cd ~/rpmbuild/SOURCES
+curl -LO https://github.com/flatpak/flatpak/releases/download/1.16.6/flatpak-1.16.6.tar.xz
+
+# Patch the spec: bump Version, update changelog
+cd ~/rpmbuild/SPECS
+# Edit flatpak.spec — set Version: 1.16.6 and add a %changelog entry
+
+# Build (disable debuginfo if not needed)
+rpmbuild -bb --define "debug_package %{nil}" flatpak.spec
+```
+
+The output RPMs land in `~/rpmbuild/RPMS/x86_64/`.
+
+### 2. Host the RPMs on GHCR as a scratch OCI image
+
+Package the RPMs into a minimal OCI image so the Containerfile can
+`COPY --from` them:
+
+```bash
+# Create a staging directory
+mkdir -p /tmp/flatpak-rpms && cp ~/rpmbuild/RPMS/x86_64/flatpak-*.rpm /tmp/flatpak-rpms/
+
+# Build and push a scratch image containing only the RPMs
+cat <<'DOCKERFILE' > /tmp/flatpak-rpms/Containerfile
+FROM scratch
+COPY *.rpm /rpms/
+DOCKERFILE
+
+podman build -t ghcr.io/borninthedark/flatpak-rpms:1.16.6 /tmp/flatpak-rpms/
+podman login ghcr.io
+podman push ghcr.io/borninthedark/flatpak-rpms:1.16.6
+```
+
+### 3. Register the override in the package spec
+
+Add an entry to `overlays/base/packages/common/rpm-overrides.yml`:
+
+```yaml
+spec:
+  overrides:
+    - package: flatpak
+      version: ">= 1.16.6"
+      image: ghcr.io/borninthedark/flatpak-rpms:1.16.6
+      reason: CVE remediation (disclosed 2026-04-12)
+      replaces:
+        - flatpak
+        - flatpak-libs
+        - flatpak-session-helper
+        - flatpak-selinux
+```
+
+The `replaces` list names every sub-package the RPM build produces. The
+transpiler (`yaml-to-containerfile.py`) reads this spec via
+`PackageLoader.load_rpm_overrides()` and generates:
+
+1. `COPY --from=ghcr.io/borninthedark/flatpak-rpms:1.16.6 /rpms/ /tmp/rpm-override-0/`
+2. `RUN dnf install -y /tmp/rpm-override-0/*.rpm`
+
+These stages run after the main `dnf install`, overriding the repo version.
+
+### 4. Ensure CI can pull from GHCR
+
+The build workflow (`hiyori.yml`) authenticates with GHCR before the image
+build step so that `COPY --from` can pull the override image:
+
+```yaml
+- name: Login to GHCR (pull RPM overrides)
+  uses: docker/login-action@v4
+  with:
+    registry: ghcr.io
+    username: ${{ github.actor }}
+    password: ${{ secrets.GHCR_PAT }}
+```
+
+### 5. Remove the override when Fedora catches up
+
+Once Fedora ships a version that satisfies the minimum version constraint,
+remove the entry from `rpm-overrides.yml` and the corresponding row from the
+Active Remediations table above. The image on GHCR can be deleted or left
+as an archive.
+
 ## Dependency Management
 
 Dependencies are managed via:

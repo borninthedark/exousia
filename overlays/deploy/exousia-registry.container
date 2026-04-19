@@ -5,7 +5,7 @@ After=network-online.target
 [Container]
 Image=docker.io/library/registry:2
 ContainerName=exousia-registry
-PublishPort=5000:5000
+PublishPort=127.0.0.1:5000:5000
 Volume=exousia-registry-data.volume:/var/lib/registry
 Network=exousia.network
 Label=io.containers.autoupdate=registry

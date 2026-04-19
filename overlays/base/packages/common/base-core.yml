@@ -1,0 +1,37 @@
+apiVersion: exousia.packages/v1alpha1
+kind: PackageBundle
+
+metadata:
+  name: base-core
+  type: common
+  description: Core packages for all Exousia builds
+
+spec:
+  source: rpm
+  stage: build
+  packages:
+    - neovim
+    - rtkit
+    - gnome-disk-utility
+    - cargo
+    - git
+    - htop
+    - etckeeper
+    - fastfetch
+    - podman-compose
+    - glances
+    - kubectl
+    - k3s
+    - curl
+    - iptables-nft
+    - container-selinux
+    - policycoreutils-python-utils
+    - cryptsetup
+    - python3
+    - uv
+    - chezmoi
+  conflicts:
+    packages: []
+    features: []
+  requires:
+    features: []

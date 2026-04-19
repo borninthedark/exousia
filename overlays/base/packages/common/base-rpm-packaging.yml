@@ -1,0 +1,24 @@
+apiVersion: exousia.packages/v1alpha1
+kind: PackageBundle
+
+metadata:
+  name: base-rpm-packaging
+  type: common
+  description: RPM packaging toolchain for local builds and COPR submissions
+
+spec:
+  source: rpm
+  stage: build
+  packages:
+    # Local rpmbuild (option 2)
+    - rpm-build
+    - rpmdevtools
+    # COPR / Fedora packaging (option 1)
+    - fedpkg
+    - copr-cli
+    - mock
+  conflicts:
+    packages: []
+    features: []
+  requires:
+    features: []

@@ -1,0 +1,20 @@
+apiVersion: exousia.packages/v1alpha1
+kind: PackageBundle
+
+metadata:
+  name: base-shell
+  type: common
+  description: Shared shell environment packages
+
+spec:
+  source: rpm
+  stage: build
+  packages:
+    - zsh
+    - zsh-autosuggestions
+    - zsh-syntax-highlighting
+  conflicts:
+    packages: []
+    features: []
+  requires:
+    features: []

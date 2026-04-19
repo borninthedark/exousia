@@ -20,6 +20,16 @@ DOC_ENTRIES: list[tuple[str, str, str]] = [
         "Build bootable disk images (ISO, raw, qcow2)",
     ),
     (
+        "docs/package-loader-cli.md",
+        "Package Loader CLI",
+        "Resolve package sets, inspect provenance, and export legacy manifests",
+    ),
+    (
+        "docs/package-management-and-container-builds.md",
+        "Package Management Design",
+        "Typed package-set model, resolved build plans, and build-pipeline direction",
+    ),
+    (
         "docs/overlay-system.md",
         "Overlay System",
         "Overlay directory structure and how files map into images",
@@ -106,7 +116,7 @@ def generate_readme(root: Path) -> str:
 > respective copyright holders.
 
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/{REPO}/urahara.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/{REPO}/actions/workflows/urahara.yml)
-[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/{REPO}/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
+[![Last Build: Fedora / Sway](https://img.shields.io/badge/Last%20Build-Fedora%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/{REPO}/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 
 DevSecOps-hardened, container-based immutable operating systems built on
@@ -117,8 +127,20 @@ and GitHub Actions pushes signed images to DockerHub.
 Development follows a **TDD-first, shift-left** methodology — see
 [Contributing](#contributing) for details.
 
+## CVE Remediations
+
+Exousia ships patched versions of packages ahead of upstream Fedora when
+required. Packages are built from upstream source, hosted as OCI images on
+GHCR, and injected at build time via RPM overrides. See
+[SECURITY.md](SECURITY.md#rpm-override-process) for the full process.
+
+| Package | Patched Version | Reason |
+|---------|----------------|--------|
+| flatpak | 1.16.6 | CVE remediation — fixes disclosed 2026-04-12 ([release notes](https://github.com/flatpak/flatpak/releases/tag/1.16.6)) |
+
 ## Table of Contents
 
+- [CVE Remediations](#cve-remediations)
 - [Highly Experimental Disclaimer](#highly-experimental-disclaimer)
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
@@ -126,6 +148,9 @@ Development follows a **TDD-first, shift-left** methodology — see
   - [The 12th Division Pipeline](#the-12th-division-pipeline)
   - [Versioning](#versioning)
 - [Customizing Builds](#customizing-builds)
+  - [Package Workflow](#package-workflow)
+  - [Configuration](#configuration)
+  - [Desktop and boot](#desktop-and-boot)
 - [Local Build Pipeline](#local-build-pipeline)
 - [YubiKey Authentication](#yubikey-authentication)
 - [Required Secrets and Variables](#required-secrets-and-variables)
@@ -170,7 +195,7 @@ curl -X POST \\
   -H "Accept: application/vnd.github+json" \\
   -H "Authorization: Bearer $GITHUB_TOKEN" \\
   https://api.github.com/repos/{REPO}/actions/workflows/urahara.yml/dispatches \\
-  -d '{{"ref":"main","inputs":{{"image_type":"fedora-bootc","distro_version":"43","enable_plymouth":"true"}}}}'
+  -d '{{"ref":"main","inputs":{{"image_type":"fedora-bootc","distro_version":"44","enable_plymouth":"true"}}}}'
 ```
 
 Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://github.com/{REPO}/actions).
@@ -204,9 +229,9 @@ graph LR
 | Component | Description |
 |-----------|-------------|
 | **Blueprint** (`adnyeus.yml`) | Declares base image, packages, overlays, scripts, services, and build flags |
-| **Transpiler** (`tools/yaml-to-containerfile.py`) | Reads the blueprint, loads package lists from `overlays/base/packages/`, emits a valid Containerfile |
+| **Transpiler** (`tools/yaml-to-containerfile.py`) | Reads the blueprint, resolves package sets, optionally writes `build/resolved-build-plan*.json`, and emits a valid Containerfile |
 | **Overlays** | Static files, configs, and scripts under `overlays/base/` (shared) and `overlays/sway/` (desktop) |
-| **Tests** | Bats tests in `custom-tests/` validate the built image |
+| **Tests** | Pytest validates the Python tooling and Bats validates the built image |
 
 ### The 12th Division Pipeline
 
@@ -240,16 +265,31 @@ Versions are automatic via [conventional commits](https://www.conventionalcommit
 
 ## Customizing Builds
 
-### Packages
+### Package Workflow
 
 | Scope | Location |
 |-------|----------|
-| Base packages | `overlays/base/packages/common/*.yml` |
-| Window managers | `overlays/base/packages/window-managers/*.yml` |
-| Removals | `overlays/base/packages/common/remove.yml` |
+| RPM overrides | `overlays/base/packages/common/rpm-overrides.yml` |
+| Common package sets | `overlays/base/packages/common/base-*.yml` |
+| Feature package sets | `overlays/base/packages/common/*.yml` |
+| Window-manager package sets | `overlays/base/packages/window-managers/*.yml` |
+| Removal list | `overlays/base/packages/common/remove.yml` |
 
-All packages are managed through the package loader. Edit the YAML lists, not
-the blueprint directly.
+All package selection flows through the package loader. Edit package-set YAML under
+`overlays/base/packages/`, then verify the resolved output before building:
+
+```bash
+uv run python tools/package_loader.py --wm sway --json
+uv run python tools/yaml-to-containerfile.py \\
+  --config adnyeus.yml \\
+  --resolved-package-plan build/resolved-build-plan.json \\
+  --output Dockerfile.generated
+```
+
+The resolved plan records package/group install and removal provenance so CI and
+tests can verify what the image is meant to contain. See
+[Package Loader CLI](docs/package-loader-cli.md) and
+[Package Management Design](docs/package-management-and-container-builds.md).
 
 ### Configuration
 
@@ -310,6 +350,7 @@ Configure in GitHub **Settings > Secrets and variables > Actions**.
 | Name | Purpose |
 |------|---------|
 | `DOCKERHUB_TOKEN` | DockerHub access token |
+| `GHCR_PAT` | GHCR personal access token (`packages:read`) |
 
 **Variables:**
 
@@ -334,7 +375,8 @@ Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 
 Contributions welcome. Development rules:
 
-- **TDD mandatory** -- write tests before implementation, 50% branch coverage floor (ratcheting toward 75%)
+- **TDD mandatory** -- write tests before implementation and keep test intent close to the change
+- **Coverage floor** -- `tools/` pytest coverage is enforced at 71% and should keep ratcheting upward
 - **[Conventional commits](https://www.conventionalcommits.org/)** -- enforced by pre-commit hook
 - **Shift-left** -- `uv run pre-commit install && uv run pre-commit install --hook-type commit-msg`
 - Security gates (Bandit, Gitleaks) and quality checks (Ruff, Black, mypy) run locally before push

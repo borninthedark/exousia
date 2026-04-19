@@ -12,6 +12,7 @@ Usage:
 """
 
 import argparse
+import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -66,6 +67,7 @@ class ContainerfileGenerator:
     def __init__(self, config: dict[str, Any], context: BuildContext):
         self.config = config
         self.context = context
+        self.package_plans: list[dict[str, Any]] = []
 
     def generate(self) -> str:
         """Generate complete Containerfile from config.
@@ -74,6 +76,7 @@ class ContainerfileGenerator:
         Each call generates a fresh Containerfile.
         """
         self.lines: list[str] = []
+        self.package_plans = []
         self._add_header()
         self._add_build_args()
         self._add_from()
@@ -83,6 +86,65 @@ class ContainerfileGenerator:
         self._add_environment()
         self._process_modules()
         return "\n".join(self.lines)
+
+    def get_resolved_package_plan(self) -> dict[str, Any]:
+        """Return an aggregated resolved package plan for all package-loader modules."""
+        install_sources: dict[str, set[str]] = {}
+        remove_sources: dict[str, set[str]] = {}
+        group_install_sources: dict[str, set[str]] = {}
+        group_remove_sources: dict[str, set[str]] = {}
+        bundles: list[dict[str, Any]] = []
+        selections: list[dict[str, Any]] = []
+
+        for plan in self.package_plans:
+            selections.append(plan.get("selection", {}))
+            bundles.extend(plan.get("bundles", []))
+            rpm = plan.get("rpm", {})
+            groups = rpm.get("groups", {})
+            for item in groups.get("install", []):
+                group_install_sources.setdefault(item["name"], set()).update(item.get("from", []))
+            for item in groups.get("remove", []):
+                group_remove_sources.setdefault(item["name"], set()).update(item.get("from", []))
+
+            for item in rpm.get("install", []):
+                install_sources.setdefault(item["name"], set()).update(item.get("from", []))
+            for item in rpm.get("remove", []):
+                remove_sources.setdefault(item["name"], set()).update(item.get("from", []))
+
+        return {
+            "image": {
+                "name": self.config.get("name"),
+                "base_image": self.context.base_image,
+                "image_type": self.context.image_type,
+                "fedora_version": self.context.fedora_version,
+                "desktop_environment": self.context.desktop_environment or None,
+                "window_manager": self.context.window_manager or None,
+                "enable_plymouth": self.context.enable_plymouth,
+                "enable_zfs": self.context.enable_zfs,
+            },
+            "package_loader_modules": selections,
+            "bundles": bundles,
+            "rpm": {
+                "install": [
+                    {"name": pkg, "from": sorted(sources)}
+                    for pkg, sources in sorted(install_sources.items())
+                ],
+                "remove": [
+                    {"name": pkg, "from": sorted(sources)}
+                    for pkg, sources in sorted(remove_sources.items())
+                ],
+                "groups": {
+                    "install": [
+                        {"name": group, "from": sorted(sources)}
+                        for group, sources in sorted(group_install_sources.items())
+                    ],
+                    "remove": [
+                        {"name": group, "from": sorted(sources)}
+                        for group, sources in sorted(group_remove_sources.items())
+                    ],
+                },
+            },
+        }
 
     def _load_common_remove_packages(self) -> list[str]:
         """Load the shared removal list from packages/common/remove.yml."""
@@ -436,21 +498,45 @@ class ContainerfileGenerator:
 
         wm = module.get("window_manager")
         de = module.get("desktop_environment")
-        include_common = module.get("include_common", True)
-        extras = module.get("extras", [])
+        common_bundles = module.get("common_bundles")
+        feature_bundles = module.get("feature_bundles")
+        include_common = module.get("include_common", True) if common_bundles is None else False
+        extras = module.get("extras", []) if feature_bundles is None else None
 
         # Load packages
         try:
-            packages = loader.get_package_list(
-                wm=wm, de=de, include_common=include_common, extras=extras
+            package_plan = loader.get_package_plan(
+                wm=wm,
+                de=de,
+                include_common=include_common,
+                extras=extras,
+                common_bundles=common_bundles,
+                feature_bundles=feature_bundles,
             )
         except Exception as e:
             self.lines.append(f"# ERROR loading packages: {e}")
             return
 
-        install_packages = packages["install"]
-        remove_packages = packages["remove"]
-        groups = packages.get("groups", [])
+        self.package_plans.append(package_plan)
+
+        install_packages = [item["name"] for item in package_plan["rpm"]["install"]]
+        remove_packages = [item["name"] for item in package_plan["rpm"]["remove"]]
+        group_installs = [item["name"] for item in package_plan["rpm"]["groups"].get("install", [])]
+        group_removals = [item["name"] for item in package_plan["rpm"]["groups"].get("remove", [])]
+
+        # RPM overrides: COPY RPMs from OCI images before the main install
+        rpm_overrides = loader.load_rpm_overrides()
+        override_packages = set()
+        for idx, override in enumerate(rpm_overrides):
+            image = override["image"]
+            stage = f"rpm-override-{idx}"
+            self.lines.append(f"# RPM override: {override.get('reason', image)}")
+            self.lines.append(f"COPY --from={image} /rpms/ /tmp/{stage}/")
+            override_packages.add(stage)
+
+        # Filter version-constrained packages from dnf install (handled by overrides)
+        if override_packages:
+            install_packages = [pkg for pkg in install_packages if not any(c in pkg for c in "><=")]
 
         # Generate installation instructions
         self.lines.append("# hadolint ignore=DL3041,SC2086")
@@ -473,9 +559,13 @@ class ContainerfileGenerator:
 
         # Install package groups (for Fedora-based distros)
         # Groups are only supported on Fedora/DNF-based systems
-        if groups and self.context.distro == "fedora":
-            for group in groups:
-                self.lines.append(f"    dnf install -y @{group}; \\")
+        if group_removals and self.context.distro == "fedora":
+            for group in group_removals:
+                self.lines.append(f"    dnf group remove -y '{group}' || true; \\")
+
+        if group_installs and self.context.distro == "fedora":
+            for group in group_installs:
+                self.lines.append(f"    dnf group install -y '{group}'; \\")
 
         # Remove conflicting packages FIRST (before installation)
         # This is critical for packages like swaylock when switching between variants
@@ -499,10 +589,17 @@ class ContainerfileGenerator:
             ]
 
             for _i, chunk in enumerate(chunks):
-                packages_str = " ".join(chunk)
+                packages_str = " ".join(
+                    f"'{pkg}'" if any(c in pkg for c in "><=") else pkg for pkg in chunk
+                )
                 self.lines.append(
                     f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\"
                 )
+
+        # Install RPM overrides from staged OCI images
+        for idx in range(len(rpm_overrides)):
+            stage = f"rpm-override-{idx}"
+            self.lines.append(f"    dnf install -y /tmp/{stage}/*.rpm && rm -rf /tmp/{stage}; \\")
 
         # Upgrade and cleanup
         self.lines.append("    dnf upgrade -y; \\")
@@ -814,6 +911,11 @@ Examples:
     parser.add_argument(
         "-o", "--output", type=Path, help="Output Containerfile path (default: stdout)"
     )
+    parser.add_argument(
+        "--resolved-package-plan",
+        type=Path,
+        help="Write normalized resolved package plan JSON to this path",
+    )
     # Build the list of all supported image types dynamically
     all_image_types = ["fedora-bootc", *FEDORA_ATOMIC_VARIANTS.keys()]
 
@@ -911,6 +1013,13 @@ Examples:
         print(f"✓ Containerfile generated: {args.output}")
     else:
         print(containerfile_content)
+
+    if args.resolved_package_plan:
+        args.resolved_package_plan.write_text(
+            json.dumps(generator.get_resolved_package_plan(), indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(f"✓ Resolved package plan written: {args.resolved_package_plan}")
 
 
 if __name__ == "__main__":

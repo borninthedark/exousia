@@ -1,98 +1,22 @@
-# Common Base Packages
-# These packages are installed regardless of desktop environment or window manager choice
+# Compatibility shim for the historical base bundle name.
+# The resolver expands `base` into the default common bundle set:
+# base-core, base-media, base-devtools, base-virtualization,
+# base-security, base-network, and base-shell.
+
+apiVersion: exousia.packages/v1alpha1
+kind: PackageBundle
 
 metadata:
   name: base
   type: common
-  description: Base packages for all Exousia builds
+  description: Compatibility alias for the default common bundle set
 
-# Core utilities
-core_utilities:
-  - neovim
-  - flatpak
-  - rtkit
-  - gnome-disk-utility
-  - cargo
-  - git
-  - htop
-  - etckeeper
-  - fastfetch
-  - podman-compose
-  - glances
-  - kubectl
-  - k3s
-  - curl
-  - iptables-nft  # Modern replacement for iptables on Fedora
-  - container-selinux
-  - policycoreutils-python-utils
-  - cryptsetup
-  - python3
-  - uv
-  - chezmoi
-
-# Audio and media
-audio_media:
-  - mpd
-  - ranger
-
-# Development and power user tools
-development:
-  - gh
-  - bat
-  - wf-recorder
-  - lsd
-  - fzf
-  - direnv
-  - libxml2
-  - libxslt
-  - libxml2-devel
-  - libxslt-devel
-  - distrobox
-  - wireguard-tools
-  - ripgrep
-  - zoxide
-  - meson
-  - ninja-build
-  - pkg-config
-  - rust
-  - wayland-devel
-  - wayland-protocols-devel
-  - libxkbcommon-devel
-  - mesa-libEGL
-  - mesa-libEGL-devel
-  - mesa-libwayland-egl
-  - mesa-libwayland-egl-devel
-  - mesa-libGLES
-  - mesa-libGLES-devel
-
-# Virtualization
-virtualization:
-  - virt-manager
-  - qemu-kvm
-  - libvirt
-  - fuse
-  - fuse-libs
-
-# Security
-security:
-  - pam-u2f
-  - pamu2fcfg
-  - lynis
-  - openssl
-
-# VPN (wireguard-tools pre-installed on Fedora)
-vpn:
-  - openconnect
-  - NetworkManager-openconnect
-  - openvpn
-  - NetworkManager-openvpn
-
-# Shell and terminal enhancements
-shell:
-  - zsh
-  - zsh-autosuggestions
-  - zsh-syntax-highlighting
-
-# Extra utilities
-extra:
-  - cava
+spec:
+  source: rpm
+  stage: build
+  packages: []
+  conflicts:
+    packages: []
+    features: []
+  requires:
+    features: []

@@ -5,6 +5,7 @@ Unit tests for yaml-to-containerfile transpiler
 """
 
 import importlib.util
+import json
 from pathlib import Path
 
 import yaml
@@ -307,7 +308,13 @@ def test_package_loader_module():
     config = {
         "name": "package-loader-test",
         "description": "Test package-loader module",
-        "modules": [{"type": "package-loader", "window_manager": "sway", "include_common": True}],
+        "modules": [
+            {
+                "type": "package-loader",
+                "window_manager": "sway",
+                "common_bundles": ["base-core", "base-shell"],
+            }
+        ],
     }
 
     context = BuildContext(
@@ -332,6 +339,105 @@ def test_package_loader_module():
     assert "rpmfusion" in output.lower(), "Should add RPMFusion repos for Fedora"
 
     print("✓ package-loader module type works correctly")
+
+
+def test_package_loader_module_emits_resolved_plan():
+    """Resolved package plan should reflect package-loader selections."""
+    config = {
+        "name": "package-loader-test",
+        "description": "Test package-loader module",
+        "modules": [
+            {
+                "type": "package-loader",
+                "window_manager": "sway",
+                "common_bundles": ["base-core", "base-shell"],
+                "feature_bundles": ["audio-production"],
+            }
+        ],
+    }
+
+    context = BuildContext(
+        image_type="fedora-bootc",
+        fedora_version="43",
+        enable_plymouth=True,
+        use_upstream_sway_config=False,
+        base_image="quay.io/fedora/fedora-bootc:43",
+        distro="fedora",
+        window_manager="sway",
+    )
+
+    generator = ContainerfileGenerator(config, context)
+    generator.generate()
+    plan = generator.get_resolved_package_plan()
+
+    install = {item["name"]: item["from"] for item in plan["rpm"]["install"]}
+
+    assert plan["image"]["window_manager"] == "sway"
+    assert "sway" in install
+    assert "feature-audio-production" in {bundle["name"] for bundle in plan["bundles"]}
+    assert any("sway" in source for source in install["sway"])
+
+
+def test_resolved_plan_is_json_serializable():
+    """The aggregated resolved plan should be serializable for artifact output."""
+    config = {
+        "name": "package-loader-test",
+        "description": "Test package-loader module",
+        "modules": [
+            {
+                "type": "package-loader",
+                "window_manager": "sway",
+                "common_bundles": ["base-core", "base-shell"],
+            }
+        ],
+    }
+
+    context = BuildContext(
+        image_type="fedora-sway-atomic",
+        fedora_version="43",
+        enable_plymouth=False,
+        use_upstream_sway_config=False,
+        base_image="quay.io/fedora/fedora-sway-atomic:43",
+        distro="fedora",
+        window_manager="sway",
+    )
+
+    generator = ContainerfileGenerator(config, context)
+    generator.generate()
+    serialized = json.dumps(generator.get_resolved_package_plan())
+
+    assert '"rpm"' in serialized
+
+
+def test_package_loader_module_renders_group_actions():
+    """Package-loader groups should render as explicit dnf5 group operations."""
+    config = {
+        "name": "package-loader-test",
+        "description": "Test package-loader module",
+        "modules": [
+            {
+                "type": "package-loader",
+                "window_manager": "sway",
+                "common_bundles": ["base-core", "base-shell"],
+            }
+        ],
+    }
+
+    context = BuildContext(
+        image_type="fedora-sway-atomic",
+        fedora_version="43",
+        enable_plymouth=False,
+        use_upstream_sway_config=False,
+        base_image="quay.io/fedora/fedora-sway-atomic:43",
+        distro="fedora",
+        window_manager="sway",
+    )
+
+    generator = ContainerfileGenerator(config, context)
+    output = generator.generate()
+
+    assert "dnf install -y dnf5 dnf5-plugins" in output
+    assert "@workstation" not in output
 
 
 def test_plymouth_not_generated_for_sway_atomic():

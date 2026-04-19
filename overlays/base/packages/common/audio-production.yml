@@ -2,67 +2,52 @@
 # Provides the full professional audio stack: PipeWire/JACK bridge,
 # DAWs, plugins, and real-time scheduling tools.
 
+apiVersion: exousia.packages/v1alpha1
+kind: FeatureBundle
+
 metadata:
-  name: audio-production
+  name: feature-audio-production
   type: common
   description: Fedora Jam audio production suite with PipeWire/JACK and RT tuning
 
-# Avoid Fedora comps group installs here.
-# The explicit package list below is stable across build environments,
-# while group metadata can be unavailable in containerized builds.
-
-# PipeWire ↔ JACK bridge (DAW compatibility layer)
-pipewire_jack:
-  - pipewire-jack-audio-connection-kit
-  - pipewire-plugin-libcamera
-
-# Real-time scheduling and IRQ threading
-realtime:
-  - realtime-setup
-  - tuned
-  - tuned-profiles-realtime
-
-# DAWs and sequencers (core Fedora Jam selection)
-daws:
-  - ardour
-  - lmms
-  - rosegarden
-  - qtractor
-  - hydrogen
-
-# Audio editors
-editors:
-  - audacity
-
-# Notation
-notation:
-  - musescore
-
-# Synthesizers and instruments
-synths:
-  - yoshimi
-  - zynaddsubfx
-  - fluidsynth
-  - qsynth
-  - soundfont-fluid
-
-# Plugin suites
-plugins:
-  - lsp-plugins
-  - calf
-  - lv2-avw-plugins
-  - lv2-invada-plugins
-  - lv2-swh-plugins
-  - lv2-zynadd-plugins
-  - dssi
-  - vmpk
-
-# MIDI and audio utilities
-utilities:
-  - a2jmidid
-  - jack_capture
-  - jaaa
-  - japa
-  - qjackctl
-  - carla
-  - raysession
+spec:
+  source: rpm
+  stage: build
+  packages:
+    - pipewire-jack-audio-connection-kit
+    - pipewire-plugin-libcamera
+    - realtime-setup
+    - tuned
+    - tuned-profiles-realtime
+    - ardour
+    - lmms
+    - rosegarden
+    - qtractor
+    - hydrogen
+    - audacity
+    - musescore
+    - yoshimi
+    - zynaddsubfx
+    - fluidsynth
+    - qsynth
+    - soundfont-fluid
+    - lsp-plugins
+    - calf
+    - lv2-avw-plugins
+    - lv2-invada-plugins
+    - lv2-swh-plugins
+    - lv2-zynadd-plugins
+    - dssi
+    - vmpk
+    - a2jmidid
+    - jack_capture
+    - jaaa
+    - japa
+    - qjackctl
+    - carla
+    - raysession
+  conflicts:
+    packages: []
+    features: []
+  requires:
+    features: []

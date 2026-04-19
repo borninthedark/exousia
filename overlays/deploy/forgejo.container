@@ -5,8 +5,8 @@ After=network-online.target
 [Container]
 Image=codeberg.org/forgejo/forgejo:14.0.2
 ContainerName=forgejo
-PublishPort=3000:3000
-PublishPort=2222:2222
+PublishPort=127.0.0.1:3000:3000
+PublishPort=127.0.0.1:2222:2222
 Volume=forgejo-data.volume:/data
 Network=exousia.network
 Label=io.containers.autoupdate=registry
