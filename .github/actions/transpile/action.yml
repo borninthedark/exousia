@@ -9,11 +9,17 @@ inputs:
     description: 'Image type (fedora-bootc, fedora-sway-atomic)'
     default: 'fedora-sway-atomic'
   distro_version:
-    description: 'Fedora version'
-    default: '43'
+    description: 'Fedora version (defaults to image-version from adnyeus.yml)'
+    default: ''
   enable_plymouth:
     description: 'Enable Plymouth boot splash'
     default: 'true'
+  kernel_profile:
+    description: 'Kernel profile (default, mainline, stable, longterm, next, cachyos)'
+    default: 'default'
+  enable_zfs:
+    description: 'Enable ZFS kernel module integration'
+    default: 'false'
   output_path:
     description: 'Output Containerfile path'
     default: 'Dockerfile.generated'
@@ -37,6 +43,12 @@ outputs:
   resolved_package_plan:
     description: 'Path to generated resolved package plan'
     value: ${{ steps.transpile.outputs.RESOLVED_PACKAGE_PLAN }}
+  kernel_profile:
+    description: 'Active kernel profile'
+    value: ${{ inputs.kernel_profile }}
+  enable_zfs:
+    description: 'ZFS flag'
+    value: ${{ inputs.enable_zfs }}
 
 runs:
   using: 'composite'
@@ -54,9 +66,14 @@ runs:
       env:
         INPUT_YAML_CONFIG: ${{ inputs.yaml_config }}
         INPUT_IMAGE_TYPE: ${{ inputs.image_type }}
-        INPUT_DISTRO_VERSION: ${{ inputs.distro_version }}
+        INPUT_DISTRO_VERSION: ${{ inputs.distro_version || '' }}
         INPUT_ENABLE_PLYMOUTH: ${{ inputs.enable_plymouth }}
-      run: uv run python tools/resolve_build_config.py
+        INPUT_KERNEL_PROFILE: ${{ inputs.kernel_profile }}
+        INPUT_ENABLE_ZFS: ${{ inputs.enable_zfs }}
+      run: |
+        # When no distro_version is provided, resolve_build_config.py reads
+        # image-version from adnyeus.yml as the single source of truth.
+        uv run python tools/resolve_build_config.py
 
     - name: Generate Containerfile
       id: transpile

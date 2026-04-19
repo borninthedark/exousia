@@ -24,6 +24,7 @@ SUPPORTED_KINDS = {
     "FeatureBundle",
     "PackageRemovalBundle",
     "PackageOverrideBundle",
+    "KernelConfig",
 }
 DEFAULT_COMMON_BUNDLES = [
     "base-core",
@@ -411,6 +412,27 @@ class PackageLoader:
         config = self.load_yaml(override_file)
         spec = config.get("spec", {}) if self._is_typed_bundle(config) else config
         return list(spec.get("overrides", []))
+
+    def load_kernel_config(self) -> dict[str, Any]:
+        """Load kernel configuration from kernel-config.yml.
+
+        Returns:
+            Kernel config dict with source, copr/oci settings, and modules.
+            Empty dict with source='default' if the file does not exist.
+        """
+        config_file = self.common_dir / "kernel-config.yml"
+        if not config_file.exists():
+            return {"source": "default", "modules": []}
+        config = self.load_yaml(config_file)
+        spec = config.get("spec", {}) if self._is_typed_bundle(config) else config
+        return {
+            "source": spec.get("source", "default"),
+            "copr": spec.get("copr", {}),
+            "oci": spec.get("oci", {}),
+            "kernel_packages": spec.get("kernel_packages", []),
+            "kernel_devel_packages": spec.get("kernel_devel_packages", []),
+            "modules": spec.get("modules", []),
+        }
 
     def _bundle_record(
         self, file_path: Path, config: dict[str, Any], selected_as: str

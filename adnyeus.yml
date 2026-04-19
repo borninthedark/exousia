@@ -25,6 +25,14 @@ labels:
   org.opencontainers.image.licenses: "MIT"
   maintainer: "uryu"
 
+# Kernel selection (consumed by kernel-config.yml)
+# Uncomment to swap kernel at build time:
+# kernel:
+#   source: copr          # default | copr | oci
+#   profile: stable       # mainline, stable, longterm, next, cachyos
+#   modules:
+#     - zfs               # enable out-of-tree modules (requires akon artifact)
+
 # Build configuration
 build:
   enable_plymouth: true

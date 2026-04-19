@@ -11,13 +11,21 @@ on:
         type: string
         default: "fedora-sway-atomic"
       distro_version:
-        description: "Fedora version"
+        description: "Fedora version (passed from Urahara, sourced from blueprint)"
         type: string
-        default: "43"
+        required: true
       enable_plymouth:
         description: "Enable Plymouth boot splash"
         type: boolean
         default: true
+      kernel_profile:
+        description: "Kernel profile (default, mainline, stable, longterm, next, cachyos)"
+        type: string
+        default: "default"
+      enable_zfs:
+        description: "Enable ZFS kernel module"
+        type: boolean
+        default: false
 
 env:
   REGISTRY_URL: ${{ vars.REGISTRY_URL || 'docker.io' }}
@@ -49,6 +57,8 @@ jobs:
           image_type: ${{ inputs.image_type }}
           distro_version: ${{ inputs.distro_version }}
           enable_plymouth: ${{ inputs.enable_plymouth }}
+          kernel_profile: ${{ inputs.kernel_profile }}
+          enable_zfs: ${{ inputs.enable_zfs }}
 
       - name: Download generated Containerfile
         uses: actions/download-artifact@v8

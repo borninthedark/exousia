@@ -19,8 +19,21 @@ except Exception as exc:
     YAML_SELECTOR_IMPORT_ERROR = exc
 
 
-DEFAULT_VERSION = "43"
 DEFAULT_IMAGE_TYPE = "fedora-sway-atomic"
+_BLUEPRINT = Path(__file__).resolve().parent.parent / "adnyeus.yml"
+
+
+def _read_blueprint_version() -> str:
+    """Read image-version from the blueprint as the single source of truth."""
+    if _BLUEPRINT.exists():
+        config = yaml.safe_load(_BLUEPRINT.read_text()) or {}
+        version = config.get("image-version")
+        if version:
+            return str(version)
+    return "43"  # absolute last-resort fallback
+
+
+DEFAULT_VERSION = _read_blueprint_version()
 
 
 def resolve_yaml_config(
@@ -216,9 +229,10 @@ def main() -> None:
     print("::group::Configuration Detection")
 
     input_image_type = os.environ.get("INPUT_IMAGE_TYPE", DEFAULT_IMAGE_TYPE)
-    input_distro_version = os.environ.get("INPUT_DISTRO_VERSION", DEFAULT_VERSION)
+    input_distro_version = os.environ.get("INPUT_DISTRO_VERSION", "") or DEFAULT_VERSION
     input_enable_plymouth = os.environ.get("INPUT_ENABLE_PLYMOUTH", "true").lower()
     input_enable_zfs = os.environ.get("INPUT_ENABLE_ZFS", "false").lower()
+    input_kernel_profile = os.environ.get("INPUT_KERNEL_PROFILE", "default")
     input_window_manager = os.environ.get("INPUT_WINDOW_MANAGER", "")
     input_desktop_environment = os.environ.get("INPUT_DESKTOP_ENVIRONMENT", "")
     input_os = os.environ.get("INPUT_OS", "")
@@ -229,6 +243,7 @@ def main() -> None:
     print(f"Input OS: {input_os}")
     print(f"Input Plymouth: {input_enable_plymouth}")
     print(f"Input ZFS: {input_enable_zfs}")
+    print(f"Input kernel profile: {input_kernel_profile}")
     print(f"Input window manager: {input_window_manager}")
     print(f"Input desktop environment: {input_desktop_environment}")
     print(f"Input YAML config: {input_yaml_config}")
@@ -280,6 +295,8 @@ def main() -> None:
         "--verbose",
         "--enable-plymouth" if enable_plymouth else "--disable-plymouth",
         "--enable-zfs" if enable_zfs else "--disable-zfs",
+        "--kernel-profile",
+        input_kernel_profile,
     ]
     subprocess.run(cmd, check=True)
 

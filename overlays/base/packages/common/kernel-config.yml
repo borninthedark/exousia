@@ -1,0 +1,63 @@
+apiVersion: exousia.packages/v1alpha1
+kind: KernelConfig
+
+metadata:
+  name: kernel-config
+  type: common
+  description: >
+    Kernel selection and module configuration.  Controls which kernel
+    variant to install and whether out-of-tree modules (ZFS, etc.)
+    are layered into the image.  Akon-built artifacts are consumed
+    via rpm-overrides.yml; COPR kernels are installed directly.
+
+# source: which kernel to use
+#   "default"  — stock Fedora kernel, no changes
+#   "copr"     — enable a COPR repo and swap kernel packages
+#   "oci"      — pull pre-built RPMs from an OCI image (via rpm-overrides)
+spec:
+  source: default
+
+  # --- COPR kernel selection (used when source == "copr") ---
+  # profile name maps to akon profiles/kernels/*.yml naming:
+  #   mainline, stable, longterm, next, cachyos
+  # copr:
+  #   profile: stable
+  #   repo: "@kernel-vanilla/stable"
+
+  # --- OCI artifact (used when source == "oci") ---
+  # Points to a scratch OCI image built by Akon containing /rpms/*.rpm
+  # oci:
+  #   image: ghcr.io/borninthedark/kernel-rpms:6.14.2-fc43
+  #   version: ">= 6.14.2"
+
+  # Packages that get replaced when swapping kernels
+  kernel_packages:
+    - kernel
+    - kernel-core
+    - kernel-modules
+    - kernel-modules-core
+    - kernel-modules-extra
+  kernel_devel_packages:
+    - kernel-devel
+    - kernel-headers
+
+  # --- Out-of-tree modules ---
+  modules: []
+  # Example: enable ZFS
+  # modules:
+  #   - name: zfs
+  #     source: oci
+  #     image: ghcr.io/borninthedark/zfs-kmod-rpms:6.14.2-zfs-2.3.1-fc43
+  #     packages:
+  #       - kmod-zfs
+  #       - zfs
+  #     boot:
+  #       depmod: true
+  #       dracut_modules:
+  #         - zfs
+  #       modules_load:
+  #         - zfs
+  #       enable_units:
+  #         - zfs.target
+  #         - zfs-import-scan.service
+  #       initramfs_rebuild: true

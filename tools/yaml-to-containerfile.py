@@ -56,6 +56,7 @@ class BuildContext:
     use_upstream_sway_config: bool
     base_image: str
     enable_zfs: bool = False
+    kernel_profile: str = "default"  # default, mainline, stable, longterm, next, cachyos
     distro: str = "fedora"  # fedora-only
     desktop_environment: str = ""  # kde, gnome, mate, etc.
     window_manager: str = ""  # sway, kwin, etc.
@@ -121,6 +122,7 @@ class ContainerfileGenerator:
                 "window_manager": self.context.window_manager or None,
                 "enable_plymouth": self.context.enable_plymouth,
                 "enable_zfs": self.context.enable_zfs,
+                "kernel_profile": self.context.kernel_profile,
             },
             "package_loader_modules": selections,
             "bundles": bundles,
@@ -185,6 +187,9 @@ class ContainerfileGenerator:
 
         if self.context.enable_zfs:
             self.lines.append(f"ARG ENABLE_ZFS={str(self.context.enable_zfs).lower()}")
+
+        if self.context.kernel_profile != "default":
+            self.lines.append(f"ARG KERNEL_PROFILE={self.context.kernel_profile}")
 
         self.lines.append("")
 
@@ -534,6 +539,44 @@ class ContainerfileGenerator:
             self.lines.append(f"COPY --from={image} /rpms/ /tmp/{stage}/")
             override_packages.add(stage)
 
+        # Kernel config: COPR swap or OCI kernel artifact
+        kernel_config = loader.load_kernel_config()
+        kernel_source = kernel_config.get("source", "default")
+        kernel_copr_commands: list[str] = []
+        kernel_modules = kernel_config.get("modules", [])
+
+        if kernel_source == "copr":
+            copr_spec = kernel_config.get("copr", {})
+            copr_repo = copr_spec.get("repo", "")
+            if copr_repo:
+                profile_name = copr_spec.get("profile", copr_repo)
+                self.lines.append(f"# Kernel: {profile_name} via COPR {copr_repo}")
+                kernel_copr_commands.append(f"dnf copr enable -y {copr_repo}")
+                kernel_pkgs = kernel_config.get("kernel_packages", [])
+                if kernel_pkgs:
+                    pkgs_str = " ".join(kernel_pkgs)
+                    kernel_copr_commands.append(f"dnf install -y --allowerasing {pkgs_str}")
+
+        elif kernel_source == "oci":
+            oci_spec = kernel_config.get("oci", {})
+            oci_image = oci_spec.get("image", "")
+            if oci_image:
+                stage = f"kernel-override-{len(override_packages)}"
+                self.lines.append(f"# Kernel: OCI artifact {oci_image}")
+                self.lines.append(f"COPY --from={oci_image} /rpms/ /tmp/{stage}/")
+                override_packages.add(stage)
+
+        # Kernel modules (ZFS, etc.): COPY from OCI if source == oci
+        for mod in kernel_modules:
+            mod_source = mod.get("source", "oci")
+            mod_image = mod.get("image", "")
+            mod_name = mod.get("name", "unknown")
+            if mod_source == "oci" and mod_image:
+                stage = f"kmod-{mod_name}-{len(override_packages)}"
+                self.lines.append(f"# Kernel module: {mod_name} from {mod_image}")
+                self.lines.append(f"COPY --from={mod_image} /rpms/ /tmp/{stage}/")
+                override_packages.add(stage)
+
         # Filter version-constrained packages from dnf install (handled by overrides)
         if override_packages:
             install_packages = [pkg for pkg in install_packages if not any(c in pkg for c in "><=")]
@@ -601,9 +644,76 @@ class ContainerfileGenerator:
             stage = f"rpm-override-{idx}"
             self.lines.append(f"    dnf install -y /tmp/{stage}/*.rpm && rm -rf /tmp/{stage}; \\")
 
+        # Kernel COPR swap (enable repo + install with --allowerasing)
+        for cmd in kernel_copr_commands:
+            self.lines.append(f"    {cmd}; \\")
+
+        # Kernel OCI artifact install
+        if kernel_source == "oci":
+            oci_stages = [s for s in override_packages if s.startswith("kernel-override-")]
+            for stage in oci_stages:
+                self.lines.append(
+                    f"    dnf install -y --allowerasing /tmp/{stage}/*.rpm && rm -rf /tmp/{stage}; \\"
+                )
+
+        # Kernel module OCI installs (ZFS, etc.)
+        for mod in kernel_modules:
+            mod_name = mod.get("name", "unknown")
+            mod_source = mod.get("source", "oci")
+            kmod_stages = [s for s in override_packages if s.startswith(f"kmod-{mod_name}-")]
+            if mod_source == "oci" and kmod_stages:
+                for stage in kmod_stages:
+                    mod_pkgs = mod.get("packages", [])
+                    if mod_pkgs:
+                        pkgs_str = " ".join(mod_pkgs)
+                        self.lines.append(
+                            f"    dnf install -y /tmp/{stage}/{{{pkgs_str}}}*.rpm && rm -rf /tmp/{stage}; \\"
+                        )
+                    else:
+                        self.lines.append(
+                            f"    dnf install -y /tmp/{stage}/*.rpm && rm -rf /tmp/{stage}; \\"
+                        )
+
         # Upgrade and cleanup
         self.lines.append("    dnf upgrade -y; \\")
         self.lines.append("    dnf clean all")
+
+        # Kernel module boot integration (separate RUN layer)
+        boot_commands: list[str] = []
+        for mod in kernel_modules:
+            boot = mod.get("boot", {})
+            mod_name = mod.get("name", "unknown")
+            if not boot:
+                continue
+
+            boot_commands.append(f"echo '# Boot integration for {mod_name}'")
+
+            if boot.get("depmod"):
+                boot_commands.append("depmod -a")
+
+            for dracut_mod in boot.get("dracut_modules", []):
+                boot_commands.append(
+                    f"echo 'add_dracutmodules+=\" {dracut_mod} \"' > /usr/lib/dracut/dracut.conf.d/50-{mod_name}.conf"
+                )
+
+            for mod_load in boot.get("modules_load", []):
+                boot_commands.append(f"echo '{mod_load}' > /usr/lib/modules-load.d/{mod_name}.conf")
+
+            for unit in boot.get("enable_units", []):
+                boot_commands.append(f"systemctl enable {unit}")
+
+            if boot.get("initramfs_rebuild"):
+                boot_commands.append(
+                    "for kdir in /usr/lib/modules/*/; do "
+                    'kver=$(basename "$kdir"); '
+                    'dracut -vf "/usr/lib/modules/${kver}/initramfs.img" "$kver"; '
+                    "done"
+                )
+
+        if boot_commands:
+            self.lines.append("")
+            self.lines.append("# Kernel module boot integration")
+            self._render_script_lines(boot_commands, "set -euxo pipefail")
 
     def _process_systemd_module(self, module: dict[str, Any]):
         """Process systemd module (service management)."""
@@ -815,6 +925,8 @@ class ContainerfileGenerator:
                 return self.context.enable_plymouth == (right.lower() == "true")
             if left == "enable_zfs":
                 return self.context.enable_zfs == (right.lower() == "true")
+            if left == "kernel_profile":
+                return self.context.kernel_profile == right
             if left == "use_upstream_sway_config":
                 return self.context.use_upstream_sway_config == (right.lower() == "true")
             if left == "desktop_environment":
@@ -936,6 +1048,11 @@ Examples:
     )
     parser.add_argument("--disable-zfs", action="store_true", help="Disable ZFS support")
     parser.add_argument(
+        "--kernel-profile",
+        default="default",
+        help="Kernel profile (default, mainline, stable, longterm, next, cachyos)",
+    )
+    parser.add_argument(
         "--validate", action="store_true", help="Validate config only, don't generate"
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
@@ -986,6 +1103,7 @@ Examples:
         print(f"  Fedora version: {fedora_version}")
         print(f"  Plymouth: {enable_plymouth}")
         print(f"  ZFS: {enable_zfs}")
+        print(f"  Kernel profile: {args.kernel_profile}")
         print(f"  Sway Config: {'upstream' if use_upstream_sway_config else 'custom'}")
         print(f"  Base image: {base_image}")
         print(f"  Desktop Environment: {desktop_environment}")
@@ -998,6 +1116,7 @@ Examples:
         use_upstream_sway_config=use_upstream_sway_config,
         base_image=base_image,
         enable_zfs=enable_zfs,
+        kernel_profile=args.kernel_profile,
         distro=distro,
         desktop_environment=desktop_environment,
         window_manager=window_manager,
