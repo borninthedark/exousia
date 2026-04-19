@@ -25,6 +25,7 @@ SUPPORTED_KINDS = {
     "PackageRemovalBundle",
     "PackageOverrideBundle",
     "KernelConfig",
+    "KernelProfile",
 }
 DEFAULT_COMMON_BUNDLES = [
     "base-core",
@@ -56,6 +57,7 @@ class PackageLoader:
         self.wm_dir = self.packages_dir / "window-managers"
         self.de_dir = self.packages_dir / "desktop-environments"
         self.common_dir = self.packages_dir / "common"
+        self.kernels_dir = self.packages_dir / "kernels"
 
     def _infer_bundle_type(self, file_path: Path) -> str:
         """Infer bundle type from the file location."""
@@ -65,6 +67,8 @@ class PackageLoader:
             return "desktop-environment"
         if file_path.parent == self.common_dir:
             return "common"
+        if file_path.parent == self.kernels_dir:
+            return "kernel-profile"
         return "unknown"
 
     def _default_common_bundle_paths(self) -> list[Path]:
@@ -432,6 +436,30 @@ class PackageLoader:
             "kernel_packages": spec.get("kernel_packages", []),
             "kernel_devel_packages": spec.get("kernel_devel_packages", []),
             "modules": spec.get("modules", []),
+        }
+
+    def load_kernel_profile(self, name: str) -> dict[str, Any]:
+        """Load a kernel profile by name.
+
+        Args:
+            name: Name of the kernel profile (e.g., 'fedora-default', 'cachyos')
+
+        Returns:
+            Kernel profile dict with source, packages, devel_packages, replaces,
+            and optional copr, image, version_pin fields.
+        """
+        profile_file = self.kernels_dir / f"{name}.yml"
+        config = self.load_yaml(profile_file)
+        spec = config.get("spec", {}) if self._is_typed_bundle(config) else config
+
+        return {
+            "source": spec.get("source", "repo"),
+            "packages": list(spec.get("packages", [])),
+            "devel_packages": list(spec.get("devel_packages", [])),
+            "replaces": list(spec.get("replaces", [])),
+            "copr": spec.get("copr"),
+            "image": spec.get("image"),
+            "version_pin": spec.get("version_pin"),
         }
 
     def _bundle_record(

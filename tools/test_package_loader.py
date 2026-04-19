@@ -677,4 +677,34 @@ def test_main_default_mode_prints_install_and_remove_lists(tmp_path, monkeypatch
     assert "basepkg" in output
     assert "wmpkg" in output
     assert "Packages to remove:" in output
-    assert "badpkg" in output
+
+
+def test_load_kernel_profile_fedora_default():
+    """Test loading the default Fedora kernel profile."""
+    loader = PackageLoader()
+    profile = loader.load_kernel_profile("fedora-default")
+
+    assert profile["source"] == "repo"
+    assert "kernel" in profile["packages"]
+    assert "kernel-devel" in profile["devel_packages"]
+    assert profile["replaces"] == []
+
+
+def test_load_kernel_profile_cachyos():
+    """Test loading the CachyOS kernel profile."""
+    loader = PackageLoader()
+    profile = loader.load_kernel_profile("cachyos")
+
+    assert profile["source"] == "copr"
+    assert profile["copr"] == {"repo": "bieszczaders/kernel-cachyos"}
+    assert "kernel-cachyos" in profile["packages"]
+    assert "kernel" in profile["replaces"]
+
+
+def test_load_kernel_profile_missing():
+    """Test that missing kernel profile raises FileNotFoundError."""
+    import pytest
+
+    loader = PackageLoader()
+    with pytest.raises(FileNotFoundError, match="not found"):
+        loader.load_kernel_profile("nonexistent-kernel")

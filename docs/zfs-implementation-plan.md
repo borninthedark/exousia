@@ -590,8 +590,8 @@ and get exactly kernel 6.7.x installed.
 
 #### Task 1.2: Add `KernelProfile` support to `PackageLoader`
 
-**Owner**: Claude
-**Status**: pending
+**Owner**: Gemini
+**Status**: done
 **Depends on**: Task 1.1 (schema definition)
 **Input**: `KernelProfile` schema, existing `PackageLoader` class
 **Output**: changes to `tools/package_loader.py`:
