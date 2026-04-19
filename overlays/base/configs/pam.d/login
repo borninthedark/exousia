@@ -1,0 +1,17 @@
+#%PAM-1.0
+# PAM configuration for login with YubiKey U2F support
+# If YubiKey authentication succeeds, password is not required
+# If YubiKey is not present, falls back to standard password authentication
+
+auth       include      u2f-sufficient
+auth       substack     system-auth
+auth       include      postlogin
+account    required     pam_nologin.so
+account    include      system-auth
+password   include      system-auth
+session    required     pam_selinux.so close
+session    required     pam_loginuid.so
+session    required     pam_selinux.so open
+session    optional     pam_keyinit.so force revoke
+session    include      system-auth
+session    include      postlogin

@@ -171,6 +171,9 @@ Validates YubiKey hardware authentication setup.
 
 - PAM U2F configuration files present (u2f-required, u2f-sufficient)
 - sudo configured with U2F support
+- login configured with U2F support
+- shared `/etc/Yubico/u2f_keys` authfile configured
+- `/etc/skel/.config/Yubico` symlink present
 - pam-u2f package installed
 
 ### 11. bootc Compliance

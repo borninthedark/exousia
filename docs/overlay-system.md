@@ -11,9 +11,11 @@ filesystem.
 overlays/
 ├── base/                               # Shared across all image types
 │   ├── configs/
-│   │   ├── pam.d/                      # PAM authentication (sudo, U2F)
-│   │   ├── polkit-1/rules.d/          # Polkit authorization rules
-│   │   └── tmpfiles.d/                # systemd-tmpfiles entries
+│   │   ├── pam.d/                      # PAM authentication (login, sudo, U2F)
+│   │   ├── polkit-1/rules.d/           # Polkit authorization rules
+│   │   ├── skel/                       # Skeleton files for new users
+│   │   ├── tmpfiles.d/                 # systemd-tmpfiles entries
+│   │   └── Yubico/                     # Shared PAM U2F authfile location
 │   ├── packages/
 │   │   ├── common/
 │   │   │   ├── base-core.yml          # Core packages for all builds

@@ -1,0 +1,4 @@
+Shared PAM U2F mappings live in this directory.
+
+Populate /etc/Yubico/u2f_keys with pamu2fcfg output for each user who should
+be able to authenticate with pam_u2f.

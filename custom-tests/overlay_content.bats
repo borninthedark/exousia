@@ -59,6 +59,10 @@ assert_has_shebang() {
     assert_file_exists "$OVERLAY_ROOT/base/configs/pam.d/sudo"
 }
 
+@test "PAM login config should exist" {
+    assert_file_exists "$OVERLAY_ROOT/base/configs/pam.d/login"
+}
+
 @test "PAM U2F config files should exist" {
     assert_file_exists "$OVERLAY_ROOT/base/configs/pam.d/u2f-required"
     assert_file_exists "$OVERLAY_ROOT/base/configs/pam.d/u2f-sufficient"
@@ -67,6 +71,22 @@ assert_has_shebang() {
 @test "PAM sudo should reference U2F" {
     run grep -q "u2f-sufficient" "$OVERLAY_ROOT/base/configs/pam.d/sudo"
     assert_success "sudo PAM config should include u2f-sufficient"
+}
+
+@test "PAM login should reference U2F" {
+    run grep -q "u2f-sufficient" "$OVERLAY_ROOT/base/configs/pam.d/login"
+    assert_success "login PAM config should include u2f-sufficient"
+}
+
+@test "PAM U2F include files should use shared /etc/Yubico authfile" {
+    run grep -q "authfile=/etc/Yubico/u2f_keys" "$OVERLAY_ROOT/base/configs/pam.d/u2f-sufficient"
+    assert_success "u2f-sufficient should use the shared authfile"
+    run grep -q "authfile=/etc/Yubico/u2f_keys" "$OVERLAY_ROOT/base/configs/pam.d/u2f-required"
+    assert_success "u2f-required should use the shared authfile"
+}
+
+@test "Skeleton Yubico path should symlink to /etc/Yubico" {
+    assert_symlink_to "$OVERLAY_ROOT/base/configs/skel/.config/Yubico" "/etc/Yubico"
 }
 
 @test "Libvirt polkit rule should exist and reference org.libvirt.unix.manage" {
