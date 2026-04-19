@@ -1,0 +1,31 @@
+---
+apiVersion: exousia.packages/v1alpha1
+kind: KernelProfile
+
+metadata:
+  name: mainline
+  description: >
+    Vanilla mainline kernel from the kernel-vanilla COPR. Intended for testing
+    upcoming upstream kernels against Exousia and out-of-tree module flows.
+
+spec:
+  source: copr
+  copr:
+    repo: "@kernel-vanilla/mainline"
+  packages:
+    - kernel
+    - kernel-core
+    - kernel-modules
+    - kernel-modules-core
+    - kernel-modules-extra
+  devel_packages:
+    - kernel-devel
+    - kernel-headers
+  replaces:
+    - kernel
+    - kernel-core
+    - kernel-modules
+    - kernel-modules-core
+    - kernel-modules-extra
+    - kernel-devel
+    - kernel-headers

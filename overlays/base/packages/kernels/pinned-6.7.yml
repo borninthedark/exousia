@@ -1,0 +1,32 @@
+---
+apiVersion: exousia.packages/v1alpha1
+kind: KernelProfile
+
+metadata:
+  name: pinned-6.7
+  description: >
+    Kernel-vanilla stable kernel constrained to the 6.7 series. This is the
+    profile shape for selecting an explicit kernel line as a declarative input.
+
+spec:
+  source: copr
+  copr:
+    repo: "@kernel-vanilla/stable"
+  packages:
+    - kernel
+    - kernel-core
+    - kernel-modules
+    - kernel-modules-core
+    - kernel-modules-extra
+  devel_packages:
+    - kernel-devel
+    - kernel-headers
+  replaces:
+    - kernel
+    - kernel-core
+    - kernel-modules
+    - kernel-modules-core
+    - kernel-modules-extra
+    - kernel-devel
+    - kernel-headers
+  version_pin: "= 6.7.0"

@@ -1,0 +1,30 @@
+---
+apiVersion: exousia.packages/v1alpha1
+kind: KernelProfile
+
+metadata:
+  name: custom-built
+  description: >
+    Self-built kernel RPM artifact published to an OCI registry. Exousia pulls
+    the RPM set during image assembly instead of enabling an external repo.
+
+spec:
+  source: oci-artifact
+  image: ghcr.io/borninthedark/kernel-rpms:latest
+  packages:
+    - kernel
+    - kernel-core
+    - kernel-modules
+    - kernel-modules-core
+    - kernel-modules-extra
+  devel_packages:
+    - kernel-devel
+    - kernel-headers
+  replaces:
+    - kernel
+    - kernel-core
+    - kernel-modules
+    - kernel-modules-core
+    - kernel-modules-extra
+    - kernel-devel
+    - kernel-headers

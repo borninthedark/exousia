@@ -1,0 +1,30 @@
+---
+apiVersion: exousia.packages/v1alpha1
+kind: KernelProfile
+
+metadata:
+  name: cachyos
+  description: >
+    CachyOS kernel from COPR for testing alternative scheduler and performance
+    tuning choices while retaining Fedora userspace.
+
+spec:
+  source: copr
+  copr:
+    repo: "bieszczaders/kernel-cachyos"
+  packages:
+    - kernel-cachyos
+    - kernel-cachyos-core
+    - kernel-cachyos-modules
+    - kernel-cachyos-modules-extra
+  devel_packages:
+    - kernel-cachyos-devel
+    - kernel-headers
+  replaces:
+    - kernel
+    - kernel-core
+    - kernel-modules
+    - kernel-modules-core
+    - kernel-modules-extra
+    - kernel-devel
+    - kernel-headers

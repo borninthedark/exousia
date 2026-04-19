@@ -1,0 +1,34 @@
+---
+apiVersion: exousia.packages/v1alpha1
+kind: KernelProfile
+
+metadata:
+  name: kernel-profile-schema
+  description: >
+    Reference schema for typed kernel profile documents consumed by Exousia.
+    Profiles describe where a kernel comes from, which packages it provides or
+    replaces, and optional version pinning for profile-specific installs.
+
+spec:
+  source: repo | copr | oci-artifact
+  copr:
+    repo: <copr-owner/project>
+  image: ghcr.io/<owner>/<kernel-artifact-image>:<tag>
+  packages:
+    - kernel
+    - kernel-core
+    - kernel-modules
+    - kernel-modules-core
+    - kernel-modules-extra
+  devel_packages:
+    - kernel-devel
+    - kernel-headers
+  replaces:
+    - kernel
+    - kernel-core
+    - kernel-modules
+    - kernel-modules-core
+    - kernel-modules-extra
+    - kernel-devel
+    - kernel-headers
+  version_pin: "= 6.7.0"

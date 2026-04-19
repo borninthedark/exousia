@@ -527,7 +527,7 @@ parallel unless noted otherwise.
 #### Task 1.1: Define `KernelProfile` bundle schema
 
 **Owner**: Codex
-**Status**: in-progress
+**Status**: done
 **Input**: existing `PackageOverrideBundle` schema in `rpm-overrides.yml`,
 kernel override shape from "Recommended Spec Extensions" above
 **Output**: `overlays/base/packages/kernels/` directory with:
@@ -579,9 +579,19 @@ and get exactly kernel 6.7.x installed.
 - version pinning is supported
 - at least three concrete profiles exist (fedora-default, cachyos, mainline)
 
+**Completion notes**:
+
+- created `overlays/base/packages/kernels/`
+- added `kernel-profile.schema.yml`
+- added concrete profiles:
+  `fedora-default.yml`, `mainline.yml`, `cachyos.yml`, `pinned-6.7.yml`,
+  `custom-built.yml`
+- verified with `uv run yamllint overlays/base/packages/kernels`
+
 #### Task 1.2: Add `KernelProfile` support to `PackageLoader`
 
 **Owner**: Claude
+**Status**: pending
 **Depends on**: Task 1.1 (schema definition)
 **Input**: `KernelProfile` schema, existing `PackageLoader` class
 **Output**: changes to `tools/package_loader.py`:
