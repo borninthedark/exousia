@@ -190,15 +190,17 @@ setup, Forgejo runner registration, and troubleshooting.
 ## YubiKey Authentication
 
 Exousia ships PAM U2F modules for YubiKey hardware authentication. After
-deploying, register your key:
+deploying, register your key in the shared authfile:
 
 ```bash
-mkdir -p ~/.config/Yubico
-pamu2fcfg > ~/.config/Yubico/u2f_keys       # primary key
-pamu2fcfg -n >> ~/.config/Yubico/u2f_keys    # backup key (recommended)
+sudo install -d -m 0755 /etc/Yubico
+pamu2fcfg -u "$USER" | sudo tee -a /etc/Yubico/u2f_keys >/dev/null
+pamu2fcfg -n -u "$USER" | sudo tee -a /etc/Yubico/u2f_keys >/dev/null
 ```
 
-`sudo` accepts YubiKey as an alternative to password by default. See
+New users inherit `~/.config/Yubico -> /etc/Yubico` from `/etc/skel`.
+`sudo` and local `login` accept YubiKey as an alternative to password by
+default. See
 [Fedora YubiKey Quick Docs](https://docs.fedoraproject.org/en-US/quick-docs/using-yubikeys/).
 
 ## Required Secrets and Variables

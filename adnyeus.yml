@@ -238,6 +238,16 @@ modules:
         dst: /usr/share/containers/systemd/
         mode: "0644"
 
+  # Flatpak auto-update (system-wide, daily)
+  - type: files
+    files:
+      - src: overlays/base/systemd/system/update-system-flatpaks.service
+        dst: /usr/lib/systemd/system/update-system-flatpaks.service
+        mode: "0644"
+      - src: overlays/base/systemd/system/update-system-flatpaks.timer
+        dst: /usr/lib/systemd/system/update-system-flatpaks.timer
+        mode: "0644"
+
   # bootc auto-update timer override (daily at 23:15 EST)
   - type: files
     files:
@@ -255,11 +265,13 @@ modules:
         - NetworkManager.service
         - greetd.service
         - bootc-fetch-apply-updates.timer
+        - update-system-flatpaks.timer
         - tuned.service
     user:
       enabled:
         - chezmoi-init.service
         - chezmoi-update.timer
+        - update-user-flatpaks.timer
     default-target: graphical.target
 
   # Note: bluebuild-default-flatpaks-system.service is automatically enabled

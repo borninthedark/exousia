@@ -622,11 +622,29 @@ get_package_manager() {
     assert_success
     run test -f "$MOUNT_POINT/etc/pam.d/sudo"
     assert_success
+    run test -f "$MOUNT_POINT/etc/pam.d/login"
+    assert_success
 }
 
 @test "PAM sudo configuration should include U2F" {
     run grep -q "u2f-sufficient" "$MOUNT_POINT/etc/pam.d/sudo"
     assert_success
+}
+
+@test "PAM login configuration should include U2F" {
+    run grep -q "u2f-sufficient" "$MOUNT_POINT/etc/pam.d/login"
+    assert_success
+}
+
+@test "PAM U2F include files should use shared /etc/Yubico authfile" {
+    run grep -q "authfile=/etc/Yubico/u2f_keys" "$MOUNT_POINT/etc/pam.d/u2f-sufficient"
+    assert_success
+    run grep -q "authfile=/etc/Yubico/u2f_keys" "$MOUNT_POINT/etc/pam.d/u2f-required"
+    assert_success
+}
+
+@test "Skeleton Yubico path should symlink to /etc/Yubico" {
+    assert_symlink_to "$MOUNT_POINT/etc/skel/.config/Yubico" "/etc/Yubico"
 }
 
 # --- User configuration ---

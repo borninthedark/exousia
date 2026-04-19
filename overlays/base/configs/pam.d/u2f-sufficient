@@ -1,2 +1,2 @@
 #%PAM-1.0
-auth       sufficient     pam_u2f.so
+auth       sufficient     pam_u2f.so authfile=/etc/Yubico/u2f_keys

@@ -277,6 +277,9 @@ graph TD
 
 - PAM U2F configuration files present (u2f-required, u2f-sufficient)
 - sudo configured with U2F support
+- login configured with U2F support
+- shared `/etc/Yubico/u2f_keys` authfile path configured
+- `/etc/skel/.config/Yubico` symlink present
 - pam-u2f package installed
 
 **Example**:
@@ -291,6 +294,16 @@ graph TD
 
 @test "PAM sudo configuration should include U2F" {
     run grep -q "u2f-sufficient" "$MOUNT_POINT/etc/pam.d/sudo"
+    assert_success
+}
+
+@test "PAM login configuration should include U2F" {
+    run grep -q "u2f-sufficient" "$MOUNT_POINT/etc/pam.d/login"
+    assert_success
+}
+
+@test "PAM U2F include files should use shared /etc/Yubico authfile" {
+    run grep -q "authfile=/etc/Yubico/u2f_keys" "$MOUNT_POINT/etc/pam.d/u2f-sufficient"
     assert_success
 }
 ```
