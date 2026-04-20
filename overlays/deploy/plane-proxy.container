@@ -1,0 +1,19 @@
+[Unit]
+Description=Plane reverse proxy
+After=plane-web.service plane-space.service plane-admin.service plane-live.service plane-api.service
+Requires=plane-web.service plane-space.service plane-admin.service plane-live.service plane-api.service
+
+[Container]
+Image=docker.io/makeplane/plane-proxy:stable
+ContainerName=plane-proxy
+PublishPort=127.0.0.1:8080:80
+Network=exousia.network
+PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=180
+
+[Install]
+WantedBy=default.target

@@ -106,8 +106,8 @@ graph LR
     end
     subgraph Transpiler
         G["resolve_build_config.py"]
-        F["package_loader.py"]
-        B["yaml-to-containerfile.py"]
+        F["uv run python -m package_loader"]
+        B["uv run python -m generator"]
     end
     A --> G --> B
     O --> B
@@ -121,7 +121,7 @@ graph LR
 | Component | Description |
 |-----------|-------------|
 | **Blueprint** (`adnyeus.yml`) | Declares base image, packages, overlays, scripts, services, and build flags |
-| **Transpiler** (`tools/yaml-to-containerfile.py`) | Reads the blueprint, resolves package sets, optionally writes `build/resolved-build-plan*.json`, and emits a valid Containerfile |
+| **Transpiler** (`uv run python -m generator`) | Reads the blueprint, resolves package sets, optionally writes `build/resolved-build-plan*.json`, and emits a valid Containerfile |
 | **Overlays** | Static files, configs, and scripts under `overlays/base/` (shared) and `overlays/sway/` (desktop) |
 | **Tests** | Pytest validates the Python tooling and Bats validates the built image |
 
@@ -171,8 +171,8 @@ All package selection flows through the package loader. Edit package-set YAML un
 `overlays/base/packages/`, then verify the resolved output before building:
 
 ```bash
-uv run python tools/package_loader.py --wm sway --json
-uv run python tools/yaml-to-containerfile.py \
+uv run python -m package_loader --wm sway --json
+uv run python -m generator \
   --config adnyeus.yml \
   --resolved-package-plan build/resolved-build-plan.json \
   --output Dockerfile.generated

@@ -1,6 +1,6 @@
 # Package Loader CLI
 
-Use `tools/package_loader.py` to inspect the package-set model without
+Use `uv run python -m package_loader` to inspect the package-set model without
 generating a Containerfile. It is the fastest way to answer:
 
 - Which RPMs and package groups does a given WM or DE selection resolve to?
@@ -19,19 +19,19 @@ generating a Containerfile. It is the fastest way to answer:
 Print the default resolved package list for a window manager:
 
 ```bash
-uv run python tools/package_loader.py --wm sway
+uv run python -m package_loader --wm sway
 ```
 
 Print the normalized resolved plan as JSON:
 
 ```bash
-uv run python tools/package_loader.py --wm sway --json
+uv run python -m package_loader --wm sway --json
 ```
 
 Resolve an explicit package-set selection instead of the default common package sets:
 
 ```bash
-uv run python tools/package_loader.py \
+uv run python -m package_loader \
   --wm sway \
   --json \
   --common base-core \
@@ -42,7 +42,7 @@ uv run python tools/package_loader.py \
 Export legacy text manifests:
 
 ```bash
-uv run python tools/package_loader.py \
+uv run python -m package_loader \
   --wm sway \
   --export \
   --output-dir custom-pkgs
@@ -51,8 +51,8 @@ uv run python tools/package_loader.py \
 List available targets:
 
 ```bash
-uv run python tools/package_loader.py --list-wms
-uv run python tools/package_loader.py --list-des
+uv run python -m package_loader --list-wms
+uv run python -m package_loader --list-des
 ```
 
 ## Options
@@ -72,7 +72,7 @@ uv run python tools/package_loader.py --list-des
 ## Output Model
 
 `--json` emits the same normalized package-plan model consumed by
-[`tools/yaml-to-containerfile.py`](../tools/yaml-to-containerfile.py) when it
+[`uv run python -m generator`](../tools/generator/) when it
 writes `--resolved-package-plan`.
 
 Important sections:

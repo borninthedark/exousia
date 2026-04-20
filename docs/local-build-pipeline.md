@@ -11,15 +11,17 @@ graph LR
         FG["Forgejo<br/>:3000"]
         RN["Forgejo Runner"]
         REG["Local Registry<br/>:5000"]
+        PL["Plane<br/>:8080"]
     end
 
     subgraph BUILD["Build Pipeline"]
-        GEN["yaml-to-containerfile.py"]
+        GEN["uv run python -m generator"]
         BA["buildah bud"]
         SK["skopeo copy"]
     end
 
     FG -->|triggers| RN
+    FG -->|integrates| PL
     RN -->|runs| GEN
     GEN --> BA
     BA -->|push| REG
@@ -36,10 +38,13 @@ All Quadlet definitions live in `overlays/deploy/`:
 | `forgejo.container` | Container | Self-hosted git forge (ports 3000, 2222) |
 | `forgejo-runner.container` | Container | Forgejo Actions CI runner |
 | `exousia-registry.container` | Container | Local container registry (port 5000) |
+| `plane-*.container` | Container | Plane app, data services, and proxy (port 8080) |
 | `forgejo-data.volume` | Volume | Persistent Forgejo data |
 | `forgejo-runner-data.volume` | Volume | Persistent runner data |
 | `exousia-registry-data.volume` | Volume | Persistent registry storage |
+| `plane-*.volume` | Volume | Persistent Plane data services |
 | `exousia.network` | Network | Shared network (10.89.1.0/24) |
+| `plane.env.example` | Env file template | Plane configuration copied to user config at runtime |
 
 ## Prerequisites
 
@@ -57,11 +62,16 @@ These tools are already included in the bootc image:
 ```bash
 make quadlet-install
 make quadlet-start
+make plane-env-init
+make plane-quadlet-start
 ```
 
 This copies all `.container`, `.volume`, and `.network` files to
 `~/.config/containers/systemd/`, reloads systemd, and starts Forgejo and the
-local registry.
+local registry. `make plane-env-init` creates
+`~/.config/exousia/plane/plane.env`, and `make plane-quadlet-start` brings up
+Plane on the same Podman network so it can integrate with Forgejo by service
+name.
 
 ### Verify services are running
 
@@ -73,6 +83,9 @@ curl -s localhost:5000/v2/
 
 # Forgejo UI
 curl -s -o /dev/null -w "%{http_code}" localhost:3000
+
+# Plane UI
+curl -s -o /dev/null -w "%{http_code}" localhost:8080
 ```
 
 ### Forgejo first-run setup
@@ -140,10 +153,33 @@ skopeo list-tags docker://localhost:5000/exousia --tls-verify=false
 
 ```bash
 make quadlet-start             # Start Forgejo + registry
+make plane-quadlet-start       # Start Plane in the documented service order
+make plane-quadlet-stop        # Stop the full Plane stack
+make plane-quadlet-status      # Show Plane service status
+make plane-quadlet-logs        # Follow Plane logs
 make quadlet-stop              # Stop all services
 make quadlet-status            # Show service status
 make quadlet-logs              # Follow logs (all services)
 ```
+
+## Plane + Forgejo
+
+Plane is deployed on the shared `exousia.network` instead of a dedicated Plane
+network. That is intentional: the Exousia local stack can treat Forgejo as the
+authoritative SCM endpoint for project planning and delivery.
+
+- from your browser, open Forgejo at `http://localhost:3000`
+- from your browser, open Plane at `http://localhost:8080`
+- from inside the Plane containers, use `http://forgejo:3000` when configuring
+  Forgejo-backed integrations for the Exousia project
+
+The Plane Quadlets follow the official Podman Quadlet startup order, adapted to
+the shared Exousia network:
+
+1. `exousia-network.service`
+2. `plane-db.service`, `plane-redis.service`, `plane-mq.service`, `plane-minio.service`
+3. `plane-api.service`, `plane-worker.service`, `plane-beat-worker.service`, `plane-migrator.service`
+4. `plane-web.service`, `plane-space.service`, `plane-admin.service`, `plane-live.service`, `plane-proxy.service`
 
 ## Troubleshooting
 

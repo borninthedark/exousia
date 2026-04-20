@@ -280,8 +280,11 @@ def main() -> None:
 
     containerfile_path = Path("Dockerfile.generated")
     cmd = [
-        "python3",
-        "tools/yaml-to-containerfile.py",
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "generator",
         "--config",
         str(resolved_yaml),
         "--image-type",

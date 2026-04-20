@@ -4,24 +4,17 @@ Unit tests for yaml-to-containerfile transpiler
 ================================================
 """
 
-import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import yaml
 
-# Load module from file path (handles hyphens in filename)
-script_path = Path(__file__).parent / "yaml-to-containerfile.py"
-spec = importlib.util.spec_from_file_location("yaml_to_containerfile", script_path)
-assert spec is not None, f"Could not load module spec from {script_path}"
-yaml_to_containerfile = importlib.util.module_from_spec(spec)
-assert spec.loader is not None, "Module spec has no loader"
-spec.loader.exec_module(yaml_to_containerfile)
+# Add tools directory to path
+sys.path.insert(0, str(Path(__file__).parent))
 
-ContainerfileGenerator = yaml_to_containerfile.ContainerfileGenerator
-BuildContext = yaml_to_containerfile.BuildContext
-determine_base_image = yaml_to_containerfile.determine_base_image
-FEDORA_ATOMIC_VARIANTS = yaml_to_containerfile.FEDORA_ATOMIC_VARIANTS
+from generator import FEDORA_ATOMIC_VARIANTS, BuildContext, ContainerfileGenerator
+from generator.cli import determine_base_image
 
 
 def test_generator_is_stateless():

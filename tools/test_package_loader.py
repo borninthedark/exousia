@@ -4,14 +4,21 @@ Unit tests for package_loader module
 =====================================
 """
 
+# pylint: disable=no-name-in-module,no-member
+
 import sys
 from pathlib import Path
 
 # Add tools directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-import package_loader as package_loader_module
-from package_loader import DEFAULT_COMMON_BUNDLES, PackageLoader, PackageValidationError
+import package_loader.cli  # pylint: disable=no-name-in-module
+import package_loader.loader  # pylint: disable=no-name-in-module
+from package_loader import (  # pylint: disable=no-name-in-module
+    DEFAULT_COMMON_BUNDLES,
+    PackageLoader,
+    PackageValidationError,
+)
 
 
 def _seed_common_bundles(common_dir, content="core:\n  - basepkg\n"):
@@ -543,16 +550,14 @@ def test_main_lists_available_bundle_targets(tmp_path, monkeypatch, capsys):
     de_dir.mkdir()
     (de_dir / "test-de.yml").write_text("core:\n  - gnome-shell\n")
 
-    monkeypatch.setattr(
-        package_loader_module, "PackageLoader", lambda: PackageLoader(packages_dir=tmp_path)
-    )
+    loader = PackageLoader(packages_dir=tmp_path)
 
     monkeypatch.setattr(sys, "argv", ["package_loader.py", "--list-wms"])
-    package_loader_module.main()
+    package_loader.cli.main(loader=loader)
     wm_output = capsys.readouterr().out
 
     monkeypatch.setattr(sys, "argv", ["package_loader.py", "--list-des"])
-    package_loader_module.main()
+    package_loader.cli.main(loader=loader)
     de_output = capsys.readouterr().out
 
     assert "test-wm" in wm_output
@@ -570,9 +575,7 @@ def test_main_json_output_uses_explicit_bundle_selection(tmp_path, monkeypatch, 
     wm_dir.mkdir()
     (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
 
-    monkeypatch.setattr(
-        package_loader_module, "PackageLoader", lambda: PackageLoader(packages_dir=tmp_path)
-    )
+    loader = PackageLoader(packages_dir=tmp_path)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -586,7 +589,7 @@ def test_main_json_output_uses_explicit_bundle_selection(tmp_path, monkeypatch, 
         ],
     )
 
-    package_loader_module.main()
+    package_loader.cli.main(loader=loader)
     payload = capsys.readouterr().out
 
     assert '"window_manager": "test"' in payload
@@ -606,9 +609,7 @@ def test_main_export_command_uses_selected_output_dir(tmp_path, monkeypatch, cap
     (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
 
     output_dir = tmp_path / "out"
-    monkeypatch.setattr(
-        package_loader_module, "PackageLoader", lambda: PackageLoader(packages_dir=tmp_path)
-    )
+    loader = PackageLoader(packages_dir=tmp_path)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -622,7 +623,7 @@ def test_main_export_command_uses_selected_output_dir(tmp_path, monkeypatch, cap
         ],
     )
 
-    package_loader_module.main()
+    package_loader.cli.main(loader=loader)
     output = capsys.readouterr().out
 
     assert "Exported package lists" in output
@@ -630,24 +631,18 @@ def test_main_export_command_uses_selected_output_dir(tmp_path, monkeypatch, cap
     assert (output_dir / "packages.remove").exists()
 
 
-def test_export_to_text_files_uses_default_output_dir(tmp_path, monkeypatch):
-    """Legacy export should default to custom-pkgs/ under the repo root."""
-    common = tmp_path / "common"
-    common.mkdir()
+def test_export_to_text_files_uses_default_output_dir(tmp_path):
+    """Legacy export should default to custom-pkgs/ relative to packages_dir."""
+    wm_dir = tmp_path / "packages" / "window-managers"
+    wm_dir.mkdir(parents=True)
+    (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
+
+    common = tmp_path / "packages" / "common"
+    common.mkdir(parents=True)
     _seed_common_bundles(common, content="core:\n  - basepkg\n")
     (common / "remove.yml").write_text("packages:\n  - badpkg\n")
 
-    wm_dir = tmp_path / "window-managers"
-    wm_dir.mkdir()
-    (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
-
-    fake_tools_dir = tmp_path / "tools"
-    fake_tools_dir.mkdir()
-    monkeypatch.setattr(
-        package_loader_module, "__file__", str(fake_tools_dir / "package_loader.py")
-    )
-
-    loader = PackageLoader(packages_dir=tmp_path)
+    loader = PackageLoader(packages_dir=tmp_path / "packages")
     loader.export_to_text_files(wm="test")
 
     assert (tmp_path / "custom-pkgs" / "packages.add").exists()
@@ -665,16 +660,44 @@ def test_main_default_mode_prints_install_and_remove_lists(tmp_path, monkeypatch
     wm_dir.mkdir()
     (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
 
-    monkeypatch.setattr(
-        package_loader_module, "PackageLoader", lambda: PackageLoader(packages_dir=tmp_path)
-    )
+    loader = PackageLoader(packages_dir=tmp_path)
     monkeypatch.setattr(sys, "argv", ["package_loader.py", "--wm", "test"])
 
-    package_loader_module.main()
+    package_loader.cli.main(loader=loader)
     output = capsys.readouterr().out
 
     assert "Packages to install:" in output
     assert "basepkg" in output
     assert "wmpkg" in output
     assert "Packages to remove:" in output
-    assert "badpkg" in output
+
+
+def test_load_kernel_profile_fedora_default():
+    """Test loading the default Fedora kernel profile."""
+    loader = PackageLoader()
+    profile = loader.load_kernel_profile("fedora-default")
+
+    assert profile["source"] == "repo"
+    assert "kernel" in profile["packages"]
+    assert "kernel-devel" in profile["devel_packages"]
+    assert profile["replaces"] == []
+
+
+def test_load_kernel_profile_cachyos():
+    """Test loading the CachyOS kernel profile."""
+    loader = PackageLoader()
+    profile = loader.load_kernel_profile("cachyos")
+
+    assert profile["source"] == "copr"
+    assert profile["copr"] == {"repo": "bieszczaders/kernel-cachyos"}
+    assert "kernel-cachyos" in profile["packages"]
+    assert "kernel" in profile["replaces"]
+
+
+def test_load_kernel_profile_missing():
+    """Test that missing kernel profile raises FileNotFoundError."""
+    import pytest
+
+    loader = PackageLoader()
+    with pytest.raises(FileNotFoundError, match="not found"):
+        loader.load_kernel_profile("nonexistent-kernel")

@@ -1,0 +1,19 @@
+[Unit]
+Description=Plane live collaboration service
+After=plane-api.service plane-redis.service
+Requires=plane-api.service plane-redis.service
+
+[Container]
+Image=docker.io/makeplane/plane-live:stable
+ContainerName=plane-live
+Exec=node live/dist/server.js live
+Network=exousia.network
+PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=180
+
+[Install]
+WantedBy=default.target

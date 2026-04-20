@@ -1,0 +1,19 @@
+[Unit]
+Description=Plane background worker
+After=plane-api.service plane-db.service plane-redis.service plane-mq.service plane-minio.service
+Requires=plane-api.service plane-db.service plane-redis.service plane-mq.service plane-minio.service
+
+[Container]
+Image=docker.io/makeplane/plane-backend:stable
+ContainerName=plane-worker
+Exec=./bin/docker-entrypoint-worker.sh
+Network=exousia.network
+PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

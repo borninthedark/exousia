@@ -1,0 +1,22 @@
+---
+apiVersion: exousia.packages/v1alpha1
+kind: KernelProfile
+
+metadata:
+  name: fedora-default
+  description: >
+    Stock Fedora kernel from the base image. No additional repositories or OCI
+    artifacts are required; Exousia keeps the kernel shipped by the base image.
+
+spec:
+  source: repo
+  packages:
+    - kernel
+    - kernel-core
+    - kernel-modules
+    - kernel-modules-core
+    - kernel-modules-extra
+  devel_packages:
+    - kernel-devel
+    - kernel-headers
+  replaces: []

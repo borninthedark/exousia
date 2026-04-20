@@ -71,7 +71,7 @@ overlays/
 
 ## How Overlays Map to the Image
 
-The transpiler (`tools/yaml-to-containerfile.py`) reads the blueprint and
+The transpiler package (`uv run python -m generator`) reads the blueprint and
 generates `COPY` directives. The general mapping:
 
 | Overlay Path | Image Destination | Purpose |
@@ -93,7 +93,7 @@ generates `COPY` directives. The general mapping:
 ## Package System
 
 Packages are declared in YAML files under `base/packages/`. The package loader
-(`tools/package_loader.py`) reads typed package-set definitions and emits explicit
+(`uv run python -m package_loader`) reads typed package-set definitions and emits explicit
 `dnf5` group operations plus RPM install/remove commands.
 
 **Processing order:**

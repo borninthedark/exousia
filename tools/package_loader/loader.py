@@ -1,60 +1,43 @@
-#!/usr/bin/env python3
-"""
-Package Loader for Exousia
-===========================
-
-Loads and merges package definitions from YAML files for different desktop
-environments and window managers.
-"""
-
-import json
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-
-class PackageValidationError(ValueError):
-    """Raised when a package definition is structurally invalid."""
-
-
-SUPPORTED_API_VERSIONS = {"exousia.packages/v1alpha1"}
-SUPPORTED_KINDS = {
-    "PackageBundle",
-    "FeatureBundle",
-    "PackageRemovalBundle",
-    "PackageOverrideBundle",
-}
-DEFAULT_COMMON_BUNDLES = [
-    "base-core",
-    "base-media",
-    "base-devtools",
-    "base-rpm-packaging",
-    "base-virtualization",
-    "base-security",
-    "base-network",
-    "base-shell",
-]
+from .constants import DEFAULT_COMMON_BUNDLES
+from .exceptions import PackageValidationError
+from .validator import is_typed_bundle, normalize_package_item, validate_config
 
 
 class PackageLoader:
     """Loads package definitions from YAML files."""
 
-    def __init__(self, packages_dir: Path | None = None):
+    def __init__(
+        self,
+        packages_dir: Path | None = None,
+        wm_dir: Path | None = None,
+        de_dir: Path | None = None,
+        common_dir: Path | None = None,
+        kernels_dir: Path | None = None,
+    ):
         """Initialize the package loader.
 
         Args:
             packages_dir: Root directory containing package definitions
+            wm_dir: Directory containing window manager definitions
+            de_dir: Directory containing desktop environment definitions
+            common_dir: Directory containing common package definitions
+            kernels_dir: Directory containing kernel profile definitions
         """
         if packages_dir is None:
             # Default to ../packages relative to this script
-            script_dir = Path(__file__).parent
+            script_dir = Path(__file__).parent.parent
             packages_dir = script_dir.parent / "overlays" / "base" / "packages"
 
         self.packages_dir = Path(packages_dir)
-        self.wm_dir = self.packages_dir / "window-managers"
-        self.de_dir = self.packages_dir / "desktop-environments"
-        self.common_dir = self.packages_dir / "common"
+        self.wm_dir = Path(wm_dir) if wm_dir else self.packages_dir / "window-managers"
+        self.de_dir = Path(de_dir) if de_dir else self.packages_dir / "desktop-environments"
+        self.common_dir = Path(common_dir) if common_dir else self.packages_dir / "common"
+        self.kernels_dir = Path(kernels_dir) if kernels_dir else self.packages_dir / "kernels"
 
     def _infer_bundle_type(self, file_path: Path) -> str:
         """Infer bundle type from the file location."""
@@ -64,6 +47,8 @@ class PackageLoader:
             return "desktop-environment"
         if file_path.parent == self.common_dir:
             return "common"
+        if file_path.parent == self.kernels_dir:
+            return "kernel-profile"
         return "unknown"
 
     def _default_common_bundle_paths(self) -> list[Path]:
@@ -72,182 +57,15 @@ class PackageLoader:
 
     def _is_typed_bundle(self, config: dict[str, Any]) -> bool:
         """Return True if the config uses the typed bundle schema."""
-        return "apiVersion" in config or "kind" in config or "spec" in config
+        return is_typed_bundle(config)
 
     def _normalize_package_item(self, item: Any, file_path: Path, key_path: str) -> str:
         """Normalize a package item to a package name string."""
-        if isinstance(item, str):
-            normalized = item.strip()
-            if normalized:
-                return normalized
-            raise PackageValidationError(
-                f"Invalid empty package entry at {file_path}:{key_path or '<root>'}"
-            )
-
-        if isinstance(item, dict):
-            name = item.get("name")
-            if isinstance(name, str) and name.strip():
-                return name.strip()
-            raise PackageValidationError(
-                f"Package object must contain non-empty 'name' at {file_path}:{key_path or '<root>'}"
-            )
-
-        raise PackageValidationError(
-            f"Unsupported package entry type at {file_path}:{key_path or '<root>'}: {type(item).__name__}"
-        )
+        return normalize_package_item(item, file_path, key_path)
 
     def _validate_config(self, config: dict[str, Any], file_path: Path) -> None:
         """Validate package YAML structure while remaining backward compatible."""
-        if not isinstance(config, dict):
-            raise PackageValidationError(f"Package definition must be a mapping: {file_path}")
-
-        if self._is_typed_bundle(config):
-            api_version = config.get("apiVersion")
-            if api_version not in SUPPORTED_API_VERSIONS:
-                raise PackageValidationError(
-                    f"Unsupported or missing 'apiVersion' in {file_path}: {api_version!r}"
-                )
-
-            kind = config.get("kind")
-            if kind not in SUPPORTED_KINDS:
-                raise PackageValidationError(
-                    f"Unsupported or missing 'kind' in {file_path}: {kind!r}"
-                )
-
-        metadata = config.get("metadata")
-        if metadata is not None and not isinstance(metadata, dict):
-            raise PackageValidationError(f"'metadata' must be a mapping in {file_path}")
-
-        if isinstance(metadata, dict):
-            name = metadata.get("name")
-            if name is not None and (not isinstance(name, str) or not name.strip()):
-                raise PackageValidationError(
-                    f"'metadata.name' must be a non-empty string in {file_path}"
-                )
-
-            metadata_type = metadata.get("type")
-            if metadata_type is not None and (
-                not isinstance(metadata_type, str) or not metadata_type.strip()
-            ):
-                raise PackageValidationError(
-                    f"'metadata.type' must be a non-empty string in {file_path}"
-                )
-
-        groups = config.get("groups")
-        if groups is not None:
-            if isinstance(groups, list):
-                if not all(isinstance(group, str) for group in groups):
-                    raise PackageValidationError(
-                        f"'groups' must be a list of strings in {file_path}"
-                    )
-            elif isinstance(groups, dict):
-                for group_key in ("install", "remove"):
-                    values = groups.get(group_key, [])
-                    if values is not None and (
-                        not isinstance(values, list)
-                        or not all(isinstance(group, str) for group in values)
-                    ):
-                        raise PackageValidationError(
-                            f"'groups.{group_key}' must be a list of strings in {file_path}"
-                        )
-            else:
-                raise PackageValidationError(
-                    f"'groups' must be a list or install/remove mapping in {file_path}"
-                )
-
-        if self._is_typed_bundle(config):
-            spec = config.get("spec")
-            if not isinstance(spec, dict):
-                raise PackageValidationError(f"'spec' must be a mapping in {file_path}")
-
-            packages = spec.get("packages", [])
-            if not isinstance(packages, list):
-                raise PackageValidationError(f"'spec.packages' must be a list in {file_path}")
-            for index, item in enumerate(packages):
-                self._normalize_package_item(item, file_path, f"spec.packages[{index}]")
-
-            groups = spec.get("groups", [])
-            if groups is not None and (not isinstance(groups, (list, dict))):
-                raise PackageValidationError(
-                    f"'spec.groups' must be a list or install/remove mapping in {file_path}"
-                )
-            if isinstance(groups, list) and not all(isinstance(group, str) for group in groups):
-                raise PackageValidationError(
-                    f"'spec.groups' must be a list of strings in {file_path}"
-                )
-            if isinstance(groups, dict):
-                for group_key in ("install", "remove"):
-                    values = groups.get(group_key, [])
-                    if values is not None and (
-                        not isinstance(values, list)
-                        or not all(isinstance(group, str) for group in values)
-                    ):
-                        raise PackageValidationError(
-                            f"'spec.groups.{group_key}' must be a list of strings in {file_path}"
-                        )
-
-            conflicts = spec.get("conflicts", {})
-            if conflicts is not None:
-                if not isinstance(conflicts, dict):
-                    raise PackageValidationError(
-                        f"'spec.conflicts' must be a mapping in {file_path}"
-                    )
-                for conflict_key in ("packages", "features"):
-                    values = conflicts.get(conflict_key, [])
-                    if values is not None and (
-                        not isinstance(values, list)
-                        or not all(isinstance(value, str) for value in values)
-                    ):
-                        raise PackageValidationError(
-                            f"'spec.conflicts.{conflict_key}' must be a list of strings in {file_path}"
-                        )
-
-            replaces = spec.get("replaces", [])
-            if replaces is not None and (
-                not isinstance(replaces, list)
-                or not all(isinstance(value, str) for value in replaces)
-            ):
-                raise PackageValidationError(
-                    f"'spec.replaces' must be a list of strings in {file_path}"
-                )
-
-            requires = spec.get("requires", {})
-            if requires is not None:
-                if not isinstance(requires, dict):
-                    raise PackageValidationError(
-                        f"'spec.requires' must be a mapping in {file_path}"
-                    )
-                for requires_key in ("features",):
-                    values = requires.get(requires_key, [])
-                    if values is not None and (
-                        not isinstance(values, list)
-                        or not all(isinstance(value, str) for value in values)
-                    ):
-                        raise PackageValidationError(
-                            f"'spec.requires.{requires_key}' must be a list of strings in {file_path}"
-                        )
-            return
-
-        def walk(node: Any, key_path: str = "") -> None:
-            if isinstance(node, dict):
-                for key, value in node.items():
-                    if key in ("metadata", "groups"):
-                        continue
-                    child_path = f"{key_path}.{key}" if key_path else str(key)
-                    walk(value, child_path)
-                return
-
-            if isinstance(node, list):
-                for index, item in enumerate(node):
-                    item_path = f"{key_path}[{index}]"
-                    self._normalize_package_item(item, file_path, item_path)
-                return
-
-            raise PackageValidationError(
-                f"Unsupported value type in {file_path}:{key_path or '<root>'}: {type(node).__name__}"
-            )
-
-        walk(config)
+        validate_config(config, file_path)
 
     def load_yaml(self, file_path: Path) -> dict[str, Any]:
         """Load a YAML file and return its contents."""
@@ -273,24 +91,24 @@ class PackageLoader:
         Returns:
             List of package names
         """
+        packages: list[str] = []
+
         if self._is_typed_bundle(config):
             spec = config.get("spec", {})
+            pkgs = spec.get("packages", [])
             return [
-                self._normalize_package_item(item, Path("<memory>"), "spec.packages")
-                for item in spec.get("packages", [])
+                self._normalize_package_item(pkg, Path("unknown"), "spec.packages") for pkg in pkgs
             ]
-
-        packages: list[str] = []
 
         for key, value in config.items():
             if key in ("metadata", "groups"):
                 continue
 
             if isinstance(value, list):
-                packages.extend(
-                    self._normalize_package_item(value_item, Path("<memory>"), key)
-                    for value_item in value
-                )
+                for index, item in enumerate(value):
+                    packages.append(
+                        self._normalize_package_item(item, Path("unknown"), f"{key}[{index}]")
+                    )
             elif isinstance(value, dict):
                 packages.extend(self.flatten_packages(value))
 
@@ -411,6 +229,51 @@ class PackageLoader:
         config = self.load_yaml(override_file)
         spec = config.get("spec", {}) if self._is_typed_bundle(config) else config
         return list(spec.get("overrides", []))
+
+    def load_kernel_config(self) -> dict[str, Any]:
+        """Load kernel configuration from kernel-config.yml.
+
+        Returns:
+            Kernel config dict with source, copr/oci settings, and modules.
+            Empty dict with source='default' if the file does not exist.
+        """
+        config_file = self.common_dir / "kernel-config.yml"
+        if not config_file.exists():
+            return {"source": "default", "modules": []}
+        config = self.load_yaml(config_file)
+        spec = config.get("spec", {}) if self._is_typed_bundle(config) else config
+        return {
+            "source": spec.get("source", "default"),
+            "copr": spec.get("copr", {}),
+            "oci": spec.get("oci", {}),
+            "kernel_packages": spec.get("kernel_packages", []),
+            "kernel_devel_packages": spec.get("kernel_devel_packages", []),
+            "modules": spec.get("modules", []),
+        }
+
+    def load_kernel_profile(self, name: str) -> dict[str, Any]:
+        """Load a kernel profile by name.
+
+        Args:
+            name: Name of the kernel profile (e.g., 'fedora-default', 'cachyos')
+
+        Returns:
+            Kernel profile dict with source, packages, devel_packages, replaces,
+            and optional copr, image, version_pin fields.
+        """
+        profile_file = self.kernels_dir / f"{name}.yml"
+        config = self.load_yaml(profile_file)
+        spec = config.get("spec", {}) if self._is_typed_bundle(config) else config
+
+        return {
+            "source": spec.get("source", "repo"),
+            "packages": list(spec.get("packages", [])),
+            "devel_packages": list(spec.get("devel_packages", [])),
+            "replaces": list(spec.get("replaces", [])),
+            "copr": spec.get("copr"),
+            "image": spec.get("image"),
+            "version_pin": spec.get("version_pin"),
+        }
 
     def _bundle_record(
         self, file_path: Path, config: dict[str, Any], selected_as: str
@@ -669,7 +532,7 @@ class PackageLoader:
         )
 
         if output_dir is None:
-            output_dir = Path(__file__).parent.parent / "custom-pkgs"
+            output_dir = self.packages_dir.parent / "custom-pkgs"
 
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -694,103 +557,3 @@ class PackageLoader:
             f.write("# NOTE: Use packages/ YAML definitions with package-loader module instead\n\n")
             for pkg in packages["remove"]:
                 f.write(f"{pkg}\n")
-
-
-def main():
-    """CLI entry point for package loader."""
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Load and manage package definitions for Exousia builds"
-    )
-    parser.add_argument("--wm", help="Window manager to load")
-    parser.add_argument("--de", help="Desktop environment to load")
-    parser.add_argument("--list-wms", action="store_true", help="List available window managers")
-    parser.add_argument(
-        "--list-des", action="store_true", help="List available desktop environments"
-    )
-    parser.add_argument(
-        "--export", action="store_true", help="Export to text files (legacy format)"
-    )
-    parser.add_argument("--output-dir", type=Path, help="Output directory for exported files")
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Print normalized resolved package plan as JSON",
-    )
-    parser.add_argument(
-        "--common",
-        action="append",
-        dest="common_bundles",
-        help="Explicit common package set to include (repeatable)",
-    )
-    parser.add_argument(
-        "--feature",
-        action="append",
-        dest="feature_bundles",
-        help="Explicit feature package set to include (repeatable)",
-    )
-    parser.add_argument(
-        "--common-bundle", action="append", dest="common_bundles", help=argparse.SUPPRESS
-    )
-    parser.add_argument(
-        "--feature-bundle", action="append", dest="feature_bundles", help=argparse.SUPPRESS
-    )
-
-    args = parser.parse_args()
-
-    loader = PackageLoader()
-
-    if args.list_wms:
-        wms = loader.list_available_wms()
-        print("Available window managers:")
-        for wm in wms:
-            print(f"  - {wm}")
-        return
-
-    if args.list_des:
-        des = loader.list_available_des()
-        print("Available desktop environments:")
-        for de in des:
-            print(f"  - {de}")
-        return
-
-    if args.export:
-        loader.export_to_text_files(wm=args.wm, de=args.de, output_dir=args.output_dir)
-        print(f"✓ Exported package lists to {args.output_dir or 'custom-pkgs/'}")
-        return
-
-    # Default: print package list
-    if args.json:
-        print(
-            json.dumps(
-                loader.get_package_plan(
-                    wm=args.wm,
-                    de=args.de,
-                    include_common=args.common_bundles is None,
-                    common_bundles=args.common_bundles,
-                    feature_bundles=args.feature_bundles,
-                ),
-                indent=2,
-            )
-        )
-        return
-
-    packages = loader.get_package_list(
-        wm=args.wm,
-        de=args.de,
-        include_common=args.common_bundles is None,
-        extras=args.feature_bundles,
-    )
-
-    print("Packages to install:")
-    for pkg in packages["install"]:
-        print(f"  {pkg}")
-
-    print("\nPackages to remove:")
-    for pkg in packages["remove"]:
-        print(f"  {pkg}")
-
-
-if __name__ == "__main__":
-    main()

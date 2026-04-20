@@ -340,6 +340,40 @@ assert_has_shebang() {
     assert_file_exists "$OVERLAY_ROOT/deploy/exousia.network"
 }
 
+@test "Plane quadlets should exist" {
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-db.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-redis.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-mq.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-minio.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-api.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-worker.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-beat-worker.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-migrator.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-web.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-space.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-admin.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-live.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-proxy.container"
+}
+
+@test "Plane Quadlet assets should include env example and persistent volumes" {
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane.env.example"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-db-data.volume"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-redis-data.volume"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-mq-data.volume"
+    assert_file_exists "$OVERLAY_ROOT/deploy/plane-minio-data.volume"
+}
+
+@test "Plane quadlets should use the shared exousia network and env file" {
+    run grep -q "^Network=exousia.network" "$OVERLAY_ROOT/deploy/plane-api.container"
+    assert_success "plane-api.container should use exousia.network"
+    run grep -q "^PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env" \
+        "$OVERLAY_ROOT/deploy/plane-api.container"
+    assert_success "plane-api.container should reference the shared plane env file"
+    run grep -q "^Network=exousia.network" "$OVERLAY_ROOT/deploy/plane-proxy.container"
+    assert_success "plane-proxy.container should use exousia.network"
+}
+
 # ============================================================
 # Chezmoi systemd units
 # ============================================================

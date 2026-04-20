@@ -4,15 +4,11 @@ Python tools for managing the Exousia bootc image build process.
 
 ## Tools
 
-| Script | Purpose |
-|--------|---------|
-| `yaml-to-containerfile.py` | Transpiles YAML blueprints into Containerfiles |
+| Tool | Purpose |
+|------|---------|
+| `generator/` | Transpiler package for YAML blueprints to Containerfiles (`uv run python -m generator`) |
 | `resolve_build_config.py` | Resolves CI build parameters from inputs and `adnyeus.yml` |
-| `package_loader.py` | Loads, validates, and resolves YAML package definitions for the transpiler |
-| `package_dependency_checker.py` | Checks for missing or conflicting package dependencies |
-| `yaml_selector_service.py` | Selects the correct YAML definition for a given build target |
-| `constants.py` | Shared constants and enums (`ImageType`, `BuildStatus`) |
-| `distro_mapper.py` | Maps image types to base images and package managers |
+| `package_loader/` | Package-loader package for typed YAML package definitions (`uv run python -m package_loader`) |
 | `generate-readme.py` | Auto-generates README content from build configuration |
 | `dry_check.py` | DRY enforcement -- detects code duplication via AST analysis |
 
@@ -22,18 +18,18 @@ All commands use `uv run` (never raw `python` or `pip`):
 
 ```bash
 # Generate a Containerfile from the blueprint
-uv run python tools/yaml-to-containerfile.py \
+uv run python -m generator \
   --config adnyeus.yml \
   --resolved-package-plan build/resolved-build-plan.json \
   --output Dockerfile.generated
 
 # Validate config without generating output
-uv run python tools/yaml-to-containerfile.py \
+uv run python -m generator \
   --config adnyeus.yml \
   --validate
 
 # Specify image type and Fedora version
-uv run python tools/yaml-to-containerfile.py \
+uv run python -m generator \
   --config adnyeus.yml \
   --image-type fedora-sway-atomic \
   --fedora-version 44 \
@@ -41,13 +37,13 @@ uv run python tools/yaml-to-containerfile.py \
   --output Dockerfile.generated
 
 # Inspect the resolved package selection and provenance directly
-uv run python tools/package_loader.py --wm sway --json
+uv run python -m package_loader --wm sway --json
 
 # Run DRY check on tools/
 uv run python tools/dry_check.py --functions-only --path tools
 ```
 
-## CLI Options (yaml-to-containerfile.py)
+## CLI Options (`uv run python -m generator`)
 
 | Option | Description | Default |
 |--------|-------------|---------|
@@ -61,7 +57,7 @@ uv run python tools/dry_check.py --functions-only --path tools
 | `--validate` | Validate config only | -- |
 | `-v, --verbose` | Verbose output | -- |
 
-## CLI Options (package_loader.py)
+## CLI Options (`uv run python -m package_loader`)
 
 | Option | Description | Default |
 |--------|-------------|---------|

@@ -1,0 +1,19 @@
+[Unit]
+Description=Plane Valkey cache
+After=exousia-network.service
+Requires=exousia-network.service
+
+[Container]
+Image=docker.io/valkey/valkey:7.2.5-alpine
+ContainerName=plane-redis
+Volume=plane-redis-data.volume:/data
+Network=exousia.network
+PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

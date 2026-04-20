@@ -63,7 +63,7 @@ runs:
       shell: bash
       run: |
         mkdir -p "$(dirname "${{ inputs.resolved_package_plan_path }}")"
-        uv run python tools/yaml-to-containerfile.py \
+        uv run python -m generator \
           --config adnyeus.yml \
           --output "${{ inputs.output_path }}" \
           --resolved-package-plan "${{ inputs.resolved_package_plan_path }}" \
