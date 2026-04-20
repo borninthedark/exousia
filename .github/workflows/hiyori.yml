@@ -11,9 +11,9 @@ on:
         type: string
         default: "fedora-sway-atomic"
       distro_version:
-        description: "Fedora version"
+        description: "Fedora version (passed from Urahara, sourced from blueprint)"
         type: string
-        default: "43"
+        required: true
       enable_plymouth:
         description: "Enable Plymouth boot splash"
         type: boolean

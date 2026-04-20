@@ -8,7 +8,7 @@
 > respective copyright holders.
 
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/urahara.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/urahara.yml)
-[![Last Build: Fedora / Sway](https://img.shields.io/badge/Last%20Build-Fedora%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
+[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 
 DevSecOps-hardened, container-based immutable operating systems built on
@@ -87,7 +87,7 @@ curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
   https://api.github.com/repos/borninthedark/exousia/actions/workflows/urahara.yml/dispatches \
-  -d '{"ref":"main","inputs":{"image_type":"fedora-bootc","distro_version":"44","enable_plymouth":"true"}}'
+  -d '{"ref":"main","inputs":{"image_type":"fedora-bootc","distro_version":"43","enable_plymouth":"true"}}'
 ```
 
 Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://github.com/borninthedark/exousia/actions).
@@ -106,8 +106,8 @@ graph LR
     end
     subgraph Transpiler
         G["resolve_build_config.py"]
-        F["package_loader.py"]
-        B["yaml-to-containerfile.py"]
+        F["uv run python -m package_loader"]
+        B["uv run python -m generator"]
     end
     A --> G --> B
     O --> B
@@ -121,7 +121,7 @@ graph LR
 | Component | Description |
 |-----------|-------------|
 | **Blueprint** (`adnyeus.yml`) | Declares base image, packages, overlays, scripts, services, and build flags |
-| **Transpiler** (`tools/yaml-to-containerfile.py`) | Reads the blueprint, resolves package sets, optionally writes `build/resolved-build-plan*.json`, and emits a valid Containerfile |
+| **Transpiler** (`uv run python -m generator`) | Reads the blueprint, resolves package sets, optionally writes `build/resolved-build-plan*.json`, and emits a valid Containerfile |
 | **Overlays** | Static files, configs, and scripts under `overlays/base/` (shared) and `overlays/sway/` (desktop) |
 | **Tests** | Pytest validates the Python tooling and Bats validates the built image |
 
@@ -171,8 +171,8 @@ All package selection flows through the package loader. Edit package-set YAML un
 `overlays/base/packages/`, then verify the resolved output before building:
 
 ```bash
-uv run python tools/package_loader.py --wm sway --json
-uv run python tools/yaml-to-containerfile.py \
+uv run python -m package_loader --wm sway --json
+uv run python -m generator \
   --config adnyeus.yml \
   --resolved-package-plan build/resolved-build-plan.json \
   --output Dockerfile.generated

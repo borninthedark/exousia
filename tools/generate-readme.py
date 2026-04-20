@@ -5,7 +5,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
+
 REPO = "borninthedark/exousia"
+_BLUEPRINT = Path(__file__).resolve().parent.parent / "adnyeus.yml"
+
+
+def _blueprint_version() -> str:
+    """Read image-version from the blueprint."""
+    if _BLUEPRINT.exists():
+        config = yaml.safe_load(_BLUEPRINT.read_text()) or {}
+        version = config.get("image-version")
+        if version:
+            return str(version)
+    return "43"
+
+
+FEDORA_VERSION = _blueprint_version()
 
 # Documentation entries: (rel_path, title, description)
 DOC_ENTRIES: list[tuple[str, str, str]] = [
@@ -116,7 +132,7 @@ def generate_readme(root: Path) -> str:
 > respective copyright holders.
 
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/{REPO}/urahara.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/{REPO}/actions/workflows/urahara.yml)
-[![Last Build: Fedora / Sway](https://img.shields.io/badge/Last%20Build-Fedora%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/{REPO}/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
+[![Last Build: Fedora {FEDORA_VERSION} / Sway](https://img.shields.io/badge/Last%20Build-Fedora%20{FEDORA_VERSION}%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/{REPO}/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 
 DevSecOps-hardened, container-based immutable operating systems built on
@@ -195,7 +211,7 @@ curl -X POST \\
   -H "Accept: application/vnd.github+json" \\
   -H "Authorization: Bearer $GITHUB_TOKEN" \\
   https://api.github.com/repos/{REPO}/actions/workflows/urahara.yml/dispatches \\
-  -d '{{"ref":"main","inputs":{{"image_type":"fedora-bootc","distro_version":"44","enable_plymouth":"true"}}}}'
+  -d '{{"ref":"main","inputs":{{"image_type":"fedora-bootc","distro_version":"{FEDORA_VERSION}","enable_plymouth":"true"}}}}'
 ```
 
 Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://github.com/{REPO}/actions).
@@ -214,8 +230,8 @@ graph LR
     end
     subgraph Transpiler
         G["resolve_build_config.py"]
-        F["package_loader.py"]
-        B["yaml-to-containerfile.py"]
+        F["uv run python -m package_loader"]
+        B["uv run python -m generator"]
     end
     A --> G --> B
     O --> B
@@ -229,7 +245,7 @@ graph LR
 | Component | Description |
 |-----------|-------------|
 | **Blueprint** (`adnyeus.yml`) | Declares base image, packages, overlays, scripts, services, and build flags |
-| **Transpiler** (`tools/yaml-to-containerfile.py`) | Reads the blueprint, resolves package sets, optionally writes `build/resolved-build-plan*.json`, and emits a valid Containerfile |
+| **Transpiler** (`uv run python -m generator`) | Reads the blueprint, resolves package sets, optionally writes `build/resolved-build-plan*.json`, and emits a valid Containerfile |
 | **Overlays** | Static files, configs, and scripts under `overlays/base/` (shared) and `overlays/sway/` (desktop) |
 | **Tests** | Pytest validates the Python tooling and Bats validates the built image |
 
@@ -279,8 +295,8 @@ All package selection flows through the package loader. Edit package-set YAML un
 `overlays/base/packages/`, then verify the resolved output before building:
 
 ```bash
-uv run python tools/package_loader.py --wm sway --json
-uv run python tools/yaml-to-containerfile.py \\
+uv run python -m package_loader --wm sway --json
+uv run python -m generator \\
   --config adnyeus.yml \\
   --resolved-package-plan build/resolved-build-plan.json \\
   --output Dockerfile.generated

@@ -1,0 +1,19 @@
+[Unit]
+Description=Plane API service
+After=plane-db.service plane-redis.service plane-mq.service plane-minio.service
+Requires=plane-db.service plane-redis.service plane-mq.service plane-minio.service
+
+[Container]
+Image=docker.io/makeplane/plane-backend:stable
+ContainerName=plane-api
+Exec=./bin/docker-entrypoint-api.sh
+Network=exousia.network
+PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

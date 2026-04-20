@@ -70,7 +70,7 @@ podman build \
 1. Go to **Actions** → **Fedora Bootc DevSec CI**
 2. Click **Run workflow**
 3. Select options:
-   - **Fedora Version**: 42, 43, etc.
+   - **Fedora Version**: as defined in `adnyeus.yml` `image-version`
    - **Image Type**: fedora-bootc or fedora-sway-atomic
    - **Enable Plymouth**: ✓ (checked) or ☐ (unchecked)
 4. Click **Run workflow**

@@ -51,6 +51,24 @@ permissions:
   id-token: write
 
 jobs:
+  # -- Read default version from blueprint so we don't hardcode it --
+  defaults:
+    name: "Resolve Defaults"
+    runs-on: ubuntu-latest
+    outputs:
+      distro_version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: adnyeus.yml
+          sparse-checkout-cone-mode: false
+      - name: Read image-version from blueprint
+        id: read
+        run: |
+          VERSION=$(grep '^image-version:' adnyeus.yml | awk '{print $2}')
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Blueprint default version: ${VERSION}"
+
   # -- Hikifune (CI) + Uhin (Security) run in parallel --
   hikifune:
     name: "Hikifune (CI)"
@@ -68,11 +86,11 @@ jobs:
   # -- Hiyori (Build) runs after both pass --
   hiyori:
     name: "Hiyori (Build)"
-    needs: [hikifune, uhin]
+    needs: [defaults, hikifune, uhin]
     uses: ./.github/workflows/hiyori.yml
     with:
       image_type: ${{ inputs.image_type || 'fedora-sway-atomic' }}
-      distro_version: ${{ inputs.distro_version || '43' }}
+      distro_version: ${{ inputs.distro_version || needs.defaults.outputs.distro_version }}
       enable_plymouth: ${{ inputs.enable_plymouth == '' && true || inputs.enable_plymouth }}
     secrets: inherit
     permissions:

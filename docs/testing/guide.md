@@ -324,7 +324,7 @@ buildah unshare -- bats -r tests/ --verbose-run
 
 ```bash
 # Switch to fedora-bootc
-make switch-version VERSION=43 TYPE=fedora-bootc
+make switch-version VERSION="${VERSION}" TYPE=fedora-bootc
 
 # Build and test
 make build test
@@ -334,7 +334,7 @@ make build test
 
 ```bash
 # Switch to fedora-sway-atomic
-make switch-version VERSION=43 TYPE=fedora-sway-atomic
+make switch-version VERSION="${VERSION}" TYPE=fedora-sway-atomic
 
 # Build and test
 make build test

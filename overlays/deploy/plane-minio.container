@@ -1,0 +1,22 @@
+[Unit]
+Description=Plane MinIO object store
+After=exousia-network.service
+Requires=exousia-network.service
+
+[Container]
+Image=docker.io/minio/minio:latest
+ContainerName=plane-minio
+Exec=server /export --console-address :9090
+PublishPort=127.0.0.1:9000:9000
+PublishPort=127.0.0.1:9090:9090
+Volume=plane-minio-data.volume:/export
+Network=exousia.network
+PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=180
+
+[Install]
+WantedBy=default.target

@@ -122,7 +122,7 @@ ENV BUILD_IMAGE_TYPE=${IMAGE_TYPE}
 
 ```bash
 podman build \
-  --build-arg FEDORA_VERSION=43 \
+  --build-arg FEDORA_VERSION="${VERSION}" \
   --build-arg IMAGE_TYPE=fedora-sway-atomic \
   -t localhost:5000/exousia:test .
 ```
@@ -337,7 +337,7 @@ cat overlays/sway/repos/*.repo
 
 ```bash
 # Some packages may not be available in all versions
-dnf search package-name --releasever=43
+dnf search package-name --releasever="${VERSION}"
 ```
 
 1. Check for typos in package name
@@ -626,7 +626,7 @@ git diff HEAD~1 custom-tests/
 
 ```bash
 # Reset to known-good configuration
-make switch-version VERSION=43 TYPE=fedora-sway-atomic
+make switch-version VERSION="${VERSION}" TYPE=fedora-sway-atomic
 
 # Clean build
 make clean

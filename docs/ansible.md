@@ -198,7 +198,7 @@ make ansible-apply           # Apply changes
 |----------|---------|-------------|
 | `ci_build_yaml_config` | `adnyeus.yml` | YAML blueprint to build |
 | `ci_build_image_type` | `fedora-sway-atomic` | Image type |
-| `ci_build_distro_version` | `43` | Fedora version |
+| `ci_build_distro_version` | from `adnyeus.yml` | Fedora version (reads `image-version` from blueprint) |
 | `ci_build_enable_plymouth` | `true` | Plymouth boot splash |
 | `ci_build_registry` | `docker.io` | Target registry |
 | `ci_build_image` | `1borninthedark/exousia` | Image path |

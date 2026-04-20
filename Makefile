@@ -3,6 +3,8 @@
 	ci-lint ci-test pre-commit build push \
 	quadlet-install quadlet-enable quadlet-disable quadlet-start quadlet-stop \
 	quadlet-logs quadlet-status \
+	plane-env-init plane-quadlet-enable plane-quadlet-disable \
+	plane-quadlet-start plane-quadlet-stop plane-quadlet-logs plane-quadlet-status \
 	local-build local-push overlay-test local-test readme
 
 # Default target: show help
@@ -28,6 +30,13 @@ help:
 	@echo "  quadlet-stop    Stop Quadlet services"
 	@echo "  quadlet-logs    View Quadlet service logs"
 	@echo "  quadlet-status  Show Quadlet service status"
+	@echo "  plane-env-init  Install Plane env template to ~/.config/exousia/plane"
+	@echo "  plane-quadlet-enable  Enable Plane Quadlet services at boot"
+	@echo "  plane-quadlet-disable Disable Plane Quadlet services at boot"
+	@echo "  plane-quadlet-start   Start Plane Quadlet services in dependency order"
+	@echo "  plane-quadlet-stop    Stop Plane Quadlet services"
+	@echo "  plane-quadlet-logs    View Plane Quadlet logs"
+	@echo "  plane-quadlet-status  Show Plane Quadlet service status"
 	@echo "  local-build     Build image and push to local registry"
 	@echo "  local-push      Promote image from local registry to DockerHub"
 	@echo "  overlay-test    Run pre-build overlay tests"
@@ -64,6 +73,11 @@ test:
 test-cov:
 	uv run pytest tools/ -v --tb=short --cov=tools --cov-report=term --cov-report=html
 	@echo "Coverage report: htmlcov/index.html"
+	uv run python -c "import sys; import subprocess; \
+		output = subprocess.check_output(['uv', 'run', 'coverage', 'report', '--format=total'], text=True).strip(); \
+		total = float(output); \
+		print(f'Total coverage: {total}%'); \
+		sys.exit(0 if total >= 80.0 else 1)"
 
 # Clean generated files
 clean:
@@ -79,7 +93,7 @@ clean:
 # Build atomic Dockerfile from YAML
 build-atomic:
 	mkdir -p build
-	uv run python tools/yaml-to-containerfile.py \
+	uv run python -m generator \
 		--config adnyeus.yml \
 		--image-type fedora-sway-atomic \
 		--resolved-package-plan build/resolved-build-plan.atomic.json \
@@ -88,7 +102,7 @@ build-atomic:
 # Build bootc Dockerfile from YAML
 build-bootc:
 	mkdir -p build
-	uv run python tools/yaml-to-containerfile.py \
+	uv run python -m generator \
 		--config adnyeus.yml \
 		--image-type fedora-bootc \
 		--enable-plymouth \
@@ -97,7 +111,7 @@ build-bootc:
 
 # Validate YAML configuration
 validate:
-	uv run python tools/yaml-to-containerfile.py \
+	uv run python -m generator \
 		--config adnyeus.yml \
 		--validate
 
@@ -160,11 +174,44 @@ quadlet-logs:
 quadlet-status:
 	systemctl --user status forgejo forgejo-runner exousia-registry --no-pager
 
+# Initialize the user-specific Plane environment file
+plane-env-init:
+	mkdir -p ~/.config/exousia/plane
+	cp -n overlays/deploy/plane.env.example ~/.config/exousia/plane/plane.env
+	@echo "Plane env file ready at ~/.config/exousia/plane/plane.env"
+
+# Enable Plane Quadlet services to start at boot
+plane-quadlet-enable:
+	systemctl --user enable plane-db plane-redis plane-mq plane-minio plane-api plane-worker plane-beat-worker plane-migrator plane-web plane-space plane-admin plane-live plane-proxy
+
+# Disable Plane Quadlet services from starting at boot
+plane-quadlet-disable:
+	systemctl --user disable plane-db plane-redis plane-mq plane-minio plane-api plane-worker plane-beat-worker plane-migrator plane-web plane-space plane-admin plane-live plane-proxy
+
+# Start Plane Quadlet services in the documented order
+plane-quadlet-start:
+	systemctl --user start exousia-network.service
+	systemctl --user start plane-db plane-redis plane-mq plane-minio
+	systemctl --user start plane-api plane-worker plane-beat-worker plane-migrator
+	systemctl --user start plane-web plane-space plane-admin plane-live plane-proxy
+
+# Stop Plane Quadlet services
+plane-quadlet-stop:
+	systemctl --user stop plane-proxy plane-live plane-admin plane-space plane-web plane-migrator plane-beat-worker plane-worker plane-api plane-minio plane-mq plane-redis plane-db
+
+# View logs for Plane Quadlet services
+plane-quadlet-logs:
+	journalctl --user -u plane-db -u plane-redis -u plane-mq -u plane-minio -u plane-api -u plane-worker -u plane-beat-worker -u plane-migrator -u plane-web -u plane-space -u plane-admin -u plane-live -u plane-proxy -f
+
+# Show status for Plane Quadlet services
+plane-quadlet-status:
+	systemctl --user status plane-db plane-redis plane-mq plane-minio plane-api plane-worker plane-beat-worker plane-migrator plane-web plane-space plane-admin plane-live plane-proxy --no-pager
+
 # Build image locally and push to local registry
 local-build:
 	@echo "==> Generating Containerfile..."
 	mkdir -p build
-	uv run python tools/yaml-to-containerfile.py \
+	uv run python -m generator \
 		--config adnyeus.yml \
 		--image-type fedora-sway-atomic \
 		--resolved-package-plan build/resolved-build-plan.local.json \

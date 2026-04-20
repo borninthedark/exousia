@@ -1,0 +1,19 @@
+[Unit]
+Description=Plane admin frontend
+After=plane-api.service plane-web.service
+Requires=plane-api.service plane-web.service
+
+[Container]
+Image=docker.io/makeplane/plane-admin:stable
+ContainerName=plane-admin
+Exec=node admin/server.js admin
+Network=exousia.network
+PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=180
+
+[Install]
+WantedBy=default.target

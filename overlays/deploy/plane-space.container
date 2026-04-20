@@ -1,0 +1,19 @@
+[Unit]
+Description=Plane public space frontend
+After=plane-api.service plane-worker.service plane-web.service
+Requires=plane-api.service plane-worker.service plane-web.service
+
+[Container]
+Image=docker.io/makeplane/plane-space:stable
+ContainerName=plane-space
+Exec=node space/server.js space
+Network=exousia.network
+PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=180
+
+[Install]
+WantedBy=default.target

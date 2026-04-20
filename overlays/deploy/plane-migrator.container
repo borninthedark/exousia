@@ -1,0 +1,20 @@
+[Unit]
+Description=Plane database migrator
+After=plane-db.service plane-redis.service plane-mq.service plane-minio.service
+Requires=plane-db.service plane-redis.service plane-mq.service plane-minio.service
+
+[Container]
+Image=docker.io/makeplane/plane-backend:stable
+ContainerName=plane-migrator
+Exec=./bin/docker-entrypoint-migrator.sh
+Network=exousia.network
+PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target
