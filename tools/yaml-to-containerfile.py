@@ -432,7 +432,7 @@ class ContainerfileGenerator:
             self.lines.append("    FEDORA_VERSION=$(rpm -E %fedora); \\")
             for repo in repos:
                 # Replace version placeholder
-                repo_url = repo.replace("43", "${FEDORA_VERSION}")
+                repo_url = repo.replace(self.context.fedora_version, "${FEDORA_VERSION}")
                 self.lines.append(f"    dnf install -y {repo_url}; \\")
 
         # Config manager
@@ -924,8 +924,8 @@ Examples:
     )
     parser.add_argument(
         "--fedora-version",
-        default="43",
-        help="Fedora version (default: 43, ignored for Linux bootc distros)",
+        default="",
+        help="Fedora version (default: from config, ignored for Linux bootc distros)",
     )
     parser.add_argument(
         "--enable-plymouth", action="store_true", default=True, help="Enable Plymouth"

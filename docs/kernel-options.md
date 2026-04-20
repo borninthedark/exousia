@@ -13,7 +13,7 @@ This document explains how to run different kernel versions on your Exousia boot
 
 ### Previous Default (Fedora Stable)
 
-- **fedora-bootc:43** → Fedora 43 stable kernel (~6.11.x)
+- **fedora-bootc:{VERSION}** → Fedora stable kernel
 - Most tested and stable, but older
 - Use if your CPU doesn't support x86-64-v3
 
@@ -153,7 +153,7 @@ Fedora's development kernel with debug options.
 
 - Slower performance (debug enabled)
 - Extreme instability
-- May not match Fedora 43 userspace
+- May not match Fedora stable userspace
 
 ## Recommended Approach
 

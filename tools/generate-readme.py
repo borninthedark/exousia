@@ -5,7 +5,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
+
 REPO = "borninthedark/exousia"
+_BLUEPRINT = Path(__file__).resolve().parent.parent / "adnyeus.yml"
+
+
+def _blueprint_version() -> str:
+    """Read image-version from the blueprint."""
+    if _BLUEPRINT.exists():
+        config = yaml.safe_load(_BLUEPRINT.read_text()) or {}
+        version = config.get("image-version")
+        if version:
+            return str(version)
+    return "43"
+
+
+FEDORA_VERSION = _blueprint_version()
 
 # Documentation entries: (rel_path, title, description)
 DOC_ENTRIES: list[tuple[str, str, str]] = [
@@ -116,7 +132,7 @@ def generate_readme(root: Path) -> str:
 > respective copyright holders.
 
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/{REPO}/urahara.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/{REPO}/actions/workflows/urahara.yml)
-[![Last Build: Fedora / Sway](https://img.shields.io/badge/Last%20Build-Fedora%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/{REPO}/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
+[![Last Build: Fedora {FEDORA_VERSION} / Sway](https://img.shields.io/badge/Last%20Build-Fedora%20{FEDORA_VERSION}%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/{REPO}/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
 
 DevSecOps-hardened, container-based immutable operating systems built on
@@ -195,7 +211,7 @@ curl -X POST \\
   -H "Accept: application/vnd.github+json" \\
   -H "Authorization: Bearer $GITHUB_TOKEN" \\
   https://api.github.com/repos/{REPO}/actions/workflows/urahara.yml/dispatches \\
-  -d '{{"ref":"main","inputs":{{"image_type":"fedora-bootc","distro_version":"44","enable_plymouth":"true"}}}}'
+  -d '{{"ref":"main","inputs":{{"image_type":"fedora-bootc","distro_version":"{FEDORA_VERSION}","enable_plymouth":"true"}}}}'
 ```
 
 Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://github.com/{REPO}/actions).
