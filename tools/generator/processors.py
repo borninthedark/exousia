@@ -56,7 +56,7 @@ class ModuleProcessorsMixin:
         """Render a sequence of shell lines as a single RUN instruction."""
 
         # Keywords that start or are in the middle of compound statements (no semicolon needed)
-        COMPOUND_STARTERS = {"if", "then", "else", "elif", "do", "case"}
+        COMPOUND_STARTERS = {"if", "then", "else", "elif", "do", "case", "for", "while", "in"}
         # Keywords that end compound statements (need semicolon before next command)
         COMPOUND_ENDERS = {"fi", "done", "esac"}
 

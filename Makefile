@@ -73,6 +73,11 @@ test:
 test-cov:
 	uv run pytest tools/ -v --tb=short --cov=tools --cov-report=term --cov-report=html
 	@echo "Coverage report: htmlcov/index.html"
+	uv run python -c "import sys; import subprocess; \
+		output = subprocess.check_output(['uv', 'run', 'coverage', 'report', '--format=total'], text=True).strip(); \
+		total = float(output); \
+		print(f'Total coverage: {total}%'); \
+		sys.exit(0 if total >= 80.0 else 1)"
 
 # Clean generated files
 clean:
