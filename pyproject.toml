@@ -5,8 +5,20 @@
 requires = ["setuptools>=82.0.1"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+package-dir = {"" = "tools"}
+py-modules = [
+    "constants",
+    "distro_mapper",
+    "dry_check",
+    "package_dependency_checker",
+    "resolve_build_config",
+    "yaml_selector_service",
+]
+
 [tool.setuptools.packages.find]
-include = ["tools*"]
+where = ["tools"]
+include = ["generator*", "package_loader*"]
 
 [project]
 name = "exousia"
