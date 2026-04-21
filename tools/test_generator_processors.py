@@ -755,3 +755,130 @@ class TestProcessGithubInstallModule:
         gen = _make_generator()
         gen._process_github_install_module({"repos": [{"name": "x", "type": "script"}]})
         assert any("missing 'url'" in line for line in gen.lines)
+
+
+# --- Comprehensive Generator & Mixin Tests ---
+
+
+class TestGeneratorComprehensive:
+    def test_resolved_package_plan_with_data(self):
+        """Test get_resolved_package_plan with actual data to cover missing lines."""
+        context = _make_context()
+        gen = ContainerfileGenerator({"name": "test"}, context)
+
+        # Mock some package plans
+        plan = {
+            "selection": {"wm": "sway"},
+            "bundles": [{"name": "base"}],
+            "rpm": {
+                "install": [{"name": "pkg1", "from": ["base"]}],
+                "remove": [{"name": "badpkg", "from": ["remove"]}],
+                "groups": {
+                    "install": [{"name": "group1", "from": ["base"]}],
+                    "remove": [{"name": "oldgroup", "from": ["remove"]}],
+                },
+            },
+        }
+        gen.package_plans = [plan]
+
+        resolved = gen.get_resolved_package_plan()
+        assert resolved["rpm"]["install"][0]["name"] == "pkg1"
+        assert resolved["rpm"]["remove"][0]["name"] == "badpkg"
+        assert resolved["rpm"]["groups"]["install"][0]["name"] == "group1"
+        assert resolved["rpm"]["groups"]["remove"][0]["name"] == "oldgroup"
+
+    def test_process_modules_comprehensive(self):
+        """Test _process_modules with all supported types to hit branches in generator.py."""
+        config = {
+            "name": "full-test",
+            "description": "test",
+            "modules": [
+                {"type": "files", "files": [{"src": "a", "dst": "b"}]},
+                {"type": "script", "scripts": ["echo hi"]},
+                {"type": "rpm-ostree", "install": ["pkg"]},
+                {"type": "package-loader", "window_manager": "sway"},
+                {"type": "systemd", "system": {"enabled": ["s"]}},
+                {"type": "chezmoi", "repository": "r"},
+                {
+                    "type": "git-clone",
+                    "repos": [{"url": "u", "files": [{"src": "s", "dst": "d"}]}],
+                },
+                {"type": "signing", "verification": "warn"},
+                {
+                    "type": "default-flatpaks",
+                    "configurations": [{"scope": "system", "install": ["app"]}],
+                },
+                {
+                    "type": "github-install",
+                    "repos": [{"url": "u", "name": "n", "type": "script", "src": "s", "dst": "d"}],
+                },
+                {"type": "unknown-type"},
+            ],
+        }
+        context = _make_context()
+        gen = ContainerfileGenerator(config, context)
+        output = gen.generate()
+        assert "Module 1: files" in output
+        assert "Module 2: script" in output
+        assert "Module 11: unknown-type" in output
+        assert "# WARNING: Unknown module type: unknown-type" in output
+
+    def test_process_modules_with_error(self):
+        """Test _process_modules when a module has an error."""
+        context = _make_context()
+        config = {"name": "test", "modules": [{"type": "script", "_error": "forced error"}]}
+        gen = ContainerfileGenerator(config, context)
+        output = gen.generate()
+        assert "# ERROR: forced error" in output
+
+    def test_hadolint_fixes_rendered(self):
+        """Verify the Hadolint fixes (SC2046, DL3040) are correctly rendered."""
+        context = _make_context()
+        config = {
+            "name": "test",
+            "description": "test",
+            "modules": [
+                {
+                    "type": "github-install",
+                    "repos": [{"url": "u", "name": "test", "type": "python"}],
+                },
+                {"type": "signing", "verification": "enforce"},
+            ],
+        }
+        gen = ContainerfileGenerator(config, context)
+        output = gen.generate()
+
+        # Check SC2046 fix (quoted subshell)
+        assert '"$(python3 -c' in output
+
+        # Check DL3040 fix (dnf clean all in signing)
+        assert "dnf install -y --skip-unavailable skopeo" in output
+        assert "dnf clean all" in output
+
+    def test_processors_sys_path_insert(self):
+        """Test the sys.path.insert branch in ModuleProcessorsMixin."""
+        gen = _make_generator()
+
+        import generator.generator
+
+        tools_dir = str(Path(generator.generator.__file__).parent.parent)
+
+        original_path = sys.path.copy()
+        try:
+            sys.path = [p for p in sys.path if p != tools_dir]
+            gen._load_common_remove_packages()
+            assert tools_dir in sys.path
+        finally:
+            sys.path = original_path
+
+    def test_git_clone_no_url(self):
+        """Test _process_git_clone_module with missing url."""
+        gen = _make_generator()
+        gen._process_git_clone_module({"repos": [{}]})
+        assert any("missing 'url'" in line for line in gen.lines)
+
+    def test_git_clone_no_files(self):
+        """Test _process_git_clone_module with missing files."""
+        gen = _make_generator()
+        gen._process_git_clone_module({"repos": [{"url": "http://test"}]})
+        assert any("no 'files' defined" in line for line in gen.lines)

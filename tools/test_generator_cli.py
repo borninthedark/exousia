@@ -180,3 +180,14 @@ class TestMain:
         main()
         output = capsys.readouterr().out
         assert "Fedora version: 44" in output
+
+
+def test_generator_main_determine_base_image_error(monkeypatch, tmp_path, capsys):
+    """Test main handles ValueError from determine_base_image."""
+    cfg = tmp_path / "config.yml"
+    cfg.write_text("name: test\ndescription: test\nmodules: []\nimage-version: ''\n")
+    monkeypatch.setattr(sys, "argv", ["prog", "-c", str(cfg)])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 1
+    assert "Error: version must be specified" in capsys.readouterr().err

@@ -459,7 +459,7 @@ class ModuleProcessorsMixin:
                 )
                 commands.append(
                     f"cp -r {clone_dir}/{module_name} "
-                    f'$(python3 -c "import site; print(site.getsitepackages()[0])")'
+                    f'"$(python3 -c "import site; print(site.getsitepackages()[0])")"'
                     f"/{module_name}"
                 )
                 commands.append(
@@ -496,6 +496,7 @@ class ModuleProcessorsMixin:
 
         # Install signing verification tools
         commands.append("dnf install -y --skip-unavailable skopeo")
+        commands.append("dnf clean all")
 
         # Set up containers policy directory
         commands.append("mkdir -p /etc/containers/registries.d")

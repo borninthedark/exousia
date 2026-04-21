@@ -701,3 +701,61 @@ def test_load_kernel_profile_missing():
     loader = PackageLoader()
     with pytest.raises(FileNotFoundError, match="not found"):
         loader.load_kernel_profile("nonexistent-kernel")
+
+
+def test_loader_flatten_packages_recursive():
+    """Test flatten_packages recursive call with nested dict."""
+    loader = PackageLoader()
+    config = {"sub": {"pkg1": ["a"]}}
+    assert "a" in loader.flatten_packages(config)
+
+
+def test_loader_get_groups_non_typed_dict():
+    """Test get_groups with non-typed bundle and dict groups."""
+    loader = PackageLoader()
+    config = {"groups": {"install": ["g1"]}}
+    assert loader.get_groups(config) == ["g1"]
+
+
+def test_loader_get_group_actions_non_typed_list():
+    """Test get_group_actions with non-typed bundle and list groups."""
+    loader = PackageLoader()
+    config = {"groups": ["g1"]}
+    assert loader.get_group_actions(config)["install"] == ["g1"]
+
+
+def test_loader_get_groups_list_typed():
+    """Test get_groups with typed bundle and list spec.groups."""
+    loader = PackageLoader()
+    config = {
+        "apiVersion": "exousia.packages/v1alpha1",
+        "kind": "PackageBundle",
+        "spec": {"groups": ["g1", "g2"]},
+    }
+    assert loader.get_groups(config) == ["g1", "g2"]
+
+
+def test_loader_get_groups_none_typed():
+    """Test get_groups with typed bundle and None spec.groups."""
+    loader = PackageLoader()
+    config = {
+        "apiVersion": "exousia.packages/v1alpha1",
+        "kind": "PackageBundle",
+        "spec": {"groups": None},
+    }
+    assert loader.get_groups(config) == []
+
+
+def test_loader_get_package_plan_de(tmp_path):
+    """Test get_package_plan with desktop_environment."""
+    de_dir = tmp_path / "desktop-environments"
+    de_dir.mkdir()
+    (de_dir / "kde.yml").write_text("core:\n  - kde-desktop")
+
+    common_dir = tmp_path / "packages" / "common"
+    common_dir.mkdir(parents=True)
+    (common_dir / "remove.yml").write_text("packages: []")
+
+    loader = PackageLoader(packages_dir=tmp_path / "packages", de_dir=de_dir)
+    plan = loader.get_package_plan(de="kde", include_common=False)
+    assert any(b["name"] == "kde" for b in plan["bundles"])
