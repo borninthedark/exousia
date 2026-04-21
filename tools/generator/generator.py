@@ -1,4 +1,7 @@
+from pathlib import Path
 from typing import Any
+
+import yaml
 
 from .context import BuildContext
 from .processors import ModuleProcessorsMixin
@@ -179,11 +182,40 @@ class ContainerfileGenerator(ModuleProcessorsMixin):
 
         self.lines.append("")
 
+    def _resolve_module(self, module: dict[str, Any]) -> dict[str, Any]:
+        """Resolve a module, handling from-file directives."""
+        from_file = module.get("from-file")
+        if not from_file:
+            return module
+
+        # Resolve relative to the config file's directory or CWD
+        file_path = Path(from_file)
+        if not file_path.is_absolute():
+            file_path = Path.cwd() / file_path
+
+        if not file_path.exists():
+            return {"type": None, "_error": f"from-file not found: {from_file}"}
+
+        try:
+            loaded = yaml.safe_load(file_path.read_text()) or {}
+        except yaml.YAMLError as e:
+            return {"type": None, "_error": f"from-file YAML error in {from_file}: {e}"}
+
+        # Merge: loaded file provides the base, inline keys override
+        merged = {**loaded}
+        for key, value in module.items():
+            if key != "from-file":
+                merged[key] = value
+        return merged
+
     def _process_modules(self):
         """Process all modules in order."""
         modules = self.config.get("modules", [])
 
         for idx, module in enumerate(modules, 1):
+            # Resolve from-file directives
+            module = self._resolve_module(module)
+
             module_type = module.get("type")
             condition = module.get("condition")
 
@@ -200,6 +232,12 @@ class ContainerfileGenerator(ModuleProcessorsMixin):
                 ]
             )
 
+            # Handle resolution errors
+            if "_error" in module:
+                self.lines.append(f"# ERROR: {module['_error']}")
+                self.lines.append("")
+                continue
+
             # Process based on type
             if module_type == "files":
                 self._process_files_module(module)
@@ -215,6 +253,12 @@ class ContainerfileGenerator(ModuleProcessorsMixin):
                 self._process_chezmoi_module(module)
             elif module_type == "git-clone":
                 self._process_git_clone_module(module)
+            elif module_type == "signing":
+                self._process_signing_module(module)
+            elif module_type == "default-flatpaks":
+                self._process_default_flatpaks_module(module)
+            elif module_type == "github-install":
+                self._process_github_install_module(module)
             else:
                 self.lines.append(f"# WARNING: Unknown module type: {module_type}")
 

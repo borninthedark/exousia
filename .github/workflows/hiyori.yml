@@ -50,11 +50,6 @@ jobs:
           distro_version: ${{ inputs.distro_version }}
           enable_plymouth: ${{ inputs.enable_plymouth }}
 
-      - name: Download generated Containerfile
-        uses: actions/download-artifact@v8
-        with:
-          name: containerfile-generated
-
       - name: Generate image tag
         id: tag
         run: |

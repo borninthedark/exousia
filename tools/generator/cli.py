@@ -70,7 +70,7 @@ def validate_config(config: dict[str, Any]) -> bool:
     return True
 
 
-def main(generator: ContainerfileGenerator | None = None):
+def main(argv: list[str] | None = None, generator: ContainerfileGenerator | None = None):
     parser = argparse.ArgumentParser(
         description="Transpile YAML config to Containerfile",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -122,7 +122,7 @@ Examples:
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv if argv is not None else sys.argv[1:])
 
     # Load configuration
     if args.verbose:

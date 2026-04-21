@@ -62,11 +62,21 @@ runs:
       id: transpile
       shell: bash
       run: |
+        RESOLVED_CONFIG="${{ steps.resolve.outputs.RESOLVED_CONFIG }}"
+        CONFIG="${RESOLVED_CONFIG:-adnyeus.yml}"
+        PLYMOUTH_FLAG="--enable-plymouth"
+        if [ "${{ steps.resolve.outputs.ENABLE_PLYMOUTH }}" = "false" ]; then
+          PLYMOUTH_FLAG="--disable-plymouth"
+        fi
+
         mkdir -p "$(dirname "${{ inputs.resolved_package_plan_path }}")"
         uv run python -m generator \
-          --config adnyeus.yml \
+          --config "$CONFIG" \
           --output "${{ inputs.output_path }}" \
           --resolved-package-plan "${{ inputs.resolved_package_plan_path }}" \
+          --image-type "${{ steps.resolve.outputs.BUILD_IMAGE_TYPE }}" \
+          --fedora-version "${{ steps.resolve.outputs.BUILD_VERSION }}" \
+          $PLYMOUTH_FLAG \
           --verbose
         echo "CONTAINERFILE=${{ inputs.output_path }}" >> $GITHUB_OUTPUT
         echo "RESOLVED_PACKAGE_PLAN=${{ inputs.resolved_package_plan_path }}" >> $GITHUB_OUTPUT

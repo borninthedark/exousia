@@ -237,13 +237,13 @@ local-push:
 # Run pre-build overlay tests (no image required)
 overlay-test:
 	@echo "==> Running overlay content tests..."
-	bats custom-tests/overlay_content.bats
+	bats tests/overlay_content.bats
 
 # Run bats tests against locally built image
 local-test:
 	@echo "==> Running bats tests against localhost:5000/exousia:$(TAG)..."
 	podman run --rm localhost:5000/exousia:$(TAG) cat /etc/os-release
-	bats custom-tests/image_content.bats
+	bats tests/image_content.bats
 
 # Generate README.md from template
 readme:

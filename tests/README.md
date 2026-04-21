@@ -11,16 +11,16 @@ make test
 
 # Or run directly
 export TEST_IMAGE_TAG=localhost:5000/exousia:latest
-buildah unshare -- bats -r custom-tests/
+buildah unshare -- bats -r tests/
 
 # Verbose mode
-buildah unshare -- bats -r custom-tests/ --verbose-run
+buildah unshare -- bats -r tests/ --verbose-run
 ```
 
 ## Structure
 
 ```text
-custom-tests/
+tests/
 ├── overlay_content.bats   # Pre-build: validates overlay source files before the image is built
 └── image_content.bats     # Post-build: validates the built container image
 ```
@@ -35,10 +35,10 @@ filesystem contents, installed packages, enabled services, and configuration fil
 
 ```bash
 # Run specific test by line number
-buildah unshare -- bats custom-tests/image_content.bats:85
+buildah unshare -- bats tests/image_content.bats:85
 
 # Filter tests by pattern
-buildah unshare -- bats custom-tests/image_content.bats --filter "package"
+buildah unshare -- bats tests/image_content.bats --filter "package"
 ```
 
 ## Prerequisites

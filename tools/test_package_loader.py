@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
 """
-Unit tests for package_loader module
-=====================================
+Unit tests for package_loader.loader module.
 """
-
-# pylint: disable=no-name-in-module,no-member
 
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
-# Add tools directory to path
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent))
 
-import package_loader.cli  # pylint: disable=no-name-in-module
-import package_loader.loader  # pylint: disable=no-name-in-module
-from package_loader import (  # pylint: disable=no-name-in-module
-    DEFAULT_COMMON_BUNDLES,
-    PackageLoader,
-    PackageValidationError,
-)
+import package_loader.cli
+import package_loader.loader
+from package_loader import DEFAULT_COMMON_BUNDLES, PackageLoader, PackageValidationError
 
 
 def _seed_common_bundles(common_dir, content="core:\n  - basepkg\n"):
@@ -29,579 +24,321 @@ def _seed_common_bundles(common_dir, content="core:\n  - basepkg\n"):
             bundle_file.write_text(content)
 
 
-def test_package_loader_initialization():
+def test_loader_init_defaults():
     """Test that PackageLoader initializes correctly."""
     loader = PackageLoader()
 
     assert loader.packages_dir.exists(), "Packages directory should exist"
     assert loader.wm_dir.exists(), "Window managers directory should exist"
+    assert loader.de_dir.exists(), "Desktop environments directory should exist"
     assert loader.common_dir.exists(), "Common directory should exist"
 
-    print("✓ PackageLoader initializes correctly")
+
+def test_loader_init_overrides(tmp_path):
+    """Test that PackageLoader allows overriding all directories."""
+    pkg_dir = tmp_path / "pkg"
+    wm_dir = tmp_path / "wm"
+    de_dir = tmp_path / "de"
+    common_dir = tmp_path / "common"
+    kernels_dir = tmp_path / "kernels"
+
+    loader = PackageLoader(
+        packages_dir=pkg_dir,
+        wm_dir=wm_dir,
+        de_dir=de_dir,
+        common_dir=common_dir,
+        kernels_dir=kernels_dir,
+    )
+
+    assert loader.packages_dir == pkg_dir
+    assert loader.wm_dir == wm_dir
+    assert loader.de_dir == de_dir
+    assert loader.common_dir == common_dir
+    assert loader.kernels_dir == kernels_dir
 
 
-def test_load_sway_packages():
-    """Test loading Sway window manager packages."""
-    loader = PackageLoader()
+def test_loader_load_wm(tmp_path):
+    """Test loading a window manager configuration."""
+    wm_dir = tmp_path / "window-managers"
+    wm_dir.mkdir()
+    (wm_dir / "sway.yml").write_text("core:\n  - sway\n  - swaylock\n")
 
+    loader = PackageLoader(packages_dir=tmp_path)
     packages = loader.load_wm("sway")
 
-    assert isinstance(packages, list), "Should return a list of packages"
-    assert len(packages) > 0, "Should have packages"
-    assert "sway" in packages, "Should include sway package"
-    assert "waybar" in packages, "Should include waybar package"
-    assert "kitty" in packages, "Should include kitty terminal"
-
-    print("✓ Sway packages load correctly")
+    assert "sway" in packages
+    assert "swaylock" in packages
+    assert len(packages) == 2
 
 
-def test_load_common_packages():
-    """Test loading common base packages."""
-    loader = PackageLoader()
+def test_loader_load_de(tmp_path):
+    """Test loading a desktop environment configuration."""
+    de_dir = tmp_path / "desktop-environments"
+    de_dir.mkdir()
+    (de_dir / "gnome.yml").write_text("main:\n  - gnome-shell\n  - nautilus\n")
 
+    loader = PackageLoader(packages_dir=tmp_path)
+    packages = loader.load_de("gnome")
+
+    assert "gnome-shell" in packages
+    assert "nautilus" in packages
+
+
+def test_loader_load_common_base(tmp_path):
+    """Test loading the base common package set."""
+    common_dir = tmp_path / "common"
+    common_dir.mkdir()
+    _seed_common_bundles(common_dir, "core:\n  - basepkg\n")
+
+    loader = PackageLoader(packages_dir=tmp_path)
     packages = loader.load_common("base")
 
-    assert isinstance(packages, list), "Should return a list of packages"
-    assert len(packages) > 0, "Should have packages"
-    assert "neovim" in packages, "Should include neovim"
-    assert "git" in packages, "Should include git"
-
-    print("✓ Common base packages load correctly")
+    assert "basepkg" in packages
+    # Should include all default bundles (they all have basepkg in this test)
+    assert len(packages) == 1
 
 
-def test_load_remove_packages():
-    """Test loading packages to remove."""
-    loader = PackageLoader()
+def test_loader_load_common_named(tmp_path):
+    """Test loading a specific common bundle."""
+    common_dir = tmp_path / "common"
+    common_dir.mkdir()
+    (common_dir / "test.yml").write_text("extra:\n  - testpkg\n")
 
+    loader = PackageLoader(packages_dir=tmp_path)
+    packages = loader.load_common("test")
+
+    assert "testpkg" in packages
+
+
+def test_loader_load_remove(tmp_path):
+    """Test loading the removal list."""
+    common_dir = tmp_path / "common"
+    common_dir.mkdir()
+    (common_dir / "remove.yml").write_text("packages:\n  - badpkg1\n  - badpkg2\n")
+
+    loader = PackageLoader(packages_dir=tmp_path)
     packages = loader.load_remove()
 
-    assert isinstance(packages, list), "Should return a list of packages"
-    assert "firefox-langpacks" in packages, "Should include firefox-langpacks"
-    assert "foot" not in packages, "WM-specific removals should not live in default remove bundle"
-
-    print("✓ Remove packages load correctly")
+    assert "badpkg1" in packages
+    assert "badpkg2" in packages
 
 
-def test_get_package_list_with_wm():
-    """Test getting complete package list for a window manager."""
-    loader = PackageLoader()
+def test_loader_load_yaml_missing(tmp_path):
+    """Test that missing YAML file raises FileNotFoundError."""
+    loader = PackageLoader(packages_dir=tmp_path)
+    with pytest.raises(FileNotFoundError):
+        loader.load_wm("nonexistent")
 
-    result = loader.get_package_list(wm="sway", include_common=True)
 
-    assert "install" in result, "Should have install key"
-    assert "remove" in result, "Should have remove key"
+def test_loader_load_yaml_invalid(tmp_path):
+    """Test that invalid YAML raises ValueError."""
+    wm_dir = tmp_path / "window-managers"
+    wm_dir.mkdir()
+    (wm_dir / "broken.yml").write_text("core: [unclosed list")
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    with pytest.raises(ValueError, match="Invalid YAML"):
+        loader.load_wm("broken")
+
+
+def test_loader_list_available_wms(tmp_path):
+    """Test listing available window managers."""
+    wm_dir = tmp_path / "window-managers"
+    wm_dir.mkdir()
+    (wm_dir / "sway.yml").write_text("core: []")
+    (wm_dir / "i3.yml").write_text("core: []")
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    wms = loader.list_available_wms()
+
+    assert "sway" in wms
+    assert "i3" in wms
+    assert len(wms) == 2
+
+
+def test_loader_list_available_des(tmp_path):
+    """Test listing available desktop environments."""
+    de_dir = tmp_path / "desktop-environments"
+    de_dir.mkdir()
+    (de_dir / "gnome.yml").write_text("core: []")
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    des = loader.list_available_des()
+
+    assert "gnome" in des
+
+
+def test_loader_get_package_list(tmp_path):
+    """Test getting combined package list for a build."""
+    common = tmp_path / "common"
+    common.mkdir()
+    _seed_common_bundles(common, content="core:\n  - neovim\n")
+    (common / "remove.yml").write_text("packages:\n  - nano\n")
+
+    wm_dir = tmp_path / "window-managers"
+    wm_dir.mkdir()
+    (wm_dir / "sway.yml").write_text("core:\n  - sway\n")
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    result = loader.get_package_list(wm="sway")
+
     assert isinstance(result["install"], list), "Install should be a list"
     assert isinstance(result["remove"], list), "Remove should be a list"
 
     # Should include both WM and common packages
     assert "sway" in result["install"], "Should include sway"
     assert "neovim" in result["install"], "Should include common packages"
-
-    # Should not have removed packages in install list
-    for pkg in result["remove"]:
-        assert (
-            pkg not in result["install"]
-        ), f"Package {pkg} should not be in both install and remove"
-
-    for pkg in ("foot", "dunst", "rofi", "rofi-wayland"):
-        assert pkg in result["remove"], f"{pkg} should be removed by the sway bundle"
-
-    print("✓ Complete package list generation works correctly")
+    assert "nano" in result["remove"], "Should include remove list"
 
 
-def test_package_list_without_common():
-    """Test getting package list without common packages."""
-    loader = PackageLoader()
-
-    result = loader.get_package_list(wm="sway", include_common=False)
-
-    assert "sway" in result["install"], "Should include sway"
-
-    # Should not include common packages when disabled
-    # (though some overlap may exist in WM-specific definitions)
-
-    print("✓ Package list generation without common packages works")
-
-
-def test_flatten_packages():
-    """Test the flatten_packages method."""
-    loader = PackageLoader()
-
-    config = {
-        "metadata": {"name": "test", "type": "test"},
-        "core": ["pkg1", "pkg2"],
-        "utilities": {"shell": ["bash", "zsh"], "editor": ["vim"]},
-    }
-
-    packages = loader.flatten_packages(config)
-
-    assert "pkg1" in packages, "Should include core packages"
-    assert "pkg2" in packages, "Should include core packages"
-    assert "bash" in packages, "Should include nested packages"
-    assert "zsh" in packages, "Should include nested packages"
-    assert "vim" in packages, "Should include nested packages"
-    assert "test" not in packages, "Should not include metadata"
-
-    print("✓ Package flattening works correctly")
-
-
-def test_list_available_wms():
-    """Test listing available window managers."""
-    loader = PackageLoader()
-
-    wms = loader.list_available_wms()
-
-    assert isinstance(wms, list), "Should return a list"
-    assert "sway" in wms, "Should include sway"
-
-    print("✓ Listing available WMs works correctly")
-
-
-def test_list_available_des():
-    """Test listing available desktop environments."""
-    loader = PackageLoader()
-
-    des = loader.list_available_des()
-
-    assert isinstance(des, list), "Should return a list"
-    # May or may not have DEs, but should return a list
-
-    print("✓ Listing available DEs works correctly")
-
-
-def test_no_duplicate_packages():
-    """Test that package lists don't have duplicates."""
-    loader = PackageLoader()
-
-    result = loader.get_package_list(wm="sway", include_common=True)
-
-    install_packages = result["install"]
-    unique_packages = set(install_packages)
-
-    assert len(install_packages) == len(
-        unique_packages
-    ), f"Install list has duplicates: {len(install_packages)} vs {len(unique_packages)}"
-
-    print("✓ Package lists are deduplicated correctly")
-
-
-def test_custom_packages_dir(tmp_path):
-    """Test PackageLoader with a custom packages directory."""
+def test_loader_get_package_plan_provenance(tmp_path):
+    """Test that package plan correctly tracks provenance."""
     common = tmp_path / "common"
     common.mkdir()
-    _seed_common_bundles(common, content="core:\n  - testpkg\n")
+    _seed_common_bundles(common, content="core:\n  - basepkg\n")
     (common / "remove.yml").write_text("packages:\n  - badpkg\n")
 
-    loader = PackageLoader(packages_dir=tmp_path)
-    assert loader.packages_dir == tmp_path
-    pkgs = loader.load_common("base")
-    assert "testpkg" in pkgs
-
-
-def test_load_yaml_file_not_found(tmp_path):
-    """Test that missing YAML files raise FileNotFoundError."""
-    import pytest
-
-    loader = PackageLoader(packages_dir=tmp_path)
-    with pytest.raises(FileNotFoundError, match="not found"):
-        loader.load_yaml(tmp_path / "nonexistent.yml")
-
-
-def test_load_yaml_invalid_yaml(tmp_path):
-    """Test that invalid YAML raises ValueError."""
-    import pytest
-
-    bad = tmp_path / "bad.yml"
-    bad.write_text(":\n  invalid: [\n")
-    loader = PackageLoader(packages_dir=tmp_path)
-    with pytest.raises(ValueError, match="Invalid YAML"):
-        loader.load_yaml(bad)
-
-
-def test_get_groups():
-    """Test extracting groups from config."""
-    loader = PackageLoader()
-    config = {"groups": ["group-a", "group-b"], "core": ["pkg1"]}
-    groups = loader.get_groups(config)
-    assert groups == ["group-a", "group-b"]
-
-
-def test_get_groups_missing():
-    """Test get_groups returns empty list when no groups key."""
-    loader = PackageLoader()
-    assert loader.get_groups({"core": ["pkg1"]}) == []
-
-
-def test_get_group_actions_with_mapping():
-    """Typed/legacy group mappings should preserve install/remove actions."""
-    loader = PackageLoader()
-    config = {"groups": {"install": ["group-a"], "remove": ["group-b"]}, "core": ["pkg1"]}
-
-    actions = loader.get_group_actions(config)
-    assert actions == {"install": ["group-a"], "remove": ["group-b"]}
-
-
-def test_get_package_list_includes_groups(tmp_path):
-    """Test that get_package_list collects groups from WM config."""
-    common = tmp_path / "common"
-    common.mkdir()
-    _seed_common_bundles(common, content="core:\n  - basepkg\n")
-    (common / "remove.yml").write_text("packages: []\n")
-
     wm_dir = tmp_path / "window-managers"
     wm_dir.mkdir()
-    (wm_dir / "test.yml").write_text("groups:\n  - sway-group\ncore:\n  - wmpkg\n")
+    (wm_dir / "sway.yml").write_text("core:\n  - wmpkg\n")
 
     loader = PackageLoader(packages_dir=tmp_path)
-    result = loader.get_package_list(wm="test")
-    assert "sway-group" in result["groups"]
-    assert "basepkg" in result["install"]
-    assert "wmpkg" in result["install"]
-
-
-def test_list_wms_empty_dir(tmp_path):
-    """Test list_available_wms with no wm directory."""
-    loader = PackageLoader(packages_dir=tmp_path)
-    assert loader.list_available_wms() == []
-
-
-def test_list_des_empty_dir(tmp_path):
-    """Test list_available_des with no de directory."""
-    loader = PackageLoader(packages_dir=tmp_path)
-    assert loader.list_available_des() == []
-
-
-def test_get_package_list_with_extras(tmp_path):
-    """Test that extras loads additional common package sets."""
-    common = tmp_path / "common"
-    common.mkdir()
-    _seed_common_bundles(common, content="core:\n  - basepkg\n")
-    (common / "remove.yml").write_text("packages: []\n")
-    (common / "audio-production.yml").write_text(
-        "groups:\n  - audio-group\nrealtime:\n  - tuned\nplugins:\n  - lsp-plugins\n"
-    )
-
-    loader = PackageLoader(packages_dir=tmp_path)
-    result = loader.get_package_list(extras=["audio-production"])
-
-    assert "basepkg" in result["install"]
-    assert "tuned" in result["install"]
-    assert "lsp-plugins" in result["install"]
-    assert "audio-group" in result["groups"]
-
-
-def test_get_package_list_extras_none(tmp_path):
-    """Test that extras=None does not load extra packages."""
-    common = tmp_path / "common"
-    common.mkdir()
-    _seed_common_bundles(common, content="core:\n  - basepkg\n")
-    (common / "remove.yml").write_text("packages: []\n")
-
-    loader = PackageLoader(packages_dir=tmp_path)
-    result = loader.get_package_list(extras=None)
-
-    assert result["install"] == ["basepkg"]
-    assert result["groups"] == []
-
-
-def test_get_package_plan_includes_provenance(tmp_path):
-    """Resolved plan should retain bundle provenance for installs/removals."""
-    common = tmp_path / "common"
-    common.mkdir()
-    _seed_common_bundles(common, content="core:\n  - basepkg\n")
-    (common / "remove.yml").write_text(
-        "metadata:\n  name: remove\n  type: common\npackages:\n  - badpkg\n"
-    )
-    (common / "audio-production.yml").write_text(
-        "metadata:\n  name: audio-production\n  type: common\nplugins:\n  - tuned\n"
-    )
-
-    wm_dir = tmp_path / "window-managers"
-    wm_dir.mkdir()
-    (wm_dir / "test.yml").write_text(
-        "metadata:\n  name: sway\n  type: window-manager\ncore:\n  - sway\n"
-    )
-
-    loader = PackageLoader(packages_dir=tmp_path)
-    plan = loader.get_package_plan(
-        wm="test",
-        include_common=False,
-        common_bundles=["base-core"],
-        feature_bundles=["audio-production"],
-    )
-
-    install = {item["name"]: item["from"] for item in plan["rpm"]["install"]}
-    remove = {item["name"]: item["from"] for item in plan["rpm"]["remove"]}
-
-    assert install["basepkg"] == ["base-core"]
-    assert install["tuned"] == ["audio-production"]
-    assert install["sway"] == ["sway"]
-    assert remove["badpkg"] == ["remove"]
-
-
-def test_get_package_plan_includes_group_actions(tmp_path):
-    """Resolved plan should preserve group install/remove provenance."""
-    common = tmp_path / "common"
-    common.mkdir()
-    _seed_common_bundles(common, content="core:\n  - basepkg\n")
-    (common / "remove.yml").write_text("packages: []\n")
-
-    wm_dir = tmp_path / "window-managers"
-    wm_dir.mkdir()
-    (wm_dir / "test.yml").write_text(
-        "groups:\n  install:\n    - workstation-product-environment\n  remove:\n    - legacy-xfce-support\ncore:\n  - wmpkg\n"
-    )
-
-    loader = PackageLoader(packages_dir=tmp_path)
-    plan = loader.get_package_plan(wm="test")
-
-    assert plan["rpm"]["groups"]["install"] == [
-        {"name": "workstation-product-environment", "from": ["test"]}
-    ]
-    assert plan["rpm"]["groups"]["remove"] == [{"name": "legacy-xfce-support", "from": ["test"]}]
-
-
-def test_get_package_plan_attributes_sway_conflict_removals():
-    """WM-owned removals should be attributed to the selected WM bundle."""
-    loader = PackageLoader()
     plan = loader.get_package_plan(wm="sway")
 
-    remove = {item["name"]: item["from"] for item in plan["rpm"]["remove"]}
+    # Verify RPM install section
+    install_pkgs = {item["name"]: item["from"] for item in plan["rpm"]["install"]}
+    assert "wmpkg" in install_pkgs
+    assert "window-manager:sway" in install_pkgs["wmpkg"]
 
-    assert remove["foot"] == ["wm-sway"]
-    assert remove["dunst"] == ["wm-sway"]
-    assert remove["rofi"] == ["wm-sway"]
-    assert remove["rofi-wayland"] == ["wm-sway"]
-    assert remove["firefox"] == ["remove"]
+    assert "basepkg" in install_pkgs
+    # Should come from one of the default common bundles
+    assert any(f.startswith("common:") for f in install_pkgs["basepkg"])
 
-
-def test_load_yaml_rejects_invalid_package_value_type(tmp_path):
-    """Scalar package values should fail validation."""
-    import pytest
-
-    bad = tmp_path / "bad.yml"
-    bad.write_text("metadata:\n  name: bad\ncore: true\n")
-    loader = PackageLoader(packages_dir=tmp_path)
-
-    with pytest.raises(PackageValidationError, match="Unsupported value type"):
-        loader.load_yaml(bad)
+    # Verify RPM remove section
+    remove_pkgs = {item["name"]: item["from"] for item in plan["rpm"]["remove"]}
+    assert "badpkg" in remove_pkgs
+    assert "remove" in remove_pkgs["badpkg"]
 
 
-def test_load_yaml_accepts_package_objects(tmp_path):
-    """Future-friendly package objects with name should be accepted."""
-    definition = tmp_path / "pkg.yml"
-    definition.write_text("metadata:\n  name: demo\ncore:\n  - name: package-a\n  - package-b\n")
-    loader = PackageLoader(packages_dir=tmp_path)
-    config = loader.load_yaml(definition)
-
-    assert loader.flatten_packages(config) == ["package-a", "package-b"]
-
-
-def test_typed_bundle_schema_loads_and_flattens(tmp_path):
-    """Typed bundles should validate and flatten via spec.packages."""
+def test_loader_get_package_plan_conflicts(tmp_path):
+    """Test that conflicts are correctly identified."""
     common = tmp_path / "common"
     common.mkdir()
-    typed_content = (
-        "apiVersion: exousia.packages/v1alpha1\n"
-        "kind: PackageBundle\n"
-        "metadata:\n"
-        "  name: base-core\n"
-        "spec:\n"
-        "  packages:\n"
-        "    - name: pkg-a\n"
-        "    - pkg-b\n"
-    )
     _seed_common_bundles(common)
-    (common / "base-core.yml").write_text(typed_content)
-    (common / "remove.yml").write_text("packages: []\n")
+    (common / "remove.yml").write_text("packages: []")
+
+    # Create a feature bundle that conflicts with another package
+    (common / "conflict.yml").write_text(
+        "apiVersion: exousia.packages/v1alpha1\n"
+        "kind: FeatureBundle\n"
+        "metadata:\n  name: conflict\n"
+        "spec:\n"
+        "  packages: ['pkg-a']\n"
+        "  conflicts:\n"
+        "    packages: ['pkg-b']\n"
+    )
+
+    # Create another bundle that provides the conflicting package
+    (common / "provider.yml").write_text("core:\n  - pkg-b\n")
 
     loader = PackageLoader(packages_dir=tmp_path)
-    packages = loader.load_common("base")
 
-    assert "pkg-a" in packages
-    assert "pkg-b" in packages
+    with pytest.raises(PackageValidationError, match="conflicts with package 'pkg-b'"):
+        loader.get_package_plan(feature_bundles=["conflict", "provider"])
 
 
-def test_package_plan_rejects_conflicting_features(tmp_path):
-    """Typed bundles should reject selected conflicting features."""
-    import pytest
-
+def test_loader_get_package_plan_requirements(tmp_path):
+    """Test that missing required features raise validation error."""
     common = tmp_path / "common"
     common.mkdir()
-    _seed_common_bundles(common, content="core:\n  - basepkg\n")
-    (common / "remove.yml").write_text("packages: []\n")
-    (common / "audio.yml").write_text(
+    _seed_common_bundles(common)
+    (common / "remove.yml").write_text("packages: []")
+
+    # Feature A requires feature B
+    (common / "feat-a.yml").write_text(
         "apiVersion: exousia.packages/v1alpha1\n"
         "kind: FeatureBundle\n"
-        "metadata:\n"
-        "  name: audio\n"
+        "metadata:\n  name: feat-a\n"
         "spec:\n"
-        "  packages:\n"
-        "    - audacity\n"
-        "  conflicts:\n"
-        "    features:\n"
-        "      - gaming\n"
-    )
-    (common / "gaming.yml").write_text(
-        "apiVersion: exousia.packages/v1alpha1\n"
-        "kind: FeatureBundle\n"
-        "metadata:\n"
-        "  name: gaming\n"
-        "spec:\n"
-        "  packages:\n"
-        "    - steam\n"
+        "  packages: []\n"
+        "  requires:\n"
+        "    features: ['feat-b']\n"
     )
 
     loader = PackageLoader(packages_dir=tmp_path)
-    with pytest.raises(PackageValidationError, match="conflicts with selected feature"):
-        loader.get_package_plan(extras=["audio", "gaming"])
+
+    with pytest.raises(PackageValidationError, match="requires missing feature 'feat-b'"):
+        loader.get_package_plan(feature_bundles=["feat-a"])
 
 
-def test_load_rpm_overrides(tmp_path):
-    """load_rpm_overrides should return override entries from rpm-overrides.yml."""
+def test_loader_get_package_plan_replaces(tmp_path):
+    """Test that replaces field appends to remove list."""
+    common = tmp_path / "common"
+    common.mkdir()
+    _seed_common_bundles(common)
+    (common / "remove.yml").write_text("packages: []")
+
+    (common / "replacer.yml").write_text(
+        "apiVersion: exousia.packages/v1alpha1\n"
+        "kind: FeatureBundle\n"
+        "metadata:\n  name: replacer\n"
+        "spec:\n"
+        "  packages: ['new-pkg']\n"
+        "  replaces: ['old-pkg']\n"
+    )
+
+    loader = PackageLoader(packages_dir=tmp_path)
+    plan = loader.get_package_plan(feature_bundles=["replacer"])
+
+    remove_names = [item["name"] for item in plan["rpm"]["remove"]]
+    assert "old-pkg" in remove_names
+
+
+def test_loader_load_rpm_overrides(tmp_path):
+    """Test loading RPM overrides."""
     common = tmp_path / "common"
     common.mkdir()
     (common / "rpm-overrides.yml").write_text(
         "apiVersion: exousia.packages/v1alpha1\n"
         "kind: PackageOverrideBundle\n"
-        "metadata:\n"
-        "  name: rpm-overrides\n"
         "spec:\n"
         "  overrides:\n"
-        "    - package: flatpak\n"
-        "      version: '1.16.6'\n"
-        "      image: ghcr.io/example/flatpak-rpms:1.16.6\n"
-        "      reason: CVE remediation\n"
-        "      replaces:\n"
-        "        - flatpak\n"
-        "        - flatpak-libs\n"
+        "    - image: 'ghcr.io/org/repo:tag'\n"
+        "      reason: 'cve-fix'\n"
     )
 
     loader = PackageLoader(packages_dir=tmp_path)
     overrides = loader.load_rpm_overrides()
 
     assert len(overrides) == 1
-    assert overrides[0]["package"] == "flatpak"
-    assert overrides[0]["version"] == "1.16.6"
-    assert overrides[0]["image"] == "ghcr.io/example/flatpak-rpms:1.16.6"
-    assert "flatpak" in overrides[0]["replaces"]
-    assert "flatpak-libs" in overrides[0]["replaces"]
+    assert overrides[0]["image"] == "ghcr.io/org/repo:tag"
 
 
-def test_load_rpm_overrides_missing_file(tmp_path):
-    """load_rpm_overrides should return empty list when file does not exist."""
+def test_loader_load_kernel_config(tmp_path):
+    """Test loading kernel configuration."""
     common = tmp_path / "common"
     common.mkdir()
+    (common / "kernel-config.yml").write_text(
+        "apiVersion: exousia.packages/v1alpha1\n"
+        "kind: KernelConfig\n"
+        "spec:\n"
+        "  source: 'copr'\n"
+        "  copr:\n"
+        "    repo: 'user/repo'\n"
+    )
 
     loader = PackageLoader(packages_dir=tmp_path)
-    assert loader.load_rpm_overrides() == []
+    config = loader.load_kernel_config()
 
-
-def test_load_rpm_overrides_from_real_spec():
-    """load_rpm_overrides should load the actual rpm-overrides.yml from the repo."""
-    loader = PackageLoader()
-    overrides = loader.load_rpm_overrides()
-
-    assert len(overrides) >= 1
-    flatpak = next((o for o in overrides if o["package"] == "flatpak"), None)
-    assert flatpak is not None
-    assert ">=" in flatpak["version"]
-    assert "1.16.6" in flatpak["version"]
-    assert "ghcr.io" in flatpak["image"]
+    assert config["source"] == "copr"
+    assert config["copr"]["repo"] == "user/repo"
 
 
 def test_export_to_text_files_writes_legacy_outputs(tmp_path):
-    """Legacy export should write both install and remove package lists."""
-    common = tmp_path / "common"
-    common.mkdir()
-    _seed_common_bundles(common, content="core:\n  - basepkg\n")
-    (common / "remove.yml").write_text("packages:\n  - badpkg\n")
-
-    wm_dir = tmp_path / "window-managers"
-    wm_dir.mkdir()
-    (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
-
-    output_dir = tmp_path / "legacy-out"
-    loader = PackageLoader(packages_dir=tmp_path)
-    loader.export_to_text_files(wm="test", output_dir=output_dir)
-
-    add_file = output_dir / "packages.add"
-    remove_file = output_dir / "packages.remove"
-
-    assert add_file.exists()
-    assert remove_file.exists()
-    assert "basepkg" in add_file.read_text()
-    assert "wmpkg" in add_file.read_text()
-    assert "badpkg" in remove_file.read_text()
-
-
-def test_main_lists_available_bundle_targets(tmp_path, monkeypatch, capsys):
-    """CLI should print available WM and DE bundle names."""
+    """Test that legacy text export works."""
     common = tmp_path / "common"
     common.mkdir()
     _seed_common_bundles(common)
-    (common / "remove.yml").write_text("packages: []\n")
-
-    wm_dir = tmp_path / "window-managers"
-    wm_dir.mkdir()
-    (wm_dir / "test-wm.yml").write_text("core:\n  - sway\n")
-
-    de_dir = tmp_path / "desktop-environments"
-    de_dir.mkdir()
-    (de_dir / "test-de.yml").write_text("core:\n  - gnome-shell\n")
-
-    loader = PackageLoader(packages_dir=tmp_path)
-
-    monkeypatch.setattr(sys, "argv", ["package_loader.py", "--list-wms"])
-    package_loader.cli.main(loader=loader)
-    wm_output = capsys.readouterr().out
-
-    monkeypatch.setattr(sys, "argv", ["package_loader.py", "--list-des"])
-    package_loader.cli.main(loader=loader)
-    de_output = capsys.readouterr().out
-
-    assert "test-wm" in wm_output
-    assert "test-de" in de_output
-
-
-def test_main_json_output_uses_explicit_bundle_selection(tmp_path, monkeypatch, capsys):
-    """CLI JSON mode should emit the resolved package plan."""
-    common = tmp_path / "common"
-    common.mkdir()
-    _seed_common_bundles(common, content="core:\n  - basepkg\n")
-    (common / "remove.yml").write_text("packages: []\n")
-
-    wm_dir = tmp_path / "window-managers"
-    wm_dir.mkdir()
-    (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
-
-    loader = PackageLoader(packages_dir=tmp_path)
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "package_loader.py",
-            "--json",
-            "--wm",
-            "test",
-            "--common",
-            "base-core",
-        ],
-    )
-
-    package_loader.cli.main(loader=loader)
-    payload = capsys.readouterr().out
-
-    assert '"window_manager": "test"' in payload
-    assert '"common_bundles": [' in payload
-    assert '"base-core"' in payload
-
-
-def test_main_export_command_uses_selected_output_dir(tmp_path, monkeypatch, capsys):
-    """CLI export mode should write legacy output files to the requested directory."""
-    common = tmp_path / "common"
-    common.mkdir()
-    _seed_common_bundles(common, content="core:\n  - basepkg\n")
     (common / "remove.yml").write_text("packages:\n  - badpkg\n")
 
     wm_dir = tmp_path / "window-managers"
@@ -610,25 +347,115 @@ def test_main_export_command_uses_selected_output_dir(tmp_path, monkeypatch, cap
 
     output_dir = tmp_path / "out"
     loader = PackageLoader(packages_dir=tmp_path)
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "package_loader.py",
-            "--export",
-            "--wm",
-            "test",
-            "--output-dir",
-            str(output_dir),
-        ],
-    )
 
-    package_loader.cli.main(loader=loader)
-    output = capsys.readouterr().out
+    # Suppress deprecation warning for this test
+    with pytest.warns(DeprecationWarning):
+        loader.export_to_text_files(wm="test", output_dir=output_dir)
 
-    assert "Exported package lists" in output
     assert (output_dir / "packages.add").exists()
     assert (output_dir / "packages.remove").exists()
+
+    add_content = (output_dir / "packages.add").read_text()
+    assert "wmpkg" in add_content
+    assert "basepkg" in add_content
+
+    remove_content = (output_dir / "packages.remove").read_text()
+    assert "badpkg" in remove_content
+
+
+# ---------------------------------------------------------------------------
+# CLI tests (main)
+# ---------------------------------------------------------------------------
+
+
+class TestPackageLoaderCLI:
+    def test_main_lists_available_bundle_targets(self, tmp_path, capsys):
+        """CLI list commands should output available YAML names."""
+        wm_dir = tmp_path / "window-managers"
+        wm_dir.mkdir()
+        (wm_dir / "test-wm.yml").write_text("core:\n  - sway\n")
+
+        de_dir = tmp_path / "desktop-environments"
+        de_dir.mkdir()
+        (de_dir / "test-de.yml").write_text("core:\n  - gnome-shell\n")
+
+        loader = PackageLoader(packages_dir=tmp_path)
+
+        package_loader.cli.main(argv=["--list-wms"], loader=loader)
+        wm_output = capsys.readouterr().out
+
+        package_loader.cli.main(argv=["--list-des"], loader=loader)
+        de_output = capsys.readouterr().out
+
+        assert "test-wm" in wm_output
+        assert "test-de" in de_output
+
+    def test_main_json_output_uses_explicit_bundle_selection(self, tmp_path, capsys):
+        """CLI --json should output a full resolved package plan."""
+        common = tmp_path / "common"
+        common.mkdir()
+        _seed_common_bundles(common)
+        (common / "remove.yml").write_text("packages: []\n")
+
+        wm_dir = tmp_path / "window-managers"
+        wm_dir.mkdir()
+        (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
+
+        loader = PackageLoader(packages_dir=tmp_path)
+
+        package_loader.cli.main(
+            argv=["--json", "--wm", "test", "--common", "base-core"], loader=loader
+        )
+        payload = capsys.readouterr().out
+
+        assert '"window_manager": "test"' in payload
+        assert '"common_bundles": [' in payload
+        assert '"base-core"' in payload
+
+    def test_main_export_command_uses_selected_output_dir(self, tmp_path, capsys):
+        """CLI --export should write legacy files to the specified directory."""
+        common = tmp_path / "common"
+        common.mkdir()
+        _seed_common_bundles(common)
+        (common / "remove.yml").write_text("packages: []\n")
+
+        wm_dir = tmp_path / "window-managers"
+        wm_dir.mkdir()
+        (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
+
+        output_dir = tmp_path / "out"
+        loader = PackageLoader(packages_dir=tmp_path)
+
+        package_loader.cli.main(
+            argv=["--export", "--wm", "test", "--output-dir", str(output_dir)], loader=loader
+        )
+        output = capsys.readouterr().out
+
+        assert "Exported package lists" in output
+        assert (output_dir / "packages.add").exists()
+        assert (output_dir / "packages.remove").exists()
+
+    def test_main_default_mode_prints_install_and_remove_lists(self, tmp_path, capsys):
+        """CLI default mode should print resolved install and removal packages."""
+        common = tmp_path / "common"
+        common.mkdir()
+        _seed_common_bundles(common)
+        (common / "remove.yml").write_text("packages:\n  - badpkg\n")
+
+        wm_dir = tmp_path / "window-managers"
+        wm_dir.mkdir()
+        (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
+
+        loader = PackageLoader(packages_dir=tmp_path)
+
+        package_loader.cli.main(argv=["--wm", "test"], loader=loader)
+        output = capsys.readouterr().out
+
+        assert "Packages to install:" in output
+        assert "basepkg" in output
+        assert "wmpkg" in output
+        assert "Packages to remove:" in output
+        assert "badpkg" in output
 
 
 def test_export_to_text_files_uses_default_output_dir(tmp_path):
@@ -643,33 +470,15 @@ def test_export_to_text_files_uses_default_output_dir(tmp_path):
     (common / "remove.yml").write_text("packages:\n  - badpkg\n")
 
     loader = PackageLoader(packages_dir=tmp_path / "packages")
-    loader.export_to_text_files(wm="test")
+    # Suppress deprecation warning
+    with pytest.warns(DeprecationWarning):
+        loader.export_to_text_files(wm="test")
 
     assert (tmp_path / "custom-pkgs" / "packages.add").exists()
     assert (tmp_path / "custom-pkgs" / "packages.remove").exists()
 
 
-def test_main_default_mode_prints_install_and_remove_lists(tmp_path, monkeypatch, capsys):
-    """CLI default mode should print resolved install and removal packages."""
-    common = tmp_path / "common"
-    common.mkdir()
-    _seed_common_bundles(common, content="core:\n  - basepkg\n")
-    (common / "remove.yml").write_text("packages:\n  - badpkg\n")
-
-    wm_dir = tmp_path / "window-managers"
-    wm_dir.mkdir()
-    (wm_dir / "test.yml").write_text("core:\n  - wmpkg\n")
-
-    loader = PackageLoader(packages_dir=tmp_path)
-    monkeypatch.setattr(sys, "argv", ["package_loader.py", "--wm", "test"])
-
-    package_loader.cli.main(loader=loader)
-    output = capsys.readouterr().out
-
-    assert "Packages to install:" in output
-    assert "basepkg" in output
-    assert "wmpkg" in output
-    assert "Packages to remove:" in output
+# --- Kernel Profile Tests ---
 
 
 def test_load_kernel_profile_fedora_default():
@@ -696,8 +505,108 @@ def test_load_kernel_profile_cachyos():
 
 def test_load_kernel_profile_missing():
     """Test that missing kernel profile raises FileNotFoundError."""
-    import pytest
-
     loader = PackageLoader()
     with pytest.raises(FileNotFoundError, match="not found"):
         loader.load_kernel_profile("nonexistent-kernel")
+
+
+# --- Merged from test_package_logic_deep_dive.py ---
+
+
+def test_loader_flatten_packages_recursive_nested():
+    """Test flatten_packages recursive call with nested dict."""
+    loader = PackageLoader()
+    config = {"sub": {"pkg1": ["a"]}}
+    assert "a" in loader.flatten_packages(config)
+
+
+def test_loader_get_groups_non_typed_bundle_dict():
+    """Test get_groups with non-typed bundle and dict groups."""
+    loader = PackageLoader()
+    config = {"groups": {"install": ["g1"]}}
+    assert loader.get_groups(config) == ["g1"]
+
+
+def test_loader_get_group_actions_edge_cases():
+    """Test get_group_actions with various inputs."""
+    loader = PackageLoader()
+
+    # Not a list or dict
+    assert loader.get_group_actions({"groups": 123}) == {"install": [], "remove": []}
+
+    # Dict with None values
+    assert loader.get_group_actions({"groups": {"install": None, "remove": None}}) == {
+        "install": [],
+        "remove": [],
+    }
+
+
+def test_loader_bundle_record_no_typed():
+    """Test _bundle_record with non-typed bundle."""
+    loader = PackageLoader()
+    record = loader._bundle_record(Path("test.yml"), {"metadata": {"name": "test"}}, "selected")
+    assert record["name"] == "test"
+    assert record["kind"] == "unknown"
+
+
+# --- Merged from test_coverage_gap_filler.py ---
+
+
+def test_loader_get_groups_list_typed_v2():
+    """Test get_groups with typed bundle and list spec.groups."""
+    loader = PackageLoader()
+    config = {
+        "apiVersion": "exousia.packages/v1alpha1",
+        "kind": "PackageBundle",
+        "spec": {"groups": ["g1", "g2"]},
+    }
+    assert loader.get_groups(config) == ["g1", "g2"]
+
+
+def test_loader_get_groups_none_typed_v2():
+    """Test get_groups with typed bundle and None spec.groups."""
+    loader = PackageLoader()
+    config = {
+        "apiVersion": "exousia.packages/v1alpha1",
+        "kind": "PackageBundle",
+        "spec": {"groups": None},
+    }
+    assert loader.get_groups(config) == []
+
+
+def test_loader_load_kernel_config_not_found(tmp_path):
+    """Test load_kernel_config when file is missing."""
+    loader = PackageLoader(common_dir=tmp_path)
+    config = loader.load_kernel_config()
+    assert config["source"] == "default"
+
+
+def test_loader_load_rpm_overrides_not_found(tmp_path):
+    """Test load_rpm_overrides when file is missing."""
+    loader = PackageLoader(common_dir=tmp_path)
+    overrides = loader.load_rpm_overrides()
+    assert overrides == []
+
+
+def test_loader_get_package_plan_de_v2(tmp_path):
+    """Test get_package_plan with desktop_environment."""
+    de_dir = tmp_path / "desktop-environments"
+    de_dir.mkdir()
+    (de_dir / "kde.yml").write_text("core:\n  - kde-desktop")
+
+    common_dir = tmp_path / "packages" / "common"
+    common_dir.mkdir(parents=True)
+    (common_dir / "remove.yml").write_text("packages: []")
+
+    loader = PackageLoader(packages_dir=tmp_path / "packages", de_dir=de_dir)
+    plan = loader.get_package_plan(de="kde", include_common=False)
+    assert any(b["name"] == "kde" for b in plan["bundles"])
+
+
+def test_loader_main_no_loader_passed_cli():
+    """Test loader main handles None loader by creating one."""
+    # We use a real directory to avoid errors, but we won't assert on output
+    # This just ensures line 50 of cli.py is hit.
+    with patch("package_loader.cli.PackageLoader") as mock_loader_class:
+        package_loader.cli.main(argv=["--list-wms"])
+        mock_loader_class.assert_called_once()

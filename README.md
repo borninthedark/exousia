@@ -261,6 +261,7 @@ Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 |----------|-------------|
 | [Upgrade Guide](docs/bootc-upgrade.md) | Switch images and perform bootc upgrades |
 | [Image Builder](docs/bootc-image-builder.md) | Build bootable disk images (ISO, raw, qcow2) |
+| [Module Reference](docs/modules.md) | Build module types, fields, and usage examples |
 | [Package Loader CLI](docs/package-loader-cli.md) | Resolve package sets, inspect provenance, and export legacy manifests |
 | [Package Management Design](docs/package-management-and-container-builds.md) | Typed package-set model, resolved build plans, and build-pipeline direction |
 | [Overlay System](docs/overlay-system.md) | Overlay directory structure and how files map into images |
@@ -279,7 +280,7 @@ Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 | [`overlays/base/`](overlays/base/) | Shared configs: PAM, polkit, sysusers, packages | [README](overlays/base/README.md) |
 | [`overlays/sway/`](overlays/sway/) | Sway desktop: configs, scripts, session | [README](overlays/sway/README.md) |
 | [`overlays/deploy/`](overlays/deploy/) | Podman Quadlet container definitions | [README](overlays/deploy/README.md) |
-| [`custom-tests/`](custom-tests/) | Bats integration tests for built images | [README](custom-tests/README.md) |
+| [`tests/`](tests/) | Bats integration tests for built images | [README](tests/README.md) |
 | [`yaml-definitions/`](yaml-definitions/) | Alternative build blueprints | [README](yaml-definitions/README.md) |
 | [`docs/`](docs/) | Full documentation | [README](docs/README.md) |
 | [`.github/workflows/`](.github/workflows/) | GitHub Actions CI/CD | [README](.github/workflows/README.md) |
@@ -289,7 +290,7 @@ Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 Contributions welcome. Development rules:
 
 - **TDD mandatory** -- write tests before implementation and keep test intent close to the change
-- **Coverage floor** -- `tools/` pytest coverage is enforced at 71% and should keep ratcheting upward
+- **Coverage floor** -- `tools/` pytest coverage is enforced at 85% and should keep ratcheting upward
 - **[Conventional commits](https://www.conventionalcommits.org/)** -- enforced by pre-commit hook
 - **Shift-left** -- `uv run pre-commit install && uv run pre-commit install --hook-type commit-msg`
 - Security gates (Bandit, Gitleaks) and quality checks (Ruff, Black, mypy) run locally before push
@@ -311,6 +312,7 @@ MIT License -- see LICENSE file.
 This project uses AI-assisted development tools:
 
 - **[Claude Code](https://claude.ai/claude-code)** (Anthropic)
+- **[Gemini CLI](https://github.com/google-gemini/gemini-cli)** (Google)
 - **[ChatGPT Codex](https://openai.com/index/openai-codex/)** (OpenAI)
 - **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)**
 - **[github-actions[bot]](https://github.com/apps/github-actions)** -- automated releases and tagging

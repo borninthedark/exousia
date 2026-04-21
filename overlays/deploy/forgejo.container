@@ -1,6 +1,7 @@
 [Unit]
 Description=Forgejo self-hosted git forge
-After=network-online.target
+After=exousia-network.service
+Requires=exousia-network.service
 
 [Container]
 Image=codeberg.org/forgejo/forgejo:14.0.2

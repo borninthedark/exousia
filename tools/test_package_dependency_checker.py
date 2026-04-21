@@ -1,5 +1,8 @@
+import json
 import sys
+from io import StringIO
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -10,6 +13,7 @@ from package_dependency_checker import (
     FedoraDnfChecker,
     PackageDependency,
     PackageDependencyTranspiler,
+    main,
 )
 
 # ---------------------------------------------------------------------------
@@ -183,39 +187,112 @@ class TestTranspiler:
         with pytest.raises(ValueError, match="Unknown distro"):
             PackageDependencyTranspiler(distro="gentoo")
 
-    def test_check_packages(self, monkeypatch):
-        t = PackageDependencyTranspiler(distro="fedora")
+    def test_check_packages(self):
+        mock_checker = MagicMock()
+        t = PackageDependencyTranspiler(checker=mock_checker)
         mock_result = DependencyCheckResult(
             package="vim",
             found=True,
             installed=True,
             distro="fedora",
         )
-        monkeypatch.setattr(t.checker, "check_dependencies_installed", lambda pkg: mock_result)
+        mock_checker.check_dependencies_installed.return_value = mock_result
         results = t.check_packages(["vim"])
         assert "vim" in results
         assert results["vim"].found is True
 
-    def test_verify_all_installed(self, monkeypatch):
-        t = PackageDependencyTranspiler(distro="fedora")
-        monkeypatch.setattr(t.checker, "is_installed", lambda pkg: True)
+    def test_verify_all_installed(self):
+        mock_checker = MagicMock()
+        t = PackageDependencyTranspiler(checker=mock_checker)
+        mock_checker.is_installed.return_value = True
         ok, missing = t.verify_installation(["a", "b"])
         assert ok is True
         assert missing == []
 
-    def test_verify_some_missing(self, monkeypatch):
-        t = PackageDependencyTranspiler(distro="fedora")
-        monkeypatch.setattr(t.checker, "is_installed", lambda pkg: pkg != "b")
+    def test_verify_some_missing(self):
+        mock_checker = MagicMock()
+        t = PackageDependencyTranspiler(checker=mock_checker)
+        mock_checker.is_installed.side_effect = lambda pkg: pkg != "b"
         ok, missing = t.verify_installation(["a", "b"])
         assert ok is False
         assert missing == ["b"]
 
     def test_detect_distro_fedora(self, monkeypatch):
-        from io import StringIO
-
         monkeypatch.setattr(
             "builtins.open",
             lambda *a, **kw: StringIO("ID=fedora\nVERSION_ID=43\n"),
         )
         t = PackageDependencyTranspiler()
         assert t.get_current_distro() == "fedora"
+
+
+# ---------------------------------------------------------------------------
+# CLI tests (main)
+# ---------------------------------------------------------------------------
+
+
+class TestPackageDependencyCheckerCLI:
+    def test_detect_distro_failure(self, monkeypatch):
+        """Test _detect_distro when no supported manager is found."""
+        monkeypatch.setattr(
+            "builtins.open", lambda *a, **kw: (_ for _ in ()).throw(FileNotFoundError())
+        )
+
+        with patch("package_dependency_checker.FedoraDnfChecker") as mock_fedora:
+            mock_fedora.return_value.is_available.return_value = False
+            with pytest.raises(RuntimeError, match="No supported package manager found"):
+                PackageDependencyTranspiler()
+
+    def test_main_verify_only_success(self, capsys):
+        """Test main() with --verify-only and all packages installed."""
+        transpiler_mock = MagicMock()
+        transpiler_mock.verify_installation.return_value = (True, [])
+        transpiler_mock.get_current_distro.return_value = "fedora"
+
+        with patch(
+            "package_dependency_checker.PackageDependencyTranspiler", return_value=transpiler_mock
+        ):
+            rc = main(argv=["--verify-only", "--distro", "fedora", "pkg1"])
+            assert rc == 0
+            assert "All packages installed" in capsys.readouterr().out
+
+    def test_main_verify_only_failure(self, capsys):
+        """Test main() with --verify-only and missing packages."""
+        transpiler_mock = MagicMock()
+        transpiler_mock.verify_installation.return_value = (False, ["pkg1"])
+        transpiler_mock.get_current_distro.return_value = "fedora"
+
+        with patch(
+            "package_dependency_checker.PackageDependencyTranspiler", return_value=transpiler_mock
+        ):
+            rc = main(argv=["--verify-only", "pkg1"])
+            assert rc == 1
+            assert "Missing packages" in capsys.readouterr().out
+
+    def test_main_json_output(self, capsys):
+        """Test main() with --json output."""
+        result = DependencyCheckResult("pkg1", found=True, installed=True, distro="fedora")
+        dep = PackageDependency("dep1", installed=True, version="1.0")
+        result.dependencies = [dep]
+
+        transpiler_mock = MagicMock()
+        transpiler_mock.check_packages.return_value = {"pkg1": result}
+
+        with patch(
+            "package_dependency_checker.PackageDependencyTranspiler", return_value=transpiler_mock
+        ):
+            rc = main(argv=["--json", "pkg1"])
+            assert rc == 0
+            output = json.loads(capsys.readouterr().out)
+            assert "pkg1" in output
+            assert output["pkg1"]["found"] is True
+
+    def test_main_error_handling(self, capsys):
+        """Test main() exception handling."""
+        with patch(
+            "package_dependency_checker.PackageDependencyTranspiler",
+            side_effect=Exception("Test Error"),
+        ):
+            rc = main(argv=["pkg1"])
+            assert rc == 1
+            assert "Error: Test Error" in capsys.readouterr().err

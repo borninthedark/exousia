@@ -28,7 +28,7 @@ FATAL: TEST_IMAGE_TAG environment variable is not set.
 
 ```bash
 export TEST_IMAGE_TAG=localhost:5000/exousia:latest
-buildah unshare -- bats -r custom-tests/
+buildah unshare -- bats -r tests/
 ```
 
 **Using Make:**
@@ -54,14 +54,14 @@ Permission denied when accessing container
 Always use `buildah unshare`:
 
 ```bash
-buildah unshare -- bats -r custom-tests/
+buildah unshare -- bats -r tests/
 ```
 
 **Never run:**
 
 ```bash
 # Wrong - will fail
-bats -r custom-tests/
+bats -r tests/
 ```
 
 ---
@@ -80,7 +80,7 @@ bats -r custom-tests/
 
 ```bash
 # Run locally with CI flag
-CI=true TEST_IMAGE_TAG=localhost:5000/exousia:latest buildah unshare -- bats -r custom-tests/
+CI=true TEST_IMAGE_TAG=localhost:5000/exousia:latest buildah unshare -- bats -r tests/
 ```
 
 1. Verify file permissions in Containerfile:
@@ -203,17 +203,17 @@ git clone https://github.com/bats-core/bats-file test/test_helper/bats-file
 
 ```bash
 # Show all output including passing tests
-buildah unshare -- bats -r custom-tests/ --verbose-run --show-output-of-passing-tests
+buildah unshare -- bats -r tests/ --verbose-run --show-output-of-passing-tests
 
 # TAP format (useful for parsing)
-buildah unshare -- bats -r custom-tests/ --formatter tap
+buildah unshare -- bats -r tests/ --formatter tap
 ```
 
 ### 2. Run Single Test
 
 ```bash
 # By line number
-buildah unshare -- bats custom-tests/image_content.bats:85
+buildah unshare -- bats tests/image_content.bats:85
 
 # By name filter
 buildah unshare -- bats tests/image_content.bats --filter "Plymouth"
@@ -289,8 +289,8 @@ package example is not installed
 1. Check package is in correct list:
 
 ```bash
-grep "example" custom-pkgs/packages.add
-grep "example" custom-pkgs/packages.sway
+grep "example" overlays/base/packages/
+grep "example" overlays/base/packages/window-managers/sway.yml
 ```
 
 1. Verify package name spelling:
@@ -542,7 +542,7 @@ CONTAINER=$(buildah from localhost:5000/exousia:test)
 MOUNT_POINT=$(buildah mount "$CONTAINER")
 
 # Run tests multiple times
-TEST_IMAGE_TAG=localhost:5000/exousia:test buildah unshare -- bats -r custom-tests/
+TEST_IMAGE_TAG=localhost:5000/exousia:test buildah unshare -- bats -r tests/
 
 # Cleanup when done
 buildah umount "$CONTAINER"
@@ -594,7 +594,7 @@ If you're still stuck after trying the above solutions:
 
 ```bash
 # Get full test output
-buildah unshare -- bats -r custom-tests/ --verbose-run 2>&1 | tee test-output.log
+buildah unshare -- bats -r tests/ --verbose-run 2>&1 | tee test-output.log
 
 # Get build output
 podman build . 2>&1 | tee build-output.log
@@ -619,7 +619,7 @@ bats --version
 git diff HEAD~1 Containerfile
 
 # Check what changed in tests
-git diff HEAD~1 custom-tests/
+git diff HEAD~1 tests/
 ```
 
 ### 4. Test with Defaults
@@ -651,10 +651,10 @@ Include:
 
 ```bash
 # Full verbose test run
-buildah unshare -- bats -r custom-tests/ --verbose-run
+buildah unshare -- bats -r tests/ --verbose-run
 
 # Test specific line
-buildah unshare -- bats custom-tests/image_content.bats:85
+buildah unshare -- bats tests/image_content.bats:85
 
 # Inspect container
 CONTAINER=$(buildah from IMAGE_TAG)

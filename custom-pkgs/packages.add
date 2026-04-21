@@ -1,7 +1,0 @@
-# Auto-generated package list (LEGACY FORMAT - DEPRECATED)
-# Generated for: test
-# DO NOT EDIT MANUALLY - Changes will be overwritten
-# NOTE: Use packages/ YAML definitions with package-loader module instead
-
-basepkg
-wmpkg

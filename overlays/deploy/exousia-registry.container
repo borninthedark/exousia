@@ -1,6 +1,7 @@
 [Unit]
 Description=Local container registry for development
-After=network-online.target
+After=exousia-network.service
+Requires=exousia-network.service
 
 [Container]
 Image=docker.io/library/registry:2

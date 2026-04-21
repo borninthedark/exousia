@@ -262,7 +262,7 @@ sudo iftop
 
 ## Build-Time Tests
 
-The repository includes automated tests in `custom-tests/image_content.bats` that verify:
+The repository includes automated tests in `tests/image_content.bats` that verify:
 
 1. **Flathub remote is configured** (line 525)
 2. **Flathub flatpakrepo file exists** (line 532)

@@ -68,8 +68,8 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 
 ## Configuration
 
+- **[modules.md](modules.md)** -- Build module types, fields, and usage reference
 - **[chezmoi-integration.md](chezmoi-integration.md)** -- Dotfile management with chezmoi
-- **[kernel-options.md](kernel-options.md)** -- Kernel boot parameters and overrides
 - **[package-loader-cli.md](package-loader-cli.md)** -- Resolve package sets, inspect provenance, and export legacy manifests
 
 ## Testing
