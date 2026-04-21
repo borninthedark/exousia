@@ -1,11 +1,12 @@
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from .loader import PackageLoader
 
 
-def main(loader: PackageLoader | None = None):
+def main(argv: list[str] | None = None, loader: PackageLoader | None = None):
     """CLI entry point for package loader."""
     parser = argparse.ArgumentParser(
         description="Load and manage package definitions for Exousia builds"
@@ -44,7 +45,7 @@ def main(loader: PackageLoader | None = None):
         "--feature-bundle", action="append", dest="feature_bundles", help=argparse.SUPPRESS
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv if argv is not None else sys.argv[1:])
 
     if loader is None:
         loader = PackageLoader()

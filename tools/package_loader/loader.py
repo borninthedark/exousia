@@ -357,11 +357,11 @@ class PackageLoader:
             bundle = self._bundle_record(file_path, config, selected_as)
             bundles.append(bundle)
             for group in bundle["groups"]["install"]:
-                group_install_sources.setdefault(group, set()).add(bundle["name"])
+                group_install_sources.setdefault(group, set()).add(selected_as)
             for group in bundle["groups"]["remove"]:
-                group_remove_sources.setdefault(group, set()).add(bundle["name"])
+                group_remove_sources.setdefault(group, set()).add(selected_as)
             for pkg in bundle["packages"]:
-                install_sources.setdefault(pkg, set()).add(bundle["name"])
+                install_sources.setdefault(pkg, set()).add(selected_as)
 
         if extras and feature_bundles is not None:
             raise PackageValidationError(

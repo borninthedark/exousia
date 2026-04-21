@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for generator.cli — covers uncovered branches.
+Unit tests for generator.cli.
 """
 
 import sys
@@ -21,17 +21,19 @@ class TestLoadYamlConfig:
         result = load_yaml_config(cfg)
         assert result["name"] == "test"
 
-    def test_file_not_found(self, tmp_path):
+    def test_file_not_found(self, tmp_path, capsys):
         with pytest.raises(SystemExit) as exc:
             load_yaml_config(tmp_path / "missing.yml")
         assert exc.value.code == 1
+        assert "Config file not found" in capsys.readouterr().err
 
-    def test_invalid_yaml(self, tmp_path):
+    def test_invalid_yaml(self, tmp_path, capsys):
         cfg = tmp_path / "bad.yml"
         cfg.write_text("invalid: [unclosed")
         with pytest.raises(SystemExit) as exc:
             load_yaml_config(cfg)
         assert exc.value.code == 1
+        assert "Error parsing YAML" in capsys.readouterr().err
 
 
 class TestDetermineBaseImage:
@@ -71,6 +73,10 @@ class TestDetermineBaseImage:
         result = determine_base_image({"base-image": "quay.io/custom/img"}, "unknown-type", "43")
         assert result == "quay.io/custom/img:43"
 
+    def test_determine_base_image_unknown_v2(self):
+        """Test determine_base_image with unknown image type and no preferred base."""
+        assert determine_base_image({}, "unknown", "43") == "quay.io/fedora/fedora-bootc:43"
+
 
 class TestValidateConfig:
     def test_valid_config(self, capsys):
@@ -91,81 +97,71 @@ class TestValidateConfig:
 
 
 class TestMain:
-    def test_validate_only(self, monkeypatch, tmp_path, capsys):
+    def test_validate_only(self, tmp_path, capsys):
         cfg = tmp_path / "test.yml"
         cfg.write_text("name: t\ndescription: d\nmodules: []")
-        monkeypatch.setattr(sys, "argv", ["prog", "-c", str(cfg), "--validate"])
         with pytest.raises(SystemExit) as exc:
-            main()
+            main(argv=["-c", str(cfg), "--validate"])
         assert exc.value.code == 0
         assert "valid" in capsys.readouterr().out
 
-    def test_invalid_config_exits(self, monkeypatch, tmp_path):
+    def test_invalid_config_exits(self, tmp_path):
         cfg = tmp_path / "test.yml"
         cfg.write_text("foo: bar")  # missing required fields
-        monkeypatch.setattr(sys, "argv", ["prog", "-c", str(cfg)])
         with pytest.raises(SystemExit) as exc:
-            main()
+            main(argv=["-c", str(cfg)])
         assert exc.value.code == 1
 
-    def test_generate_to_stdout(self, monkeypatch, tmp_path, capsys):
+    def test_generate_to_stdout(self, tmp_path, capsys):
         cfg = tmp_path / "test.yml"
         cfg.write_text(
             "name: t\ndescription: d\nimage-type: fedora-bootc\n" "image-version: 43\nmodules: []"
         )
-        monkeypatch.setattr(sys, "argv", ["prog", "-c", str(cfg)])
-        main()
+        main(argv=["-c", str(cfg)])
         output = capsys.readouterr().out
         assert "FROM" in output
 
-    def test_generate_to_file(self, monkeypatch, tmp_path):
+    def test_generate_to_file(self, tmp_path):
         cfg = tmp_path / "test.yml"
         cfg.write_text(
             "name: t\ndescription: d\nimage-type: fedora-sway-atomic\n"
             "image-version: 43\nmodules: []"
         )
         out = tmp_path / "Containerfile"
-        monkeypatch.setattr(sys, "argv", ["prog", "-c", str(cfg), "-o", str(out)])
-        main()
+        main(argv=["-c", str(cfg), "-o", str(out)])
         assert out.exists()
         assert "FROM" in out.read_text()
 
-    def test_verbose_output(self, monkeypatch, tmp_path, capsys):
+    def test_verbose_output(self, tmp_path, capsys):
         cfg = tmp_path / "test.yml"
         cfg.write_text("name: t\ndescription: d\nmodules: []\nimage-version: 43")
-        monkeypatch.setattr(sys, "argv", ["prog", "-c", str(cfg), "-v"])
-        main()
+        main(argv=["-c", str(cfg), "-v"])
         output = capsys.readouterr().out
         assert "Build context" in output
 
-    def test_disable_plymouth(self, monkeypatch, tmp_path, capsys):
+    def test_disable_plymouth(self, tmp_path, capsys):
         cfg = tmp_path / "test.yml"
         cfg.write_text(
             "name: t\ndescription: d\nimage-type: fedora-bootc\n" "image-version: 43\nmodules: []"
         )
-        monkeypatch.setattr(sys, "argv", ["prog", "-c", str(cfg), "--disable-plymouth", "-v"])
-        main()
+        main(argv=["-c", str(cfg), "--disable-plymouth", "-v"])
         output = capsys.readouterr().out
         assert "Plymouth: False" in output
 
-    def test_enable_zfs(self, monkeypatch, tmp_path, capsys):
+    def test_enable_zfs(self, tmp_path, capsys):
         cfg = tmp_path / "test.yml"
         cfg.write_text(
             "name: t\ndescription: d\nimage-type: fedora-bootc\n" "image-version: 43\nmodules: []"
         )
-        monkeypatch.setattr(sys, "argv", ["prog", "-c", str(cfg), "--enable-zfs", "-v"])
-        main()
+        main(argv=["-c", str(cfg), "--enable-zfs", "-v"])
         output = capsys.readouterr().out
         assert "ZFS: True" in output
 
-    def test_resolved_package_plan_output(self, monkeypatch, tmp_path):
+    def test_resolved_package_plan_output(self, tmp_path):
         cfg = tmp_path / "test.yml"
         cfg.write_text("name: t\ndescription: d\nmodules: []\nimage-version: 43")
         plan = tmp_path / "plan.json"
-        monkeypatch.setattr(
-            sys, "argv", ["prog", "-c", str(cfg), "--resolved-package-plan", str(plan)]
-        )
-        main()
+        main(argv=["-c", str(cfg), "--resolved-package-plan", str(plan)])
         assert plan.exists()
         import json
 
@@ -173,21 +169,28 @@ class TestMain:
         assert "image" in data
         assert "rpm" in data
 
-    def test_custom_fedora_version(self, monkeypatch, tmp_path, capsys):
+    def test_custom_fedora_version(self, tmp_path, capsys):
         cfg = tmp_path / "test.yml"
         cfg.write_text("name: t\ndescription: d\nmodules: []")
-        monkeypatch.setattr(sys, "argv", ["prog", "-c", str(cfg), "--fedora-version", "44", "-v"])
-        main()
+        main(argv=["-c", str(cfg), "--fedora-version", "44", "-v"])
         output = capsys.readouterr().out
         assert "Fedora version: 44" in output
 
+    def test_main_determine_base_image_error(self, tmp_path, capsys):
+        """Test main handles ValueError from determine_base_image."""
+        cfg = tmp_path / "config.yml"
+        cfg.write_text("name: test\ndescription: test\nmodules: []\nimage-version: ''\n")
+        with pytest.raises(SystemExit) as exc:
+            main(argv=["-c", str(cfg)])
+        assert exc.value.code == 1
+        assert "Error: version must be specified" in capsys.readouterr().err
 
-def test_generator_main_determine_base_image_error(monkeypatch, tmp_path, capsys):
-    """Test main handles ValueError from determine_base_image."""
-    cfg = tmp_path / "config.yml"
-    cfg.write_text("name: test\ndescription: test\nmodules: []\nimage-version: ''\n")
-    monkeypatch.setattr(sys, "argv", ["prog", "-c", str(cfg)])
-    with pytest.raises(SystemExit) as exc:
-        main()
-    assert exc.value.code == 1
-    assert "Error: version must be specified" in capsys.readouterr().err
+
+# --- Main entrypoint coverage ---
+
+
+def test_generator_main_file_execution():
+    """Import __main__ to get coverage."""
+    import generator.__main__
+
+    assert generator.__main__.main is not None

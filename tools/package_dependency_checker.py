@@ -208,14 +208,19 @@ class PackageDependencyTranspiler:
     verification.
     """
 
-    def __init__(self, distro: str | None = None):
+    def __init__(self, distro: str | None = None, checker: PackageManagerInterface | None = None):
         """
         Initialize the transpiler.
 
         Args:
             distro: Force a specific distro checker. Only "fedora" is supported.
                     If None, auto-detect.
+            checker: Optional pre-instantiated checker to use (dependency injection).
         """
+        if checker:
+            self.checker = checker
+            return
+
         self.checkers: dict[str, PackageManagerInterface] = {
             "fedora": FedoraDnfChecker(),
         }
@@ -296,9 +301,10 @@ class PackageDependencyTranspiler:
         return len(missing) == 0, missing
 
 
-def main():
+def main(argv: list[str] | None = None):
     """CLI interface for package dependency checking."""
     import argparse
+    import sys
 
     parser = argparse.ArgumentParser(
         description="Fedora package dependency checker",
@@ -327,7 +333,7 @@ Examples:
         help="Only verify if packages are installed (exit 0 if all installed)",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv if argv is not None else sys.argv[1:])
 
     try:
         transpiler = PackageDependencyTranspiler(distro=args.distro)
