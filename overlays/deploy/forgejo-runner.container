@@ -7,7 +7,7 @@ Requires=forgejo.service
 Image=codeberg.org/forgejo/runner:latest
 ContainerName=forgejo-runner
 Volume=forgejo-runner-data.volume:/data
-Volume=/var/run/podman/podman.sock:/var/run/docker.sock:ro
+Volume=%t/podman/podman.sock:/var/run/docker.sock:ro
 Network=exousia.network
 Label=io.containers.autoupdate=registry
 Environment=FORGEJO_INSTANCE_URL=http://forgejo:3000

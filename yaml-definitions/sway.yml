@@ -42,10 +42,7 @@ modules:
       - |
         test -f /etc/passwd || touch /etc/passwd
         test -f /etc/group  || touch /etc/group
-      - systemd-sysusers || true
-      - |
-        set -e
-        systemd-sysusers --root=/ /usr/lib/sysusers.d/bootc.conf
+        systemd-sysusers || true
         mkdir -p /var/lib/greeter /var/lib/greetd /var/lib/rtkit
         chown -R 241:241 /var/lib/greeter || true
         chown -R 240:240 /var/lib/greetd || true
