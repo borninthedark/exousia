@@ -258,6 +258,31 @@ def test_distro_detection():
     print("✓ Distro detection works correctly")
 
 
+def test_final_cleanup_avoids_wholesale_run_deletion():
+    """The generated cleanup phase must not recursively delete all of /run."""
+
+    config = yaml.safe_load(Path("adnyeus.yml").read_text())
+    context = BuildContext(
+        image_type="fedora-sway-atomic",
+        fedora_version="43",
+        enable_plymouth=True,
+        use_upstream_sway_config=False,
+        base_image="quay.io/fedora/fedora-sway-atomic:43",
+        distro="fedora",
+        window_manager="sway",
+    )
+
+    output = ContainerfileGenerator(config, context).generate()
+
+    assert "rm -rf /run/* /tmp/*" not in output
+    assert "/run/systemd" not in output
+    assert "rm -rf \\" in output
+    assert "/run/dnf" in output
+    assert "/run/gluster" in output
+    assert "/run/selinux-policy" in output
+    assert "/run/tor" in output
+
+
 def test_enable_plymouth_generates_env():
     """Test that ENABLE_PLYMOUTH is generated as ENV, not a standalone instruction."""
     config = {
