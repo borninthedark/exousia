@@ -3,8 +3,8 @@ description: 'Transpile bootc YAML blueprints to Containerfiles'
 
 inputs:
   yaml_config:
-    description: 'Path to YAML blueprint (or "auto")'
-    default: 'auto'
+    description: 'Path to YAML blueprint (defaults to adnyeus.yml)'
+    default: 'adnyeus.yml'
   image_type:
     description: 'Image type (fedora-bootc, fedora-sway-atomic)'
     default: 'fedora-sway-atomic'

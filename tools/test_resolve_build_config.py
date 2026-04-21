@@ -5,7 +5,9 @@ Unit tests for resolve_build_config.py -- ZFS and output rendering
 """
 
 import importlib.util
+import os
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 # Load module from file path
@@ -18,6 +20,18 @@ assert spec.loader is not None, "Module spec has no loader"
 spec.loader.exec_module(resolve_build_config)
 
 render_outputs = resolve_build_config.render_outputs
+resolve_yaml_config = resolve_build_config.resolve_yaml_config
+
+
+@contextmanager
+def working_directory(path: Path):
+    """Temporarily change the process working directory."""
+    original = Path.cwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(original)
 
 
 def _read_outputs(tmp_path, **kwargs):
@@ -95,3 +109,29 @@ def test_render_outputs_appends_to_existing(tmp_path):
     content = output_file.read_text()
     assert "EXISTING_KEY=existing_value" in content, "Should preserve existing content"
     assert "ENABLE_ZFS=true" in content, "Should append new content"
+
+
+def test_resolve_yaml_config_auto_prefers_adnyeus(tmp_path):
+    """Auto resolution should prefer adnyeus.yml as the authoritative blueprint."""
+    with working_directory(tmp_path):
+        (tmp_path / "adnyeus.yml").write_text("name: canonical\n")
+        definitions_dir = tmp_path / "yaml-definitions"
+        definitions_dir.mkdir()
+        (definitions_dir / "sway.yml").write_text("name: fallback\n")
+
+        resolved = resolve_yaml_config("auto", "fedora-sway-atomic")
+
+    assert resolved == (tmp_path / "adnyeus.yml").resolve()
+
+
+def test_resolve_yaml_config_explicit_path_still_wins(tmp_path):
+    """Explicit yaml_config input should override the adnyeus default."""
+    with working_directory(tmp_path):
+        (tmp_path / "adnyeus.yml").write_text("name: canonical\n")
+        definitions_dir = tmp_path / "yaml-definitions"
+        definitions_dir.mkdir()
+        (definitions_dir / "custom.yml").write_text("name: explicit\n")
+
+        resolved = resolve_yaml_config("custom.yml", "fedora-sway-atomic")
+
+    assert resolved == (definitions_dir / "custom.yml").resolve()

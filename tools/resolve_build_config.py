@@ -36,6 +36,16 @@ def _read_blueprint_version() -> str:
 DEFAULT_VERSION = _read_blueprint_version()
 
 
+def _default_blueprint_path() -> Path | None:
+    """Return the canonical repo blueprint if present in the current workspace."""
+    candidate = Path("adnyeus.yml")
+    if candidate.exists():
+        return candidate.resolve()
+    if _BLUEPRINT.exists():
+        return _BLUEPRINT.resolve()
+    return None
+
+
 def resolve_yaml_config(
     input_yaml_config: str,
     target_image_type: str,
@@ -114,7 +124,13 @@ def resolve_yaml_config(
         print(f"::error::Searched locations: {[str(p) for p in candidate_paths]}")
         sys.exit(1)
 
-    # Auto-selection mode
+    # Auto-selection mode: prefer the canonical project blueprint first.
+    default_blueprint = _default_blueprint_path()
+    if default_blueprint is not None:
+        print(f"Auto-selected canonical blueprint: {default_blueprint}")
+        return default_blueprint
+
+    # Fall back to definition selection when the canonical blueprint is absent.
     if not YAML_SELECTOR_AVAILABLE:
         if YAML_SELECTOR_IMPORT_ERROR is not None:
             print(f"::error::Failed to import YamlSelectorService: {YAML_SELECTOR_IMPORT_ERROR}")
@@ -233,7 +249,7 @@ def main() -> None:
     input_window_manager = os.environ.get("INPUT_WINDOW_MANAGER", "")
     input_desktop_environment = os.environ.get("INPUT_DESKTOP_ENVIRONMENT", "")
     input_os = os.environ.get("INPUT_OS", "")
-    input_yaml_config = os.environ.get("INPUT_YAML_CONFIG", "auto")
+    input_yaml_config = os.environ.get("INPUT_YAML_CONFIG", "adnyeus.yml")
 
     print(f"Input image type: {input_image_type}")
     print(f"Input distro version: {input_distro_version}")
