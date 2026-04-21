@@ -458,7 +458,7 @@ class ModuleProcessorsMixin:
                     "entry-point", f"from {module_name}.main import main\\nmain()"
                 )
                 site_pkg = '$(python3 -c "import site; print(site.getsitepackages()[0])")'
-                commands.append(f"mkdir -p {site_pkg}")
+                commands.append(f'mkdir -p "{site_pkg}"')
                 commands.append(
                     f"cp -r {clone_dir}/{module_name} " f'"{site_pkg}"' f"/{module_name}"
                 )
