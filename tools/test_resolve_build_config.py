@@ -27,7 +27,7 @@ def _read_outputs(tmp_path, **kwargs):
         "build_image_type": "fedora-sway-atomic",
         "os_family": "fedora",
         "os_version": "43",
-        "containerfile_path": Path("Dockerfile.generated"),
+        "resolved_config": Path("Dockerfile.generated"),
         "enable_plymouth": True,
         "enable_zfs": False,
     }
@@ -60,7 +60,7 @@ def test_render_outputs_all_keys_present(tmp_path):
         "BUILD_IMAGE_TYPE",
         "OS_FAMILY",
         "OS_VERSION",
-        "CONTAINERFILE",
+        "RESOLVED_CONFIG",
         "ENABLE_PLYMOUTH",
         "ENABLE_ZFS",
     }
@@ -88,7 +88,7 @@ def test_render_outputs_appends_to_existing(tmp_path):
         build_image_type="fedora-bootc",
         os_family="fedora",
         os_version="43",
-        containerfile_path=Path("Dockerfile.generated"),
+        resolved_config=Path("Dockerfile.generated"),
         enable_plymouth=True,
         enable_zfs=True,
     )

@@ -142,6 +142,10 @@ get_package_manager() {
     assert_failure "auth.json must not be baked into the image"
 }
 
+@test "Package state tmpfiles config should be present" {
+    assert_file_exists "$MOUNT_POINT/usr/lib/tmpfiles.d/package-state-dirs.conf"
+}
+
 # --- Plymouth ---
 
 @test "Directory structure should be correct for fedora-bootc" {

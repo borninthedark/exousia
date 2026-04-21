@@ -91,8 +91,6 @@ def resolve_yaml_config(
         print(
             f"::warning::YAML config not found in standard locations, searching repo for: {config_path.name}"
         )
-        import subprocess
-
         try:
             result = subprocess.run(
                 ["find", ".", "-name", config_path.name, "-type", "f"],
@@ -211,7 +209,7 @@ def render_outputs(
     build_image_type: str,
     os_family: str,
     os_version: str,
-    containerfile_path: Path,
+    resolved_config: Path,
     enable_plymouth: bool,
     enable_zfs: bool,
 ) -> None:
@@ -220,7 +218,7 @@ def render_outputs(
         output.write(f"BUILD_IMAGE_TYPE={build_image_type}\n")
         output.write(f"OS_FAMILY={os_family}\n")
         output.write(f"OS_VERSION={os_version}\n")
-        output.write(f"CONTAINERFILE={containerfile_path}\n")
+        output.write(f"RESOLVED_CONFIG={resolved_config}\n")
         output.write(f"ENABLE_PLYMOUTH={'true' if enable_plymouth else 'false'}\n")
         output.write(f"ENABLE_ZFS={'true' if enable_zfs else 'false'}\n")
 
@@ -275,33 +273,6 @@ def main() -> None:
             input_desktop_environment,
         )
 
-    print("::group::YAML to Containerfile Transpilation")
-    print(f"Generating Containerfile from {resolved_yaml}...")
-
-    containerfile_path = Path("Dockerfile.generated")
-    cmd = [
-        "uv",
-        "run",
-        "python",
-        "-m",
-        "generator",
-        "--config",
-        str(resolved_yaml),
-        "--image-type",
-        target_image_type,
-        "--fedora-version",
-        str(target_version),
-        "--output",
-        str(containerfile_path),
-        "--verbose",
-        "--enable-plymouth" if enable_plymouth else "--disable-plymouth",
-        "--enable-zfs" if enable_zfs else "--disable-zfs",
-    ]
-    subprocess.run(cmd, check=True)
-
-    print(f"Generated Containerfile: {containerfile_path}")
-    print("::endgroup::")
-
     os_family = "unknown"
     os_version = "latest"
 
@@ -319,7 +290,7 @@ def main() -> None:
         target_image_type,
         os_family,
         os_version,
-        containerfile_path,
+        resolved_yaml,
         enable_plymouth,
         enable_zfs,
     )

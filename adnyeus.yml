@@ -59,6 +59,9 @@ modules:
       - src: overlays/base/tmpfiles/podman-auth-dirs.conf
         dst: /usr/lib/tmpfiles.d/podman-auth-dirs.conf
         mode: "0644"
+      - src: overlays/base/tmpfiles/package-state-dirs.conf
+        dst: /usr/lib/tmpfiles.d/package-state-dirs.conf
+        mode: "0644"
       - src: overlays/sway/repos/
         dst: /etc/yum.repos.d/
         mode: "0644"
@@ -271,6 +274,12 @@ modules:
         rm -f /var/log/dnf5.log /var/log/dnf5.log.[0-9]* || true
         rm -rf /var/cache/dnf /var/cache/libdnf5 /var/cache/etckeeper || true
         rm -rf /var/lib/dnf || true
+
+        # Purge flatpak build-time cache (remote config survives, cache does not)
+        rm -rf /var/lib/flatpak/repo/tmp || true
+
+        # Runtime-only dirs must be empty in the image
+        rm -rf /run/* /tmp/*
       - bootc container lint
       - restorecon -vv /usr/local/bin/tuigreet || true
       - echo "composefs=true" >> /etc/ostree/repo.config || true

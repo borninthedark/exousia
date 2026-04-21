@@ -397,7 +397,7 @@ Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 Contributions welcome. Development rules:
 
 - **TDD mandatory** -- write tests before implementation and keep test intent close to the change
-- **Coverage floor** -- `tools/` pytest coverage is enforced at 80% and should keep ratcheting upward
+- **Coverage floor** -- `tools/` pytest coverage is enforced at 85% and should keep ratcheting upward
 - **[Conventional commits](https://www.conventionalcommits.org/)** -- enforced by pre-commit hook
 - **Shift-left** -- `uv run pre-commit install && uv run pre-commit install --hook-type commit-msg`
 - Security gates (Bandit, Gitleaks) and quality checks (Ruff, Black, mypy) run locally before push
@@ -419,6 +419,7 @@ MIT License -- see LICENSE file.
 This project uses AI-assisted development tools:
 
 - **[Claude Code](https://claude.ai/claude-code)** (Anthropic)
+- **[Gemini CLI](https://github.com/google-gemini/gemini-cli)** (Google)
 - **[ChatGPT Codex](https://openai.com/index/openai-codex/)** (OpenAI)
 - **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)**
 - **[github-actions[bot]](https://github.com/apps/github-actions)** -- automated releases and tagging
