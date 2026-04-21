@@ -135,7 +135,7 @@ get_package_manager() {
 # --- CI container auth config checks ---
 
 @test "Container auth tmpfiles config should be present" {
-    assert_file_exists "$MOUNT_POINT/usr/lib/tmpfiles.d/containers-auth.conf"
+    assert_file_exists "$MOUNT_POINT/usr/lib/tmpfiles.d/podman-auth-dirs.conf"
 
     # No auth.json should be baked into the image -- credentials are injected at runtime
     run test -e "$MOUNT_POINT/usr/lib/container-auth.json"

@@ -36,6 +36,11 @@ DOC_ENTRIES: list[tuple[str, str, str]] = [
         "Build bootable disk images (ISO, raw, qcow2)",
     ),
     (
+        "docs/modules.md",
+        "Module Reference",
+        "Build module types, fields, and usage examples",
+    ),
+    (
         "docs/package-loader-cli.md",
         "Package Loader CLI",
         "Resolve package sets, inspect provenance, and export legacy manifests",
@@ -84,7 +89,7 @@ SUBDIR_ENTRIES: list[tuple[str, str, str]] = [
     ("overlays/base/", "Base Overlay", "Shared configs: PAM, polkit, sysusers, packages"),
     ("overlays/sway/", "Sway Overlay", "Sway desktop: configs, scripts, session"),
     ("overlays/deploy/", "Deploy Overlay", "Podman Quadlet container definitions"),
-    ("custom-tests/", "Test Suite", "Bats integration tests for built images"),
+    ("tests/", "Test Suite", "Bats integration tests for built images"),
     ("yaml-definitions/", "YAML Definitions", "Alternative build blueprints"),
     ("docs/", "Documentation", "Full documentation"),
     (".github/workflows/", "Shinigami Pipeline", "GitHub Actions CI/CD"),
@@ -392,7 +397,7 @@ Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 Contributions welcome. Development rules:
 
 - **TDD mandatory** -- write tests before implementation and keep test intent close to the change
-- **Coverage floor** -- `tools/` pytest coverage is enforced at 71% and should keep ratcheting upward
+- **Coverage floor** -- `tools/` pytest coverage is enforced at 80% and should keep ratcheting upward
 - **[Conventional commits](https://www.conventionalcommits.org/)** -- enforced by pre-commit hook
 - **Shift-left** -- `uv run pre-commit install && uv run pre-commit install --hook-type commit-msg`
 - Security gates (Bandit, Gitleaks) and quality checks (Ruff, Black, mypy) run locally before push

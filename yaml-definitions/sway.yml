@@ -60,8 +60,8 @@ modules:
   # Container authentication
   - type: files
     files:
-      - src: containers-auth.conf
-        dst: /usr/lib/tmpfiles.d/containers-auth.conf
+      - src: overlays/base/tmpfiles/podman-auth-dirs.conf
+        dst: /usr/lib/tmpfiles.d/podman-auth-dirs.conf
         mode: "0644"
 
   # Directory structure

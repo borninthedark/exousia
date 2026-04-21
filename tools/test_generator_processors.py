@@ -537,3 +537,221 @@ class TestLoadCommonRemovePackages:
         with patch("package_loader.PackageLoader", side_effect=Exception("fail")):
             result = gen._load_common_remove_packages()
         assert result == []
+
+
+# --- _process_signing_module ---
+
+
+class TestProcessSigningModule:
+    def test_default_enforce_mode(self):
+        gen = _make_generator()
+        gen._process_signing_module({})
+        output = "\n".join(gen.lines)
+        assert "dnf install -y --skip-unavailable skopeo" in output
+        assert "mkdir -p /etc/containers/registries.d" in output
+        assert "mkdir -p /etc/pki/containers" in output
+        assert "sigstoreSigned" in output
+        assert "policy.json" in output
+
+    def test_warn_mode(self):
+        gen = _make_generator()
+        gen._process_signing_module({"verification": "warn"})
+        output = "\n".join(gen.lines)
+        assert "insecureAcceptAnything" in output
+
+    def test_cosign_key_copy(self):
+        gen = _make_generator()
+        gen._process_signing_module({"cosign-key": "keys/cosign.pub"})
+        assert any("COPY" in line for line in gen.lines)
+
+    def test_policy_file_override(self):
+        gen = _make_generator()
+        gen._process_signing_module({"policy-file": "overlays/policy.json"})
+        assert any("COPY" in line and "policy.json" in line for line in gen.lines)
+
+
+# --- _process_default_flatpaks_module ---
+
+
+class TestProcessDefaultFlatpaksModule:
+    def test_no_configurations(self):
+        gen = _make_generator()
+        gen._process_default_flatpaks_module({"configurations": []})
+        assert any("no configurations" in line for line in gen.lines)
+
+    def test_system_scope_install_list(self):
+        gen = _make_generator()
+        gen._process_default_flatpaks_module(
+            {
+                "configurations": [
+                    {
+                        "scope": "system",
+                        "install": ["org.mozilla.firefox//stable", "org.gimp.GIMP//stable"],
+                    }
+                ]
+            }
+        )
+        output = "\n".join(gen.lines)
+        assert "mkdir -p /usr/share/exousia/flatpaks" in output
+        assert "system-install.list" in output
+        assert "org.mozilla.firefox//stable" in output
+
+    def test_user_scope_empty_install(self):
+        gen = _make_generator()
+        gen._process_default_flatpaks_module({"configurations": [{"scope": "user", "install": []}]})
+        output = "\n".join(gen.lines)
+        # Empty install list should not write a list file
+        assert "user-install.list" not in output
+
+    def test_multiple_scopes(self):
+        gen = _make_generator()
+        gen._process_default_flatpaks_module(
+            {
+                "configurations": [
+                    {"scope": "system", "install": ["app.A//stable"]},
+                    {"scope": "user", "install": ["app.B//stable"]},
+                ]
+            }
+        )
+        output = "\n".join(gen.lines)
+        assert "system-install.list" in output
+        assert "user-install.list" in output
+
+
+# --- _resolve_module (from-file) ---
+
+
+class TestResolveModule:
+    def test_no_from_file_passthrough(self):
+        gen = _make_generator()
+        module = {"type": "script", "scripts": ["echo hi"]}
+        assert gen._resolve_module(module) is module
+
+    def test_from_file_loads_yaml(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        ext = tmp_path / "ext.yml"
+        ext.write_text(
+            "type: default-flatpaks\nconfigurations:\n  - scope: system\n    install:\n      - app.A//stable\n"
+        )
+        gen = _make_generator()
+        result = gen._resolve_module({"from-file": "ext.yml"})
+        assert result["type"] == "default-flatpaks"
+        assert len(result["configurations"]) == 1
+
+    def test_from_file_missing(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        gen = _make_generator()
+        result = gen._resolve_module({"from-file": "missing.yml"})
+        assert result["type"] is None
+        assert "not found" in result["_error"]
+
+    def test_from_file_invalid_yaml(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        bad = tmp_path / "bad.yml"
+        bad.write_text("invalid: [unclosed")
+        gen = _make_generator()
+        result = gen._resolve_module({"from-file": "bad.yml"})
+        assert "_error" in result
+
+    def test_from_file_inline_overrides(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        ext = tmp_path / "ext.yml"
+        ext.write_text("type: script\nscripts:\n  - echo base\n")
+        gen = _make_generator()
+        result = gen._resolve_module({"from-file": "ext.yml", "condition": 'distro == "fedora"'})
+        assert result["type"] == "script"
+        assert result["condition"] == 'distro == "fedora"'
+
+
+# --- _process_github_install_module ---
+
+
+class TestProcessGithubInstallModule:
+    def test_python_install(self):
+        gen = _make_generator()
+        gen._process_github_install_module(
+            {
+                "repos": [
+                    {
+                        "url": "https://github.com/nwg-piotr/autotiling",
+                        "name": "autotiling",
+                        "type": "python",
+                        "module": "autotiling",
+                        "bin": "autotiling",
+                        "entry-point": "from autotiling.main import main\\nmain()",
+                    }
+                ]
+            }
+        )
+        output = "\n".join(gen.lines)
+        assert "git clone --depth 1" in output
+        assert "nwg-piotr/autotiling" in output
+        assert "site.getsitepackages" in output
+        assert "/usr/local/bin/autotiling" in output
+        assert "rm -rf /tmp/github-install-0" in output
+
+    def test_script_install(self):
+        gen = _make_generator()
+        gen._process_github_install_module(
+            {
+                "repos": [
+                    {
+                        "url": "https://github.com/user/tool",
+                        "name": "mytool",
+                        "type": "script",
+                        "src": "bin/mytool.sh",
+                        "dst": "/usr/local/bin/mytool",
+                    }
+                ]
+            }
+        )
+        output = "\n".join(gen.lines)
+        assert "install -m 0755" in output
+        assert "bin/mytool.sh" in output
+
+    def test_make_install(self):
+        gen = _make_generator()
+        gen._process_github_install_module(
+            {
+                "repos": [
+                    {
+                        "url": "https://github.com/user/tool",
+                        "name": "tool",
+                        "type": "make",
+                        "prefix": "/usr",
+                    }
+                ]
+            }
+        )
+        output = "\n".join(gen.lines)
+        assert "make -C" in output
+        assert "PREFIX=/usr install" in output
+
+    def test_with_branch(self):
+        gen = _make_generator()
+        gen._process_github_install_module(
+            {
+                "repos": [
+                    {
+                        "url": "https://github.com/user/tool",
+                        "name": "tool",
+                        "type": "script",
+                        "branch": "v2.0",
+                        "src": "tool",
+                        "dst": "/usr/local/bin/tool",
+                    }
+                ]
+            }
+        )
+        output = "\n".join(gen.lines)
+        assert "--branch v2.0" in output
+
+    def test_no_repos_error(self):
+        gen = _make_generator()
+        gen._process_github_install_module({"repos": []})
+        assert any("ERROR" in line for line in gen.lines)
+
+    def test_missing_url_error(self):
+        gen = _make_generator()
+        gen._process_github_install_module({"repos": [{"name": "x", "type": "script"}]})
+        assert any("missing 'url'" in line for line in gen.lines)

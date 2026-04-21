@@ -48,29 +48,28 @@ build:
 
 # Modules define the build steps
 modules:
-  # System users configuration
+  # --- Phase: Early filesystem bootstrap ---
+
+  # System config payloads (sysusers, tmpfiles, repos, PAM, polkit, greetd, sway, swaylock)
   - type: files
     files:
       - src: overlays/base/sysusers/bootc.conf
         dst: /usr/lib/sysusers.d/bootc.conf
         mode: "0644"
-
-  # Initialize system users
-  - type: script
-    scripts:
-      - |
-        test -f /etc/passwd || touch /etc/passwd
-        test -f /etc/group  || touch /etc/group
-        systemd-sysusers || true
-
-  # Container authentication
-  - type: files
-    files:
-      - src: containers-auth.conf
-        dst: /usr/lib/tmpfiles.d/containers-auth.conf
+      - src: overlays/base/tmpfiles/podman-auth-dirs.conf
+        dst: /usr/lib/tmpfiles.d/podman-auth-dirs.conf
+        mode: "0644"
+      - src: overlays/sway/repos/
+        dst: /etc/yum.repos.d/
+        mode: "0644"
+      - src: overlays/base/configs/
+        dst: /etc/
+        mode: "0644"
+      - src: overlays/sway/configs/
+        dst: /etc/
         mode: "0644"
 
-  # Plymouth theme files (toggleable per image type)
+  # Plymouth theme assets (conditional)
   - type: files
     condition: enable_plymouth == true
     files:
@@ -78,57 +77,18 @@ modules:
         dst: /usr/share/plymouth/themes/bgrt-better-luks/
         mode: "0644"
 
-  # Custom repositories
-  - type: files
-    files:
-      - src: overlays/sway/repos/
-        dst: /etc/yum.repos.d/
-        mode: "0644"
-
-  # Base configurations (PAM, polkit, tmpfiles)
-  - type: files
-    files:
-      - src: overlays/base/configs/
-        dst: /etc/
-        mode: "0644"
-
-  # Sway configurations (greetd, sway, swaylock)
-  - type: files
-    files:
-      - src: overlays/sway/configs/
-        dst: /etc/
-        mode: "0644"
-
-  # Base scripts
+  # Executables (base tools, sway setup/runtime scripts, session entry points)
   - type: files
     files:
       - src: overlays/base/tools/
         dst: /usr/local/bin/
         mode: "0755"
-
-  # Sway setup scripts
-  - type: files
-    files:
       - src: overlays/sway/scripts/setup/
         dst: /usr/local/bin/
         mode: "0755"
-
-  # Sway runtime scripts
-  - type: files
-    files:
       - src: overlays/sway/scripts/runtime/
         dst: /usr/local/bin/
         mode: "0755"
-
-  # Sway session files (custom Exousia configs)
-  - type: files
-    files:
-      - src: overlays/sway/session/sway.desktop
-        dst: /usr/share/wayland-sessions/sway.desktop
-        mode: "0644"
-      - src: overlays/sway/session/environment
-        dst: /etc/sway/environment
-        mode: "0644"
       - src: overlays/sway/session/start-sway
         dst: /usr/bin/start-sway
         mode: "0755"
@@ -138,6 +98,24 @@ modules:
       - src: overlays/sway/scripts/runtime/volume-helper
         dst: /usr/libexec/sway/volume-helper
         mode: "0755"
+
+  # Desktop session assets
+  - type: files
+    files:
+      - src: overlays/sway/session/sway.desktop
+        dst: /usr/share/wayland-sessions/sway.desktop
+        mode: "0644"
+      - src: overlays/sway/session/environment
+        dst: /etc/sway/environment
+        mode: "0644"
+
+  # Initialize system users (must run after sysusers.d is staged)
+  - type: script
+    scripts:
+      - |
+        test -f /etc/passwd || touch /etc/passwd
+        test -f /etc/group  || touch /etc/group
+        systemd-sysusers || true
 
   # Package management using new YAML-based loader
   # Automatically loads packages based on desktop.window_manager or desktop.desktop_environment
@@ -156,17 +134,17 @@ modules:
     feature_bundles:
       - audio-production  # Fedora Jam audio suite: DAWs, plugins, PipeWire-JACK, RT tuning
 
-  # Audio production: configure PipeWire-JACK and realtime permissions
+  # --- Phase: Post-package configuration ---
+
+  # Audio, autotiling, Flathub remote — all post-package setup in one layer
   - type: script
     scripts:
       - |
-        # Activate PipeWire-JACK as the system-wide JACK implementation
-        # This makes pipewire-jack-audio-connection-kit the default for all JACK clients
+        # PipeWire-JACK: low-latency defaults for audio production
         if [ -x /usr/bin/pw-jack ]; then
           mkdir -p /etc/pipewire/pipewire.conf.d
           printf '%s\n' \
             '# PipeWire-JACK defaults for audio production' \
-            '# Low-latency settings suitable for DAW usage' \
             'context.properties = {' \
             '    default.clock.rate          = 48000' \
             '    default.clock.quantum       = 256' \
@@ -176,29 +154,25 @@ modules:
             > /etc/pipewire/pipewire.conf.d/10-jack-defaults.conf
         fi
 
-        # Set tuned profile to realtime (if tuned is available)
+        # Set tuned profile to realtime
         if [ -x /usr/sbin/tuned-adm ]; then
           mkdir -p /etc/tuned
           echo "realtime" > /etc/tuned/active_profile
         fi
 
-  # NOTE: git-clone module type is deprecated pending compilation support.
-  # Autotiling installed via uv after package-loader makes it available
-  - type: script
-    scripts:
-      - UV_CACHE_DIR=/tmp/uv-cache uv pip install --system autotiling && rm -rf /tmp/uv-cache
-
-  # Flatpak setup - Add Flathub remote at build time for testing
-  # The remote must be present for tests to verify configuration
-  - type: script
-    scripts:
-      - |
-        # Add Flathub remote at build time (safe, no package installation)
-        # This allows tests to verify the remote is configured
+        # Flathub remote at build time (tests verify this)
         flatpak remote-add --if-not-exists --system flathub \
           https://dl.flathub.org/repo/flathub.flatpakrepo
 
-        echo "Flathub remote configured at build time"
+  # Autotiling: installed from GitHub (no pip, no COPR)
+  - type: github-install
+    repos:
+      - url: https://github.com/nwg-piotr/autotiling
+        name: autotiling
+        type: python
+        module: autotiling
+        bin: autotiling
+        entry-point: "from autotiling.main import main\\nmain()"
 
   # Flatpak setup - Boot-time installation via default-flatpaks module
   # The module creates systemd services that automatically:
@@ -240,14 +214,9 @@ modules:
           dracut -vf "/usr/lib/modules/${kver}/initramfs.img" "$kver"
         done
 
-  # Podman Quadlet definitions (container services)
-  - type: files
-    files:
-      - src: overlays/deploy/
-        dst: /usr/share/containers/systemd/
-        mode: "0644"
+  # --- Phase: Post-package systemd units and deploy assets ---
 
-  # Flatpak auto-update (system-wide, daily)
+  # Systemd units (flatpak timers, bootc timer override) and Quadlet definitions
   - type: files
     files:
       - src: overlays/base/systemd/system/update-system-flatpaks.service
@@ -256,15 +225,16 @@ modules:
       - src: overlays/base/systemd/system/update-system-flatpaks.timer
         dst: /usr/lib/systemd/system/update-system-flatpaks.timer
         mode: "0644"
-
-  # bootc auto-update timer override (daily at 23:15 EST)
-  - type: files
-    files:
       - src: overlays/base/systemd/system/bootc-fetch-apply-updates.timer.d/
         dst: /usr/lib/systemd/system/bootc-fetch-apply-updates.timer.d/
         mode: "0644"
+      - src: overlays/deploy/
+        dst: /usr/share/containers/systemd/
+        mode: "0644"
 
   # System services (common to all image types)
+  # Note: Forgejo and Plane services are auto-activated via WantedBy=default.target
+  # in their Quadlet definitions — no explicit enable needed here.
   - type: systemd
     system:
       enabled:
@@ -278,15 +248,16 @@ modules:
         - tuned.service
     user:
       enabled:
-        - chezmoi-init.service
-        - chezmoi-update.timer
+        # chezmoi-init.service and chezmoi-update.timer are enabled by the chezmoi module
         - update-user-flatpaks.timer
     default-target: graphical.target
 
   # Note: bluebuild-default-flatpaks-system.service is automatically enabled
   # by the default-flatpaks module when it creates the service files
 
-  # Ensure /var layout matches bootc lint expectations
+  # --- Phase: Final cleanup and validation ---
+
+  # /var cleanup, bootc lint, composefs — must be last
   - type: script
     scripts:
       - |
@@ -300,10 +271,6 @@ modules:
         rm -f /var/log/dnf5.log /var/log/dnf5.log.[0-9]* || true
         rm -rf /var/cache/dnf /var/cache/libdnf5 /var/cache/etckeeper || true
         rm -rf /var/lib/dnf || true
-
-  # Validation and finalization
-  - type: script
-    scripts:
       - bootc container lint
       - restorecon -vv /usr/local/bin/tuigreet || true
       - echo "composefs=true" >> /etc/ostree/repo.config || true

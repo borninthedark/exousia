@@ -5,7 +5,7 @@ Compact reference for the current Exousia test surface. The canonical narrative 
 ## Test Locations
 
 ```text
-custom-tests/
+tests/
 ├── image_content.bats      # built image validation
 └── overlay_content.bats    # source overlay and static config validation
 ```
@@ -29,8 +29,8 @@ custom-tests/
 ```bash
 make test
 make test-run
-buildah unshare -- bats -r custom-tests/
-buildah unshare -- bats custom-tests/image_content.bats --filter "Plymouth"
+buildah unshare -- bats -r tests/
+buildah unshare -- bats tests/image_content.bats --filter "Plymouth"
 ```
 
 ## Related Docs
