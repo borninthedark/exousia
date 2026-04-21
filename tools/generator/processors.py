@@ -457,10 +457,10 @@ class ModuleProcessorsMixin:
                 entry_point = module.get(
                     "entry-point", f"from {module_name}.main import main\\nmain()"
                 )
+                site_pkg = '$(python3 -c "import site; print(site.getsitepackages()[0])")'
+                commands.append(f"mkdir -p {site_pkg}")
                 commands.append(
-                    f"cp -r {clone_dir}/{module_name} "
-                    f'"$(python3 -c "import site; print(site.getsitepackages()[0])")"'
-                    f"/{module_name}"
+                    f"cp -r {clone_dir}/{module_name} " f'"{site_pkg}"' f"/{module_name}"
                 )
                 commands.append(
                     f"printf '#!/usr/bin/python3\\n{entry_point}\\n' > /usr/local/bin/{bin_name}"

@@ -686,6 +686,7 @@ class TestProcessGithubInstallModule:
         output = "\n".join(gen.lines)
         assert "git clone --depth 1" in output
         assert "nwg-piotr/autotiling" in output
+        assert "mkdir -p" in output
         assert "site.getsitepackages" in output
         assert "/usr/local/bin/autotiling" in output
         assert "rm -rf /tmp/github-install-0" in output
