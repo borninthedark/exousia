@@ -281,8 +281,14 @@ modules:
         # Purge flatpak build-time cache (remote config survives, cache does not)
         rm -rf /var/lib/flatpak/repo/tmp || true
 
-        # Runtime-only dirs must be empty in the image
-        rm -rf /run/* /tmp/*
+        # Remove known transient build-time runtime directories without touching
+        # system-managed paths that may be mounted or busy under BuildKit.
+        rm -rf \
+          /run/dnf \
+          /run/gluster \
+          /run/selinux-policy \
+          /run/tor \
+          /tmp/*
       - bootc container lint
       - restorecon -vv /usr/local/bin/tuigreet || true
       - echo "composefs=true" >> /etc/ostree/repo.config || true
