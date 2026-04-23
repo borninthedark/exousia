@@ -125,9 +125,6 @@ modules:
       - src: overlays/sway/session/sway.desktop
         dst: /usr/share/wayland-sessions/sway.desktop
         mode: "0644"
-      - src: overlays/sway/session/environment
-        dst: /etc/sway/environment
-        mode: "0644"
       - src: overlays/sway/session/start-sway
         dst: /usr/bin/start-sway
         mode: "0755"
