@@ -80,11 +80,8 @@ jobs:
   uhin:
     name: "Uhin (Security)"
     uses: ./.github/workflows/uhin.yml
-    secrets: inherit
     permissions:
       contents: read
-      security-events: write
-      issues: write
 
   # -- Hiyori (Build) runs after both pass --
   hiyori:

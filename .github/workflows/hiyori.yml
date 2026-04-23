@@ -119,9 +119,6 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     timeout-minutes: 15
-    permissions:
-      contents: read
-      security-events: write
     steps:
       - name: Trivy vulnerability scan
         uses: aquasecurity/trivy-action@0.35.0
@@ -129,23 +126,6 @@ jobs:
           image-ref: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:${{ needs.build.outputs.image_tag }}
           severity: HIGH,CRITICAL
           exit-code: 0
-
-      - name: Qualys container scan
-        if: ${{ github.ref == 'refs/heads/main' && secrets.QUALYS_ACCESS_TOKEN != '' && vars.QUALYS_POD != '' }}
-        uses: qualys/qualys-github/container-scan@v1
-        with:
-          qualys_access_token: ${{ secrets.QUALYS_ACCESS_TOKEN }}
-          qualys_pod: ${{ vars.QUALYS_POD }}
-          image_id: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_PATH }}:${{ needs.build.outputs.image_tag }}
-          upload_sarif: true
-          continue_on_error: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Qualys container scan skipped
-        if: ${{ github.ref != 'refs/heads/main' || secrets.QUALYS_ACCESS_TOKEN == '' || vars.QUALYS_POD == '' }}
-        run: |
-          echo "Qualys container scan skipped: it runs on main when QUALYS_ACCESS_TOKEN and QUALYS_POD are configured." >> $GITHUB_STEP_SUMMARY
 
   sign:
     name: Cosign Image
