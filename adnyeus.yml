@@ -234,9 +234,6 @@ modules:
       - src: overlays/base/systemd/system/bootc-fetch-apply-updates.timer.d/
         dst: /usr/lib/systemd/system/bootc-fetch-apply-updates.timer.d/
         mode: "0644"
-      - src: overlays/deploy/
-        dst: /usr/share/containers/systemd/users/
-        mode: "0644"
       - src: overlays/deploy/plane.env.example
         dst: /etc/exousia/plane/plane.env
         mode: "0644"
