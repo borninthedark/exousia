@@ -237,6 +237,9 @@ modules:
       - src: overlays/deploy/
         dst: /usr/share/containers/systemd/users/
         mode: "0644"
+      - src: overlays/deploy/plane.env.example
+        dst: /etc/exousia/plane/plane.env
+        mode: "0644"
 
   # System services (common to all image types)
   # Note: Forgejo and Plane services are auto-activated via WantedBy=default.target

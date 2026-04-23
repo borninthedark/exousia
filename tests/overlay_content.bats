@@ -367,7 +367,7 @@ assert_has_shebang() {
 @test "Plane quadlets should use the shared exousia network and env file" {
     run grep -q "^Network=exousia.network" "$OVERLAY_ROOT/deploy/plane-api.container"
     assert_success "plane-api.container should use exousia.network"
-    run grep -q "^PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env" \
+    run grep -q "^PodmanArgs=--env-file=/etc/exousia/plane/plane.env" \
         "$OVERLAY_ROOT/deploy/plane-api.container"
     assert_success "plane-api.container should reference the shared plane env file"
     run grep -q "^Network=exousia.network" "$OVERLAY_ROOT/deploy/plane-proxy.container"

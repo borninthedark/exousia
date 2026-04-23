@@ -8,7 +8,7 @@ Image=docker.io/makeplane/plane-backend:stable
 ContainerName=plane-worker
 Exec=./bin/docker-entrypoint-worker.sh
 Network=exousia.network
-PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+PodmanArgs=--env-file=/etc/exousia/plane/plane.env
 Label=io.containers.autoupdate=registry
 
 [Service]

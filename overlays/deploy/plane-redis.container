@@ -8,7 +8,7 @@ Image=docker.io/valkey/valkey:7.2.5-alpine
 ContainerName=plane-redis
 Volume=plane-redis-data.volume:/data
 Network=exousia.network
-PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+PodmanArgs=--env-file=/etc/exousia/plane/plane.env
 Label=io.containers.autoupdate=registry
 
 [Service]
