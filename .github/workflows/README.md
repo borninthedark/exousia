@@ -9,8 +9,8 @@ The 12th Division is the Shinigami Research and Development Institute — Calend
 |---------|------|----------|------|
 | **Urahara** | `urahara.yml` | 12th (Despair in Your Heart) | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate |
 | **Hikifune** | `hikifune.yml` | 12th (Despair in Your Heart) | CI: Ruff, Black, isort, pytest |
-| **Uhin** | `uhin.yml` | 12th (Despair in Your Heart) | Security: Hadolint, Checkov, Trivy config scan, Bandit |
-| **Hiyori** | `hiyori.yml` | 12th (Despair in Your Heart) | Build, Cosign, Trivy image scan, semver release |
+| **Uhin** | `uhin.yml` | 12th (Despair in Your Heart) | Security: Hadolint, Checkov, Trivy config scan, Qualys code scan, Bandit |
+| **Hiyori** | `hiyori.yml` | 12th (Despair in Your Heart) | Build, Trivy image scan, Qualys container scan, Cosign, semver release |
 | **Nemu** | `nemu.yml` | 12th (Despair in Your Heart) | Post-CI: generates STATUS.md |
 | **Mayuri** | `mayuri.yml` | 12th (Despair in Your Heart) | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
 

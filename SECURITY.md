@@ -32,6 +32,7 @@ Exousia employs a defense-in-depth approach:
 
 - **Checkov** -- Static analysis for Containerfile and IaC misconfigurations
 - **Trivy** -- Container image vulnerability scanning (config + image)
+- **Qualys** -- Repository SCA and container vulnerability scanning with SARIF upload to GitHub Security
 - **Bandit** -- Python SAST for security anti-patterns
 - **Hadolint** -- Dockerfile/Containerfile best-practice linting
 - **Cosign** -- Image signing for supply-chain integrity
@@ -172,6 +173,23 @@ Dependencies are managed via:
 - **GitHub Dependabot** for automated security updates on Actions and pip
   dependencies
 - **uv lock** for reproducible Python dependency resolution
+
+## Qualys CI Integration
+
+Qualys scanning is integrated into the GitHub Actions pipeline in two places:
+
+- `Uhin` runs `qualys/qualys-github/code-scan@v1` against the repository
+- `Hiyori` runs `qualys/qualys-github/container-scan@v1` against the built image on `main`
+
+Required GitHub configuration:
+
+- Actions secret: `QUALYS_ACCESS_TOKEN`
+- Actions variable: `QUALYS_POD`
+
+Example POD values include `US1`, `US2`, `US3`, and `EU1`.
+
+The integration is configured to skip cleanly when those values are not set, so
+the pipeline remains usable before Qualys credentials are provisioned.
 
 ## Contact
 
