@@ -47,14 +47,21 @@ sudo systemctl reboot
 ### Switch to Different Image/Tag
 
 ```bash
+# Mirror the desired tag from GHCR first
+make local-mirror TAG=v1.2.0
+
 # Switch to a specific tag
-sudo bootc switch docker.io/1borninthedark/exousia:v1.2.0
+sudo bootc switch localhost:5000/exousia:v1.2.0
+
+# Mirror the rolling daily build
+make local-mirror TAG=current
 
 # Switch to the rolling daily build
-sudo bootc switch docker.io/1borninthedark/exousia:current
+sudo bootc switch localhost:5000/exousia:current
 
-# Switch back to latest
-sudo bootc switch docker.io/1borninthedark/exousia:latest
+# Mirror latest and switch back
+make local-mirror
+sudo bootc switch localhost:5000/exousia:latest
 ```
 
 ## Upgrade Workflow Best Practices
@@ -78,7 +85,7 @@ sudo bootc switch docker.io/1borninthedark/exousia:latest
 
    ```bash
    # Check if newer image exists
-   skopeo inspect docker://docker.io/1borninthedark/exousia:latest
+   skopeo inspect docker://ghcr.io/borninthedark/exousia:latest
    ```
 
 4. **Review changelog/release notes**
@@ -223,7 +230,7 @@ Create a script to check for updates:
 # check-updates.sh
 
 CURRENT_DIGEST=$(bootc status --json | jq -r '.status.booted.image.imageDigest')
-LATEST_DIGEST=$(skopeo inspect docker://docker.io/1borninthedark/exousia:latest | jq -r '.Digest')
+LATEST_DIGEST=$(skopeo inspect docker://ghcr.io/borninthedark/exousia:latest | jq -r '.Digest')
 
 if [ "$CURRENT_DIGEST" != "$LATEST_DIGEST" ]; then
     echo "Update available!"
@@ -248,11 +255,11 @@ sudo ostree admin cleanup
 
 ### Issue: Upgrade fails with authentication error
 
-**Solution**: Ensure you're logged into the container registry:
+**Solution**: Ensure you're logged into the container registry you use for direct pulls:
 
 ```bash
-# For DockerHub
-podman login docker.io
+# For GHCR
+podman login ghcr.io
 
 # Copy credentials for bootc
 sudo cp ~/.config/containers/auth.json /etc/ostree/auth.json

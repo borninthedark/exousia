@@ -22,14 +22,14 @@ help:
 	@echo "  ci-test         Run CI tests"
 	@echo "  pre-commit      Run pre-commit hooks on all files"
 	@echo "  build           Build bootc image with podman"
-	@echo "  push            Push bootc image to DockerHub"
+	@echo "  push            Push bootc image to GHCR"
 	@echo "  quadlet-install Install Quadlet definitions to systemd"
-	@echo "  quadlet-enable  Enable Quadlet services at boot"
-	@echo "  quadlet-disable Disable Quadlet services at boot"
-	@echo "  quadlet-start   Start Quadlet services"
-	@echo "  quadlet-stop    Stop Quadlet services"
-	@echo "  quadlet-logs    View Quadlet service logs"
-	@echo "  quadlet-status  Show Quadlet service status"
+	@echo "  quadlet-enable  Enable the local registry at boot"
+	@echo "  quadlet-disable Disable the local registry at boot"
+	@echo "  quadlet-start   Start the local registry"
+	@echo "  quadlet-stop    Stop the local registry"
+	@echo "  quadlet-logs    View local registry logs"
+	@echo "  quadlet-status  Show local registry status"
 	@echo "  plane-env-init  Install Plane env template to ~/.config/exousia/plane"
 	@echo "  plane-quadlet-enable  Enable Plane Quadlet services at boot"
 	@echo "  plane-quadlet-disable Disable Plane Quadlet services at boot"
@@ -38,14 +38,15 @@ help:
 	@echo "  plane-quadlet-logs    View Plane Quadlet logs"
 	@echo "  plane-quadlet-status  Show Plane Quadlet service status"
 	@echo "  local-build     Build image and push to local registry"
-	@echo "  local-push      Promote image from local registry to DockerHub"
+	@echo "  local-push      Promote image from local registry to GHCR"
+	@echo "  local-mirror    Mirror image from GHCR to the local registry"
 	@echo "  overlay-test    Run pre-build overlay tests"
 	@echo "  local-test      Run bats tests against locally built image"
 	@echo "  readme          Generate README.md from template"
 
 # Variables with defaults
 TAG ?= latest
-IMAGE ?= 1borninthedark/exousia
+IMAGE ?= ghcr.io/borninthedark/exousia
 
 # Format code with black and isort
 format:
@@ -139,7 +140,7 @@ pre-commit:
 build:
 	podman build -t exousia:latest -f Containerfile.atomic .
 
-# Push bootc image to DockerHub
+# Push bootc image to GHCR
 push:
 	podman push $(IMAGE):$(TAG)
 
@@ -150,29 +151,29 @@ quadlet-install:
 	systemctl --user daemon-reload
 	@echo "Quadlets installed. Run 'make quadlet-enable' to enable at boot."
 
-# Enable Quadlet services to start at boot
+# Enable local registry service to start at boot
 quadlet-enable:
-	systemctl --user enable forgejo exousia-registry forgejo-runner
+	systemctl --user enable exousia-registry
 
-# Disable Quadlet services from starting at boot
+# Disable local registry service from starting at boot
 quadlet-disable:
-	systemctl --user disable forgejo exousia-registry forgejo-runner
+	systemctl --user disable exousia-registry
 
-# Start Quadlet services
+# Start local registry service
 quadlet-start:
-	systemctl --user start forgejo exousia-registry
+	systemctl --user start exousia-registry
 
-# Stop Quadlet services
+# Stop local registry service
 quadlet-stop:
-	systemctl --user stop forgejo forgejo-runner exousia-registry
+	systemctl --user stop exousia-registry
 
-# View logs for Quadlet services
+# View logs for local registry service
 quadlet-logs:
-	journalctl --user -u forgejo -u forgejo-runner -u exousia-registry -f
+	journalctl --user -u exousia-registry -f
 
-# Show status of Quadlet services
+# Show status of local registry service
 quadlet-status:
-	systemctl --user status forgejo forgejo-runner exousia-registry --no-pager
+	systemctl --user status exousia-registry --no-pager
 
 # Initialize Plane environment file
 plane-env-init:
@@ -228,14 +229,23 @@ local-build:
 		--dest-tls-verify=false
 	@echo "==> Done. Image available at localhost:5000/exousia:$(TAG)"
 
-# Promote image from local registry to DockerHub
+# Mirror image from GHCR to the local registry for bootc consumption
+local-mirror:
+	@echo "==> Copying $(IMAGE):$(TAG) -> localhost:5000/exousia:$(TAG)"
+	skopeo copy \
+		docker://$(IMAGE):$(TAG) \
+		docker://localhost:5000/exousia:$(TAG) \
+		--dest-tls-verify=false
+	@echo "==> Mirrored to localhost:5000/exousia:$(TAG)"
+
+# Promote image from local registry to GHCR
 local-push:
-	@echo "==> Copying localhost:5000/exousia:$(TAG) -> docker.io/$(IMAGE):$(TAG)"
+	@echo "==> Copying localhost:5000/exousia:$(TAG) -> $(IMAGE):$(TAG)"
 	skopeo copy \
 		docker://localhost:5000/exousia:$(TAG) \
-		docker://docker.io/$(IMAGE):$(TAG) \
+		docker://$(IMAGE):$(TAG) \
 		--src-tls-verify=false
-	@echo "==> Pushed to docker.io/$(IMAGE):$(TAG)"
+	@echo "==> Pushed to $(IMAGE):$(TAG)"
 
 # Run pre-build overlay tests (no image required)
 overlay-test:
