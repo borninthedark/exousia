@@ -296,6 +296,14 @@ assert_has_shebang() {
     assert_has_shebang "$OVERLAY_ROOT/sway/session/start-sway"
 }
 
+@test "start-sway should only source system-level sway environment" {
+    run grep -q "/etc/sway/environment" "$OVERLAY_ROOT/sway/session/start-sway"
+    assert_success "start-sway should source /etc/sway/environment"
+
+    run grep -q "\${XDG_CONFIG_HOME:-\$HOME/.config}/sway/environment" "$OVERLAY_ROOT/sway/session/start-sway"
+    assert_failure "start-sway should not source user-level sway environment overrides by default"
+}
+
 # ============================================================
 # Sway repos
 # ============================================================

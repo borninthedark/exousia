@@ -68,6 +68,7 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 
 - **[modules.md](modules.md)** -- Build module types, fields, and usage reference
 - **[chezmoi-integration.md](chezmoi-integration.md)** -- Dotfile management with chezmoi
+- **[fedora-bootc-migration-plan.md](fedora-bootc-migration-plan.md)** -- Base-image migration plan and package audit checklist
 - **[package-loader-cli.md](package-loader-cli.md)** -- Resolve package sets, inspect provenance, and export legacy manifests
 
 ## Testing

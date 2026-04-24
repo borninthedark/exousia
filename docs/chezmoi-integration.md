@@ -1,14 +1,17 @@
 # Chezmoi Integration
 
-This guide explains how Exousia integrates chezmoi for automated dotfiles management using the BlueBuild chezmoi module.
+This guide explains how Exousia integrates chezmoi for optional dotfile
+management using the BlueBuild chezmoi module.
 
 ## Overview
 
-Exousia automates dotfiles management using a custom chezmoi module. This integration handles:
+Exousia ships the chezmoi tooling, but keeps desktop and session behavior
+authoritative at the system level under `/etc`. User-level dotfile management is
+opt-in. This integration provides:
 
 - **Build-time installation**: chezmoi is installed as an RPM package during the image build
-- **Automatic initialization**: the dotfiles repository is cloned on first user login
-- **Automatic updates**: dotfiles are updated daily via a systemd timer
+- **Optional initialization**: the dotfiles repository can be cloned on first user login
+- **Optional updates**: dotfiles can be updated daily via a systemd timer
 - **Conflict handling**: configured to skip files with local changes (keeps your customizations)
 
 ## How It Works
@@ -20,20 +23,20 @@ During image build, the chezmoi module:
 - ✅ Installs chezmoi from Fedora RPM repos to `/usr/bin/chezmoi`
 - ✅ Copies systemd user unit files with placeholder values
 - ✅ Substitutes the repository URL, conflict policy, and timer intervals into the unit files
-- ✅ Enables services globally for all users via `systemctl --global enable`
+- ✅ Leaves activation opt-in unless `all-users: true` is explicitly configured
 
-### Phase 2: First User Login
+### Phase 2: Opt-in User Login
 
-When a user logs in for the first time:
+When a user opts in and logs in:
 
 - 🚀 The `chezmoi-init.service` runs automatically
 - 🚀 Dotfiles repository is cloned to `~/.local/share/chezmoi`
 - 🚀 Initial dotfiles are applied to the home directory
 - 🚀 The service marks itself complete and won't run again
 
-### Phase 3: Automatic Updates
+### Phase 3: Optional Automatic Updates
 
-After initialization:
+After initialization, if the timer is enabled:
 
 - 🔄 The `chezmoi-update.timer` runs daily (configurable)
 - 🔄 Waits 5 minutes after boot before first update (configurable)
@@ -53,7 +56,7 @@ The chezmoi module is declared in the blueprint files:
 ```yaml
 type: chezmoi
 repository: "https://github.com/borninthedark/dotfiles"
-all-users: true                # Enabled for all users by default
+all-users: false               # Per-user opt-in by default
 file-conflict-policy: skip     # Skip files with local changes
 run-every: "1d"                # Update once per day
 wait-after-boot: "5m"          # Wait 5 minutes after boot
@@ -64,7 +67,7 @@ wait-after-boot: "5m"          # Wait 5 minutes after boot
 | Option | Value | Description |
 |--------|-------|-------------|
 | `repository` | `https://github.com/borninthedark/dotfiles` | Git repository URL for dotfiles |
-| `all-users` | `true` | Enable services globally for all users |
+| `all-users` | `false` | Keep user dotfile activation opt-in so system-level desktop config stays authoritative |
 | `file-conflict-policy` | `skip` | Skip files with local changes |
 | `run-every` | `1d` | Update interval (1 day) |
 | `wait-after-boot` | `5m` | Delay before first update after boot |

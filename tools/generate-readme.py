@@ -61,6 +61,11 @@ DOC_ENTRIES: list[tuple[str, str, str]] = [
         "Quadlet services, local build, GHCR publication, and local registry mirroring",
     ),
     (
+        "docs/fedora-bootc-migration-plan.md",
+        "Fedora bootc Migration Plan",
+        "Base-image migration plan and package audit checklist",
+    ),
+    (
         "docs/sway-session-greetd.md",
         "Sway + greetd",
         "Sway session with greetd login manager",
