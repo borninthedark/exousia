@@ -244,7 +244,7 @@ Configure in GitHub **Settings > Secrets and variables > Actions**.
 
 | Name | Purpose |
 |------|---------|
-| `GHCR_PAT` | GHCR personal access token for local/manual registry access when `GITHUB_TOKEN` is not available |
+| `GHCR_PAT` | GHCR personal access token for CI RPM override pulls and local/manual registry access |
 
 **Variables:**
 
