@@ -87,6 +87,7 @@ jobs:
   hiyori:
     name: "Hiyori (Build)"
     needs: [defaults, hikifune, uhin]
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork != true
     uses: ./.github/workflows/hiyori.yml
     with:
       image_type: ${{ inputs.image_type || 'fedora-sway-atomic' }}
