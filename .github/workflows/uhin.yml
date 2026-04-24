@@ -24,12 +24,17 @@ jobs:
         run: |
           echo "## Uhin: File Structure Check" >> $GITHUB_STEP_SUMMARY
 
-          for file in sway.desktop environment start-sway; do
+          for file in sway.desktop start-sway; do
             if [[ ! -f "overlays/sway/session/$file" ]]; then
               echo "ERROR: Missing overlays/sway/session/$file"
               exit 1
             fi
           done
+
+          if [[ ! -f "overlays/sway/configs/greetd/config.toml" ]]; then
+            echo "ERROR: Missing overlays/sway/configs/greetd/config.toml"
+            exit 1
+          fi
 
           for dir in window-managers common; do
             if [[ ! -d "overlays/base/packages/$dir" ]]; then
@@ -38,9 +43,16 @@ jobs:
             fi
           done
 
-          for script in setup-plymouth-theme dracut-rebuild; do
+          for script in setup-plymouth-theme dracut-rebuild ensure-sway-session; do
             if [[ ! -f "overlays/sway/scripts/setup/$script" ]]; then
               echo "ERROR: Missing overlays/sway/scripts/setup/$script"
+              exit 1
+            fi
+          done
+
+          for script in layered-include volume-helper; do
+            if [[ ! -f "overlays/sway/scripts/runtime/$script" ]]; then
+              echo "ERROR: Missing overlays/sway/scripts/runtime/$script"
               exit 1
             fi
           done

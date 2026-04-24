@@ -9,7 +9,7 @@ ContainerName=plane-mq
 PublishPort=127.0.0.1:15672:15672
 Volume=plane-mq-data.volume:/var/lib/rabbitmq
 Network=exousia.network
-PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+PodmanArgs=--env-file=/etc/exousia/plane/plane.env
 Label=io.containers.autoupdate=registry
 
 [Service]

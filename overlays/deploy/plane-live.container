@@ -8,7 +8,7 @@ Image=docker.io/makeplane/plane-live:stable
 ContainerName=plane-live
 Exec=node live/dist/server.js live
 Network=exousia.network
-PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+PodmanArgs=--env-file=/etc/exousia/plane/plane.env
 Label=io.containers.autoupdate=registry
 
 [Service]

@@ -9,7 +9,7 @@ ContainerName=plane-db
 Exec=postgres -c max_connections=1000
 Volume=plane-db-data.volume:/var/lib/postgresql/data
 Network=exousia.network
-PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+PodmanArgs=--env-file=/etc/exousia/plane/plane.env
 Label=io.containers.autoupdate=registry
 
 [Service]

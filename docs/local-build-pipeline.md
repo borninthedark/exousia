@@ -69,7 +69,7 @@ make plane-quadlet-start
 This copies all `.container`, `.volume`, and `.network` files to
 `~/.config/containers/systemd/`, reloads systemd, and starts Forgejo and the
 local registry. `make plane-env-init` creates
-`~/.config/exousia/plane/plane.env`, and `make plane-quadlet-start` brings up
+`~/.config/exousia/plane/plane.env` (or `/etc/exousia/plane/plane.env` for system-wide), and `make plane-quadlet-start` brings up
 Plane on the same Podman network so it can integrate with Forgejo by service
 name.
 

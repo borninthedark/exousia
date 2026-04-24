@@ -174,11 +174,14 @@ quadlet-logs:
 quadlet-status:
 	systemctl --user status forgejo forgejo-runner exousia-registry --no-pager
 
-# Initialize the user-specific Plane environment file
+# Initialize Plane environment file
 plane-env-init:
 	mkdir -p ~/.config/exousia/plane
 	cp -n overlays/deploy/plane.env.example ~/.config/exousia/plane/plane.env
 	@echo "Plane env file ready at ~/.config/exousia/plane/plane.env"
+	@echo "Note: Quadlets now use /etc/exousia/plane/plane.env by default."
+	@echo "The image build process provides a default there."
+
 
 # Enable Plane Quadlet services to start at boot
 plane-quadlet-enable:

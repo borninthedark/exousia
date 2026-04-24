@@ -8,7 +8,7 @@ Image=docker.io/makeplane/plane-proxy:stable
 ContainerName=plane-proxy
 PublishPort=127.0.0.1:8080:80
 Network=exousia.network
-PodmanArgs=--env-file=%h/.config/exousia/plane/plane.env
+PodmanArgs=--env-file=/etc/exousia/plane/plane.env
 Label=io.containers.autoupdate=registry
 
 [Service]
