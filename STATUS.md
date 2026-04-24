@@ -1,6 +1,6 @@
 # Exousia CI Status
 
-> Last updated: 2026-04-24 01:45:38 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/24867503319)
+> Last updated: 2026-04-24 03:19:30 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/24870047059)
 
 ## Pipeline: Urahara
 
@@ -10,7 +10,7 @@
 | Uhin | 12th (Despair in Your Heart) | Security scanning | success |
 | Hiyori | 12th (Despair in Your Heart) | Build & Release | success |
 
-**Result:** success
+**Result:** failure
 
 ## Build
 
@@ -20,5 +20,5 @@
 | Image Type | fedora-bootc |
 | Fedora Version | 43 |
 | Window Manager | sway |
-| Commit | `8fa9953c` |
+| Commit | `3b5f198d` |
 | Triggered By | push |
