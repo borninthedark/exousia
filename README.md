@@ -267,6 +267,7 @@ Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 | [Package Management Design](docs/package-management-and-container-builds.md) | Typed package-set model, resolved build plans, and build-pipeline direction |
 | [Overlay System](docs/overlay-system.md) | Overlay directory structure and how files map into images |
 | [Local Build Pipeline](docs/local-build-pipeline.md) | Quadlet services, local build, GHCR publication, and local registry mirroring |
+| [Fedora bootc Migration Plan](docs/fedora-bootc-migration-plan.md) | Base-image migration plan and package audit checklist |
 | [Sway + greetd](docs/sway-session-greetd.md) | Sway session with greetd login manager |
 | [Test Suite](docs/testing/README.md) | Test architecture, categories, and writing guide |
 | [Troubleshooting](docs/reference/troubleshooting.md) | Common issues and fixes |
