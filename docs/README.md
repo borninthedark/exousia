@@ -11,7 +11,6 @@ Comprehensive documentation for building, testing, and deploying custom Fedora b
 - [Configuration](#configuration)
 - [Testing](#testing)
 - [Architecture](#architecture)
-- [Infrastructure](#infrastructure)
 - [Reference](#reference)
 
 ---
@@ -42,14 +41,13 @@ Configure in GitHub repository settings under **Settings > Secrets and variables
 
 | Name | Purpose |
 |------|---------|
-| `DOCKERHUB_TOKEN` | DockerHub access token |
+| `GHCR_PAT` | GHCR personal access token for CI RPM override pulls and local/manual registry access |
 
 **Variables:**
 
 | Name | Purpose | Required |
 |------|---------|----------|
-| `DOCKERHUB_USERNAME` | DockerHub username | Yes |
-| `REGISTRY_URL` | Registry URL (defaults to `docker.io`) | No |
+| `REGISTRY_URL` | Registry URL (defaults to `ghcr.io`) | No |
 
 Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 
@@ -83,11 +81,8 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 
 - **[overlay-system.md](overlay-system.md)** -- Overlay directory structure and how files map into images
 - **[package-management-and-container-builds.md](package-management-and-container-builds.md)** -- Typed package-set model and resolved build-plan direction
-- **[local-build-pipeline.md](local-build-pipeline.md)** -- Quadlet services, local build, and promotion to DockerHub
+- **[local-build-pipeline.md](local-build-pipeline.md)** -- Quadlet services, local build, GHCR publication, and local registry mirroring
 
-## Infrastructure
-
-- **[ansible.md](ansible.md)** -- Ansible playbooks for post-deployment configuration
 - **[security-boundaries.md](security-boundaries.md)** -- Security model and boundaries
 
 ## Reference

@@ -50,6 +50,7 @@ CLAUDE.md
 GEMINI.md
 AGENTS.md
 CLAUDE_GEMINI_CODEX.md
+docs/ansible.md
 .claude/
 .gemini/
 .codex

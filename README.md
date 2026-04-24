@@ -14,7 +14,7 @@
 DevSecOps-hardened, container-based immutable operating systems built on
 [**bootc**](https://github.com/bootc-dev/bootc). YAML blueprints define OS
 images, Python tools transpile them to Containerfiles, Docker Buildx builds them,
-and GitHub Actions pushes signed images to DockerHub.
+and GitHub Actions pushes signed images to GHCR.
 
 Development follows a **TDD-first, shift-left** methodology — see
 [Contributing](#contributing) for details.
@@ -63,7 +63,8 @@ GHCR, and injected at build time via RPM overrides. See
 ### Use a published image
 
 ```bash
-sudo bootc switch docker.io/1borninthedark/exousia:latest
+make local-mirror
+sudo bootc switch localhost:5000/exousia:latest
 sudo bootc upgrade && sudo systemctl reboot
 ```
 
@@ -203,13 +204,15 @@ tests can verify what the image is meant to contain. See
 
 ## Local Build Pipeline
 
-Build images locally with Podman Quadlet services before promoting to DockerHub:
+Build images locally with Podman Quadlet services before publishing to GHCR and
+mirroring images into the local registry for bootc:
 
 ```bash
-make quadlet-install && make quadlet-start   # start Forgejo + local registry
+make quadlet-install && make quadlet-start   # start the local registry
 make local-build                             # generate containerfile, buildah build, push to local registry
 make local-test                              # run bats tests against local image
-make local-push                              # promote to DockerHub via skopeo
+make local-push                              # promote to GHCR via skopeo
+make local-mirror                            # mirror GHCR back to localhost:5000 for bootc
 ```
 
 See [Local Build Pipeline docs](docs/local-build-pipeline.md) for the full
@@ -241,15 +244,13 @@ Configure in GitHub **Settings > Secrets and variables > Actions**.
 
 | Name | Purpose |
 |------|---------|
-| `DOCKERHUB_TOKEN` | DockerHub access token |
-| `GHCR_PAT` | GHCR personal access token (`packages:read`) |
+| `GHCR_PAT` | GHCR personal access token for CI RPM override pulls and local/manual registry access |
 
 **Variables:**
 
 | Name | Purpose | Required |
 |------|---------|----------|
-| `DOCKERHUB_USERNAME` | DockerHub username | Yes |
-| `REGISTRY_URL` | Registry URL (defaults to `docker.io`) | No |
+| `REGISTRY_URL` | Registry URL (defaults to `ghcr.io`) | No |
 
 Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 
@@ -265,7 +266,7 @@ Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 | [Package Loader CLI](docs/package-loader-cli.md) | Resolve package sets, inspect provenance, and export legacy manifests |
 | [Package Management Design](docs/package-management-and-container-builds.md) | Typed package-set model, resolved build plans, and build-pipeline direction |
 | [Overlay System](docs/overlay-system.md) | Overlay directory structure and how files map into images |
-| [Local Build Pipeline](docs/local-build-pipeline.md) | Quadlet services, local build, and promotion to DockerHub |
+| [Local Build Pipeline](docs/local-build-pipeline.md) | Quadlet services, local build, GHCR publication, and local registry mirroring |
 | [Sway + greetd](docs/sway-session-greetd.md) | Sway session with greetd login manager |
 | [Test Suite](docs/testing/README.md) | Test architecture, categories, and writing guide |
 | [Troubleshooting](docs/reference/troubleshooting.md) | Common issues and fixes |

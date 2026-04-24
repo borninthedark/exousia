@@ -128,11 +128,11 @@ journalctl -u bluebuild-default-flatpaks.service
 
 ```bash
 # Pull or load your built image
-podman pull docker.io/1borninthedark/exousia:latest
+podman pull ghcr.io/borninthedark/exousia:latest
 
 # Export to a directory
 mkdir -p /tmp/exousia-test
-podman export $(podman create docker.io/1borninthedark/exousia:latest) | tar -C /tmp/exousia-test -xf -
+podman export $(podman create ghcr.io/borninthedark/exousia:latest) | tar -C /tmp/exousia-test -xf -
 
 # Boot with systemd-nspawn
 sudo systemd-nspawn -D /tmp/exousia-test --boot
@@ -157,7 +157,7 @@ sudo podman run --rm -it --privileged \
   -v /var/lib/containers/storage:/var/lib/containers/storage \
   quay.io/centos-bootc/bootc-image-builder:latest \
   --type qcow2 \
-  docker.io/1borninthedark/exousia:latest
+  ghcr.io/borninthedark/exousia:latest
 
 # Boot the VM and verify
 ssh user@vm-ip

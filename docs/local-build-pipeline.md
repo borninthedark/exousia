@@ -1,6 +1,8 @@
 # Local Build Pipeline
 
 Build, test, and promote container images using local Podman Quadlet services.
+The default local workflow only starts the registry. Forgejo and Plane are
+available, but opt-in.
 
 ## Architecture
 
@@ -26,7 +28,7 @@ graph LR
     GEN --> BA
     BA -->|push| REG
     REG -->|promote| SK
-    SK -->|copy| DH["DockerHub"]
+    SK -->|copy| GH["GHCR"]
 ```
 
 ## Quadlet Files
@@ -62,13 +64,25 @@ These tools are already included in the bootc image:
 ```bash
 make quadlet-install
 make quadlet-start
+```
+
+This installs all Quadlet definitions but only starts the local registry by
+default.
+
+### Optionally enable Forgejo and Plane later
+
+```bash
+# Forgejo
+systemctl --user start forgejo forgejo-runner
+
+# Plane
 make plane-env-init
 make plane-quadlet-start
 ```
 
 This copies all `.container`, `.volume`, and `.network` files to
-`~/.config/containers/systemd/`, reloads systemd, and starts Forgejo and the
-local registry. `make plane-env-init` creates
+`~/.config/containers/systemd/`, reloads systemd, and starts the local
+registry. `make plane-env-init` creates
 `~/.config/exousia/plane/plane.env` (or `/etc/exousia/plane/plane.env` for system-wide), and `make plane-quadlet-start` brings up
 Plane on the same Podman network so it can integrate with Forgejo by service
 name.
@@ -81,14 +95,16 @@ make quadlet-status
 # Registry health check
 curl -s localhost:5000/v2/
 
-# Forgejo UI
+# Forgejo UI (optional)
 curl -s -o /dev/null -w "%{http_code}" localhost:3000
 
-# Plane UI
+# Plane UI (optional)
 curl -s -o /dev/null -w "%{http_code}" localhost:8080
 ```
 
 ### Forgejo first-run setup
+
+Only needed if you explicitly started Forgejo.
 
 1. Open `http://localhost:3000` in a browser
 2. Complete the initial configuration wizard
@@ -97,6 +113,8 @@ curl -s -o /dev/null -w "%{http_code}" localhost:8080
    **Settings > Repository > Mirrors > Add Mirror**
 
 ### Register the Forgejo runner
+
+Only needed if you explicitly started Forgejo.
 
 1. In Forgejo, go to **Site Administration > Runners**
 2. Copy the registration token
@@ -132,11 +150,18 @@ make local-test               # runs bats tests against latest
 make local-test TAG=v1.2.3    # runs bats tests against specific tag
 ```
 
-### Promote to DockerHub
+### Publish to GHCR
 
 ```bash
-make local-push               # copies latest to docker.io/1borninthedark/exousia:latest
+make local-push               # copies latest to ghcr.io/borninthedark/exousia:latest
 make local-push TAG=v1.2.3    # copies specific tag
+```
+
+### Mirror GHCR back into the local registry for bootc
+
+```bash
+make local-mirror             # copies latest from GHCR to localhost:5000/exousia:latest
+make local-mirror TAG=v1.2.3  # copies specific tag
 ```
 
 ### Verify
@@ -152,14 +177,14 @@ skopeo list-tags docker://localhost:5000/exousia --tls-verify=false
 ## Service Management
 
 ```bash
-make quadlet-start             # Start Forgejo + registry
+make quadlet-start             # Start the local registry only
 make plane-quadlet-start       # Start Plane in the documented service order
 make plane-quadlet-stop        # Stop the full Plane stack
 make plane-quadlet-status      # Show Plane service status
 make plane-quadlet-logs        # Follow Plane logs
-make quadlet-stop              # Stop all services
-make quadlet-status            # Show service status
-make quadlet-logs              # Follow logs (all services)
+make quadlet-stop              # Stop the local registry
+make quadlet-status            # Show local registry status
+make quadlet-logs              # Follow local registry logs
 ```
 
 ## Plane + Forgejo

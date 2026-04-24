@@ -179,7 +179,7 @@ def extract_config(repo_root: Path, colors: Colors) -> Config:
             config.github_repo = "borninthedark/exousia"
 
     config.github_owner = config.github_repo.split("/")[0]
-    config.docker_image = "docker.io/1borninthedark/exousia"
+    config.docker_image = "ghcr.io/borninthedark/exousia"
     config.build_date = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     badge_text = f"{config.os_name} {config.os_version} / {config.wm_de_label}"
@@ -198,7 +198,7 @@ def generate_readme(config: Config) -> str:
 
 Declarative bootc image builder for Fedora Linux. YAML blueprints define OS
 images, Python tools transpile them to Containerfiles, Docker Buildx builds them,
-and GitHub Actions pushes signed images to DockerHub.
+and GitHub Actions pushes signed images to GHCR.
 
 > **Warning** -- This project is highly experimental. There are no guarantees
 > about stability, data safety, or fitness for any purpose.
@@ -224,7 +224,8 @@ and GitHub Actions pushes signed images to DockerHub.
 ### Use a published image
 
 ```bash
-sudo bootc switch docker.io/1borninthedark/exousia:latest
+make local-mirror
+sudo bootc switch localhost:5000/exousia:latest
 sudo bootc upgrade && sudo systemctl reboot
 ```
 
@@ -263,7 +264,7 @@ graph LR
     A["adnyeus.yml<br/>(blueprint)"] --> B["Python transpiler<br/>(tools/*.py)"]
     B --> C["Containerfile"]
     C --> D["Docker Buildx"]
-    D --> E["DockerHub<br/>(signed image)"]
+    D --> E["GHCR<br/>(signed image)"]
     B -.-> F["package_loader.py"]
     B -.-> G["resolve_build_config.py"]
 ```
@@ -361,14 +362,13 @@ Configure in GitHub **Settings > Secrets and variables > Actions**.
 
 | Name | Purpose |
 |------|---------|
-| `DOCKERHUB_TOKEN` | DockerHub access token |
+| `GHCR_PAT` | GHCR personal access token for CI RPM override pulls and local/manual registry access |
 
 **Variables:**
 
 | Name | Purpose | Required |
 |------|---------|----------|
-| `DOCKERHUB_USERNAME` | DockerHub username | Yes |
-| `REGISTRY_URL` | Registry URL (defaults to `docker.io`) | No |
+| `REGISTRY_URL` | Registry URL (defaults to `ghcr.io`) | No |
 
 Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 
