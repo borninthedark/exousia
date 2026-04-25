@@ -34,13 +34,6 @@ if [ -f /etc/sway/environment ]; then
     set +o allexport
 fi
 
-## Load Sway-specific user environment customizations
-if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/sway/environment" ]; then
-    set -o allexport
-    . "${XDG_CONFIG_HOME:-$HOME/.config}/sway/environment"
-    set +o allexport
-fi
-
 ## Unexport internal variables
 _SWAY_EXTRA_ARGS="$SWAY_EXTRA_ARGS"
 unset SWAY_EXTRA_ARGS

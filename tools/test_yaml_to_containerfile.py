@@ -613,6 +613,20 @@ def test_chezmoi_module_all_users_false():
     print("✓ Chezmoi all-users=false skips global enablement")
 
 
+def test_adnyeus_enables_global_chezmoi():
+    """The canonical blueprint now globally enables chezmoi user services.
+
+    Exousia uses chezmoi for user-level dotfile management as a first-class citizen.
+    """
+    config = yaml.safe_load(Path("adnyeus.yml").read_text())
+    generator = ContainerfileGenerator(config, _make_context())
+    output = generator.generate()
+
+    assert "COPY --chmod=0644 overlays/sway/configs/ /etc/" in output
+    assert "systemctl --global enable chezmoi-init.service" in output
+    assert "systemctl --global enable chezmoi-update.timer" in output
+
+
 def test_chezmoi_module_disable_init():
     """When disable-init is true, init service should not be enabled."""
     config = _make_chezmoi_config(**{"disable-init": True})

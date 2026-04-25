@@ -5,190 +5,149 @@ import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from urllib.parse import quote
 
-try:
-    import yaml
-except ImportError:
-    yaml = None  # type: ignore
+import yaml
 
-
-class Colors:
-    """Terminal colors (disabled in CI)."""
-
-    def __init__(self):
-        if os.environ.get("CI") == "true":
-            self.GREEN = self.BLUE = self.YELLOW = self.RED = self.NC = ""
-        else:
-            self.GREEN = "\033[0;32m"
-            self.BLUE = "\033[0;34m"
-            self.YELLOW = "\033[1;33m"
-            self.RED = "\033[0;31m"
-            self.NC = "\033[0m"
-
-    def success(self, msg: str) -> None:
-        print(f"{self.GREEN}+{self.NC} {msg}")
-
-    def info(self, msg: str) -> None:
-        print(f"{self.BLUE}i{self.NC} {msg}")
-
-    def warning(self, msg: str) -> None:
-        print(f"{self.YELLOW}!{self.NC} {msg}")
-
-    def error(self, msg: str) -> None:
-        print(f"{self.RED}x{self.NC} {msg}", file=sys.stderr)
+REPO = "borninthedark/exousia"
+_BLUEPRINT = Path(__file__).resolve().parent.parent / "adnyeus.yml"
 
 
-class Config:
-    """Build configuration extracted from repository."""
-
-    def __init__(self):
-        self.os_name = "Linux"
-        self.os_logo = "linux"
-        self.os_badge_color = "0A74DA"
-        self.os_version = ""
-        self.image_type = ""
-        self.image_type_display = ""
-        self.wm_de_label = "Unknown"
-        self.github_repo = ""
-        self.github_owner = ""
-        self.docker_image = ""
-        self.build_date = ""
-        self.build_badge_text_uri = ""
+def _blueprint_version() -> str:
+    """Read image-version from the blueprint."""
+    if _BLUEPRINT.exists():
+        config = yaml.safe_load(_BLUEPRINT.read_text()) or {}
+        version = config.get("image-version")
+        if version:
+            return str(version)
+    return "43"
 
 
-def get_repo_root() -> Path:
-    """Determine repository root reliably."""
-    if github_ws := os.environ.get("GITHUB_WORKSPACE"):
-        return Path(github_ws)
+FEDORA_VERSION = _blueprint_version()
 
-    script_path = Path(__file__).resolve()
-    # tools/generate-readme.py -> repo root
-    return script_path.parent.parent
+# Documentation entries: (rel_path, title, description)
+DOC_ENTRIES: list[tuple[str, str, str]] = [
+    (
+        "docs/bootc-upgrade.md",
+        "Upgrade Guide",
+        "Switch images and perform bootc upgrades",
+    ),
+    (
+        "docs/bootc-image-builder.md",
+        "Image Builder",
+        "Build bootable disk images (ISO, raw, qcow2)",
+    ),
+    (
+        "docs/modules.md",
+        "Module Reference",
+        "Build module types, fields, and usage examples",
+    ),
+    (
+        "docs/package-loader-cli.md",
+        "Package Loader CLI",
+        "Resolve package sets, inspect provenance, and export legacy manifests",
+    ),
+    (
+        "docs/package-management-and-container-builds.md",
+        "Package Management Design",
+        "Typed package-set model, resolved build plans, and build-pipeline direction",
+    ),
+    (
+        "docs/overlay-system.md",
+        "Overlay System",
+        "Overlay directory structure and how files map into images",
+    ),
+    (
+        "docs/local-build-pipeline.md",
+        "Local Build Pipeline",
+        "Quadlet services, local build, GHCR publication, and local registry mirroring",
+    ),
+    (
+        "docs/fedora-bootc-migration-plan.md",
+        "Fedora bootc Migration Plan",
+        "Base-image migration plan and package audit checklist",
+    ),
+    (
+        "docs/sway-session-greetd.md",
+        "Sway + greetd",
+        "Sway session with greetd login manager",
+    ),
+    (
+        "docs/testing/README.md",
+        "Test Suite",
+        "Test architecture, categories, and writing guide",
+    ),
+    (
+        "docs/reference/troubleshooting.md",
+        "Troubleshooting",
+        "Common issues and fixes",
+    ),
+    (
+        "SECURITY.md",
+        "Security Policy",
+        "Vulnerability reporting and security model",
+    ),
+]
 
-
-def extract_config(repo_root: Path, colors: Colors) -> Config:
-    """Extract configuration from repository metadata."""
-    config = Config()
-    colors.info(f"Repository root: {repo_root}")
-
-    adnyeus_path = repo_root / "adnyeus.yml"
-    base_image = ""
-
-    # Parse adnyeus.yml
-    if adnyeus_path.exists():
-        colors.info(f"Found image definition blueprint: {adnyeus_path}")
-
-        if yaml:
-            with open(adnyeus_path) as f:
-                blueprint = yaml.safe_load(f)
-            base_image = blueprint.get("base-image", "")
-            config.os_version = str(blueprint.get("image-version", ""))
-            config.image_type = blueprint.get("image-type", "")
-
-            # Get desktop/window manager
-            desktop = blueprint.get("desktop", {})
-            de = desktop.get("desktop_environment", "")
-            wm = desktop.get("window_manager", "")
-
-            if de:
-                de_labels = {
-                    "gnome": "GNOME",
-                }
-                config.wm_de_label = de_labels.get(de.lower(), de.capitalize())
-            elif wm:
-                config.wm_de_label = wm.capitalize()
-        else:
-            # Fallback to regex parsing if PyYAML not available
-            content = adnyeus_path.read_text()
-            if match := re.search(r"^base-image:\s*(.+)$", content, re.MULTILINE):
-                base_image = match.group(1).strip().strip("\"'")
-            if match := re.search(r"^image-version:\s*(.+)$", content, re.MULTILINE):
-                config.os_version = match.group(1).strip().strip("\"'")
-            if match := re.search(r"window_manager:\s*(.+)$", content, re.MULTILINE):
-                config.wm_de_label = match.group(1).strip().strip("\"'").capitalize()
-    else:
-        colors.warning("adnyeus.yml not found; relying on pipeline inputs")
-
-    # Detect OS from base image
-    if base_image:
-        base_lower = base_image.lower()
-        os_map = {
-            "fedora": ("Fedora", "fedora", "0A74DA"),
-        }
-        for key, (name, logo, color) in os_map.items():
-            if key in base_lower:
-                config.os_name, config.os_logo, config.os_badge_color = name, logo, color
-                break
-
-        # Extract version from base image tag if not set
-        if not config.os_version and ":" in base_image:
-            config.os_version = base_image.rsplit(":", 1)[1].split("@")[0]
-
-    # Check .fedora-version file (takes precedence)
-    version_file = repo_root / ".fedora-version"
-    if version_file.exists() and version_file.stat().st_size > 0:
-        version_info = version_file.read_text().strip()
-        parts = version_info.split(":")
-        config.os_version = parts[0]
-        if len(parts) > 1:
-            config.image_type = parts[1]
-
-    # Set display name
-    type_displays = {
-        "fedora-sway-atomic": "Fedora Sway Atomic Desktop",
-        "fedora-bootc": "Fedora bootc Base",
-    }
-    config.image_type_display = type_displays.get(config.image_type, config.image_type or "Unknown")
-
-    if not config.os_version:
-        config.os_version = "unknown"
-
-    if config.os_version:
-        colors.info(f"Blueprint version detected: {config.os_name} {config.os_version}")
-
-    # Get GitHub repository
-    if github_repo := os.environ.get("GITHUB_REPOSITORY"):
-        config.github_repo = github_repo
-    else:
-        try:
-            result = subprocess.run(
-                ["git", "-C", str(repo_root), "remote", "get-url", "origin"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            url = result.stdout.strip()
-            # Extract owner/repo from various URL formats
-            match = re.search(r"[:/]([^/]+/[^/]+?)(?:\.git)?$", url)
-            if match:
-                config.github_repo = match.group(1).replace(".git", "")
-                if "/git/" in config.github_repo:
-                    config.github_repo = config.github_repo.split("/git/")[-1]
-                colors.info(f"Detected GitHub repository: {config.github_repo}")
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            colors.warning("Could not detect GitHub repository, using default")
-            config.github_repo = "borninthedark/exousia"
-
-    config.github_owner = config.github_repo.split("/")[0]
-    config.docker_image = "ghcr.io/borninthedark/exousia"
-    config.build_date = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
-
-    badge_text = f"{config.os_name} {config.os_version} / {config.wm_de_label}"
-    config.build_badge_text_uri = quote(badge_text)
-
-    return config
+# Subdirectory entries: (rel_path, title, description)
+SUBDIR_ENTRIES: list[tuple[str, str, str]] = [
+    ("tools/", "Build Tools", "Python transpiler, package loader, build tools"),
+    ("overlays/", "Overlays", "Static files and configs copied into images"),
+    ("overlays/base/", "Base Overlay", "Shared configs: PAM, polkit, sysusers, packages"),
+    ("overlays/sway/", "Sway Overlay", "Sway desktop: configs, scripts, session"),
+    ("overlays/deploy/", "Deploy Overlay", "Podman Quadlet container definitions"),
+    ("tests/", "Test Suite", "Bats integration tests for built images"),
+    ("yaml-definitions/", "YAML Definitions", "Alternative build blueprints"),
+    ("docs/", "Documentation", "Full documentation"),
+    (".github/workflows/", "Shinigami Pipeline", "GitHub Actions CI/CD"),
+]
 
 
-def generate_readme(config: Config) -> str:
-    """Generate the complete README content."""
+def _docs_table(root: Path) -> str:
+    rows = ["| Document | Description |", "|----------|-------------|"]
+    for rel_path, title, desc in DOC_ENTRIES:
+        if (root / rel_path).exists():
+            rows.append(f"| [{title}]({rel_path}) | {desc} |")
+    return "\n".join(rows)
 
-    readme = f"""# Exousia
 
-[![Last Build: {config.os_name} {config.os_version} / {config.wm_de_label}](https://img.shields.io/badge/Last%20Build-{config.build_badge_text_uri}-{config.os_badge_color}?style=for-the-badge&logo={config.os_logo}&logoColor=white)](#cicd-pipeline)
-[![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+def _structure_table(root: Path) -> str:
+    rows = [
+        "| Directory | Purpose | Docs |",
+        "|-----------|---------|------|",
+    ]
+    for rel_path, _title, desc in SUBDIR_ENTRIES:
+        dir_path = root / rel_path
+        readme = dir_path / "README.md"
+        if dir_path.exists():
+            if readme.exists():
+                rows.append(
+                    f"| [`{rel_path}`]({rel_path}) | {desc} " f"| [README]({rel_path}README.md) |"
+                )
+            else:
+                rows.append(f"| [`{rel_path}`]({rel_path}) | {desc} | -- |")
+    return "\n".join(rows)
 
-Declarative bootc image builder for Fedora Linux. YAML blueprints define OS
+
+def generate_readme(root: Path) -> str:
+    docs = _docs_table(root)
+    structure = _structure_table(root)
+
+    return f"""\
+# Exousia - Declarative Bootc Image Builder
+
+> *Can't Fear Your Own OS*
+>
+> **BLEACH** by **Tite Kubo** -- The Shinigami Pipeline,
+> Reiatsu badge, and all captain naming are inspired by the Gotei 13
+> from *BLEACH*. All rights belong to Tite Kubo and
+> respective copyright holders.
+
+[![Reiatsu](https://img.shields.io/github/actions/workflow/status/{REPO}/urahara.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/{REPO}/actions/workflows/urahara.yml)
+[![Last Build: Fedora {FEDORA_VERSION} / Sway](https://img.shields.io/badge/Last%20Build-Fedora%20{FEDORA_VERSION}%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/{REPO}/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
+[![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
+
+DevSecOps-hardened, container-based immutable operating systems built on
+[**bootc**](https://github.com/bootc-dev/bootc). YAML blueprints define OS
 images, Python tools transpile them to Containerfiles, Docker Buildx builds them,
 and GitHub Actions pushes signed images to GHCR.
 

@@ -186,12 +186,16 @@ Enables or disables systemd units.
 
 ## `chezmoi`
 
-Configures chezmoi dotfile management with systemd timers for automatic updates.
+Configures chezmoi dotfile management with systemd user services.
+
+Exousia keeps desktop and session configuration authoritative at the system
+level under `/etc`. If you use `chezmoi` for user dotfiles, prefer
+`all-users: false` unless you explicitly want global per-user activation.
 
 ```yaml
 - type: chezmoi
   repository: "https://github.com/user/dotfiles"
-  all-users: true
+  all-users: false
   file-conflict-policy: skip
   run-every: "1d"
   wait-after-boot: "5m"
@@ -201,7 +205,7 @@ Configures chezmoi dotfile management with systemd timers for automatic updates.
 |-------|----------|---------|-------------|
 | `repository` | yes* | — | Git URL for dotfiles (*required unless `disable-init: true`) |
 | `branch` | no | — | Branch to checkout |
-| `all-users` | no | `true` | Enable for all users via `--global` |
+| `all-users` | no | `true` | Enable for all users via `--global` (Exousia recommends `false` for desktop/session safety) |
 | `file-conflict-policy` | no | `skip` | `skip` or `replace` |
 | `run-every` | no | `1d` | Timer interval for updates |
 | `wait-after-boot` | no | `5m` | Delay before first update |

@@ -38,3 +38,13 @@ Mayuri (scheduled, independent) -> triggers Urahara if dotfiles changed
 - **Urahara**: push/PR to main, scheduled at 00:10 / 08:10 / 16:10 UTC, manual dispatch
 - **Mayuri**: scheduled at 04:10 / 12:10 / 20:10 UTC (midpoint between Urahara runs), manual dispatch
 - **Nemu**: `workflow_run` after Urahara completes on main
+
+## Forked PR Policy
+
+Hiyori is skipped on pull requests from forks.
+
+That is intentional: the build path may need repository secrets such as
+`GHCR_PAT` to pull private or restricted RPM override artifacts from GHCR.
+Forked pull requests do not receive repository secrets, so Urahara runs the
+CI and security workflows but leaves the image build/release workflow out of
+that path.

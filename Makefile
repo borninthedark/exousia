@@ -78,7 +78,7 @@ test-cov:
 		output = subprocess.check_output(['uv', 'run', 'coverage', 'report', '--format=total'], text=True).strip(); \
 		total = float(output); \
 		print(f'Total coverage: {total}%'); \
-		sys.exit(0 if total >= 80.0 else 1)"
+		sys.exit(0 if total >= 85.0 else 1)"
 
 # Clean generated files
 clean:
@@ -260,4 +260,4 @@ local-test:
 
 # Generate README.md from template
 readme:
-	uv run python overlays/base/tools/generate-readme
+	uv run python tools/generate-readme.py
