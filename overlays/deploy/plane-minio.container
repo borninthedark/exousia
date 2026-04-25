@@ -18,5 +18,5 @@ Label=io.containers.autoupdate=registry
 Restart=always
 TimeoutStartSec=180
 
-[Install]
-WantedBy=default.target
+# [Install]
+# WantedBy=default.target
