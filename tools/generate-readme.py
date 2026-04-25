@@ -414,6 +414,9 @@ MIT License -- see LICENSE file.
 - [openSUSEway](https://github.com/openSUSE/openSUSEway) for Sway enhancements and config references
 - [Universal Blue](https://universal-blue.org/) and [BlueBuild](https://blue-build.org/) for container-native workflows
 - [Buildah](https://buildah.io/), [Podman](https://podman.io/), [Skopeo](https://github.com/containers/skopeo), [Docker](https://www.docker.com/)
+- [Maple Mono](https://github.com/subframe7536/maple-font) by subframe7536 for the terminal and UI font
+- [Kripton GTK Theme](https://github.com/EliverLara/Kripton) by EliverLara for the desktop color scheme
+- [Cyberpunk Technotronic](https://github.com/dreifacherspass/cyberpunk-technotronic-icon-theme) by dreifacherspass for the icon theme
 
 ### AI-Assisted Development
 
