@@ -65,6 +65,11 @@ DOC_ENTRIES: list[tuple[str, str, str]] = [
         "Trivy findings, active remediations, and RPM override workflow",
     ),
     (
+        "docs/rpm-overrides.md",
+        "RPM Overrides",
+        "Schema, build behavior, and lifecycle for external RPM replacement",
+    ),
+    (
         "docs/sway-session-greetd.md",
         "Sway + greetd",
         "Sway session with greetd login manager",
@@ -399,6 +404,7 @@ graph TD
 | **Hikifune** | `hikifune.yml` | CI: Ruff, Black, isort, pytest |
 | **Uhin** | `uhin.yml` | Security: Hadolint, Checkov, Trivy config scan, Bandit |
 | **Hiyori** | `hiyori.yml` | Build, Trivy image scan artifact, SBOM submission, Cosign, semver release |
+| **Kon** | `kon.yml` | Advanced CodeQL analysis for Python and GitHub Actions |
 | **Nemu** | `nemu.yml` | Post-CI: generates STATUS.md |
 | **Mayuri** | `mayuri.yml` | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara |
 

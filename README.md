@@ -107,6 +107,7 @@ graph TD
 | **Hikifune** | `hikifune.yml` | CI: Ruff, Black, isort, pytest |
 | **Uhin** | `uhin.yml` | Security: Hadolint, Checkov, Trivy config scan, Bandit |
 | **Hiyori** | `hiyori.yml` | Build, Trivy image scan artifact, SBOM submission, Cosign, semver release |
+| **Kon** | `kon.yml` | Advanced CodeQL analysis for Python and GitHub Actions |
 | **Nemu** | `nemu.yml` | Post-CI: generates STATUS.md |
 | **Mayuri** | `mayuri.yml` | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara |
 
@@ -218,6 +219,7 @@ tracked in [docs/cve-remediation.md](docs/cve-remediation.md).
 | [Overlay System](docs/overlay-system.md) | Overlay directory structure and how files map into images |
 | [Local Build Pipeline](docs/local-build-pipeline.md) | Quadlet services, local build, GHCR publication, and local registry mirroring |
 | [CVE Remediation](docs/cve-remediation.md) | Trivy findings, active remediations, and RPM override workflow |
+| [RPM Overrides](docs/rpm-overrides.md) | Schema, build behavior, and lifecycle for external RPM replacement |
 | [Sway + greetd](docs/sway-session-greetd.md) | Sway session with greetd login manager |
 | [Test Suite](docs/testing/README.md) | Test architecture, categories, and writing guide |
 | [Troubleshooting](docs/reference/troubleshooting.md) | Common issues and fixes |

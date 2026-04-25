@@ -25,7 +25,8 @@ Exousia uses a 12th Division-themed GitHub Actions pipeline (Shinigami Research 
 | **Hikifune** | `hikifune.yml` | 12th -- CI: Ruff, Black, isort, pytest |
 | **Uhin** | `uhin.yml` | 12th -- Security: Hadolint, Checkov, Trivy config scan, Bandit |
 | **Hiyori** | `hiyori.yml` | 12th -- Build, Trivy scan artifact, SBOM submission, Cosign, semver release |
-| **Nemu** | `nemu.yml` | 12th -- Post-CI: STATUS.md |
+| **Kon** | `kon.yml` | 12th -- Advanced CodeQL analysis for Python and GitHub Actions |
+| **Nemu** | `nemu.yml` | 12th -- Post-CI: status artifact and summary |
 | **Mayuri** | `mayuri.yml` | 12th -- Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):
@@ -70,6 +71,7 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 - **[chezmoi-integration.md](chezmoi-integration.md)** -- Dotfile management with chezmoi
 - **[package-loader-cli.md](package-loader-cli.md)** -- Resolve package sets, inspect provenance, and export legacy manifests
 - **[cve-remediation.md](cve-remediation.md)** -- Trivy findings, active remediations, and RPM override workflow
+- **[rpm-overrides.md](rpm-overrides.md)** -- RPM override schema, build behavior, and lifecycle
 
 ## Testing
 
