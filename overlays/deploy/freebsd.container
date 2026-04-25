@@ -1,0 +1,15 @@
+[Unit]
+Description=FreeBSD runtime environment
+
+[Container]
+Image=docker.io/freebsd/freebsd-runtime:14.4
+ContainerName=freebsd
+Network=exousia.network
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+# [Install]
+# WantedBy=default.target
