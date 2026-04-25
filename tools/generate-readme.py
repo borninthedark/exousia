@@ -60,6 +60,11 @@ DOC_ENTRIES: list[tuple[str, str, str]] = [
         "Quadlet services, local build, GHCR publication, and local registry mirroring",
     ),
     (
+        "docs/cve-remediation.md",
+        "CVE Remediation",
+        "Trivy findings, active remediations, and RPM override workflow",
+    ),
+    (
         "docs/sway-session-greetd.md",
         "Sway + greetd",
         "Sway session with greetd login manager",
@@ -316,6 +321,7 @@ and GitHub Actions pushes signed images to GHCR.
 - [Official Dotfiles](#official-dotfiles)
 - [YubiKey Authentication](#yubikey-authentication)
 - [Required Secrets and Variables](#required-secrets-and-variables)
+- [CVE Remediation](#cve-remediation)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
 - [Acknowledgments](#acknowledgments)
@@ -392,7 +398,7 @@ graph TD
 | **Urahara** | `urahara.yml` | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori |
 | **Hikifune** | `hikifune.yml` | CI: Ruff, Black, isort, pytest |
 | **Uhin** | `uhin.yml` | Security: Hadolint, Checkov, Trivy config scan, Bandit |
-| **Hiyori** | `hiyori.yml` | Build, Cosign, Trivy image scan, semver release |
+| **Hiyori** | `hiyori.yml` | Build, Trivy image scan, SBOM submission, issue/report delivery, Cosign, semver release |
 | **Nemu** | `nemu.yml` | Post-CI: generates STATUS.md |
 | **Mayuri** | `mayuri.yml` | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara |
 
@@ -480,6 +486,13 @@ Configure in GitHub **Settings > Secrets and variables > Actions**.
 | `REGISTRY_URL` | Registry URL (defaults to `ghcr.io`) | No |
 
 Secrets propagate to child workflows via `secrets: inherit` in Urahara.
+
+---
+
+## CVE Remediation
+
+Current Trivy findings, active remediations, and the RPM override workflow are
+tracked in [docs/cve-remediation.md](docs/cve-remediation.md).
 
 ---
 

@@ -119,13 +119,79 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     timeout-minutes: 15
+    env:
+      TRIVY_PASSWORD: ${{ secrets.GHCR_PAT }}
+      TRIVY_USERNAME: ${{ github.repository_owner }}
     steps:
       - name: Trivy vulnerability scan
         uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
+          format: table
+          output: trivy-results.txt
+          hide-progress: true
           severity: HIGH,CRITICAL
           exit-code: 0
+
+      - name: Generate SBOM and submit to GitHub Dependency Graph
+        if: github.ref == 'refs/heads/main'
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
+          format: github
+          output: dependency-results.sbom.json
+          github-pat: ${{ github.token }}
+          scanners: vuln
+          skip-setup-trivy: true
+
+      - name: Upload Trivy report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image-scan-${{ needs.build.outputs.image_tag }}
+          path: trivy-results.txt
+          retention-days: 14
+
+      - name: Upload SBOM artifact
+        if: always() && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-sbom-${{ needs.build.outputs.image_tag }}
+          path: dependency-results.sbom.json
+          retention-days: 14
+
+      - name: Publish Trivy report to summary
+        if: always()
+        run: |
+          echo "## Hiyori: Trivy Image Scan" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Image: \`${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifact: \`trivy-image-scan-${{ needs.build.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "- SBOM: submitted to GitHub Dependency Graph and uploaded as \`trivy-sbom-${{ needs.build.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [[ -s trivy-results.txt ]]; then
+            {
+              echo ""
+              echo "<details><summary>Trivy report</summary>"
+              echo ""
+              echo '```text'
+              cat trivy-results.txt
+              echo '```'
+              echo "</details>"
+            } >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Create or update Trivy issue
+        if: github.ref == 'refs/heads/main'
+        uses: lazy-actions/gitrivy@v3
+        with:
+          token: ${{ github.token }}
+          image: ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
+          severity: HIGH,CRITICAL
+          issue_title: Trivy findings for ${{ needs.build.outputs.image_ref }}
+          issue_label: trivy,vulnerability
+          fail_on_vulnerabilities: false
 
   sign:
     name: Cosign Image

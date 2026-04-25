@@ -29,6 +29,7 @@ and GitHub Actions pushes signed images to GHCR.
 - [Official Dotfiles](#official-dotfiles)
 - [YubiKey Authentication](#yubikey-authentication)
 - [Required Secrets and Variables](#required-secrets-and-variables)
+- [CVE Remediation](#cve-remediation)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
 - [Acknowledgments](#acknowledgments)
@@ -105,7 +106,7 @@ graph TD
 | **Urahara** | `urahara.yml` | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori |
 | **Hikifune** | `hikifune.yml` | CI: Ruff, Black, isort, pytest |
 | **Uhin** | `uhin.yml` | Security: Hadolint, Checkov, Trivy config scan, Bandit |
-| **Hiyori** | `hiyori.yml` | Build, Cosign, Trivy image scan, semver release |
+| **Hiyori** | `hiyori.yml` | Build, Trivy image scan, SBOM submission, issue/report delivery, Cosign, semver release |
 | **Nemu** | `nemu.yml` | Post-CI: generates STATUS.md |
 | **Mayuri** | `mayuri.yml` | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara |
 
@@ -196,6 +197,13 @@ Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 
 ---
 
+## CVE Remediation
+
+Current Trivy findings, active remediations, and the RPM override workflow are
+tracked in [docs/cve-remediation.md](docs/cve-remediation.md).
+
+---
+
 ## Documentation
 
 **[Full Documentation Index](docs/README.md)**
@@ -209,6 +217,7 @@ Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 | [Package Management Design](docs/package-management-and-container-builds.md) | Typed package-set model, resolved build plans, and build-pipeline direction |
 | [Overlay System](docs/overlay-system.md) | Overlay directory structure and how files map into images |
 | [Local Build Pipeline](docs/local-build-pipeline.md) | Quadlet services, local build, GHCR publication, and local registry mirroring |
+| [CVE Remediation](docs/cve-remediation.md) | Trivy findings, active remediations, and RPM override workflow |
 | [Sway + greetd](docs/sway-session-greetd.md) | Sway session with greetd login manager |
 | [Test Suite](docs/testing/README.md) | Test architecture, categories, and writing guide |
 | [Troubleshooting](docs/reference/troubleshooting.md) | Common issues and fixes |
