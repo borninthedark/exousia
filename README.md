@@ -88,8 +88,7 @@ graph LR
 ## CI/CD Pipeline
 
 Every workflow is named after a member of the **12th Division** -- the Shinigami
-Research and Development Institute (SRDI). Division flower: **Calendula** --
-*Despair in Your Heart*.
+Research and Development Institute (SRDI).
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}%%

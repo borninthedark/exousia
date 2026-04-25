@@ -1,17 +1,16 @@
 ---
 # Nemu Kurotsuchi - 12th Division
-# Post-CI housekeeping: generates a STATUS.md artifact after the Urahara
-# pipeline completes on main. README is managed by the generate-readme
-# pre-commit hook.
+# Post-CI housekeeping: generates STATUS.md after the Urahara pipeline
+# completes on main. README is managed by the generate-readme pre-commit hook.
 #
 # 12th Division Pipeline:
 #   Urahara  -> Orchestrator
 #   Hikifune -> CI: lint + test
 #   Uhin     -> Security scanning
 #   Hiyori   -> Build, scan, sign, release
-#   Nemu     -> Status artifact + summary
+#   Nemu     -> Status report
 
-name: "Nemu - Status Artifact"
+name: "Nemu - Status Report"
 
 on:
   workflow_run:
@@ -21,7 +20,7 @@ on:
 
 permissions:
   actions: read
-  contents: read
+  contents: write
 
 jobs:
   status-report:
@@ -122,12 +121,8 @@ jobs:
           EOF
           sed -i 's/^          //' STATUS.md
 
-      - name: Upload STATUS artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: status-report-${{ steps.jobs.outputs.run_id }}
-          path: STATUS.md
-          retention-days: 14
-
-      - name: Publish STATUS summary
-        run: cat STATUS.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Update CI status
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -am "docs: update CI status [skip ci]" && git push || true
