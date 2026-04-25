@@ -1,7 +1,15 @@
-# Exousia
+# Exousia - Declarative Bootc Image Builder
 
-[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20/%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](#cicd-pipeline)
-[![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+> *Can't Fear Your Own OS*
+>
+> **BLEACH** by **Tite Kubo** -- The Shinigami Pipeline,
+> Reiatsu badge, and all captain naming are inspired by the Gotei 13
+> from *BLEACH*. All rights belong to Tite Kubo and
+> respective copyright holders.
+
+[![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/urahara.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/urahara.yml)
+[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20/%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
+[![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#contents)
 
 Declarative bootc image builder for Fedora Linux. YAML blueprints define OS
 images, Python tools transpile them to Containerfiles, Docker Buildx builds them,
@@ -179,12 +187,34 @@ Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 
 **[Full Documentation Index](docs/README.md)**
 
-| Topic | Links |
-|-------|-------|
-| Getting Started | [Upgrade Guide](docs/bootc-upgrade.md) &#124; [Image Builder](docs/bootc-image-builder.md) |
-| Desktop | [Sway + greetd](docs/sway-session-greetd.md) &#124; [Plymouth](docs/reference/plymouth-usage.md) |
-| Testing | [Test Suite](docs/testing/README.md) &#124; [Writing Tests](docs/reference/writing-tests.md) |
-| Reference | [Troubleshooting](docs/reference/troubleshooting.md) &#124; [Security](SECURITY.md) |
+| Document | Description |
+|----------|-------------|
+| [Upgrade Guide](docs/bootc-upgrade.md) | Switch images and perform bootc upgrades |
+| [Image Builder](docs/bootc-image-builder.md) | Build bootable disk images (ISO, raw, qcow2) |
+| [Module Reference](docs/modules.md) | Build module types, fields, and usage examples |
+| [Package Loader CLI](docs/package-loader-cli.md) | Resolve package sets, inspect provenance, and export legacy manifests |
+| [Package Management Design](docs/package-management-and-container-builds.md) | Typed package-set model, resolved build plans, and build-pipeline direction |
+| [Overlay System](docs/overlay-system.md) | Overlay directory structure and how files map into images |
+| [Local Build Pipeline](docs/local-build-pipeline.md) | Quadlet services, local build, GHCR publication, and local registry mirroring |
+| [Fedora bootc Migration Plan](docs/fedora-bootc-migration-plan.md) | Base-image migration plan and package audit checklist |
+| [Sway + greetd](docs/sway-session-greetd.md) | Sway session with greetd login manager |
+| [Test Suite](docs/testing/README.md) | Test architecture, categories, and writing guide |
+| [Troubleshooting](docs/reference/troubleshooting.md) | Common issues and fixes |
+| [Security Policy](SECURITY.md) | Vulnerability reporting and security model |
+
+## Project Structure
+
+| Directory | Purpose | Docs |
+|-----------|---------|------|
+| [`tools/`](tools/) | Python transpiler, package loader, build tools | [README](tools/README.md) |
+| [`overlays/`](overlays/) | Static files and configs copied into images | [README](overlays/README.md) |
+| [`overlays/base/`](overlays/base/) | Shared configs: PAM, polkit, sysusers, packages | [README](overlays/base/README.md) |
+| [`overlays/sway/`](overlays/sway/) | Sway desktop: configs, scripts, session | [README](overlays/sway/README.md) |
+| [`overlays/deploy/`](overlays/deploy/) | Podman Quadlet container definitions | [README](overlays/deploy/README.md) |
+| [`tests/`](tests/) | Bats integration tests for built images | [README](tests/README.md) |
+| [`yaml-definitions/`](yaml-definitions/) | Alternative build blueprints | [README](yaml-definitions/README.md) |
+| [`docs/`](docs/) | Full documentation | [README](docs/README.md) |
+| [`.github/workflows/`](.github/workflows/) | GitHub Actions CI/CD | [README](.github/workflows/README.md) |
 
 ---
 
