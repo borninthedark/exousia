@@ -189,7 +189,7 @@ modules:
   # See: https://blue-build.org/reference/modules/chezmoi/
   - type: chezmoi
     repository: "https://github.com/borninthedark/dotfiles"
-    all-users: false
+    all-users: true
     file-conflict-policy: skip
     run-every: "1d"
     wait-after-boot: "5m"
