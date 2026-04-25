@@ -13,7 +13,7 @@ overlays/
 │   ├── configs/
 │   │   ├── pam.d/                      # PAM authentication (login, sudo, U2F)
 │   │   ├── polkit-1/rules.d/           # Polkit authorization rules
-│   │   ├── skel/                       # Skeleton files for new users
+│   │   ├── skel/.config/               # User-level defaults for new accounts (sway, waybar, swaylock)
 │   │   ├── tmpfiles.d/                 # systemd-tmpfiles entries
 │   │   └── Yubico/                     # Shared PAM U2F authfile location
 │   ├── packages/
@@ -40,9 +40,11 @@ overlays/
 │   │   ├── greetd/config.toml         # Login manager configuration
 │   │   ├── plymouth/themes/           # Boot splash themes
 │   │   ├── sway/
-│   │   │   ├── config                 # Main Sway config (sway-config-minimal)
-│   │   │   └── config.d/             # Layered config overrides
-│   │   └── swaylock/config            # Lock screen configuration
+│   │   │   ├── config                 # Main Sway config
+│   │   │   ├── config.d/             # Layered config overrides (theme, bar, keybindings)
+│   │   │   └── environment           # Session environment variables
+│   │   ├── swaylock/config            # Lock screen configuration
+│   │   └── xdg/waybar/               # System-level waybar config + style
 │   ├── repos/
 │   │   └── nwg-shell.repo            # Additional package repository
 │   ├── scripts/
@@ -56,7 +58,6 @@ overlays/
 │   │       ├── ensure-sway-session    # Session file validation
 │   │       └── setup-plymouth-theme   # Plymouth theme installer
 │   └── session/
-│       ├── environment                # Session environment variables
 │       ├── start-sway                 # Session entry point
 │       └── sway.desktop               # Desktop entry for greetd
 └── deploy/                             # Local dev infrastructure (Quadlets)
@@ -81,14 +82,16 @@ generates `COPY` directives. The general mapping:
 | `base/configs/tmpfiles.d/` | `/etc/tmpfiles.d/` | Temp file rules |
 | `base/sysusers/` | `/etc/sysusers.d/` | System user definitions |
 | `base/tools/` | `/usr/local/bin/` | Build and utility scripts |
-| `sway/configs/sway/` | `/etc/sway/` | Sway window manager config |
+| `sway/configs/sway/` | `/etc/sway/` | Sway config, config.d snippets, environment |
+| `sway/configs/swaylock/` | `/etc/swaylock/` | Lock screen config |
+| `sway/configs/xdg/waybar/` | `/etc/xdg/waybar/` | Waybar config and Kripton theme CSS |
 | `sway/configs/greetd/` | `/etc/greetd/` | Login manager config |
 | `sway/configs/plymouth/` | `/usr/share/plymouth/` | Boot splash themes |
-| `sway/configs/swaylock/` | `/etc/swaylock/` | Lock screen config |
 | `sway/repos/` | `/etc/yum.repos.d/` | Package repositories |
 | `sway/scripts/runtime/` | `/usr/local/bin/` | Runtime helper scripts |
+| `base/configs/skel/.config/` | `/etc/skel/.config/` | User-level defaults (sway, waybar, swaylock) |
 | `sway/scripts/setup/` | (executed at build time) | Build-time setup |
-| `sway/session/` | `/usr/share/wayland-sessions/` | Session files |
+| `sway/session/` | `/usr/share/wayland-sessions/`, `/usr/bin/` | Session entry point and desktop file |
 
 ## Package System
 
@@ -109,8 +112,7 @@ See `overlays/base/packages/README.md` for the package list format.
 ## Base vs. Sway
 
 - **base/** contains everything shared across image variants: authentication,
-  system users, package lists, and utility scripts. If both `fedora-bootc` and
-  `fedora-sway-atomic` need it, it goes here.
+  system users, package lists, user-level skel defaults, and utility scripts.
 - **sway/** contains everything specific to the Sway desktop: window manager
   config, greetd, Plymouth themes, runtime scripts, and session definitions.
 
