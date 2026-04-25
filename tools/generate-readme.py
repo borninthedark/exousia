@@ -20,6 +20,85 @@ try:
 except ImportError:
     yaml = None  # type: ignore
 
+REPO = "borninthedark/exousia"
+
+# Documentation entries: (rel_path, title, description)
+DOC_ENTRIES: list[tuple[str, str, str]] = [
+    (
+        "docs/bootc-upgrade.md",
+        "Upgrade Guide",
+        "Switch images and perform bootc upgrades",
+    ),
+    (
+        "docs/bootc-image-builder.md",
+        "Image Builder",
+        "Build bootable disk images (ISO, raw, qcow2)",
+    ),
+    (
+        "docs/modules.md",
+        "Module Reference",
+        "Build module types, fields, and usage examples",
+    ),
+    (
+        "docs/package-loader-cli.md",
+        "Package Loader CLI",
+        "Resolve package sets, inspect provenance, and export legacy manifests",
+    ),
+    (
+        "docs/package-management-and-container-builds.md",
+        "Package Management Design",
+        "Typed package-set model, resolved build plans, and build-pipeline direction",
+    ),
+    (
+        "docs/overlay-system.md",
+        "Overlay System",
+        "Overlay directory structure and how files map into images",
+    ),
+    (
+        "docs/local-build-pipeline.md",
+        "Local Build Pipeline",
+        "Quadlet services, local build, GHCR publication, and local registry mirroring",
+    ),
+    (
+        "docs/fedora-bootc-migration-plan.md",
+        "Fedora bootc Migration Plan",
+        "Base-image migration plan and package audit checklist",
+    ),
+    (
+        "docs/sway-session-greetd.md",
+        "Sway + greetd",
+        "Sway session with greetd login manager",
+    ),
+    (
+        "docs/testing/README.md",
+        "Test Suite",
+        "Test architecture, categories, and writing guide",
+    ),
+    (
+        "docs/reference/troubleshooting.md",
+        "Troubleshooting",
+        "Common issues and fixes",
+    ),
+    (
+        "SECURITY.md",
+        "Security Policy",
+        "Vulnerability reporting and security model",
+    ),
+]
+
+# Subdirectory entries: (rel_path, title, description)
+SUBDIR_ENTRIES: list[tuple[str, str, str]] = [
+    ("tools/", "Build Tools", "Python transpiler, package loader, build tools"),
+    ("overlays/", "Overlays", "Static files and configs copied into images"),
+    ("overlays/base/", "Base Overlay", "Shared configs: PAM, polkit, sysusers, packages"),
+    ("overlays/sway/", "Sway Overlay", "Sway desktop: configs, scripts, session"),
+    ("overlays/deploy/", "Deploy Overlay", "Podman Quadlet container definitions"),
+    ("tests/", "Test Suite", "Bats integration tests for built images"),
+    ("yaml-definitions/", "YAML Definitions", "Alternative build blueprints"),
+    ("docs/", "Documentation", "Full documentation"),
+    (".github/workflows/", "Shinigami Pipeline", "GitHub Actions CI/CD"),
+]
+
 
 class Colors:
     """Terminal colors (disabled in CI)."""
@@ -178,13 +257,51 @@ def extract_config(repo_root: Path, colors: Colors) -> Config:
     return config
 
 
+def docs_table(root: Path) -> str:
+    """Build the documentation table for the previous README layout."""
+    rows = ["| Document | Description |", "|----------|-------------|"]
+    for rel_path, title, desc in DOC_ENTRIES:
+        if (root / rel_path).exists():
+            rows.append(f"| [{title}]({rel_path}) | {desc} |")
+    return "\n".join(rows)
+
+
+def structure_table(root: Path) -> str:
+    """Build the project structure table for the previous README layout."""
+    rows = [
+        "| Directory | Purpose | Docs |",
+        "|-----------|---------|------|",
+    ]
+    for rel_path, _title, desc in SUBDIR_ENTRIES:
+        dir_path = root / rel_path
+        readme = dir_path / "README.md"
+        if not dir_path.exists():
+            continue
+        if readme.exists():
+            rows.append(f"| [`{rel_path}`]({rel_path}) | {desc} | [README]({rel_path}README.md) |")
+        else:
+            rows.append(f"| [`{rel_path}`]({rel_path}) | {desc} | -- |")
+    return "\n".join(rows)
+
+
 def generate_readme(config: Config) -> str:
     """Generate the complete README content."""
+    root = get_repo_root()
+    docs = docs_table(root)
+    structure = structure_table(root)
 
-    return f"""# Exousia
+    return f"""# Exousia - Declarative Bootc Image Builder
 
-[![Last Build: {config.os_name} {config.os_version} / {config.wm_de_label}](https://img.shields.io/badge/Last%20Build-{config.build_badge_text_uri}-{config.os_badge_color}?style=for-the-badge&logo={config.os_logo}&logoColor=white)](#cicd-pipeline)
-[![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+> *Can't Fear Your Own OS*
+>
+> **BLEACH** by **Tite Kubo** -- The Shinigami Pipeline,
+> Reiatsu badge, and all captain naming are inspired by the Gotei 13
+> from *BLEACH*. All rights belong to Tite Kubo and
+> respective copyright holders.
+
+[![Reiatsu](https://img.shields.io/github/actions/workflow/status/{REPO}/urahara.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/{REPO}/actions/workflows/urahara.yml)
+[![Last Build: {config.os_name} {config.os_version} / {config.wm_de_label}](https://img.shields.io/badge/Last%20Build-{config.build_badge_text_uri}-{config.os_badge_color}?style=for-the-badge&logo={config.os_logo}&logoColor=white)](https://github.com/{REPO}/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
+[![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#contents)
 
 Declarative bootc image builder for Fedora Linux. YAML blueprints define OS
 images, Python tools transpile them to Containerfiles, Docker Buildx builds them,
@@ -362,12 +479,11 @@ Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 
 **[Full Documentation Index](docs/README.md)**
 
-| Topic | Links |
-|-------|-------|
-| Getting Started | [Upgrade Guide](docs/bootc-upgrade.md) &#124; [Image Builder](docs/bootc-image-builder.md) |
-| Desktop | [Sway + greetd](docs/sway-session-greetd.md) &#124; [Plymouth](docs/reference/plymouth-usage.md) |
-| Testing | [Test Suite](docs/testing/README.md) &#124; [Writing Tests](docs/reference/writing-tests.md) |
-| Reference | [Troubleshooting](docs/reference/troubleshooting.md) &#124; [Security](SECURITY.md) |
+{docs}
+
+## Project Structure
+
+{structure}
 
 ---
 
