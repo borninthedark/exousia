@@ -93,6 +93,7 @@ def extract_config(repo_root: Path, colors: Colors) -> Config:
                 blueprint = yaml.safe_load(f)
             base_image = blueprint.get("base-image", "")
             config.os_version = str(blueprint.get("image-version", ""))
+            config.image_type = blueprint.get("image-type", "")
 
             # Get desktop/window manager
             desktop = blueprint.get("desktop", {})
