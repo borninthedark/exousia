@@ -179,36 +179,12 @@ Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 
 **[Full Documentation Index](docs/README.md)**
 
-| Document | Description |
-|----------|-------------|
-| [Upgrade Guide](docs/bootc-upgrade.md) | Switch images and perform bootc upgrades |
-| [Image Builder](docs/bootc-image-builder.md) | Build bootable disk images (ISO, raw, qcow2) |
-| [Module Reference](docs/modules.md) | Build module types, fields, and usage examples |
-| [Package Loader CLI](docs/package-loader-cli.md) | Resolve package sets, inspect provenance, and export legacy manifests |
-| [Package Management Design](docs/package-management-and-container-builds.md) | Typed package-set model, resolved build plans, and build-pipeline direction |
-| [Overlay System](docs/overlay-system.md) | Overlay directory structure and how files map into images |
-| [Local Build Pipeline](docs/local-build-pipeline.md) | Quadlet services, local build, GHCR publication, and local registry mirroring |
-| [Fedora bootc Migration Plan](docs/fedora-bootc-migration-plan.md) | Base-image migration plan and package audit checklist |
-| [Sway + greetd](docs/sway-session-greetd.md) | Sway session with greetd login manager |
-| [Test Suite](docs/testing/README.md) | Test architecture, categories, and writing guide |
-| [Troubleshooting](docs/reference/troubleshooting.md) | Common issues and fixes |
-| [Security Policy](SECURITY.md) | Vulnerability reporting and security model |
-
-## Project Structure
-
-| Directory | Purpose | Docs |
-|-----------|---------|------|
-| [`tools/`](tools/) | Python transpiler, package loader, build tools | [README](tools/README.md) |
-| [`overlays/`](overlays/) | Static files and configs copied into images | [README](overlays/README.md) |
-| [`overlays/base/`](overlays/base/) | Shared configs: PAM, polkit, sysusers, packages | [README](overlays/base/README.md) |
-| [`overlays/sway/`](overlays/sway/) | Sway desktop: configs, scripts, session | [README](overlays/sway/README.md) |
-| [`overlays/deploy/`](overlays/deploy/) | Podman Quadlet container definitions | [README](overlays/deploy/README.md) |
-| [`tests/`](tests/) | Bats integration tests for built images | [README](tests/README.md) |
-| [`yaml-definitions/`](yaml-definitions/) | Alternative build blueprints | [README](yaml-definitions/README.md) |
-| [`docs/`](docs/) | Full documentation | [README](docs/README.md) |
-| [`.github/workflows/`](.github/workflows/) | GitHub Actions CI/CD | [README](.github/workflows/README.md) |
-
-## Contributing
+| Topic | Links |
+|-------|-------|
+| Getting Started | [Upgrade Guide](docs/bootc-upgrade.md) &#124; [Image Builder](docs/bootc-image-builder.md) |
+| Desktop | [Sway + greetd](docs/sway-session-greetd.md) &#124; [Plymouth](docs/reference/plymouth-usage.md) |
+| Testing | [Test Suite](docs/testing/README.md) &#124; [Writing Tests](docs/reference/writing-tests.md) |
+| Reference | [Troubleshooting](docs/reference/troubleshooting.md) &#124; [Security](SECURITY.md) |
 
 ---
 
