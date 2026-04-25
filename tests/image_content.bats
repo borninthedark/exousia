@@ -359,11 +359,6 @@ get_package_manager() {
     assert_success
 }
 
-@test "Custom script 'generate-readme' should be executable" {
-    run test -x "$MOUNT_POINT/usr/local/bin/generate-readme"
-    assert_success
-}
-
 # --- Repositories and package config ---
 
 @test "RPM Fusion repositories should be configured" {

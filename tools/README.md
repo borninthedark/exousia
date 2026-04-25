@@ -9,7 +9,7 @@ Python tools for managing the Exousia bootc image build process.
 | `generator/` | Transpiler package for YAML blueprints to Containerfiles (`uv run python -m generator`) |
 | `resolve_build_config.py` | Resolves CI build parameters from inputs and `adnyeus.yml` |
 | `package_loader/` | Package-loader package for typed YAML package definitions (`uv run python -m package_loader`) |
-| `generate-readme.py` | Auto-generates README content from build configuration |
+| `generate-readme.py` | Auto-generates README.md from build configuration (pre-commit hook) |
 | `dry_check.py` | DRY enforcement -- detects code duplication via AST analysis |
 
 ## Usage
