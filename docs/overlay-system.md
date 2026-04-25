@@ -66,7 +66,7 @@ overlays/
     ├── forgejo-data.volume            # Forgejo persistent storage
     ├── forgejo-runner.container       # Forgejo Actions runner
     └── forgejo-runner-data.volume     # Runner persistent storage
-```
+---
 
 ## How Overlays Map to the Image
 
@@ -91,7 +91,9 @@ generates `COPY` directives. The general mapping:
 | `sway/scripts/setup/` | (executed at build time) | Build-time setup |
 | `sway/session/` | `/usr/share/wayland-sessions/`, `/usr/bin/` | Session entry point and desktop file |
 
+
 ## Package System
+
 
 Packages are declared in YAML files under `base/packages/`. The package loader
 (`uv run python -m package_loader`) reads typed package-set definitions and emits explicit

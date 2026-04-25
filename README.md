@@ -88,8 +88,7 @@ graph LR
 ## CI/CD Pipeline
 
 Every workflow is named after a member of the **12th Division** -- the Shinigami
-Research and Development Institute (SRDI). Division flower: **Calendula** --
-*Despair in Your Heart*.
+Research and Development Institute (SRDI).
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}%%
@@ -106,7 +105,8 @@ graph TD
 | **Urahara** | `urahara.yml` | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori |
 | **Hikifune** | `hikifune.yml` | CI: Ruff, Black, isort, pytest |
 | **Uhin** | `uhin.yml` | Security: Hadolint, Checkov, Trivy config scan, Bandit |
-| **Hiyori** | `hiyori.yml` | Build, Trivy image scan, SBOM submission, issue/report delivery, Cosign, semver release |
+| **Hiyori** | `hiyori.yml` | Build, Trivy image scan artifact, SBOM submission, Cosign, semver release |
+| **Kon** | `kon.yml` | Advanced CodeQL analysis for Python and GitHub Actions |
 | **Nemu** | `nemu.yml` | Post-CI: generates STATUS.md |
 | **Mayuri** | `mayuri.yml` | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara |
 
@@ -218,6 +218,7 @@ tracked in [docs/cve-remediation.md](docs/cve-remediation.md).
 | [Overlay System](docs/overlay-system.md) | Overlay directory structure and how files map into images |
 | [Local Build Pipeline](docs/local-build-pipeline.md) | Quadlet services, local build, GHCR publication, and local registry mirroring |
 | [CVE Remediation](docs/cve-remediation.md) | Trivy findings, active remediations, and RPM override workflow |
+| [RPM Overrides](docs/rpm-overrides.md) | Schema, build behavior, and lifecycle for external RPM replacement |
 | [Sway + greetd](docs/sway-session-greetd.md) | Sway session with greetd login manager |
 | [Test Suite](docs/testing/README.md) | Test architecture, categories, and writing guide |
 | [Troubleshooting](docs/reference/troubleshooting.md) | Common issues and fixes |

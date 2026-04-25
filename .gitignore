@@ -52,6 +52,7 @@ AGENTS.md
 CLAUDE_GEMINI_CODEX.md
 docs/ansible.md
 docs/fedora-bootc-migration-plan.md
+# CI status tracked by Nemu workflow
 .claude/
 .gemini/
 .codex

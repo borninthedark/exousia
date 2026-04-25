@@ -182,17 +182,6 @@ jobs:
             } >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Create or update Trivy issue
-        if: github.ref == 'refs/heads/main'
-        uses: lazy-actions/gitrivy@v3
-        with:
-          token: ${{ github.token }}
-          image: ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
-          severity: HIGH,CRITICAL
-          issue_title: Trivy findings for ${{ needs.build.outputs.image_ref }}
-          issue_label: trivy,vulnerability
-          fail_on_vulnerabilities: false
-
   sign:
     name: Cosign Image
     needs: build
