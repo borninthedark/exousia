@@ -9,21 +9,23 @@ sway/
 ├── configs/
 │   ├── greetd/       # greetd login manager configuration
 │   ├── plymouth/     # Boot splash themes (bgrt-better-luks)
-│   ├── sway/         # Sway WM configs and config.d snippets
-│   └── swaylock/     # Swaylock configuration
+│   ├── sway/         # Sway WM config, config.d snippets, environment
+│   ├── swaylock/     # Swaylock configuration (Kripton theme)
+│   └── xdg/waybar/   # Waybar config and Kripton theme CSS
 ├── repos/            # Custom YUM/DNF repository definitions
 ├── scripts/
 │   ├── runtime/      # Runtime scripts (autotiling, lid, volume)
 │   └── setup/        # Build-time setup scripts
 └── session/
     ├── sway.desktop   # Wayland session file
-    ├── environment    # Sway environment variables
     └── start-sway     # Session startup script
 ```
 
 ## Notes
 
-- Uses `sway-config-minimal` (not upstream) with layered `config.d` overrides
+- Uses a custom sway config with layered `config.d` overrides and the Kripton color scheme
+- System-level configs (`/etc/sway/`, `/etc/xdg/waybar/`, `/etc/swaylock/`) apply to all users
+- User-level defaults for new accounts are seeded from `/etc/skel/.config/`
 - greetd is the login manager for all image types
 - Plymouth is toggled via `build.enable_plymouth` in the blueprint
 
