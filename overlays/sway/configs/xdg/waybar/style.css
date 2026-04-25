@@ -1,0 +1,352 @@
+/* Kripton GTK Theme for Waybar */
+
+/* Kripton color palette */
+@define-color bg          transparent;
+@define-color light       #E0E0E0;                     /* theme_fg_color */
+@define-color dark        #131519;                     /* theme_base_color */
+@define-color bg-alt      #171a1f;                     /* theme_bg_color */
+@define-color accent      #9bbfbf;                     /* theme_selected_bg_color */
+@define-color accent-dark #8bb5b5;                     /* darker accent */
+@define-color accent-soft #7cabab;                     /* softer accent */
+@define-color orange      #d79920;                     /* storage orange */
+@define-color warning     #aa4b1a;                     /* warning_color */
+@define-color critical    #b72f1d;                     /* error_color */
+@define-color success     #70af5a;                     /* success_color */
+@define-color memory      #b16286;                     /* purple tint */
+@define-color muted       #7c7d80;                     /* insensitive_fg_color */
+@define-color borders     #08090b;                     /* borders */
+
+/* Backwards-compat token (used in some module rules) */
+@define-color frost       @accent-soft;
+
+@define-color module-bg   rgba(19, 21, 25, 0.95);      /* dark glass */
+@define-color ws-bg       rgba(34, 38, 45, 0.92);      /* button background */
+@define-color hover-bg    rgba(155, 191, 191, 0.30);    /* accent hover */
+
+@keyframes blink-critical {
+    0%   { background-color: transparent; }
+    50%  { background-color: @critical; }
+    100% { background-color: transparent; }
+}
+
+@keyframes pulse-glow {
+    0%   { box-shadow: 0 0 4px rgba(155, 191, 191, 0.16); }
+
+    50%  { box-shadow: 0 0 10px rgba(155, 191, 191, 0.32); }
+    100% { box-shadow: 0 0 4px rgba(155, 191, 191, 0.16); }
+}
+
+* {
+    border: none;
+    border-radius: 0;
+    font-family: 'Maple Mono NF', system-ui, -apple-system;
+    font-size: 12px;
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+window#waybar {
+    background-color: @bg;
+    color: @light;
+    border-radius: 16px;
+    margin: 8px 12px;
+    padding: 4px 10px;
+    box-shadow:
+        0 8px 22px rgba(0, 0, 0, 0.60),
+        0 2px 10px rgba(8, 9, 11, 0.45);
+}
+
+window#waybar.hidden {
+    opacity: 0.3;
+}
+
+/* Common module styling */
+#clock,
+#battery,
+#cpu,
+#memory,
+#disk,
+#temperature,
+#backlight,
+#pulseaudio,
+#power-profiles-daemon,
+#wireplumber,
+#custom-media,
+#tray,
+#mode,
+#idle_inhibitor,
+#scratchpad,
+#mpd,
+#language,
+#keyboard-state {
+    background-color: @module-bg;
+    padding: 4px 12px;
+    margin: 2px 3px;
+    border-radius: 8px;
+    border: 1px solid rgba(155, 191, 191, 0.20);
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    min-width: 20px;
+}
+
+/* Hover without transform/backdrop-filter */
+#clock:hover,
+#battery:hover,
+#cpu:hover,
+#memory:hover,
+#disk:hover,
+#temperature:hover,
+#backlight:hover,
+#pulseaudio:hover,
+#power-profiles-daemon:hover,
+#wireplumber:hover,
+#custom-media:hover,
+#tray:hover,
+#mode:hover,
+#idle_inhibitor:hover,
+#scratchpad:hover,
+#mpd:hover,
+#language:hover,
+#keyboard-state:hover {
+    background-color: @hover-bg;
+    box-shadow: 0 3px 10px rgba(155, 191, 191, 0.35);
+    border-color: rgba(155, 191, 191, 0.75);
+}
+
+/* Workspaces */
+#workspaces {
+    background: transparent;
+    padding: 0;
+    margin: 2px 3px;
+    border-radius: 8px;
+}
+
+#workspaces button {
+    background-color: @ws-bg;
+    color: @muted;
+    border-radius: 4px;
+    font-weight: 600;
+    margin: 0 1px;
+    padding: 3px 7px;
+    min-width: 16px;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    border: 1px solid transparent;
+}
+
+#workspaces button.focused {
+    background-color: @accent;
+    color: @dark;
+    box-shadow:
+        0 2px 9px rgba(155, 191, 191, 0.45),
+        inset 0 1px 2px rgba(224, 224, 224, 0.10);
+}
+
+#workspaces button.visible {
+    background-color: rgba(139, 181, 181, 0.75);
+    color: @light;
+    border-color: rgba(155, 191, 191, 0.55);
+}
+
+#workspaces button.occupied {
+    background-color: rgba(23, 26, 31, 0.70);
+    color: @frost;
+    border-color: rgba(155, 191, 191, 0.35);
+}
+
+#workspaces button.empty {
+    background-color: rgba(34, 38, 45, 0.55);
+    color: @light;
+    opacity: 0.40;
+}
+
+#workspaces button.urgent {
+    background-color: @critical;
+    color: @light;
+    animation: pulse-glow 2s infinite;
+}
+
+#workspaces button:hover {
+    background-color: @hover-bg;
+    color: @light;
+    border-color: @accent;
+}
+
+/* Tray */
+#tray {
+    background-color: @module-bg;
+    border-radius: 6px;
+    padding: 2px 6px;
+}
+
+#tray > .passive {
+    opacity: 0.7;
+}
+
+#tray > .active {
+    opacity: 1;
+}
+
+#tray > .needs-attention {
+    background-color: @critical;
+    border-radius: 4px;
+    animation: pulse-glow 3s infinite;
+}
+
+/* Semantic coloring */
+#clock {
+    color: @accent;
+    font-weight: 600;
+}
+
+#cpu {
+    color: @success;
+}
+
+#memory {
+    color: @memory;
+}
+
+#disk {
+    color: @orange;
+}
+
+#pulseaudio,
+#wireplumber {
+    color: @warning;
+}
+
+#temperature {
+    color: @orange;
+}
+
+#backlight {
+    color: @warning;
+}
+
+#custom-media,
+#mpd {
+    color: @success;
+    font-style: italic;
+}
+
+#battery {
+    color: @accent-soft;
+}
+
+#battery.charging,
+#battery.plugged {
+    color: @success;
+}
+
+#battery.critical:not(.charging) {
+    color: @light;
+    background-color: @critical;
+    animation: blink-critical 1.5s infinite;
+    font-weight: 700;
+}
+
+#pulseaudio.muted,
+#wireplumber.muted {
+    color: @muted;
+    opacity: 0.6;
+}
+
+#temperature.critical {
+    color: @critical;
+    font-weight: 700;
+    animation: pulse-glow 2s infinite;
+}
+
+
+/* Power Profiles Daemon (per-mode colors)
+   Waybar adds class names matching profile: .power-saver, .balanced, .performance */
+#power-profiles-daemon {
+    color: @light;
+    font-weight: 700;
+}
+
+/* Green = power-saver */
+#power-profiles-daemon.power-saver {
+    background-color: rgba(112, 175, 90, 0.22);
+    border-color: rgba(112, 175, 90, 0.65);
+    box-shadow: 0 2px 10px rgba(112, 175, 90, 0.18);
+    color: @success;
+}
+
+/* Blue = balanced */
+#power-profiles-daemon.balanced {
+    background-color: rgba(155, 191, 191, 0.22);
+    border-color: rgba(155, 191, 191, 0.75);
+    box-shadow: 0 2px 10px rgba(155, 191, 191, 0.18);
+    color: @accent;
+}
+
+/* Red = performance */
+#power-profiles-daemon.performance {
+    background-color: rgba(183, 47, 29, 0.22);
+    border-color: rgba(183, 47, 29, 0.70);
+    box-shadow: 0 2px 10px rgba(183, 47, 29, 0.16);
+    color: @critical;
+}
+
+
+/* Idle inhibitor */
+#idle_inhibitor {
+    color: @muted;
+    opacity: 0.7;
+}
+
+#idle_inhibitor.activated {
+    background-color: rgba(155, 191, 191, 0.14);
+    color: @accent;
+    opacity: 1;
+    box-shadow:
+        inset 0 0 6px rgba(155, 191, 191, 0.26),
+        0 0 10px rgba(155, 191, 191, 0.20);
+}
+
+/* MPD / media state */
+#mpd.disconnected {
+    color: @critical;
+    opacity: 0.7;
+}
+
+#mpd.stopped {
+    color: @muted;
+    opacity: 0.6;
+}
+
+#mpd.paused {
+    color: @warning;
+}
+
+#mpd.playing {
+    color: @success;
+}
+
+/* Scratchpad */
+#scratchpad {
+    color: @accent;
+}
+
+#scratchpad.empty {
+    background-color: transparent;
+    opacity: 0.5;
+}
+
+/* Language / keyboard */
+#language {
+    color: @frost;
+}
+
+#keyboard-state {
+    color: @warning;
+}
+
+/* Mode indicator */
+#mode {
+    background-color: @critical;
+    color: @light;
+    font-weight: 700;
+    animation: pulse-glow 2s infinite;
+}
