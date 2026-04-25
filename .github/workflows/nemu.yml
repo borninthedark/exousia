@@ -1,14 +1,14 @@
 ---
-# Nemu Kurotsuchi - 12th Division, Calendula (Despair in Your Heart)
+# Nemu Kurotsuchi - 12th Division
 # Post-CI housekeeping: generates STATUS.md after the Urahara pipeline
 # completes on main. README is managed by the generate-readme pre-commit hook.
 #
 # 12th Division Pipeline:
-#   Urahara  -> Orchestrator (12th Division, Calendula -- Despair in Your Heart)
-#   Hikifune -> CI: lint + test (12th Division, Calendula -- Despair in Your Heart)
-#   Uhin     -> Security scanning (12th Division, Calendula -- Despair in Your Heart)
-#   Hiyori   -> Build, scan, sign, release (12th Division, Calendula -- Despair in Your Heart)
-#   Nemu     -> Status report (12th Division, Calendula -- Despair in Your Heart)
+#   Urahara  -> Orchestrator
+#   Hikifune -> CI: lint + test
+#   Uhin     -> Security scanning
+#   Hiyori   -> Build, scan, sign, release
+#   Nemu     -> Status report
 
 name: "Nemu - Status Report"
 
@@ -102,9 +102,9 @@ jobs:
 
           | Captain | Division | Role | Status |
           |---------|----------|------|--------|
-          | Hikifune | 12th (Despair in Your Heart) | CI: lint + test | ${HIKIFUNE} |
-          | Uhin | 12th (Despair in Your Heart) | Security scanning | ${UHIN} |
-          | Hiyori | 12th (Despair in Your Heart) | Build & Release | ${HIYORI} |
+          | Hikifune | 12th | CI: lint + test | ${HIKIFUNE} |
+          | Uhin | 12th | Security scanning | ${UHIN} |
+          | Hiyori | 12th | Build & Release | ${HIYORI} |
 
           **Result:** ${CONCLUSION}
 

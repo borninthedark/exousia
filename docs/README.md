@@ -21,12 +21,12 @@ Exousia uses a 12th Division-themed GitHub Actions pipeline (Shinigami Research 
 
 | Workflow | File | Role |
 |----------|------|------|
-| **Urahara** | `urahara.yml` | 12th (Despair in Your Heart) -- Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate |
-| **Hikifune** | `hikifune.yml` | 12th (Despair in Your Heart) -- CI: Ruff, Black, isort, pytest |
-| **Uhin** | `uhin.yml` | 12th (Despair in Your Heart) -- Security: Hadolint, Checkov, Trivy config scan, Bandit |
-| **Hiyori** | `hiyori.yml` | 12th (Despair in Your Heart) -- Build, Cosign, Trivy scan, semver release |
-| **Nemu** | `nemu.yml` | 12th (Despair in Your Heart) -- Post-CI: STATUS.md |
-| **Mayuri** | `mayuri.yml` | 12th (Despair in Your Heart) -- Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
+| **Urahara** | `urahara.yml` | 12th -- Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate |
+| **Hikifune** | `hikifune.yml` | 12th -- CI: Ruff, Black, isort, pytest |
+| **Uhin** | `uhin.yml` | 12th -- Security: Hadolint, Checkov, Trivy config scan, Bandit |
+| **Hiyori** | `hiyori.yml` | 12th -- Build, Cosign, Trivy scan, semver release |
+| **Nemu** | `nemu.yml` | 12th -- Post-CI: STATUS.md |
+| **Mayuri** | `mayuri.yml` | 12th -- Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):
 `feat:` minor, `fix:` patch, `feat!:` major.

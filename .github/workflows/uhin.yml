@@ -1,4 +1,4 @@
-# Uhin Zenjoji - 12th Division, Calendula (Despair in Your Heart)
+# Uhin Zenjoji - 12th Division
 # Validates file structure, generates Containerfile, runs Hadolint + Checkov +
 # Trivy config scan + Bandit, then uploads the generated Containerfile for Hiyori.
 

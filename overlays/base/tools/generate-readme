@@ -19,7 +19,7 @@ from urllib.parse import quote
 try:
     import yaml
 except ImportError:
-    yaml = None
+    yaml = None  # type: ignore
 
 
 class Colors:
@@ -194,7 +194,7 @@ def generate_readme(config: Config) -> str:
 
     readme = f"""# Exousia
 
-[![Last Build: {config.os_name} {config.os_version} / {config.wm_de_label}](https://img.shields.io/badge/Last%20Build-{config.build_badge_text_uri}-{config.os_badge_color}?style=for-the-badge&logo={config.os_logo}&logoColor=white)](#cicd-pipeline--the-phoenician-pantheon)
+[![Last Build: {config.os_name} {config.os_version} / {config.wm_de_label}](https://img.shields.io/badge/Last%20Build-{config.build_badge_text_uri}-{config.os_badge_color}?style=for-the-badge&logo={config.os_logo}&logoColor=white)](#cicd-pipeline)
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
 Declarative bootc image builder for Fedora Linux. YAML blueprints define OS
@@ -210,8 +210,9 @@ and GitHub Actions pushes signed images to GHCR.
 
 - [Quick Start](#quick-start)
 - [How It Works](#how-it-works)
-- [CI/CD Pipeline -- The Shinigami](#cicd-pipeline--the-shinigami)
+- [CI/CD Pipeline](#cicd-pipeline)
 - [Customizing Builds](#customizing-builds)
+- [Official Dotfiles](#official-dotfiles)
 - [YubiKey Authentication](#yubikey-authentication)
 - [Required Secrets and Variables](#required-secrets-and-variables)
 - [Documentation](#documentation)
@@ -243,18 +244,6 @@ git clone https://github.com/borninthedark/exousia.git && cd exousia
 make build
 ```
 
-### Trigger a remote build
-
-```bash
-curl -X POST \\
-  -H "Accept: application/vnd.github+json" \\
-  -H "Authorization: Bearer $GITHUB_TOKEN" \\
-  https://api.github.com/repos/borninthedark/exousia/actions/workflows/aizen.yml/dispatches \\
-  -d '{{"ref":"main","inputs":{{"image_type":"fedora-bootc","distro_version":"43","enable_plymouth":"true"}}}}'
-```
-
-Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://github.com/borninthedark/exousia/actions).
-
 ---
 
 ## How It Works
@@ -281,7 +270,7 @@ graph LR
 
 ---
 
-## CI/CD Pipeline -- The Shinigami
+## CI/CD Pipeline
 
 Every workflow is named after a captain from the Gotei 13. Each captain's
 division maps to the workflow's role in the pipeline:
@@ -298,11 +287,6 @@ graph TD
 
 Aizen calls Kaname and Gin in parallel. When both pass, Kyoraku builds,
 signs, scans, and cuts a semver release on `main`.
-
-### Versioning
-
-Versions are automatic via [conventional commits](https://www.conventionalcommits.org/):
-`feat:` bumps minor, `fix:` bumps patch, `feat!:` bumps major.
 
 ---
 
@@ -336,6 +320,16 @@ the blueprint directly.
   Configuration references drawn from [openSUSEway](https://github.com/openSUSE/openSUSEway).
 - **Plymouth** is toggled via `enable_plymouth: true` in the blueprint.
 - **greetd** is the login manager for all image types.
+
+---
+
+## Official Dotfiles
+
+This project is designed to be used with the official **[borninthedark/dotfiles](https://github.com/borninthedark/dotfiles)** repository.
+
+The image uses the `chezmoi` module to automatically initialize these dotfiles
+on first login for all users, providing a consistent development environment
+"out of the box".
 
 ---
 
@@ -406,6 +400,7 @@ versioning.
 - [Maple Mono](https://github.com/subframe7536/maple-font) by subframe7536 for the terminal and UI font
 - [Kripton GTK Theme](https://github.com/EliverLara/Kripton) by EliverLara for the desktop color scheme
 - [Cyberpunk Technotronic](https://github.com/dreifacherspass/cyberpunk-technotronic-icon-theme) by dreifacherspass for the icon theme
+- [Bibata Cursor](https://github.com/ful1e5/Bibata_Cursor) by ful1e5 for the cursor theme
 
 ### AI-Assisted Development
 

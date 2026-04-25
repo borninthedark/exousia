@@ -1,196 +1,214 @@
 #!/usr/bin/env python3
-"""Generate README.md from template with dynamic documentation section."""
+"""
+Dynamic README generator for Exousia.
 
-from __future__ import annotations
+Generates the published README from repository metadata and the active
+blueprint so docs stay aligned with the current image definition.
+"""
 
+import argparse
+import os
+import re
+import subprocess
+import sys
+from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import quote
 
-import yaml
-
-REPO = "borninthedark/exousia"
-_BLUEPRINT = Path(__file__).resolve().parent.parent / "adnyeus.yml"
-
-
-def _blueprint_version() -> str:
-    """Read image-version from the blueprint."""
-    if _BLUEPRINT.exists():
-        config = yaml.safe_load(_BLUEPRINT.read_text()) or {}
-        version = config.get("image-version")
-        if version:
-            return str(version)
-    return "43"
+try:
+    import yaml
+except ImportError:
+    yaml = None  # type: ignore
 
 
-FEDORA_VERSION = _blueprint_version()
+class Colors:
+    """Terminal colors (disabled in CI)."""
 
-# Documentation entries: (rel_path, title, description)
-DOC_ENTRIES: list[tuple[str, str, str]] = [
-    (
-        "docs/bootc-upgrade.md",
-        "Upgrade Guide",
-        "Switch images and perform bootc upgrades",
-    ),
-    (
-        "docs/bootc-image-builder.md",
-        "Image Builder",
-        "Build bootable disk images (ISO, raw, qcow2)",
-    ),
-    (
-        "docs/modules.md",
-        "Module Reference",
-        "Build module types, fields, and usage examples",
-    ),
-    (
-        "docs/package-loader-cli.md",
-        "Package Loader CLI",
-        "Resolve package sets, inspect provenance, and export legacy manifests",
-    ),
-    (
-        "docs/package-management-and-container-builds.md",
-        "Package Management Design",
-        "Typed package-set model, resolved build plans, and build-pipeline direction",
-    ),
-    (
-        "docs/overlay-system.md",
-        "Overlay System",
-        "Overlay directory structure and how files map into images",
-    ),
-    (
-        "docs/local-build-pipeline.md",
-        "Local Build Pipeline",
-        "Quadlet services, local build, GHCR publication, and local registry mirroring",
-    ),
-    (
-        "docs/fedora-bootc-migration-plan.md",
-        "Fedora bootc Migration Plan",
-        "Base-image migration plan and package audit checklist",
-    ),
-    (
-        "docs/sway-session-greetd.md",
-        "Sway + greetd",
-        "Sway session with greetd login manager",
-    ),
-    (
-        "docs/testing/README.md",
-        "Test Suite",
-        "Test architecture, categories, and writing guide",
-    ),
-    (
-        "docs/reference/troubleshooting.md",
-        "Troubleshooting",
-        "Common issues and fixes",
-    ),
-    (
-        "SECURITY.md",
-        "Security Policy",
-        "Vulnerability reporting and security model",
-    ),
-]
+    def __init__(self) -> None:
+        if os.environ.get("CI") == "true":
+            self.GREEN = self.BLUE = self.YELLOW = self.RED = self.NC = ""
+        else:
+            self.GREEN = "\033[0;32m"
+            self.BLUE = "\033[0;34m"
+            self.YELLOW = "\033[1;33m"
+            self.RED = "\033[0;31m"
+            self.NC = "\033[0m"
 
-# Subdirectory entries: (rel_path, title, description)
-SUBDIR_ENTRIES: list[tuple[str, str, str]] = [
-    ("tools/", "Build Tools", "Python transpiler, package loader, build tools"),
-    ("overlays/", "Overlays", "Static files and configs copied into images"),
-    ("overlays/base/", "Base Overlay", "Shared configs: PAM, polkit, sysusers, packages"),
-    ("overlays/sway/", "Sway Overlay", "Sway desktop: configs, scripts, session"),
-    ("overlays/deploy/", "Deploy Overlay", "Podman Quadlet container definitions"),
-    ("tests/", "Test Suite", "Bats integration tests for built images"),
-    ("yaml-definitions/", "YAML Definitions", "Alternative build blueprints"),
-    ("docs/", "Documentation", "Full documentation"),
-    (".github/workflows/", "Shinigami Pipeline", "GitHub Actions CI/CD"),
-]
+    def success(self, msg: str) -> None:
+        print(f"{self.GREEN}+{self.NC} {msg}")
+
+    def info(self, msg: str) -> None:
+        print(f"{self.BLUE}i{self.NC} {msg}")
+
+    def warning(self, msg: str) -> None:
+        print(f"{self.YELLOW}!{self.NC} {msg}")
+
+    def error(self, msg: str) -> None:
+        print(f"{self.RED}x{self.NC} {msg}", file=sys.stderr)
 
 
-def _docs_table(root: Path) -> str:
-    rows = ["| Document | Description |", "|----------|-------------|"]
-    for rel_path, title, desc in DOC_ENTRIES:
-        if (root / rel_path).exists():
-            rows.append(f"| [{title}]({rel_path}) | {desc} |")
-    return "\n".join(rows)
+class Config:
+    """Build configuration extracted from repository metadata."""
+
+    def __init__(self) -> None:
+        self.os_name = "Linux"
+        self.os_logo = "linux"
+        self.os_badge_color = "0A74DA"
+        self.os_version = ""
+        self.image_type = ""
+        self.image_type_display = ""
+        self.wm_de_label = "Unknown"
+        self.github_repo = ""
+        self.github_owner = ""
+        self.docker_image = ""
+        self.build_date = ""
+        self.build_badge_text_uri = ""
 
 
-def _structure_table(root: Path) -> str:
-    rows = [
-        "| Directory | Purpose | Docs |",
-        "|-----------|---------|------|",
-    ]
-    for rel_path, _title, desc in SUBDIR_ENTRIES:
-        dir_path = root / rel_path
-        readme = dir_path / "README.md"
-        if dir_path.exists():
-            if readme.exists():
-                rows.append(
-                    f"| [`{rel_path}`]({rel_path}) | {desc} " f"| [README]({rel_path}README.md) |"
-                )
-            else:
-                rows.append(f"| [`{rel_path}`]({rel_path}) | {desc} | -- |")
-    return "\n".join(rows)
+def get_repo_root() -> Path:
+    """Determine repository root reliably."""
+    if github_ws := os.environ.get("GITHUB_WORKSPACE"):
+        return Path(github_ws)
+
+    script_path = Path(__file__).resolve()
+    # tools/generate-readme.py -> repo root
+    return script_path.parent.parent
 
 
-def generate_readme(root: Path) -> str:
-    docs = _docs_table(root)
-    structure = _structure_table(root)
+def extract_config(repo_root: Path, colors: Colors) -> Config:
+    """Extract configuration from repository metadata."""
+    config = Config()
+    colors.info(f"Repository root: {repo_root}")
 
-    return f"""\
-# Exousia - Declarative Bootc Image Builder
+    adnyeus_path = repo_root / "adnyeus.yml"
+    base_image = ""
 
-> *Can't Fear Your Own OS*
->
-> **BLEACH** by **Tite Kubo** -- The Shinigami Pipeline,
-> Reiatsu badge, and all captain naming are inspired by the Gotei 13
-> from *BLEACH*. All rights belong to Tite Kubo and
-> respective copyright holders.
+    if adnyeus_path.exists():
+        colors.info(f"Found image definition blueprint: {adnyeus_path}")
 
-[![Reiatsu](https://img.shields.io/github/actions/workflow/status/{REPO}/urahara.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/{REPO}/actions/workflows/urahara.yml)
-[![Last Build: Fedora {FEDORA_VERSION} / Sway](https://img.shields.io/badge/Last%20Build-Fedora%20{FEDORA_VERSION}%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/{REPO}/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
-[![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
+        if yaml:
+            blueprint = yaml.safe_load(adnyeus_path.read_text())
+            blueprint = blueprint or {}
+            base_image = blueprint.get("base-image", "")
+            config.os_version = str(blueprint.get("image-version", ""))
+            config.image_type = blueprint.get("image-type", "")
 
-DevSecOps-hardened, container-based immutable operating systems built on
-[**bootc**](https://github.com/bootc-dev/bootc). YAML blueprints define OS
+            desktop = blueprint.get("desktop", {})
+            de = desktop.get("desktop_environment", "")
+            wm = desktop.get("window_manager", "")
+
+            if de:
+                de_labels = {
+                    "gnome": "GNOME",
+                }
+                config.wm_de_label = de_labels.get(de.lower(), de.capitalize())
+            elif wm:
+                config.wm_de_label = wm.capitalize()
+        else:
+            content = adnyeus_path.read_text()
+            if match := re.search(r"^base-image:\s*(.+)$", content, re.MULTILINE):
+                base_image = match.group(1).strip().strip("\"'")
+            if match := re.search(r"^image-version:\s*(.+)$", content, re.MULTILINE):
+                config.os_version = match.group(1).strip().strip("\"'")
+            if match := re.search(r"window_manager:\s*(.+)$", content, re.MULTILINE):
+                config.wm_de_label = match.group(1).strip().strip("\"'").capitalize()
+    else:
+        colors.warning("adnyeus.yml not found; relying on pipeline inputs")
+
+    if base_image:
+        base_lower = base_image.lower()
+        os_map = {
+            "fedora": ("Fedora", "fedora", "0A74DA"),
+        }
+        for key, (name, logo, color) in os_map.items():
+            if key in base_lower:
+                config.os_name, config.os_logo, config.os_badge_color = name, logo, color
+                break
+
+        if not config.os_version and ":" in base_image:
+            config.os_version = base_image.rsplit(":", 1)[1].split("@")[0]
+
+    version_file = repo_root / ".fedora-version"
+    if version_file.exists() and version_file.stat().st_size > 0:
+        version_info = version_file.read_text().strip()
+        parts = version_info.split(":")
+        config.os_version = parts[0]
+        if len(parts) > 1:
+            config.image_type = parts[1]
+
+    type_displays = {
+        "fedora-sway-atomic": "Fedora Sway Atomic Desktop",
+        "fedora-bootc": "Fedora bootc Base",
+    }
+    config.image_type_display = type_displays.get(config.image_type, config.image_type or "Unknown")
+
+    if not config.os_version:
+        config.os_version = "unknown"
+
+    if config.os_version:
+        colors.info(f"Blueprint version detected: {config.os_name} {config.os_version}")
+
+    if github_repo := os.environ.get("GITHUB_REPOSITORY"):
+        config.github_repo = github_repo
+    else:
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(repo_root), "remote", "get-url", "origin"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            url = result.stdout.strip()
+            match = re.search(r"[:/]([^/]+/[^/]+?)(?:\.git)?$", url)
+            if match:
+                config.github_repo = match.group(1).replace(".git", "")
+                if "/git/" in config.github_repo:
+                    config.github_repo = config.github_repo.split("/git/")[-1]
+                colors.info(f"Detected GitHub repository: {config.github_repo}")
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            colors.warning("Could not detect GitHub repository, using default")
+            config.github_repo = "borninthedark/exousia"
+
+    config.github_owner = config.github_repo.split("/")[0]
+    config.docker_image = "ghcr.io/borninthedark/exousia"
+    config.build_date = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
+    badge_text = f"{config.os_name} {config.os_version} / {config.wm_de_label}"
+    config.build_badge_text_uri = quote(badge_text)
+
+    return config
+
+
+def generate_readme(config: Config) -> str:
+    """Generate the complete README content."""
+
+    return f"""# Exousia
+
+[![Last Build: {config.os_name} {config.os_version} / {config.wm_de_label}](https://img.shields.io/badge/Last%20Build-{config.build_badge_text_uri}-{config.os_badge_color}?style=for-the-badge&logo={config.os_logo}&logoColor=white)](#cicd-pipeline)
+[![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+
+Declarative bootc image builder for Fedora Linux. YAML blueprints define OS
 images, Python tools transpile them to Containerfiles, Docker Buildx builds them,
 and GitHub Actions pushes signed images to GHCR.
 
-Development follows a **TDD-first, shift-left** methodology — see
-[Contributing](#contributing) for details.
+> **Warning** -- This project is highly experimental. There are no guarantees
+> about stability, data safety, or fitness for any purpose.
 
-## CVE Remediations
+---
 
-Exousia ships patched versions of packages ahead of upstream Fedora when
-required. Packages are built from upstream source, hosted as OCI images on
-GHCR, and injected at build time via RPM overrides. See
-[SECURITY.md](SECURITY.md#rpm-override-process) for the full process.
+## Contents
 
-| Package | Patched Version | Reason |
-|---------|----------------|--------|
-| flatpak | 1.16.6 | CVE remediation — fixes disclosed 2026-04-12 ([release notes](https://github.com/flatpak/flatpak/releases/tag/1.16.6)) |
-
-## Table of Contents
-
-- [CVE Remediations](#cve-remediations)
-- [Highly Experimental Disclaimer](#highly-experimental-disclaimer)
 - [Quick Start](#quick-start)
-- [Architecture](#architecture)
-  - [Build Flow](#build-flow)
-  - [The 12th Division Pipeline](#the-12th-division-pipeline)
-  - [Versioning](#versioning)
+- [How It Works](#how-it-works)
+- [CI/CD Pipeline](#cicd-pipeline)
 - [Customizing Builds](#customizing-builds)
-  - [Package Workflow](#package-workflow)
-  - [Configuration](#configuration)
-  - [Desktop and boot](#desktop-and-boot)
-- [Local Build Pipeline](#local-build-pipeline)
+- [Official Dotfiles](#official-dotfiles)
 - [YubiKey Authentication](#yubikey-authentication)
 - [Required Secrets and Variables](#required-secrets-and-variables)
 - [Documentation](#documentation)
-- [Project Structure](#project-structure)
 - [Contributing](#contributing)
-- [License](#license)
 - [Acknowledgments](#acknowledgments)
 
-## Highly Experimental Disclaimer
-
-> **Warning**: This project is highly experimental. There are **no guarantees**
-> about stability, data safety, or fitness for any purpose. Proceed only if you
-> understand the risks.
+---
 
 ## Quick Start
 
@@ -211,112 +229,68 @@ sudo bootc upgrade && sudo systemctl reboot
 ### Build locally
 
 ```bash
-git clone https://github.com/{REPO}.git && cd exousia
+git clone https://github.com/borninthedark/exousia.git && cd exousia
 make build
 ```
 
-### Trigger a remote build
+---
 
-```bash
-curl -X POST \\
-  -H "Accept: application/vnd.github+json" \\
-  -H "Authorization: Bearer $GITHUB_TOKEN" \\
-  https://api.github.com/repos/{REPO}/actions/workflows/urahara.yml/dispatches \\
-  -d '{{"ref":"main","inputs":{{"image_type":"fedora-bootc","distro_version":"{FEDORA_VERSION}","enable_plymouth":"true"}}}}'
-```
-
-Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://github.com/{REPO}/actions).
-
-## Architecture
-
-### Build Flow
+## How It Works
 
 ```mermaid
 %%{{init: {{'theme': 'base', 'themeVariables': {{'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}}}}%%
 graph LR
-    subgraph Input
-        A["adnyeus.yml"]
-        O["overlays/"]
-        P["packages/*.yml"]
-    end
-    subgraph Transpiler
-        G["resolve_build_config.py"]
-        F["uv run python -m package_loader"]
-        B["uv run python -m generator"]
-    end
-    A --> G --> B
-    O --> B
-    P --> F --> B
+    A["adnyeus.yml<br/>(blueprint)"] --> B["Python transpiler<br/>(tools/*.py)"]
     B --> C["Containerfile"]
     C --> D["Docker Buildx"]
-    D --> T["Bats tests"]
-    T --> E["Registry"]
+    D --> E["GHCR<br/>(signed image)"]
+    B -.-> F["package_loader.py"]
+    B -.-> G["resolve_build_config.py"]
 ```
 
-| Component | Description |
-|-----------|-------------|
-| **Blueprint** (`adnyeus.yml`) | Declares base image, packages, overlays, scripts, services, and build flags |
-| **Transpiler** (`uv run python -m generator`) | Reads the blueprint, resolves package sets, optionally writes `build/resolved-build-plan*.json`, and emits a valid Containerfile |
-| **Overlays** | Static files, configs, and scripts under `overlays/base/` (shared) and `overlays/sway/` (desktop) |
-| **Tests** | Pytest validates the Python tooling and Bats validates the built image |
+- **Blueprint** (`adnyeus.yml`) -- declares base image, packages, overlays,
+  scripts, services, and build flags.
+- **Transpiler** (`tools/yaml-to-containerfile.py`) -- reads the blueprint,
+  loads package lists from `overlays/base/packages/`, and emits a valid
+  Containerfile.
+- **Overlays** -- static files, configs, and scripts organized under
+  `overlays/base/` (shared) and `overlays/sway/` (desktop-specific).
+- **Tests** -- Bats tests in `custom-tests/` validate the built image.
 
-### The 12th Division Pipeline
+---
 
-Every CI workflow is named after a member of the **12th Division** — the Shinigami
-Research and Development Institute (SRDI). Division flower: **Calendula** — *Despair
-in Your Heart*.
+## CI/CD Pipeline
+
+Every workflow is named after a captain from the Gotei 13. Each captain's
+division maps to the workflow's role in the pipeline:
 
 ```mermaid
 %%{{init: {{'theme': 'base', 'themeVariables': {{'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}}}}%%
 graph TD
-    A["Urahara"] --> B["Hikifune"] & C["Uhin"]
-    B & C --> K["Hiyori: build"]
-    K --> S["scan"] & SG["sign"]
-    S & SG --> R["release"]
-    R --> G["Gate"]
-    G --> Y["Nemu"]
+    A["Aizen<br/>(orchestrator)"] --> B["Kaname<br/>(CI: lint+test)"]
+    A --> C["Gin<br/>(security scan)"]
+    B --> D["Kyoraku<br/>(build, sign, release)"]
+    C --> D
+    D --> E["Gate"]
 ```
 
-| Member | Role | Key Tools |
-|--------|------|-----------|
-| **Urahara** | Orchestrator | Calls Hikifune + Uhin in parallel, then Hiyori |
-| **Hikifune** | CI | Ruff, Black, isort, pytest |
-| **Uhin** | Security | Hadolint, Checkov, Trivy config scan, Bandit |
-| **Hiyori** | Build & Release | Docker Buildx, Cosign (OIDC), Trivy image scan, semver |
-| **Nemu** | Status Report | Generates STATUS.md |
+Aizen calls Kaname and Gin in parallel. When both pass, Kyoraku builds,
+signs, scans, and cuts a semver release on `main`.
 
-### Versioning
-
-Versions are automatic via [conventional commits](https://www.conventionalcommits.org/):
-`feat:` bumps minor, `fix:` bumps patch, `feat!:` bumps major.
+---
 
 ## Customizing Builds
 
-### Package Workflow
+### Packages
 
 | Scope | Location |
 |-------|----------|
-| RPM overrides | `overlays/base/packages/common/rpm-overrides.yml` |
-| Common package sets | `overlays/base/packages/common/base-*.yml` |
-| Feature package sets | `overlays/base/packages/common/*.yml` |
-| Window-manager package sets | `overlays/base/packages/window-managers/*.yml` |
-| Removal list | `overlays/base/packages/common/remove.yml` |
+| Base packages | `overlays/base/packages/common/*.yml` |
+| Window managers | `overlays/base/packages/window-managers/*.yml` |
+| Removals | `overlays/base/packages/common/remove.yml` |
 
-All package selection flows through the package loader. Edit package-set YAML under
-`overlays/base/packages/`, then verify the resolved output before building:
-
-```bash
-uv run python -m package_loader --wm sway --json
-uv run python -m generator \\
-  --config adnyeus.yml \\
-  --resolved-package-plan build/resolved-build-plan.json \\
-  --output Dockerfile.generated
-```
-
-The resolved plan records package/group install and removal provenance so CI and
-tests can verify what the image is meant to contain. See
-[Package Loader CLI](docs/package-loader-cli.md) and
-[Package Management Design](docs/package-management-and-container-builds.md).
+All packages are managed through the package loader. Edit the YAML lists, not
+the blueprint directly.
 
 ### Configuration
 
@@ -336,39 +310,33 @@ tests can verify what the image is meant to contain. See
 - **Plymouth** is toggled via `enable_plymouth: true` in the blueprint.
 - **greetd** is the login manager for all image types.
 
-## Local Build Pipeline
+---
 
-Build images locally with Podman Quadlet services before publishing to GHCR and
-mirroring images into the local registry for bootc:
+## Official Dotfiles
 
-```bash
-make quadlet-install && make quadlet-start   # start the local registry
-make local-build                             # generate containerfile, buildah build, push to local registry
-make local-test                              # run bats tests against local image
-make local-push                              # promote to GHCR via skopeo
-make local-mirror                            # mirror GHCR back to localhost:5000 for bootc
-```
+This project is designed to be used with the official **[borninthedark/dotfiles](https://github.com/borninthedark/dotfiles)** repository.
 
-See [Local Build Pipeline docs](docs/local-build-pipeline.md) for the full
-setup, Forgejo runner registration, and troubleshooting.
+The image uses the `chezmoi` module to automatically initialize these dotfiles
+on first login for all users, providing a consistent development environment
+"out of the box".
 
 ---
 
 ## YubiKey Authentication
 
 Exousia ships PAM U2F modules for YubiKey hardware authentication. After
-deploying, register your key in the shared authfile:
+deploying, register your key:
 
 ```bash
-sudo install -d -m 0755 /etc/Yubico
-pamu2fcfg -u "$USER" | sudo tee -a /etc/Yubico/u2f_keys >/dev/null
-pamu2fcfg -n -u "$USER" | sudo tee -a /etc/Yubico/u2f_keys >/dev/null
+mkdir -p ~/.config/Yubico
+pamu2fcfg > ~/.config/Yubico/u2f_keys       # primary key
+pamu2fcfg -n >> ~/.config/Yubico/u2f_keys    # backup key (recommended)
 ```
 
-New users inherit `~/.config/Yubico -> /etc/Yubico` from `/etc/skel`.
-`sudo` and local `login` accept YubiKey as an alternative to password by
-default. See
+`sudo` accepts YubiKey as an alternative to password by default. See
 [Fedora YubiKey Quick Docs](https://docs.fedoraproject.org/en-US/quick-docs/using-yubikeys/).
+
+---
 
 ## Required Secrets and Variables
 
@@ -386,31 +354,30 @@ Configure in GitHub **Settings > Secrets and variables > Actions**.
 |------|---------|----------|
 | `REGISTRY_URL` | Registry URL (defaults to `ghcr.io`) | No |
 
-Secrets propagate to child workflows via `secrets: inherit` in Urahara.
+Secrets propagate to child workflows via `secrets: inherit` in Aizen.
+
+---
 
 ## Documentation
 
 **[Full Documentation Index](docs/README.md)**
 
-{docs}
+| Topic | Links |
+|-------|-------|
+| Getting Started | [Upgrade Guide](docs/bootc-upgrade.md) &#124; [Image Builder](docs/bootc-image-builder.md) |
+| Desktop | [Sway + greetd](docs/sway-session-greetd.md) &#124; [Plymouth](docs/reference/plymouth-usage.md) |
+| Testing | [Test Suite](docs/testing/README.md) &#124; [Writing Tests](docs/reference/writing-tests.md) |
+| Reference | [Troubleshooting](docs/reference/troubleshooting.md) &#124; [Security](SECURITY.md) |
 
-## Project Structure
-
-{structure}
+---
 
 ## Contributing
 
-Contributions welcome. Development rules:
+Contributions welcome. Submit PRs or open issues. Use
+[conventional commits](https://www.conventionalcommits.org/) for automatic
+versioning.
 
-- **TDD mandatory** -- write tests before implementation and keep test intent close to the change
-- **Coverage floor** -- `tools/` pytest coverage is enforced at 85% and should keep ratcheting upward
-- **[Conventional commits](https://www.conventionalcommits.org/)** -- enforced by pre-commit hook
-- **Shift-left** -- `uv run pre-commit install && uv run pre-commit install --hook-type commit-msg`
-- Security gates (Bandit, Gitleaks) and quality checks (Ruff, Black, mypy) run locally before push
-
-## License
-
-MIT License -- see LICENSE file.
+---
 
 ## Acknowledgments
 
@@ -422,6 +389,7 @@ MIT License -- see LICENSE file.
 - [Maple Mono](https://github.com/subframe7536/maple-font) by subframe7536 for the terminal and UI font
 - [Kripton GTK Theme](https://github.com/EliverLara/Kripton) by EliverLara for the desktop color scheme
 - [Cyberpunk Technotronic](https://github.com/dreifacherspass/cyberpunk-technotronic-icon-theme) by dreifacherspass for the icon theme
+- [Bibata Cursor](https://github.com/ful1e5/Bibata_Cursor) by ful1e5 for the cursor theme
 
 ### AI-Assisted Development
 
@@ -433,23 +401,65 @@ This project uses AI-assisted development tools:
 - **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)**
 - **[github-actions[bot]](https://github.com/apps/github-actions)** -- automated releases and tagging
 
+### Creative
+
+**Tite Kubo** -- Creator of *BLEACH*. The CI/CD naming scheme (Shinigami Pipeline)
+and Reiatsu status indicator are inspired by the Gotei 13 and themes from BLEACH,
+used respectfully as a playful aesthetic. All rights belong to Tite Kubo and
+respective copyright holders.
+
 ---
 
 **Built with [bootc](https://github.com/bootc-dev/bootc)** | [Docs](https://bootc-dev.github.io/bootc/) | [Fedora bootc](https://docs.fedoraproject.org/en-US/bootc/) | MIT License
 """
 
 
-def update_readme() -> bool:
-    root = Path(__file__).resolve().parent.parent
-    readme = root / "README.md"
-    content = generate_readme(root)
-    if readme.exists() and readme.read_text(encoding="utf-8") == content:
-        print("README.md is up to date")
-        return True
-    readme.write_text(content, encoding="utf-8")
-    print("Generated README.md")
-    return True
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Generate dynamic README.md with current build configuration"
+    )
+    parser.add_argument("--image-type", help="Override image type")
+    parser.add_argument("--dry-run", action="store_true", help="Preview without writing")
+    args = parser.parse_args()
+
+    colors = Colors()
+    repo_root = get_repo_root()
+    readme_path = repo_root / "README.md"
+
+    colors.info("Extracting configuration from repository metadata...")
+    config = extract_config(repo_root, colors)
+
+    if args.image_type:
+        config.image_type = args.image_type
+        colors.info(f"Using custom image type: {config.image_type}")
+
+    colors.info("Configuration detected:")
+    print(f"  - OS: {config.os_name} {config.os_version}")
+    print(f"  - Image Type: {config.image_type_display}")
+    print(f"  - GitHub Repo: {config.github_repo}")
+    print(f"  - Docker Image: {config.docker_image}")
+    print()
+
+    readme_content = generate_readme(config)
+
+    if args.dry_run:
+        colors.info("Dry run mode - displaying generated content:")
+        print("-" * 50)
+        print(readme_content)
+        print("-" * 50)
+        colors.warning("Dry run complete - README.md was not modified")
+        return
+
+    colors.info("Generating README.md...")
+    readme_path.write_text(readme_content)
+    colors.success(f"README.md generated successfully at: {readme_path}")
+
+    if os.environ.get("CI") != "true":
+        print()
+        colors.info("Next steps:")
+        print("  1. Review the generated README: less README.md")
+        print("  2. Commit the changes: git add README.md && git commit")
 
 
 if __name__ == "__main__":
-    raise SystemExit(0 if update_readme() else 1)
+    main()

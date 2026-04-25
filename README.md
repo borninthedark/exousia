@@ -1,62 +1,31 @@
-# Exousia - Declarative Bootc Image Builder
+# Exousia
 
-> *Can't Fear Your Own OS*
->
-> **BLEACH** by **Tite Kubo** -- The Shinigami Pipeline,
-> Reiatsu badge, and all captain naming are inspired by the Gotei 13
-> from *BLEACH*. All rights belong to Tite Kubo and
-> respective copyright holders.
+[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20/%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](#cicd-pipeline)
+[![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
-[![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/urahara.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/urahara.yml)
-[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20%2F%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
-[![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#highly-experimental-disclaimer)
-
-DevSecOps-hardened, container-based immutable operating systems built on
-[**bootc**](https://github.com/bootc-dev/bootc). YAML blueprints define OS
+Declarative bootc image builder for Fedora Linux. YAML blueprints define OS
 images, Python tools transpile them to Containerfiles, Docker Buildx builds them,
 and GitHub Actions pushes signed images to GHCR.
 
-Development follows a **TDD-first, shift-left** methodology — see
-[Contributing](#contributing) for details.
+> **Warning** -- This project is highly experimental. There are no guarantees
+> about stability, data safety, or fitness for any purpose.
 
-## CVE Remediations
+---
 
-Exousia ships patched versions of packages ahead of upstream Fedora when
-required. Packages are built from upstream source, hosted as OCI images on
-GHCR, and injected at build time via RPM overrides. See
-[SECURITY.md](SECURITY.md#rpm-override-process) for the full process.
+## Contents
 
-| Package | Patched Version | Reason |
-|---------|----------------|--------|
-| flatpak | 1.16.6 | CVE remediation — fixes disclosed 2026-04-12 ([release notes](https://github.com/flatpak/flatpak/releases/tag/1.16.6)) |
-
-## Table of Contents
-
-- [CVE Remediations](#cve-remediations)
-- [Highly Experimental Disclaimer](#highly-experimental-disclaimer)
 - [Quick Start](#quick-start)
-- [Architecture](#architecture)
-  - [Build Flow](#build-flow)
-  - [The 12th Division Pipeline](#the-12th-division-pipeline)
-  - [Versioning](#versioning)
+- [How It Works](#how-it-works)
+- [CI/CD Pipeline](#cicd-pipeline)
 - [Customizing Builds](#customizing-builds)
-  - [Package Workflow](#package-workflow)
-  - [Configuration](#configuration)
-  - [Desktop and boot](#desktop-and-boot)
-- [Local Build Pipeline](#local-build-pipeline)
+- [Official Dotfiles](#official-dotfiles)
 - [YubiKey Authentication](#yubikey-authentication)
 - [Required Secrets and Variables](#required-secrets-and-variables)
 - [Documentation](#documentation)
-- [Project Structure](#project-structure)
 - [Contributing](#contributing)
-- [License](#license)
 - [Acknowledgments](#acknowledgments)
 
-## Highly Experimental Disclaimer
-
-> **Warning**: This project is highly experimental. There are **no guarantees**
-> about stability, data safety, or fitness for any purpose. Proceed only if you
-> understand the risks.
+---
 
 ## Quick Start
 
@@ -81,108 +50,64 @@ git clone https://github.com/borninthedark/exousia.git && cd exousia
 make build
 ```
 
-### Trigger a remote build
+---
 
-```bash
-curl -X POST \
-  -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $GITHUB_TOKEN" \
-  https://api.github.com/repos/borninthedark/exousia/actions/workflows/urahara.yml/dispatches \
-  -d '{"ref":"main","inputs":{"image_type":"fedora-bootc","distro_version":"43","enable_plymouth":"true"}}'
-```
-
-Or use the manual **workflow_dispatch** in the [GitHub Actions UI](https://github.com/borninthedark/exousia/actions).
-
-## Architecture
-
-### Build Flow
+## How It Works
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}%%
 graph LR
-    subgraph Input
-        A["adnyeus.yml"]
-        O["overlays/"]
-        P["packages/*.yml"]
-    end
-    subgraph Transpiler
-        G["resolve_build_config.py"]
-        F["uv run python -m package_loader"]
-        B["uv run python -m generator"]
-    end
-    A --> G --> B
-    O --> B
-    P --> F --> B
+    A["adnyeus.yml<br/>(blueprint)"] --> B["Python transpiler<br/>(tools/*.py)"]
     B --> C["Containerfile"]
     C --> D["Docker Buildx"]
-    D --> T["Bats tests"]
-    T --> E["Registry"]
+    D --> E["GHCR<br/>(signed image)"]
+    B -.-> F["package_loader.py"]
+    B -.-> G["resolve_build_config.py"]
 ```
 
-| Component | Description |
-|-----------|-------------|
-| **Blueprint** (`adnyeus.yml`) | Declares base image, packages, overlays, scripts, services, and build flags |
-| **Transpiler** (`uv run python -m generator`) | Reads the blueprint, resolves package sets, optionally writes `build/resolved-build-plan*.json`, and emits a valid Containerfile |
-| **Overlays** | Static files, configs, and scripts under `overlays/base/` (shared) and `overlays/sway/` (desktop) |
-| **Tests** | Pytest validates the Python tooling and Bats validates the built image |
+- **Blueprint** (`adnyeus.yml`) -- declares base image, packages, overlays,
+  scripts, services, and build flags.
+- **Transpiler** (`tools/yaml-to-containerfile.py`) -- reads the blueprint,
+  loads package lists from `overlays/base/packages/`, and emits a valid
+  Containerfile.
+- **Overlays** -- static files, configs, and scripts organized under
+  `overlays/base/` (shared) and `overlays/sway/` (desktop-specific).
+- **Tests** -- Bats tests in `custom-tests/` validate the built image.
 
-### The 12th Division Pipeline
+---
 
-Every CI workflow is named after a member of the **12th Division** — the Shinigami
-Research and Development Institute (SRDI). Division flower: **Calendula** — *Despair
-in Your Heart*.
+## CI/CD Pipeline
+
+Every workflow is named after a captain from the Gotei 13. Each captain's
+division maps to the workflow's role in the pipeline:
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}%%
 graph TD
-    A["Urahara"] --> B["Hikifune"] & C["Uhin"]
-    B & C --> K["Hiyori: build"]
-    K --> S["scan"] & SG["sign"]
-    S & SG --> R["release"]
-    R --> G["Gate"]
-    G --> Y["Nemu"]
+    A["Aizen<br/>(orchestrator)"] --> B["Kaname<br/>(CI: lint+test)"]
+    A --> C["Gin<br/>(security scan)"]
+    B --> D["Kyoraku<br/>(build, sign, release)"]
+    C --> D
+    D --> E["Gate"]
 ```
 
-| Member | Role | Key Tools |
-|--------|------|-----------|
-| **Urahara** | Orchestrator | Calls Hikifune + Uhin in parallel, then Hiyori |
-| **Hikifune** | CI | Ruff, Black, isort, pytest |
-| **Uhin** | Security | Hadolint, Checkov, Trivy config scan, Bandit |
-| **Hiyori** | Build & Release | Docker Buildx, Cosign (OIDC), Trivy image scan, semver |
-| **Nemu** | Status Report | Generates STATUS.md |
+Aizen calls Kaname and Gin in parallel. When both pass, Kyoraku builds,
+signs, scans, and cuts a semver release on `main`.
 
-### Versioning
-
-Versions are automatic via [conventional commits](https://www.conventionalcommits.org/):
-`feat:` bumps minor, `fix:` bumps patch, `feat!:` bumps major.
+---
 
 ## Customizing Builds
 
-### Package Workflow
+### Packages
 
 | Scope | Location |
 |-------|----------|
-| RPM overrides | `overlays/base/packages/common/rpm-overrides.yml` |
-| Common package sets | `overlays/base/packages/common/base-*.yml` |
-| Feature package sets | `overlays/base/packages/common/*.yml` |
-| Window-manager package sets | `overlays/base/packages/window-managers/*.yml` |
-| Removal list | `overlays/base/packages/common/remove.yml` |
+| Base packages | `overlays/base/packages/common/*.yml` |
+| Window managers | `overlays/base/packages/window-managers/*.yml` |
+| Removals | `overlays/base/packages/common/remove.yml` |
 
-All package selection flows through the package loader. Edit package-set YAML under
-`overlays/base/packages/`, then verify the resolved output before building:
-
-```bash
-uv run python -m package_loader --wm sway --json
-uv run python -m generator \
-  --config adnyeus.yml \
-  --resolved-package-plan build/resolved-build-plan.json \
-  --output Dockerfile.generated
-```
-
-The resolved plan records package/group install and removal provenance so CI and
-tests can verify what the image is meant to contain. See
-[Package Loader CLI](docs/package-loader-cli.md) and
-[Package Management Design](docs/package-management-and-container-builds.md).
+All packages are managed through the package loader. Edit the YAML lists, not
+the blueprint directly.
 
 ### Configuration
 
@@ -202,39 +127,33 @@ tests can verify what the image is meant to contain. See
 - **Plymouth** is toggled via `enable_plymouth: true` in the blueprint.
 - **greetd** is the login manager for all image types.
 
-## Local Build Pipeline
+---
 
-Build images locally with Podman Quadlet services before publishing to GHCR and
-mirroring images into the local registry for bootc:
+## Official Dotfiles
 
-```bash
-make quadlet-install && make quadlet-start   # start the local registry
-make local-build                             # generate containerfile, buildah build, push to local registry
-make local-test                              # run bats tests against local image
-make local-push                              # promote to GHCR via skopeo
-make local-mirror                            # mirror GHCR back to localhost:5000 for bootc
-```
+This project is designed to be used with the official **[borninthedark/dotfiles](https://github.com/borninthedark/dotfiles)** repository.
 
-See [Local Build Pipeline docs](docs/local-build-pipeline.md) for the full
-setup, Forgejo runner registration, and troubleshooting.
+The image uses the `chezmoi` module to automatically initialize these dotfiles
+on first login for all users, providing a consistent development environment
+"out of the box".
 
 ---
 
 ## YubiKey Authentication
 
 Exousia ships PAM U2F modules for YubiKey hardware authentication. After
-deploying, register your key in the shared authfile:
+deploying, register your key:
 
 ```bash
-sudo install -d -m 0755 /etc/Yubico
-pamu2fcfg -u "$USER" | sudo tee -a /etc/Yubico/u2f_keys >/dev/null
-pamu2fcfg -n -u "$USER" | sudo tee -a /etc/Yubico/u2f_keys >/dev/null
+mkdir -p ~/.config/Yubico
+pamu2fcfg > ~/.config/Yubico/u2f_keys       # primary key
+pamu2fcfg -n >> ~/.config/Yubico/u2f_keys    # backup key (recommended)
 ```
 
-New users inherit `~/.config/Yubico -> /etc/Yubico` from `/etc/skel`.
-`sudo` and local `login` accept YubiKey as an alternative to password by
-default. See
+`sudo` accepts YubiKey as an alternative to password by default. See
 [Fedora YubiKey Quick Docs](https://docs.fedoraproject.org/en-US/quick-docs/using-yubikeys/).
+
+---
 
 ## Required Secrets and Variables
 
@@ -252,54 +171,30 @@ Configure in GitHub **Settings > Secrets and variables > Actions**.
 |------|---------|----------|
 | `REGISTRY_URL` | Registry URL (defaults to `ghcr.io`) | No |
 
-Secrets propagate to child workflows via `secrets: inherit` in Urahara.
+Secrets propagate to child workflows via `secrets: inherit` in Aizen.
+
+---
 
 ## Documentation
 
 **[Full Documentation Index](docs/README.md)**
 
-| Document | Description |
-|----------|-------------|
-| [Upgrade Guide](docs/bootc-upgrade.md) | Switch images and perform bootc upgrades |
-| [Image Builder](docs/bootc-image-builder.md) | Build bootable disk images (ISO, raw, qcow2) |
-| [Module Reference](docs/modules.md) | Build module types, fields, and usage examples |
-| [Package Loader CLI](docs/package-loader-cli.md) | Resolve package sets, inspect provenance, and export legacy manifests |
-| [Package Management Design](docs/package-management-and-container-builds.md) | Typed package-set model, resolved build plans, and build-pipeline direction |
-| [Overlay System](docs/overlay-system.md) | Overlay directory structure and how files map into images |
-| [Local Build Pipeline](docs/local-build-pipeline.md) | Quadlet services, local build, GHCR publication, and local registry mirroring |
-| [Fedora bootc Migration Plan](docs/fedora-bootc-migration-plan.md) | Base-image migration plan and package audit checklist |
-| [Sway + greetd](docs/sway-session-greetd.md) | Sway session with greetd login manager |
-| [Test Suite](docs/testing/README.md) | Test architecture, categories, and writing guide |
-| [Troubleshooting](docs/reference/troubleshooting.md) | Common issues and fixes |
-| [Security Policy](SECURITY.md) | Vulnerability reporting and security model |
+| Topic | Links |
+|-------|-------|
+| Getting Started | [Upgrade Guide](docs/bootc-upgrade.md) &#124; [Image Builder](docs/bootc-image-builder.md) |
+| Desktop | [Sway + greetd](docs/sway-session-greetd.md) &#124; [Plymouth](docs/reference/plymouth-usage.md) |
+| Testing | [Test Suite](docs/testing/README.md) &#124; [Writing Tests](docs/reference/writing-tests.md) |
+| Reference | [Troubleshooting](docs/reference/troubleshooting.md) &#124; [Security](SECURITY.md) |
 
-## Project Structure
-
-| Directory | Purpose | Docs |
-|-----------|---------|------|
-| [`tools/`](tools/) | Python transpiler, package loader, build tools | [README](tools/README.md) |
-| [`overlays/`](overlays/) | Static files and configs copied into images | [README](overlays/README.md) |
-| [`overlays/base/`](overlays/base/) | Shared configs: PAM, polkit, sysusers, packages | [README](overlays/base/README.md) |
-| [`overlays/sway/`](overlays/sway/) | Sway desktop: configs, scripts, session | [README](overlays/sway/README.md) |
-| [`overlays/deploy/`](overlays/deploy/) | Podman Quadlet container definitions | [README](overlays/deploy/README.md) |
-| [`tests/`](tests/) | Bats integration tests for built images | [README](tests/README.md) |
-| [`yaml-definitions/`](yaml-definitions/) | Alternative build blueprints | [README](yaml-definitions/README.md) |
-| [`docs/`](docs/) | Full documentation | [README](docs/README.md) |
-| [`.github/workflows/`](.github/workflows/) | GitHub Actions CI/CD | [README](.github/workflows/README.md) |
+---
 
 ## Contributing
 
-Contributions welcome. Development rules:
+Contributions welcome. Submit PRs or open issues. Use
+[conventional commits](https://www.conventionalcommits.org/) for automatic
+versioning.
 
-- **TDD mandatory** -- write tests before implementation and keep test intent close to the change
-- **Coverage floor** -- `tools/` pytest coverage is enforced at 85% and should keep ratcheting upward
-- **[Conventional commits](https://www.conventionalcommits.org/)** -- enforced by pre-commit hook
-- **Shift-left** -- `uv run pre-commit install && uv run pre-commit install --hook-type commit-msg`
-- Security gates (Bandit, Gitleaks) and quality checks (Ruff, Black, mypy) run locally before push
-
-## License
-
-MIT License -- see LICENSE file.
+---
 
 ## Acknowledgments
 
@@ -311,6 +206,7 @@ MIT License -- see LICENSE file.
 - [Maple Mono](https://github.com/subframe7536/maple-font) by subframe7536 for the terminal and UI font
 - [Kripton GTK Theme](https://github.com/EliverLara/Kripton) by EliverLara for the desktop color scheme
 - [Cyberpunk Technotronic](https://github.com/dreifacherspass/cyberpunk-technotronic-icon-theme) by dreifacherspass for the icon theme
+- [Bibata Cursor](https://github.com/ful1e5/Bibata_Cursor) by ful1e5 for the cursor theme
 
 ### AI-Assisted Development
 
@@ -321,6 +217,13 @@ This project uses AI-assisted development tools:
 - **[ChatGPT Codex](https://openai.com/index/openai-codex/)** (OpenAI)
 - **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)**
 - **[github-actions[bot]](https://github.com/apps/github-actions)** -- automated releases and tagging
+
+### Creative
+
+**Tite Kubo** -- Creator of *BLEACH*. The CI/CD naming scheme (Shinigami Pipeline)
+and Reiatsu status indicator are inspired by the Gotei 13 and themes from BLEACH,
+used respectfully as a playful aesthetic. All rights belong to Tite Kubo and
+respective copyright holders.
 
 ---
 

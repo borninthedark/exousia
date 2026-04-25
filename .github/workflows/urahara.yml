@@ -1,11 +1,11 @@
-# Kisuke Urahara - 12th Division, Calendula (Despair in Your Heart) - Orchestrator
+# Kisuke Urahara - 12th Division - Orchestrator
 # Calls Hikifune (CI) + Uhin (Security) in parallel, then Hiyori, then gate.
 #
 # 12th Division Pipeline:
-#   Urahara  -> Orchestrator (12th Division, Calendula -- Despair in Your Heart)
-#   Hikifune -> CI: lint + test (12th Division, Calendula -- Despair in Your Heart)
-#   Uhin     -> Security scanning (12th Division, Calendula -- Despair in Your Heart)
-#   Hiyori   -> Build -> scan + sign -> release (12th Division, Calendula -- Despair in Your Heart)
+#   Urahara  -> Orchestrator
+#   Hikifune -> CI: lint + test
+#   Uhin     -> Security scanning
+#   Hiyori   -> Build -> scan + sign -> release
 
 name: "Urahara - Orchestrator"
 

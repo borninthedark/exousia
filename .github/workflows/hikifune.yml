@@ -1,4 +1,4 @@
-# Kirio Hikifune - 12th Division, Calendula (Despair in Your Heart)
+# Kirio Hikifune - 12th Division
 # Runs Python quality checks (ruff, black, isort) and pytest with coverage.
 
 name: "Hikifune - CI"
