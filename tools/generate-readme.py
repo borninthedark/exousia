@@ -398,7 +398,7 @@ graph TD
 | **Urahara** | `urahara.yml` | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori |
 | **Hikifune** | `hikifune.yml` | CI: Ruff, Black, isort, pytest |
 | **Uhin** | `uhin.yml` | Security: Hadolint, Checkov, Trivy config scan, Bandit |
-| **Hiyori** | `hiyori.yml` | Build, Trivy image scan, SBOM submission, issue/report delivery, Cosign, semver release |
+| **Hiyori** | `hiyori.yml` | Build, Trivy image scan artifact, SBOM submission, Cosign, semver release |
 | **Nemu** | `nemu.yml` | Post-CI: generates STATUS.md |
 | **Mayuri** | `mayuri.yml` | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara |
 

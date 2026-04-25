@@ -10,7 +10,7 @@ The 12th Division is the Shinigami Research and Development Institute.
 | **Urahara** | `urahara.yml` | 12th | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate |
 | **Hikifune** | `hikifune.yml` | 12th | CI: Ruff, Black, isort, pytest |
 | **Uhin** | `uhin.yml` | 12th | Security: Hadolint, Checkov, Trivy config scan, Bandit |
-| **Hiyori** | `hiyori.yml` | 12th | Build, Trivy image scan, SBOM submission, issue/report delivery, Cosign, semver release |
+| **Hiyori** | `hiyori.yml` | 12th | Build, Trivy image scan artifact, SBOM submission, Cosign, semver release |
 | **Nemu** | `nemu.yml` | 12th | Post-CI: generates STATUS.md |
 | **Mayuri** | `mayuri.yml` | 12th | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
 
@@ -51,12 +51,11 @@ that path.
 
 ## Trivy Reporting
 
-Hiyori now does three things with image-scan results on non-PR runs:
+Hiyori currently does three things with image-scan results on non-PR runs:
 
 1. saves `trivy-results.txt` as a workflow artifact
-2. submits an SBOM to GitHub Dependency Graph on `main`
-3. creates or updates a Trivy issue on `main` via `lazy-actions/gitrivy@v3`
+2. publishes the full report in the workflow summary when present
+3. submits an SBOM to GitHub Dependency Graph on `main` and uploads it as an artifact
 
 GitHub's native notification email covers workflow status only. The full scan
-content lives in the workflow summary, the Trivy issue, and the uploaded
-artifacts.
+content lives in the workflow summary and the uploaded artifacts.
