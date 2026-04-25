@@ -75,31 +75,41 @@ graph LR
 
 - **Blueprint** (`adnyeus.yml`) -- declares base image, packages, overlays,
   scripts, services, and build flags.
-- **Transpiler** (`tools/yaml-to-containerfile.py`) -- reads the blueprint,
+- **Transpiler** (`uv run python -m generator`) -- reads the blueprint,
   loads package lists from `overlays/base/packages/`, and emits a valid
   Containerfile.
 - **Overlays** -- static files, configs, and scripts organized under
   `overlays/base/` (shared) and `overlays/sway/` (desktop-specific).
-- **Tests** -- Bats tests in `custom-tests/` validate the built image.
+- **Tests** -- pytest + Bats tests in `tests/` validate the built image.
 
 ---
 
 ## CI/CD Pipeline
 
-Every workflow is named after a captain from the Gotei 13. Each captain's
-division maps to the workflow's role in the pipeline:
+Every workflow is named after a member of the **12th Division** -- the Shinigami
+Research and Development Institute (SRDI). Division flower: **Calendula** --
+*Despair in Your Heart*.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a2e', 'primaryTextColor': '#e0e0e0', 'primaryBorderColor': '#4fc3f7', 'lineColor': '#4fc3f7', 'secondaryColor': '#16213e', 'tertiaryColor': '#0f3460', 'edgeLabelBackground': '#1a1a2e'}}}%%
 graph TD
-    A["Aizen<br/>(orchestrator)"] --> B["Kaname<br/>(CI: lint+test)"]
-    A --> C["Gin<br/>(security scan)"]
-    B --> D["Kyoraku<br/>(build, sign, release)"]
-    C --> D
+    A["Urahara<br/>(orchestrator)"] --> B["Hikifune<br/>(CI: lint+test)"]
+    A --> C["Uhin<br/>(security scan)"]
+    B & C --> D["Hiyori<br/>(build, sign, release)"]
     D --> E["Gate"]
+    E --> F["Nemu<br/>(status report)"]
 ```
 
-Aizen calls Kaname and Gin in parallel. When both pass, Kyoraku builds,
+| Workflow | File | Role |
+|----------|------|------|
+| **Urahara** | `urahara.yml` | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori |
+| **Hikifune** | `hikifune.yml` | CI: Ruff, Black, isort, pytest |
+| **Uhin** | `uhin.yml` | Security: Hadolint, Checkov, Trivy config scan, Bandit |
+| **Hiyori** | `hiyori.yml` | Build, Cosign, Trivy image scan, semver release |
+| **Nemu** | `nemu.yml` | Post-CI: generates STATUS.md |
+| **Mayuri** | `mayuri.yml` | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara |
+
+Urahara calls Hikifune and Uhin in parallel. When both pass, Hiyori builds,
 signs, scans, and cuts a semver release on `main`.
 
 ---
@@ -121,7 +131,9 @@ the blueprint directly.
 
 | Directory | Purpose |
 |-----------|---------|
-| `overlays/sway/configs/sway/` | Sway WM and config.d snippets |
+| `overlays/sway/configs/sway/` | Sway WM config, config.d snippets, environment |
+| `overlays/sway/configs/xdg/waybar/` | Waybar config and Kripton theme CSS |
+| `overlays/sway/configs/swaylock/` | Swaylock config (Kripton theme) |
 | `overlays/sway/configs/greetd/` | greetd display manager |
 | `overlays/sway/configs/plymouth/` | Boot splash themes |
 | `overlays/base/configs/pam.d/` | PAM authentication (YubiKey U2F) |
@@ -130,8 +142,9 @@ the blueprint directly.
 
 ### Desktop and boot
 
-- **Sway** uses `sway-config-minimal` with layered config.d overrides.
-  Configuration references drawn from [openSUSEway](https://github.com/openSUSE/openSUSEway).
+- **Sway** uses a custom config with layered config.d overrides and the Kripton
+  color scheme. System-level configs apply to all users; `/etc/skel/.config/`
+  seeds new accounts.
 - **Plymouth** is toggled via `enable_plymouth: true` in the blueprint.
 - **greetd** is the login manager for all image types.
 
@@ -179,7 +192,7 @@ Configure in GitHub **Settings > Secrets and variables > Actions**.
 |------|---------|----------|
 | `REGISTRY_URL` | Registry URL (defaults to `ghcr.io`) | No |
 
-Secrets propagate to child workflows via `secrets: inherit` in Aizen.
+Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 
 ---
 
@@ -196,7 +209,6 @@ Secrets propagate to child workflows via `secrets: inherit` in Aizen.
 | [Package Management Design](docs/package-management-and-container-builds.md) | Typed package-set model, resolved build plans, and build-pipeline direction |
 | [Overlay System](docs/overlay-system.md) | Overlay directory structure and how files map into images |
 | [Local Build Pipeline](docs/local-build-pipeline.md) | Quadlet services, local build, GHCR publication, and local registry mirroring |
-| [Fedora bootc Migration Plan](docs/fedora-bootc-migration-plan.md) | Base-image migration plan and package audit checklist |
 | [Sway + greetd](docs/sway-session-greetd.md) | Sway session with greetd login manager |
 | [Test Suite](docs/testing/README.md) | Test architecture, categories, and writing guide |
 | [Troubleshooting](docs/reference/troubleshooting.md) | Common issues and fixes |

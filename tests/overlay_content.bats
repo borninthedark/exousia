@@ -175,12 +175,6 @@ assert_has_shebang() {
     assert_success
 }
 
-@test "generate-readme script should exist and be executable" {
-    assert_file_exists "$OVERLAY_ROOT/base/tools/generate-readme"
-    run test -x "$OVERLAY_ROOT/base/tools/generate-readme"
-    assert_success
-}
-
 @test "verify-flatpak-installation script should exist and have shebang" {
     assert_file_exists "$OVERLAY_ROOT/base/tools/verify-flatpak-installation"
     assert_has_shebang "$OVERLAY_ROOT/base/tools/verify-flatpak-installation"

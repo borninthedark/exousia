@@ -30,10 +30,8 @@ overlays/
 │   │   └── window-managers/
 │   │       └── sway.yml               # Sway-specific packages
 │   ├── sysusers/
-│   │   ├── atomic.conf                # sysusers.d for atomic images
-│   │   └── bootc.conf                 # sysusers.d for bootc images
+│   │   └── atomic.conf                # sysusers.d for atomic images
 │   └── tools/
-│       ├── generate-readme            # README generator (Python)
 │       └── verify-flatpak-installation # Flatpak verification script
 ├── sway/                               # Sway desktop environment
 │   ├── configs/

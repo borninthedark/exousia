@@ -110,7 +110,6 @@ Ensures custom scripts are executable and functional.
 
 - autotiling - Automatic tiling for Sway
 - lid - Laptop lid state handler
-- generate-readme - Dynamic documentation
 
 ### 5. Repository Configuration
 
