@@ -1,4 +1,4 @@
-# Hiyori Sarugaki - 12th Division, Calendula (Despair in Your Heart) - Build, Sign & Release
+# Hiyori Sarugaki - 12th Division - Build, Sign & Release
 # Builds image, scans with Trivy, signs with cosign (OIDC keyless),
 # and cuts semver releases from conventional commits.
 name: "Hiyori - Build & Release"

@@ -6,9 +6,9 @@
 
 | Captain | Division | Role | Status |
 |---------|----------|------|--------|
-| Hikifune | 12th (Despair in Your Heart) | CI: lint + test | success |
-| Uhin | 12th (Despair in Your Heart) | Security scanning | success |
-| Hiyori | 12th (Despair in Your Heart) | Build & Release | success |
+| Hikifune | 12th | CI: lint + test | success |
+| Uhin | 12th | Security scanning | success |
+| Hiyori | 12th | Build & Release | success |
 
 **Result:** success
 

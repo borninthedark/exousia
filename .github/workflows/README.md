@@ -1,18 +1,18 @@
 # 12th Division Pipeline
 
 GitHub Actions CI/CD workflows named after 12th Division captains and members from BLEACH.
-The 12th Division is the Shinigami Research and Development Institute — Calendula (Despair in Your Heart).
+The 12th Division is the Shinigami Research and Development Institute.
 
 ## Workflows
 
 | Captain | File | Division | Role |
 |---------|------|----------|------|
-| **Urahara** | `urahara.yml` | 12th (Despair in Your Heart) | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate |
-| **Hikifune** | `hikifune.yml` | 12th (Despair in Your Heart) | CI: Ruff, Black, isort, pytest |
-| **Uhin** | `uhin.yml` | 12th (Despair in Your Heart) | Security: Hadolint, Checkov, Trivy config scan, Bandit |
-| **Hiyori** | `hiyori.yml` | 12th (Despair in Your Heart) | Build, Trivy image scan, Cosign, semver release |
-| **Nemu** | `nemu.yml` | 12th (Despair in Your Heart) | Post-CI: generates STATUS.md |
-| **Mayuri** | `mayuri.yml` | 12th (Despair in Your Heart) | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
+| **Urahara** | `urahara.yml` | 12th | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate |
+| **Hikifune** | `hikifune.yml` | 12th | CI: Ruff, Black, isort, pytest |
+| **Uhin** | `uhin.yml` | 12th | Security: Hadolint, Checkov, Trivy config scan, Bandit |
+| **Hiyori** | `hiyori.yml` | 12th | Build, Trivy image scan, Cosign, semver release |
+| **Nemu** | `nemu.yml` | 12th | Post-CI: generates STATUS.md |
+| **Mayuri** | `mayuri.yml` | 12th | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
 
 ## Captains
 

@@ -1,15 +1,15 @@
 ---
-# Mayuri Kurotsuchi - 12th Division, Calendula (Despair in Your Heart) - R&D / Watcher
+# Mayuri Kurotsuchi - 12th Division - R&D / Watcher
 # Polls borninthedark/dotfiles for new commits; triggers the Urahara pipeline
 # when changes are detected.
 #
 # 12th Division Pipeline:
-#   Urahara  -> Orchestrator (12th Division, Calendula -- Despair in Your Heart)
-#   Hikifune -> CI: lint + test (12th Division, Calendula -- Despair in Your Heart)
-#   Uhin     -> Security scanning (12th Division, Calendula -- Despair in Your Heart)
-#   Hiyori   -> Build, scan, sign, release (12th Division, Calendula -- Despair in Your Heart)
-#   Nemu     -> Status report (12th Division, Calendula -- Despair in Your Heart)
-#   Mayuri   -> Dotfiles watcher / R&D trigger (12th Division, Calendula -- Despair in Your Heart)
+#   Urahara  -> Orchestrator
+#   Hikifune -> CI: lint + test
+#   Uhin     -> Security scanning
+#   Hiyori   -> Build, scan, sign, release
+#   Nemu     -> Status report
+#   Mayuri   -> Dotfiles watcher / R&D trigger
 
 name: "Mayuri - Dotfiles Watcher"
 
