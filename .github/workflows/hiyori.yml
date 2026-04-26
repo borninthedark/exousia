@@ -191,7 +191,7 @@ jobs:
       TRIVY_USERNAME: ${{ github.repository_owner }}
     steps:
       - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           image-ref: ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
           format: table
@@ -202,7 +202,7 @@ jobs:
 
       - name: Generate SBOM and submit to GitHub Dependency Graph
         if: github.ref == 'refs/heads/main'
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           image-ref: ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
           format: github
@@ -213,7 +213,7 @@ jobs:
 
       - name: Upload Trivy report artifact
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: trivy-image-scan-${{ needs.build.outputs.image_tag }}
           path: trivy-results.txt
@@ -221,7 +221,7 @@ jobs:
 
       - name: Upload SBOM artifact
         if: always() && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: trivy-sbom-${{ needs.build.outputs.image_tag }}
           path: dependency-results.sbom.json
