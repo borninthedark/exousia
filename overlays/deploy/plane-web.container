@@ -6,8 +6,7 @@ Requires=plane-api.service plane-worker.service
 [Container]
 Image=docker.io/makeplane/plane-frontend:stable
 ContainerName=plane-web
-Exec=node web/server.js web
-Network=exousia.network
+Network=exousia.network:alias=web
 PodmanArgs=--env-file=/etc/exousia/plane/plane.env
 Label=io.containers.autoupdate=registry
 

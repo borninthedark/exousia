@@ -6,8 +6,8 @@ Requires=plane-db.service plane-redis.service plane-mq.service plane-minio.servi
 [Container]
 Image=docker.io/makeplane/plane-backend:stable
 ContainerName=plane-api
-Exec=./bin/docker-entrypoint-api.sh
-Network=exousia.network
+Network=exousia.network:alias=api
+Environment=USE_MINIO=1
 PodmanArgs=--env-file=/etc/exousia/plane/plane.env
 Label=io.containers.autoupdate=registry
 
