@@ -97,7 +97,7 @@ jobs:
         run: uv run bandit -r tools/ -ll -c pyproject.toml
 
       - name: OSV-Scanner
-        uses: google/osv-scanner-action/scan@v1
+        uses: google/osv-scanner-action/scan@b77c075a1235514558f0eb88dbd31e22c45e0cd2 # v2.3.0
         with:
           scan-args: |-
             --recursive
