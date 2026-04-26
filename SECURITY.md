@@ -45,6 +45,7 @@ Exousia employs a defense-in-depth approach:
 - composefs enabled for integrity verification
 - bootc container lint enforced at build time
 - Build-time caches and logs cleaned from final image
+- **Build Environment**: Local builds require `buildah >= 1.14.5` to prevent host path traversal (CVE-2020-10696).
 
 ### Development Practices
 
