@@ -213,6 +213,13 @@ plane-quadlet-status:
 
 # Build image locally and push to local registry
 local-build:
+	@echo "==> Verifying build environment..."
+	@BUILDAH_VERSION=$$(buildah --version | awk '{print $$3}'); \
+	REQUIRED_VERSION="1.14.5"; \
+	if [ "$$(printf '%s\n' "$$REQUIRED_VERSION" "$$BUILDAH_VERSION" | sort -V | head -n1)" != "$$REQUIRED_VERSION" ]; then \
+		echo "ERROR: buildah version $$BUILDAH_VERSION is below the required $$REQUIRED_VERSION"; \
+		exit 1; \
+	fi
 	@echo "==> Generating Containerfile..."
 	mkdir -p build
 	uv run python -m generator \

@@ -541,14 +541,7 @@ This project uses AI-assisted development tools:
 - **[Gemini CLI](https://github.com/google-gemini/gemini-cli)** (Google)
 - **[ChatGPT Codex](https://openai.com/index/openai-codex/)** (OpenAI)
 - **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)**
-- **[github-actions[bot]](https://github.com/apps/github-actions)** -- automated releases and tagging
-
-### Creative
-
-**Tite Kubo** -- Creator of *BLEACH*. The CI/CD naming scheme (Shinigami Pipeline)
-and Reiatsu status indicator are inspired by the Gotei 13 and themes from BLEACH,
-used respectfully as a playful aesthetic. All rights belong to Tite Kubo and
-respective copyright holders.
+- [github-actions[bot]](https://github.com/apps/github-actions) -- automated releases and tagging
 
 ---
 
