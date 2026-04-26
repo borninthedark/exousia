@@ -6,8 +6,8 @@ Requires=plane-api.service plane-redis.service
 [Container]
 Image=docker.io/makeplane/plane-live:stable
 ContainerName=plane-live
-Exec=node live/dist/server.js live
-Network=exousia.network
+Network=exousia.network:alias=live
+Environment=LIVE_SERVER_SECRET_KEY=7f9e8b2a1c4d6e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f
 PodmanArgs=--env-file=/etc/exousia/plane/plane.env
 Label=io.containers.autoupdate=registry
 
