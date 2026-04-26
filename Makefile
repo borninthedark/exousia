@@ -217,7 +217,7 @@ local-build:
 	@BUILDAH_VERSION=$$(buildah --version | awk '{print $$3}'); \
 	REQUIRED_VERSION="1.14.5"; \
 	if [ "$$(printf '%s\n' "$$REQUIRED_VERSION" "$$BUILDAH_VERSION" | sort -V | head -n1)" != "$$REQUIRED_VERSION" ]; then \
-		echo "ERROR: buildah version $$BUILDAH_VERSION is below the required $$REQUIRED_VERSION (CVE-2020-10696)"; \
+		echo "ERROR: buildah version $$BUILDAH_VERSION is below the required $$REQUIRED_VERSION (CVE-2020-10696 / CVE-2026-33747 path traversal)"; \
 		exit 1; \
 	fi
 	@echo "==> Generating Containerfile..."
