@@ -207,12 +207,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_PAT }}
-      - name: Sign image with cosign
+      - name: Install cosign
         uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
-      - run: |
+      - name: Sign image with cosign
+        run: |
           cosign sign --yes \
-            --oidc-issuer=https://token.actions.githubusercontent.com \
-            --oidc-client-id=sigstore \
             "${{ needs.build.outputs.image_ref }}@${{ needs.build.outputs.image_digest }}"
 
   # -- Release runs after scan + sign --
@@ -285,14 +284,13 @@ jobs:
           DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE}:${VERSION}" | cut -d@ -f2)
           echo "digest=$DIGEST" >> $GITHUB_OUTPUT
 
-      - name: Sign release image with cosign
+      - name: Install cosign
         if: steps.version.outputs.skip != 'true'
         uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
-      - if: steps.version.outputs.skip != 'true'
+      - name: Sign release image with cosign
+        if: steps.version.outputs.skip != 'true'
         run: |
           cosign sign --yes \
-            --oidc-issuer=https://token.actions.githubusercontent.com \
-            --oidc-client-id=sigstore \
             "${{ needs.build.outputs.image_ref }}@${{ steps.retag.outputs.digest }}"
 
       - name: Create tag and release
