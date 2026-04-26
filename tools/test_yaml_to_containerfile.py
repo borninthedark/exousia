@@ -237,7 +237,10 @@ def test_fedora_atomic_variants():
 
     base_sway = determine_base_image({}, "fedora-sway-atomic", "43")
     assert "fedora-sway-atomic:43" in base_sway
-    assert base_sway.startswith("quay.io/")
+    # Remediate py/incomplete-url-substring-sanitization:
+    # Explicitly check the registry component of the image reference
+    registry = base_sway.split("/")[0]
+    assert registry == "quay.io"
 
     print("✓ Fedora Atomic variants are recognized")
 
