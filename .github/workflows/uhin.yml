@@ -96,12 +96,22 @@ jobs:
       - name: Bandit (Python SAST)
         run: uv run bandit -r tools/ -ll -c pyproject.toml
 
+      - name: Install OSV-Scanner
+        env:
+          OSV_SCANNER_VERSION: v2.3.5
+        run: |
+          set -euxo pipefail
+          curl -fsSL \
+            "https://github.com/google/osv-scanner/releases/download/${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64.tar.gz" \
+            -o /tmp/osv-scanner_linux_amd64.tar.gz
+          tar -xzf /tmp/osv-scanner_linux_amd64.tar.gz -C /tmp osv-scanner
+          install -m 0755 /tmp/osv-scanner "$HOME/.local/bin/osv-scanner"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: OSV-Scanner
-        uses: google/osv-scanner-action@b77c075a1235514558f0eb88dbd31e22c45e0cd2 # v2.3.0
-        with:
-          scan-args: |-
-            --recursive
-            ./
+        run: |
+          set -euxo pipefail
+          osv-scanner scan source --recursive ./
 
       - name: Security summary
         if: always()
