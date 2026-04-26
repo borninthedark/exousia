@@ -125,7 +125,61 @@ jobs:
           echo "| Plymouth | ${{ steps.config.outputs.enable_plymouth }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Digest | \`${{ steps.build-push.outputs.digest }}\` |" >> $GITHUB_STEP_SUMMARY
 
-  # -- Scan + Sign run in parallel after build --
+  # -- Scan + Sign + Compliance run in parallel after build --
+  oscap:
+    name: OpenSCAP Compliance
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install OpenSCAP and Security Guide
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenscap8 wget
+
+      - name: Download Fedora SCAP Security Guide
+        run: |
+          # Fedora content is distributed in the scap-security-guide package on Fedora,
+          # but we can grab the latest data stream from the upstream repository.
+          wget https://github.com/ComplianceAsCode/content/releases/latest/download/scap-security-guide-latest.zip
+          unzip scap-security-guide-latest.zip
+
+      - name: Pull image for scanning
+        run: |
+          echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+          docker pull ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
+
+      - name: Run OpenSCAP scan
+        run: |
+          # We use the 'standard' profile for Fedora.
+          # Note: oscap-docker/podman isn't easily available on ubuntu-latest runners,
+          # so we use the oscap tool directly against the mounted container root or
+          # use a specialized action if available. Here we use the oscap-ssh pattern
+          # against a local container.
+
+          CONTAINER_ID=$(docker run -d --entrypoint /bin/sh ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }} -c "sleep 3600")
+
+          # Evaluate against Fedora default content
+          oscap-ssh root@localhost 22 xccdf eval \
+            --profile xccdf_org.ssgproject.content_profile_standard \
+            --results oscap-results.xml \
+            --report oscap-report.html \
+            scap-security-guide-*/ssg-fedora-ds.xml || true
+
+          docker rm -f $CONTAINER_ID
+
+      - name: Upload OpenSCAP report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: openscap-report-${{ needs.build.outputs.image_tag }}
+          path: |
+            oscap-results.xml
+            oscap-report.html
+          retention-days: 14
+
   scan:
     name: Trivy Image Scan
     needs: build

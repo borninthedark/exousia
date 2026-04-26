@@ -8,7 +8,7 @@ Image=codeberg.org/forgejo/runner:latest
 ContainerName=forgejo-runner
 Volume=forgejo-runner-data.volume:/data
 Volume=%t/podman/podman.sock:/var/run/docker.sock:ro
-Network=exousia.network
+Network=exousia.network:alias=forgejo-runner
 Label=io.containers.autoupdate=registry
 Environment=FORGEJO_INSTANCE_URL=http://forgejo:3000
 Environment=FORGEJO_RUNNER_LABELS=ubuntu-latest:docker://node:20

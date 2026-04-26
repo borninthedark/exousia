@@ -96,6 +96,13 @@ jobs:
       - name: Bandit (Python SAST)
         run: uv run bandit -r tools/ -ll -c pyproject.toml
 
+      - name: OSV-Scanner
+        uses: google/osv-scanner-action/scan@v1
+        with:
+          scan-args: |-
+            --recursive
+            ./
+
       - name: Security summary
         if: always()
         run: |
@@ -107,3 +114,4 @@ jobs:
           echo "| Checkov | Containerfile |" >> $GITHUB_STEP_SUMMARY
           echo "| Trivy | Repository config |" >> $GITHUB_STEP_SUMMARY
           echo "| Bandit | Python tools/ |" >> $GITHUB_STEP_SUMMARY
+          echo "| OSV-Scanner | Dependencies |" >> $GITHUB_STEP_SUMMARY
