@@ -40,7 +40,7 @@ jobs:
       enable_plymouth: ${{ steps.config.outputs.enable_plymouth }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Transpile YAML blueprint
         id: config
@@ -82,12 +82,12 @@ jobs:
           echo "image=${{ env.REGISTRY_URL }}/${OWNER}/${REPO}" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
         with:
           driver-opts: image=moby/buildkit:v0.28.1  # Remediate CVE-2026-33747 (path traversal)
 
       - name: Login to GHCR for RPM overrides
-        uses: docker/login-action@v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -95,7 +95,7 @@ jobs:
 
       - name: Build and push
         id: build-push
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           context: .
           file: ${{ steps.config.outputs.containerfile }}
@@ -137,7 +137,7 @@ jobs:
       TRIVY_USERNAME: ${{ github.repository_owner }}
     steps:
       - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
           format: table
@@ -148,7 +148,7 @@ jobs:
 
       - name: Generate SBOM and submit to GitHub Dependency Graph
         if: github.ref == 'refs/heads/main'
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
           format: github
@@ -159,7 +159,7 @@ jobs:
 
       - name: Upload Trivy report artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: trivy-image-scan-${{ needs.build.outputs.image_tag }}
           path: trivy-results.txt
@@ -167,7 +167,7 @@ jobs:
 
       - name: Upload SBOM artifact
         if: always() && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: trivy-sbom-${{ needs.build.outputs.image_tag }}
           path: dependency-results.sbom.json
@@ -202,13 +202,13 @@ jobs:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     steps:
       - name: Login to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_PAT }}
       - name: Sign image with cosign
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
       - run: |
           cosign sign --yes \
             --oidc-issuer=https://token.actions.githubusercontent.com \
@@ -224,7 +224,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
 
@@ -263,7 +263,7 @@ jobs:
 
       - name: Login to GHCR
         if: steps.version.outputs.skip != 'true'
-        uses: docker/login-action@v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -287,7 +287,7 @@ jobs:
 
       - name: Sign release image with cosign
         if: steps.version.outputs.skip != 'true'
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
       - if: steps.version.outputs.skip != 'true'
         run: |
           cosign sign --yes \
