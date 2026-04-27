@@ -200,6 +200,12 @@ modules:
     scripts:
       - /usr/local/bin/ensure-sway-session
 
+  # Security: Initialize AIDE database
+  - type: script
+    scripts:
+      - mkdir -p /var/lib/aide
+      - aide --init
+
   # Enable image signing support
   - type: signing
 
