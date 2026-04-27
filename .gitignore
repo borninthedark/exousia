@@ -1,5 +1,6 @@
 # Build artifacts and local outputs
 build/
+output/
 image.tar
 *.log
 

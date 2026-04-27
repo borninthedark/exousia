@@ -302,13 +302,14 @@ def test_aide_init_uses_new_database_then_promotes_it():
 
     output = ContainerfileGenerator(config, context).generate()
 
+    assert "gzip -nc /dev/null > /var/lib/aide/aide.db.gz" in output
     assert "aide --init" in output
     assert "mv -f /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz" in output
 
     aide_conf = Path("overlays/base/configs/aide.conf").read_text()
-    assert "database_in=/var/lib/aide/aide.db.gz" in aide_conf
-    assert "database_out=/var/lib/aide/aide.db.new.gz" in aide_conf
-    assert "file:" not in aide_conf
+    assert "database_in=file:/var/lib/aide/aide.db.gz" in aide_conf
+    assert "database_out=file:/var/lib/aide/aide.db.new.gz" in aide_conf
+    assert "database=file:" not in aide_conf
 
 
 def test_enable_plymouth_generates_env():

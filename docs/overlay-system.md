@@ -11,61 +11,96 @@ filesystem.
 overlays/
 ├── base/                               # Shared across all image types
 │   ├── configs/
-│   │   ├── pam.d/                      # PAM authentication (login, sudo, U2F)
-│   │   ├── polkit-1/rules.d/           # Polkit authorization rules
-│   │   ├── skel/.config/               # User-level defaults for new accounts (sway, waybar, swaylock)
-│   │   ├── tmpfiles.d/                 # systemd-tmpfiles entries
-│   │   └── Yubico/                     # Shared PAM U2F authfile location
+│   │   ├── aide.conf                  # AIDE intrusion detection configuration
+│   │   ├── containers/               # Podman registry configuration
+│   │   │   ├── registries.conf
+│   │   │   └── registries.conf.d/01-local-registry.conf
+│   │   ├── pam.d/                     # PAM authentication (login, sudo, U2F)
+│   │   ├── polkit-1/rules.d/         # Polkit authorization rules
+│   │   ├── security/limits.d/        # Realtime audio resource limits
+│   │   ├── skel/.config/             # User-level defaults (sway, waybar, swaylock)
+│   │   ├── sysctl.d/                 # Kernel tuning (realtime audio)
+│   │   ├── tmpfiles.d/               # systemd-tmpfiles entries (libvirt)
+│   │   └── Yubico/                   # Shared PAM U2F authfile location
+│   ├── configs-zfs/
+│   │   └── modules-load.d/zfs.conf   # ZFS kernel module autoload
 │   ├── packages/
 │   │   ├── common/
-│   │   │   ├── base-core.yml          # Core packages for all builds
-│   │   │   ├── base-devtools.yml      # Dev and power-user tools
-│   │   │   ├── base-media.yml         # Shared media tools
-│   │   │   ├── base-network.yml       # Shared network tooling
-│   │   │   ├── base-security.yml      # Shared auth and security tooling
-│   │   │   ├── base-shell.yml         # Shared shell environment packages
+│   │   │   ├── audio-production.yml  # Audio production tooling
+│   │   │   ├── base-core.yml         # Core packages for all builds
+│   │   │   ├── base-devtools.yml     # Dev and power-user tools
+│   │   │   ├── base-media.yml        # Shared media tools
+│   │   │   ├── base-network.yml      # Shared network tooling
+│   │   │   ├── base-pentest.yml      # Penetration testing tools
+│   │   │   ├── base-rpm-packaging.yml # RPM build toolchain
+│   │   │   ├── base-security.yml     # Shared auth and security tooling
+│   │   │   ├── base-shell.yml        # Shared shell environment packages
 │   │   │   ├── base-virtualization.yml # Shared virtualization packages
-│   │   │   ├── flatpaks.yml           # Flatpak application list
-│   │   │   └── remove.yml             # Packages to remove (processed first)
+│   │   │   ├── base.yml              # Base package set
+│   │   │   ├── flatpaks.yml          # Flatpak application list
+│   │   │   ├── remove.yml            # Packages to remove (processed first)
+│   │   │   ├── rpm-overrides.yml     # RPM override definitions (CVE pins)
+│   │   │   └── zfs.yml              # ZFS userspace packages
+│   │   ├── kernels/                  # Kernel profile definitions
 │   │   └── window-managers/
-│   │       └── sway.yml               # Sway-specific packages
+│   │       └── sway.yml              # Sway-specific packages
+│   ├── systemd/
+│   │   ├── system/
+│   │   │   ├── bootc-fetch-apply-updates.timer.d/override.conf
+│   │   │   ├── update-system-flatpaks.service
+│   │   │   └── update-system-flatpaks.timer
+│   │   └── user/
+│   │       ├── chezmoi-init.service
+│   │       ├── chezmoi-update.service
+│   │       ├── chezmoi-update.timer
+│   │       ├── update-user-flatpaks.service
+│   │       └── update-user-flatpaks.timer
 │   ├── sysusers/
-│   │   └── atomic.conf                # sysusers.d for atomic images
+│   │   ├── atomic.conf               # sysusers.d for atomic images
+│   │   └── bootc.conf                # sysusers.d for bootc images
+│   ├── tmpfiles/
+│   │   ├── package-state-dirs.conf   # Package state directory creation
+│   │   └── podman-auth-dirs.conf     # Podman auth directory creation
 │   └── tools/
 │       └── verify-flatpak-installation # Flatpak verification script
 ├── sway/                               # Sway desktop environment
 │   ├── configs/
-│   │   ├── greetd/config.toml         # Login manager configuration
-│   │   ├── plymouth/themes/           # Boot splash themes
+│   │   ├── greetd/config.toml        # Login manager configuration
+│   │   ├── plymouth/themes/          # Boot splash themes
 │   │   ├── sway/
-│   │   │   ├── config                 # Main Sway config
-│   │   │   ├── config.d/             # Layered config overrides (theme, bar, keybindings)
-│   │   │   └── environment           # Session environment variables
-│   │   ├── swaylock/config            # Lock screen configuration
-│   │   └── xdg/waybar/               # System-level waybar config + style
+│   │   │   ├── config                # Main Sway config
+│   │   │   ├── config.d/            # Layered config overrides (theme, bar, keybindings)
+│   │   │   └── environment          # Session environment variables
+│   │   ├── swaylock/config           # Lock screen configuration
+│   │   └── xdg/waybar/              # System-level waybar config + style
 │   ├── repos/
-│   │   └── nwg-shell.repo            # Additional package repository
+│   │   └── nwg-shell.repo           # Additional package repository
 │   ├── scripts/
-│   │   ├── runtime/                   # Scripts installed to the image
-│   │   │   ├── autotiling             # Automatic window tiling
-│   │   │   ├── layered-include        # Config include helper
-│   │   │   ├── lid                    # Laptop lid switch handler
-│   │   │   └── volume-helper          # Volume control wrapper
-│   │   └── setup/                     # Build-time setup scripts
-│   │       ├── dracut-rebuild         # Initramfs regeneration
-│   │       ├── ensure-sway-session    # Session file validation
-│   │       └── setup-plymouth-theme   # Plymouth theme installer
+│   │   ├── runtime/                  # Scripts installed to the image
+│   │   │   ├── layered-include       # Config include helper
+│   │   │   ├── lid                   # Laptop lid switch handler
+│   │   │   └── volume-helper         # Volume control wrapper
+│   │   └── setup/                    # Build-time setup scripts
+│   │       ├── dracut-rebuild        # Initramfs regeneration
+│   │       ├── ensure-sway-session   # Session file validation
+│   │       └── setup-plymouth-theme  # Plymouth theme installer
 │   └── session/
-│       ├── start-sway                 # Session entry point
-│       └── sway.desktop               # Desktop entry for greetd
+│       ├── start-sway                # Session entry point
+│       └── sway.desktop              # Desktop entry for greetd
 └── deploy/                             # Local dev infrastructure (Quadlets)
-    ├── exousia.network                # Shared Podman network
-    ├── exousia-registry.container     # Local container registry
-    ├── exousia-registry-data.volume   # Registry persistent storage
-    ├── forgejo.container              # Self-hosted git forge
-    ├── forgejo-data.volume            # Forgejo persistent storage
-    ├── forgejo-runner.container       # Forgejo Actions runner
-    └── forgejo-runner-data.volume     # Runner persistent storage
+    ├── exousia.network               # Shared Podman network
+    ├── exousia-registry.container    # Local container registry
+    ├── exousia-registry-data.volume  # Registry persistent storage
+    ├── forgejo.container             # Self-hosted git forge
+    ├── forgejo-db.container          # Forgejo database (PostgreSQL)
+    ├── forgejo-*.volume              # Forgejo persistent storage
+    ├── forgejo-runner.container      # Forgejo Actions runner
+    ├── freebsd.container             # FreeBSD standalone container
+    ├── plane-*.container             # Plane services (13 containers)
+    ├── plane-*.volume                # Plane persistent storage
+    └── plane.env.example             # Plane env template
+```
+
 ---
 
 ## How Overlays Map to the Image
@@ -77,8 +112,15 @@ generates `COPY` directives. The general mapping:
 |---|---|---|
 | `base/configs/pam.d/` | `/etc/pam.d/` | PAM authentication modules |
 | `base/configs/polkit-1/` | `/etc/polkit-1/` | Authorization policies |
-| `base/configs/tmpfiles.d/` | `/etc/tmpfiles.d/` | Temp file rules |
-| `base/sysusers/` | `/etc/sysusers.d/` | System user definitions |
+| `base/configs/tmpfiles.d/` | `/etc/tmpfiles.d/` | Temp file rules (libvirt) |
+| `base/configs/containers/` | `/etc/containers/` | Podman registry configuration |
+| `base/configs/security/limits.d/` | `/etc/security/limits.d/` | Realtime resource limits |
+| `base/configs/sysctl.d/` | `/etc/sysctl.d/` | Kernel tuning parameters |
+| `base/configs/aide.conf` | `/etc/aide.conf` | AIDE intrusion detection config |
+| `base/tmpfiles/` | `/usr/lib/tmpfiles.d/` | Tmpfiles rules (podman auth, package state) |
+| `base/systemd/system/` | `/usr/lib/systemd/system/` and `/etc/systemd/system/` | System-level units plus selected overrides |
+| `base/systemd/user/` | `/usr/lib/systemd/user/` | User-level units (chezmoi, flatpak updates) |
+| `base/sysusers/` | `/usr/lib/sysusers.d/` | System user definitions |
 | `base/tools/` | `/usr/local/bin/` | Build and utility scripts |
 | `sway/configs/sway/` | `/etc/sway/` | Sway config, config.d snippets, environment |
 | `sway/configs/swaylock/` | `/etc/swaylock/` | Lock screen config |
@@ -91,9 +133,7 @@ generates `COPY` directives. The general mapping:
 | `sway/scripts/setup/` | (executed at build time) | Build-time setup |
 | `sway/session/` | `/usr/share/wayland-sessions/`, `/usr/bin/` | Session entry point and desktop file |
 
-
 ## Package System
-
 
 Packages are declared in YAML files under `base/packages/`. The package loader
 (`uv run python -m package_loader`) reads typed package-set definitions and emits explicit
@@ -128,7 +168,7 @@ Quadlet files for local development infrastructure. See
 2. Update the YAML blueprint (`adnyeus.yml`) to reference the new overlay path
 3. The transpiler will generate the corresponding `COPY` directive
 4. Run `make build-bootc` or `make build-atomic` to verify
-5. Add Bats tests in `custom-tests/image_content.bats` to validate the file
+5. Add Bats tests in `tests/image_content.bats` to validate the file
    exists in the built image
 
 ---

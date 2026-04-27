@@ -1,22 +1,79 @@
-# Security Boundaries and Input Handling
+# Security Boundaries
 
-## YAML configuration paths
+This document describes the security-relevant trust boundaries that currently
+exist in Exousia as implemented in the local tooling and CI workflows.
 
-- Only YAML definitions located under `yaml-definitions/` (or the repository root `adnyeus.yml` fallback) are considered trusted.
-- API calls must provide simple filenames for `definition_filename`; path traversal, nested paths, and absolute paths are rejected at the router layer.
-- The YAML selector service resolves requested files against an allowlist of trusted directories and raises an error if a request attempts to escape them.
+## Scope
 
-## YAML content handling
+Exousia is currently a repository-local build system plus GitHub Actions
+automation. It does **not** ship an API service, webhook receiver, or remote
+router layer in this repo. Security guidance here is limited to the actual
+implemented surfaces:
 
-- User-supplied `yaml_content` is validated to reject common code-injection primitives before it is accepted or base64-encoded for transport.
-- Base64 encoding is used strictly for transport safety; decoding happens only after validation to prevent injection payloads from bypassing checks.
+- local blueprint selection
+- local path resolution
+- generated Containerfile assembly
+- CI workflow inputs and registry access
 
-## Webhook and trigger endpoints
+## Blueprint Selection
 
-- Webhook triggers should be fronted by infrastructure-level rate limiting (e.g., API gateway or reverse proxy) to mitigate brute-force or resource exhaustion attacks.
-- GitHub workflow dispatch payloads are constrained to validated YAML filenames or validated YAML content, blocking path traversal attacks against workflow runners.
+The build flow resolves configuration from a small trusted set of paths:
 
-## Testing coverage
+- root blueprint: `adnyeus.yml`
+- curated variants under `yaml-definitions/`
 
-- Security regression tests guard against directory traversal attempts when triggering builds or resolving YAML definitions.
-- YAML content validation tests assert that shell-injection primitives are rejected.
+`tools/resolve_build_config.py` resolves `yaml_config=auto` to the canonical
+blueprint first and does not treat arbitrary caller-supplied paths as trusted.
+
+## Local Path Resolution
+
+The relevant local selector logic lives in:
+
+- [tools/yaml_selector_service.py](../tools/yaml_selector_service.py)
+- [tools/resolve_build_config.py](../tools/resolve_build_config.py)
+
+The intended boundary is:
+
+- build inputs should resolve inside the repository
+- trusted definitions come from the root blueprint or curated YAML definitions
+- generated outputs are written to explicit build/output paths
+
+When changing these tools, preserve the constraint that repository-local build
+selection must not become arbitrary filesystem traversal.
+
+## Generated Image Boundary
+
+The generator consumes:
+
+- YAML blueprint modules
+- overlay files under `overlays/`
+- package definitions under `overlays/base/packages/`
+
+It emits a deterministic Containerfile rather than executing arbitrary templated
+Python from the blueprint. Security-sensitive build behaviors should therefore
+remain explicit in module processors and overlay files.
+
+## CI and Registry Boundary
+
+GitHub Actions workflows split trust by stage:
+
+- `Hikifune`: Python lint/test
+- `Uhin`: static and source/security scanning
+- `Hiyori`: image build, Trivy image scan, SBOM submission, OpenSCAP, signing
+- `Kon`: CodeQL
+
+Secrets are intentionally narrow. Today the main sensitive input is:
+
+- `GHCR_PAT` for authenticated GHCR access where required
+
+Forked pull requests do not receive repository secrets, so the build/release
+path is intentionally skipped there.
+
+## Regression Expectations
+
+Security regressions in these areas should be covered by tests where practical:
+
+- config resolution chooses trusted blueprint paths
+- generator output remains explicit and reviewable
+- CI documentation matches the actual workflow behavior
+- secret-dependent paths remain excluded from forked PR execution

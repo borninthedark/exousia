@@ -96,8 +96,8 @@ Field meaning:
 
 - `replaces`
   Every RPM package name that should be satisfied by the override payload.
-  This list matters because Exousia must avoid reinstalling conflicting repo
-  versions during the main `dnf` phase.
+  This is currently descriptive metadata for operators. The generator does not
+  yet consume `replaces` directly when assembling the main install phase.
 
 ---
 
@@ -131,11 +131,12 @@ RUN dnf install -y /tmp/rpm-override-0/*.rpm
 This happens after the base package install phase, so the override RPMs replace
 the repo-provided packages in the final image.
 
-### 3. It filters the main install path
+### 3. It filters version-constrained install specs when overrides exist
 
-The generator also uses the override metadata to avoid conflicting package
-requests during the regular install phase. The `replaces` list is the key input
-for that behavior.
+Today the generator strips version-constrained install specs when override RPMs
+are present so the override payload can become authoritative in the final
+image. It does **not** currently use `replaces` to rewrite or remove the main
+package request set automatically.
 
 ---
 

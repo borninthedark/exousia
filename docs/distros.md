@@ -1,6 +1,9 @@
 # Supported Distributions
 
-Exousia focuses exclusively on Fedora bootc images with Sway as the window manager.
+Exousia currently supports Fedora-based image generation for both
+`fedora-bootc` and `fedora-sway-atomic`. The active root blueprint presently
+defaults to a `fedora-sway-atomic` base image, even when other image types are
+still supported by the toolchain and tests.
 
 ## Fedora Atomic Variants
 
@@ -13,7 +16,7 @@ Exousia focuses exclusively on Fedora bootc images with Sway as the window manag
 
 ### Using Workflow Dispatch (GitHub Actions)
 
-1. Go to **Actions** → **Bootc DevSecOps Pipeline**
+1. Go to **Actions** → **Urahara - Orchestrator**
 2. Click **Run workflow**
 3. Select your desired **image type** (e.g., `fedora-bootc` or `fedora-sway-atomic`)
 4. Select the Fedora version (`43`, `44`, or `rawhide`)
@@ -21,10 +24,11 @@ Exousia focuses exclusively on Fedora bootc images with Sway as the window manag
 
 Images are tagged with:
 
-- OS family and version (e.g., `fedora-{VERSION}`)
-- Image type (e.g., `fedora-sway-atomic`)
-- Git commit SHA
-- Branch name
+- `{build-type}-{short-sha}` (for example `fedora-sway-atomic-deadbeef`)
+- `{branch-name}`
+- `latest`
+- `rolling-YYYYMMDD-HHMM` on scheduled runs
+- `current` on scheduled runs
 
 ### Using YAML Configs Locally
 
@@ -32,9 +36,8 @@ Example: build a Fedora Sway Atomic image locally
 
 ```bash
 uv run python -m generator \
-  --config yaml-definitions/sway-atomic.yml \
-  --image-type fedora-sway-atomic \
   --config adnyeus.yml \
+  --image-type fedora-sway-atomic \
   --output Containerfile.sway
 
 buildah build -f Containerfile.sway -t localhost/fedora-sway-atomic .
@@ -45,11 +48,9 @@ buildah build -f Containerfile.sway -t localhost/fedora-sway-atomic .
 
 Built images use the following patterns:
 
-- **OS-Version**: `fedora-{version}` (version from `adnyeus.yml`)
-- **Image Type**: `{image-type}` (e.g., `fedora-sway-atomic`)
-- **Main**: `main` (for main branch builds)
-- **SHA**: `sha-{git-commit-sha}`
-- **Branch**: `{branch-name}` (for branch builds)
+- **Primary build tag**: `{image-type}-{short-sha}`
+- **Branch**: `{branch-name}`
+- **Latest**: `latest`
 - **Rolling**: `rolling-YYYYMMDD-HHMM` (time-stamped snapshot from scheduled builds)
 - **Current**: `current` (rolling tag, always points to the latest scheduled build)
 

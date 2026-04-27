@@ -34,8 +34,7 @@ buildah unshare -- bats -r tests/
 **Using Make:**
 
 ```bash
-# Make sets this automatically
-make test-run
+make local-test
 ```
 
 ---
@@ -115,7 +114,7 @@ Detected image type: unknown
 
 ```dockerfile
 ARG IMAGE_TYPE
-ENV BUILD_IMAGE_TYPE=${IMAGE_TYPE}
+ENV BUILD_BUILD_TYPE=${IMAGE_TYPE}
 ```
 
 1. Rebuild with proper build args:
@@ -123,7 +122,7 @@ ENV BUILD_IMAGE_TYPE=${IMAGE_TYPE}
 ```bash
 podman build \
   --build-arg FEDORA_VERSION="${VERSION}" \
-  --build-arg IMAGE_TYPE=fedora-sway-atomic \
+  --build-arg BUILD_TYPE=fedora-sway-atomic \
   -t localhost:5000/exousia:test .
 ```
 
@@ -153,7 +152,7 @@ buildah rm "$CONTAINER"
 
 ```bash
 @test "debug image type detection" {
-    echo "Detected IMAGE_TYPE: $IMAGE_TYPE" >&3
+    echo "Detected BUILD_TYPE: $BUILD_TYPE" >&3
 }
 ```
 
@@ -161,10 +160,10 @@ buildah rm "$CONTAINER"
 
 ```bash
 @test "example conditional test" {
-    if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
+    if [[ "$BUILD_TYPE" == "fedora-bootc" ]]; then
         # fedora-bootc specific test
     else
-        echo "# Skipping for $IMAGE_TYPE" >&3
+        echo "# Skipping for $BUILD_TYPE" >&3
     fi
 }
 ```
@@ -227,7 +226,7 @@ buildah unshare -- bats tests/image_content.bats --filter "package" --filter "in
 ```bash
 @test "debug test" {
     # Print environment variables
-    echo "IMAGE_TYPE=$IMAGE_TYPE" >&3
+    echo "BUILD_TYPE=$BUILD_TYPE" >&3
     echo "MOUNT_POINT=$MOUNT_POINT" >&3
     echo "FEDORA_VERSION=$FEDORA_VERSION" >&3
 
@@ -441,11 +440,11 @@ ls -la "$MOUNT_POINT/path/to/link"
 
 ### Waybar does not start or shows an empty bar (fedora-bootc Sway)
 
-**What ships in the image:** The bootc Sway manifest installs Waybar along with its supporting session components (wlroots/Xwayland, seatd, polkit, XDG portal stack, PipeWire, fonts, NetworkManager applet, etc.). It also only installs the Sway session launcher files (`sway.desktop`, `/etc/sway/environment`, `start-sway`) and does not bundle a Waybar configuration.
+**What ships in the image:** The bootc Sway manifest installs Waybar along with its supporting session components (wlroots/Xwayland, seatd, polkit, XDG portal stack, PipeWire, fonts, NetworkManager applet, etc.). It also ships a system-level Waybar configuration under `/etc/xdg/waybar/`, and the Sway config starts Waybar by default.
 
 **Common runtime blockers:**
 
-- **No config to start Waybar:** The image leaves Waybar configuration to the user; add `exec waybar` to your Sway config and provide `~/.config/waybar/{config,style.css}`.
+- **Config override issue:** If your user config overrides the system defaults, verify `~/.config/waybar/` is valid or temporarily move it aside to fall back to `/etc/xdg/waybar/`.
 - **Seat/session not active:** `seatd` is present but needs a running seatd/logind session; ensure the seat manager is active before launching Sway/Waybar.
 - **Missing user D-Bus/portals:** Waybar modules that rely on portals need a user session bus; verify `dbus-daemon --session` is running and the XDG portal services start cleanly (the packages are included).
 - **Network/volume modules:** Waybar’s network or audio widgets expect NetworkManager and PipeWire services to be up; start `NetworkManager.service` and ensure the PipeWire/WirePlumber session is running.
@@ -530,7 +529,7 @@ buildah run "$CONTAINER" -- systemctl list-unit-files | grep greetd
 make build
 
 # Then test
-make test-run
+make local-test
 ```
 
 1. Use SSD for build/test operations
@@ -608,7 +607,7 @@ bats --version
 
 ### 2. Check Documentation
 
-- [Test Suite Guide](./guide.md)
+- [Test Suite Guide](../testing/guide.md)
 - [Writing Tests](./writing-tests.md)
 - [bats-core Documentation](https://bats-core.readthedocs.io/)
 
@@ -625,12 +624,10 @@ git diff HEAD~1 tests/
 ### 4. Test with Defaults
 
 ```bash
-# Reset to known-good configuration
-make switch-version VERSION="${VERSION}" TYPE=fedora-sway-atomic
-
 # Clean build
 make clean
-make build test
+make local-build
+make local-test
 ```
 
 ### 5. Open an Issue

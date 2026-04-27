@@ -6,16 +6,13 @@ Shared configurations and tools included in all Exousia image types.
 
 ```text
 base/
-├── configs/        # PAM, polkit, tmpfiles configurations
-│   ├── pam.d/      # PAM authentication (YubiKey U2F)
-│   ├── polkit/     # Polkit rules
-│   └── tmpfiles/   # tmpfiles.d entries
-├── packages/       # YAML package definitions
-│   ├── common/     # Base, remove, flatpaks
-│   └── window-managers/  # Sway packages
-├── sysusers/       # systemd-sysusers configs
-│   └── bootc.conf  # System user definitions
-└── tools/          # Build-time scripts (copied to /usr/local/bin/)
+├── configs/         # PAM, AIDE, containers, skel, sysctl, and auth configs
+├── configs-zfs/     # ZFS-specific staged configs
+├── packages/        # YAML package definitions and kernel profiles
+├── systemd/         # System and user units
+├── sysusers/        # systemd-sysusers configs (bootc + atomic)
+├── tmpfiles/        # Tmpfiles definitions staged into the image
+└── tools/           # Image utilities copied to /usr/local/bin/
 ```
 
 ## See Also

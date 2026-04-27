@@ -21,14 +21,18 @@ tests/
 | Flatpak | Flathub setup and default-flatpaks behavior |
 | Sway session | greetd, session assets, config presence |
 | System users | sysusers output and expected service users |
+| PAM U2F | U2F config files, sudo/login PAM modules, Yubico authfile |
 | bootc compliance | `bootc container lint`, ComposeFS, bootc-specific layout |
+| Chezmoi | systemd units, repo config, conflict policy |
+| ZFS | kernel module config, userspace packages |
 | Overlay content | presence and validity of staged source files before build |
 
 ## Common Commands
 
 ```bash
-make test
-make test-run
+make test                                          # pytest (tools/)
+make overlay-test                                  # bats overlay validation
+make local-test                                    # bats against built image
 buildah unshare -- bats -r tests/
 buildah unshare -- bats tests/image_content.bats --filter "Plymouth"
 ```

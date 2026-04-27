@@ -9,10 +9,10 @@ The 12th Division is the Shinigami Research and Development Institute.
 |---------|------|----------|------|
 | **Urahara** | `urahara.yml` | 12th | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate |
 | **Hikifune** | `hikifune.yml` | 12th | CI: Ruff, Black, isort, pytest |
-| **Uhin** | `uhin.yml` | 12th | Security: Hadolint, Checkov, Trivy config scan, Bandit |
-| **Hiyori** | `hiyori.yml` | 12th | Build, Trivy image scan artifact, SBOM submission, Cosign, semver release |
+| **Uhin** | `uhin.yml` | 12th | Security: file-structure gate, overlay Bats, Hadolint, Checkov, Trivy config scan, Bandit, OSV-Scanner |
+| **Hiyori** | `hiyori.yml` | 12th | Build, Trivy image scan artifact, SBOM submission, OpenSCAP, Cosign, semver release |
 | **Kon** | `kon.yml` | 12th | Advanced CodeQL analysis for Python and GitHub Actions |
-| **Nemu** | `nemu.yml` | 12th | Post-CI: generates STATUS.md |
+| **Nemu** | `nemu.yml` | 12th | Post-CI: commits refreshed `STATUS.md` with the latest orchestration result |
 | **Mayuri** | `mayuri.yml` | 12th | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
 
 ## Captains
@@ -58,8 +58,24 @@ Hiyori currently does three things with image-scan results on non-PR runs:
 2. publishes the full report in the workflow summary when present
 3. submits an SBOM to GitHub Dependency Graph on `main` and uploads it as an artifact
 
+Hiyori also uploads OpenSCAP compliance artifacts on non-PR runs:
+
+- `openscap-results.xml`
+- `openscap-report.html`
+
 GitHub's native notification email covers workflow status only. The full scan
 content lives in the workflow summary and the uploaded artifacts.
+
+## Dependency and Compliance Scanning
+
+Uhin and Hiyori divide security evidence by stage:
+
+- **Uhin** scans source/config content with Hadolint, Checkov, Trivy config
+  mode, Bandit, OSV-Scanner, and `tests/overlay_content.bats`
+- **Hiyori** scans the built image with Trivy, uploads the full text report,
+  generates an SBOM artifact, and submits that SBOM to GitHub Dependency
+  Graph on `main`
+- **Kon** provides advanced static analysis through CodeQL
 
 ## CodeQL
 

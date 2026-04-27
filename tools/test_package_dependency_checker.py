@@ -1,4 +1,5 @@
 import json
+import runpy
 import sys
 from io import StringIO
 from pathlib import Path
@@ -172,6 +173,30 @@ class TestFedoraDnfChecker:
         assert rc == -1
         assert "timed out" in err.lower()
 
+    def test_run_command_generic_exception(self, monkeypatch):
+        checker = self._checker()
+        monkeypatch.setattr(
+            "subprocess.run",
+            lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("boom")),
+        )
+        rc, out, err = checker.run_command(["dnf", "repoquery"])
+        assert rc == -1
+        assert out == ""
+        assert err == "boom"
+
+    def test_get_dependencies_recursive_adds_flag(self, monkeypatch):
+        checker = self._checker()
+        seen = {}
+
+        def mock_run(cmd):
+            seen["cmd"] = cmd
+            return (0, "wlroots\n", "")
+
+        monkeypatch.setattr(checker, "run_command", mock_run)
+        deps = checker.get_dependencies("sway", recursive=True)
+        assert deps == ["wlroots"]
+        assert "--recursive" in seen["cmd"]
+
 
 # ---------------------------------------------------------------------------
 # PackageDependencyTranspiler
@@ -200,6 +225,15 @@ class TestTranspiler:
         results = t.check_packages(["vim"])
         assert "vim" in results
         assert results["vim"].found is True
+
+    def test_check_package_delegates(self):
+        mock_checker = MagicMock()
+        expected = DependencyCheckResult("vim", found=True, installed=True, distro="fedora")
+        mock_checker.check_dependencies_installed.return_value = expected
+        t = PackageDependencyTranspiler(checker=mock_checker)
+        result = t.check_package("vim")
+        assert result is expected
+        mock_checker.check_dependencies_installed.assert_called_once_with("vim")
 
     def test_verify_all_installed(self):
         mock_checker = MagicMock()
@@ -296,3 +330,37 @@ class TestPackageDependencyCheckerCLI:
             rc = main(argv=["pkg1"])
             assert rc == 1
             assert "Error: Test Error" in capsys.readouterr().err
+
+    def test_main_human_output_with_dependencies_missing_and_errors(self, capsys):
+        deps = [PackageDependency(f"dep{i}", installed=(i % 2 == 0)) for i in range(12)]
+        result = DependencyCheckResult(
+            "pkg1",
+            found=True,
+            installed=False,
+            dependencies=deps,
+            missing_deps=["dep-missing-1", "dep-missing-2"],
+            errors=["dep broken"],
+            distro="fedora",
+        )
+
+        transpiler_mock = MagicMock()
+        transpiler_mock.get_current_distro.return_value = "fedora"
+        transpiler_mock.check_packages.return_value = {"pkg1": result}
+
+        with patch(
+            "package_dependency_checker.PackageDependencyTranspiler", return_value=transpiler_mock
+        ):
+            rc = main(argv=["pkg1"])
+            assert rc == 0
+            out = capsys.readouterr().out
+            assert "Package Dependency Check (fedora)" in out
+            assert "Dependencies (12):" in out
+            assert "... and 2 more" in out
+            assert "Missing: dep-missing-1, dep-missing-2" in out
+            assert "Errors: dep broken" in out
+
+
+def test_package_loader_module_main_entrypoint():
+    with patch("package_loader.cli.main") as mock_main:
+        runpy.run_module("package_loader.__main__", run_name="__main__")
+    mock_main.assert_called_once_with()

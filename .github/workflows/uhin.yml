@@ -20,6 +20,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      - name: Setup Bats
+        id: setup-bats
+        uses: bats-core/bats-action@5b1e60c2ee94cb1b44a616ea4b1f466f9d6e38ef # 4.0.0
+        with:
+          github-token: ${{ github.token }}
+
       - name: Verify required file structure
         run: |
           echo "## Uhin: File Structure Check" >> $GITHUB_STEP_SUMMARY
@@ -58,6 +64,12 @@ jobs:
           done
 
           echo "All required files present" >> $GITHUB_STEP_SUMMARY
+
+      - name: Run overlay Bats tests
+        env:
+          BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
+          TERM: xterm
+        run: bats tests/overlay_content.bats
 
       - name: Transpile YAML blueprint
         id: transpile

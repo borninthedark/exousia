@@ -42,32 +42,35 @@ The Plymouth boot splash system has been modularized into separate components:
 ### Enabling Plymouth (Default)
 
 ```bash
-# Using Make
-make build
+# Using local build flow
+make local-build
 
 # Using Podman directly
 podman build \
   --build-arg ENABLE_PLYMOUTH=true \
   -t localhost:5000/exousia:latest \
-  -f Containerfile.atomic .
+  -f Dockerfile.local.generated .
 ```
 
 ### Disabling Plymouth
 
 ```bash
-# Using Make
-make build ENABLE_PLYMOUTH=false
+# Generate a Containerfile with Plymouth disabled
+uv run python -m generator \
+  --config adnyeus.yml \
+  --image-type fedora-sway-atomic \
+  --disable-plymouth \
+  --output Dockerfile.no-plymouth.generated
 
-# Using Podman directly
+# Then build it
 podman build \
-  --build-arg ENABLE_PLYMOUTH=false \
   -t localhost:5000/exousia:latest \
-  -f Containerfile.atomic .
+  -f Dockerfile.no-plymouth.generated .
 ```
 
 ### GitHub Actions Workflow Dispatch
 
-1. Go to **Actions** → **Fedora Bootc DevSec CI**
+1. Go to **Actions** → **Urahara - Orchestrator**
 2. Click **Run workflow**
 3. Select options:
    - **Fedora Version**: as defined in `adnyeus.yml` `image-version`
@@ -314,11 +317,8 @@ ls -la /usr/share/plymouth/themes/
 ### Test Plymouth Configuration
 
 ```bash
-# Run tests with Plymouth enabled (default)
-make test
-
-# Run tests with Plymouth disabled
-ENABLE_PLYMOUTH=false make test
+# Run the image Bats suite against your built image
+make local-test
 ```
 
 ### Manual Testing in Container

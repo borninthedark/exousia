@@ -13,13 +13,15 @@ Comprehensive documentation for the Exousia bootc image test suite.
 
 ## Overview
 
-The test suite validates bootc container images using bats-core with intelligent conditional testing that adapts to different base image types (fedora-bootc vs fedora-sway-atomic).
+The test suite validates bootc container images using bats-core with
+conditional testing that adapts to different base image types
+(`fedora-bootc` vs `fedora-sway-atomic`).
 
 ### Key Features
 
-- **52+ comprehensive tests** across 12 categories
+- **Broad image and overlay coverage** across the current validation categories
 - **Conditional execution** based on detected image type
-- **CI/CD ready** with GitHub Actions integration
+- **Workflow-aware** with clear separation between local Bats validation and CI Python/security gates
 - **Developer friendly** with clear assertions and error messages
 - **Flexible** supports multiple Fedora versions and base images
 
@@ -44,7 +46,7 @@ The test suite validates bootc container images using bats-core with intelligent
 ### Test Lifecycle
 
 1. **setup_file()** - Mount container, detect image type, export variables
-2. **Test execution** - Run 52+ individual tests
+2. **Test execution** - Run individual tests
 3. **teardown_file()** - Unmount and cleanup container
 
 ### File Structure
@@ -78,38 +80,36 @@ Validates operating system and Fedora version.
 }
 ```
 
-### 2. Container Authentication (CI only)
+### 2. Container Authentication
 
-Validates container registry authentication for bootc operations.
+Validates that runtime auth is not baked into the image and that the
+container-auth path wiring exists where expected.
 
 **Tests:**
 
-- auth.json file presence and content
+- auth.json absence from the image payload
 - ostree symlink configuration
 - tmpfiles.d configuration
 
-**Conditional:** Only runs when `CI=true`
-
-### 3. Package Lists and Plymouth
+### 3. Packages and Plymouth
 
 Verifies custom package management and boot splash configuration.
 
 **Tests:**
 
-- Package list files (packages.add, packages.remove, packages.sway)
 - Plymouth theme installation
 - Plymouth configuration files
-- Kernel arguments
-- Default theme setting
+- Kernel arguments when enabled
+- package and repo expectations from the built image
 
 ### 4. Custom Scripts
 
-Ensures custom scripts are executable and functional.
+Ensures shipped helper scripts are executable and staged correctly.
 
 **Scripts tested:**
 
-- autotiling - Automatic tiling for Sway
-- lid - Laptop lid state handler
+- Plymouth/setup helpers
+- runtime helper scripts under `overlays/sway/scripts/runtime/`
 
 ### 5. Repository Configuration
 
@@ -218,8 +218,8 @@ Validates system user creation.
 ```bash
 setup_file() {
     # Detect image type from container environment
-    IMAGE_TYPE=$(buildah run "$CONTAINER" -- printenv BUILD_IMAGE_TYPE 2>/dev/null || echo "unknown")
-    export IMAGE_TYPE
+    BUILD_TYPE=$(buildah run "$CONTAINER" -- printenv BUILD_IMAGE_TYPE 2>/dev/null || echo "unknown")
+    export BUILD_TYPE
 }
 ```
 
@@ -229,7 +229,7 @@ setup_file() {
 
 ```bash
 @test "fedora-bootc specific feature" {
-    if [[ "$IMAGE_TYPE" != "fedora-bootc" ]]; then
+    if [[ "$BUILD_TYPE" != "fedora-bootc" ]]; then
         skip "Only applicable to fedora-bootc base"
     fi
 
@@ -241,10 +241,10 @@ setup_file() {
 
 ```bash
 @test "directory structure" {
-    if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
+    if [[ "$BUILD_TYPE" == "fedora-bootc" ]]; then
         assert_dir_exists "$MOUNT_POINT/var/roothome"
     else
-        echo "# Skipping fedora-bootc specific checks for $IMAGE_TYPE" >&3
+        echo "# Skipping fedora-bootc specific checks for $BUILD_TYPE" >&3
     fi
 }
 ```
@@ -253,7 +253,7 @@ setup_file() {
 
 ```bash
 @test "services configured based on type" {
-    if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
+    if [[ "$BUILD_TYPE" == "fedora-bootc" ]]; then
         run buildah run "$CONTAINER" -- systemctl is-enabled greetd.service
         assert_success
     else
@@ -293,14 +293,17 @@ sudo dnf install buildah
 #### Using Make (Recommended)
 
 ```bash
-# Build and test
-make build test
+# Pytest (tools/)
+make test
 
-# Test only
-make test-run
+# Pre-build overlay validation
+make overlay-test
+
+# Bats against built image
+make local-test
 
 # With specific image tag
-TEST_IMAGE_TAG=localhost:5000/exousia:custom make test-run
+make local-test TAG=custom
 ```
 
 #### Direct Execution
@@ -322,21 +325,15 @@ buildah unshare -- bats -r tests/ --verbose-run
 #### Test fedora-bootc Build
 
 ```bash
-# Switch to fedora-bootc
-make switch-version VERSION="${VERSION}" TYPE=fedora-bootc
-
-# Build and test
-make build test
+make build-bootc
+make local-test
 ```
 
 #### Test fedora-sway-atomic Build
 
 ```bash
-# Switch to fedora-sway-atomic
-make switch-version VERSION="${VERSION}" TYPE=fedora-sway-atomic
-
-# Build and test
-make build test
+make build-atomic
+make local-test
 ```
 
 ### Debugging Failed Tests
@@ -354,23 +351,15 @@ buildah unshare -- bats tests/image_content.bats --filter "Plymouth"
 
 ## CI/CD Integration
 
-### GitHub Actions Configuration
+The current GitHub Actions workflows run only the overlay-side Bats coverage.
+Today the split is:
 
-```yaml
-- name: Run Bats tests
-  env:
-    BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
-    TERM: xterm
-  run: |
-    FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-    TEST_IMAGE_TAG="$FIRST_TAG" buildah unshare -- bats -r tests
-```
+- `Hikifune`: Python linting and pytest
+- `Uhin`: static/security checks plus `tests/overlay_content.bats`
+- local/manual image Bats: `make local-test`
 
-### CI Environment Variables
-
-- `CI=true` - Enables CI-specific tests
-- `TEST_IMAGE_TAG` - Image under test
-- `BATS_LIB_PATH` - Bats library location
+The built-image Bats suite still remains local/manual because it depends on a
+prebuilt image and rootless `buildah unshare` execution.
 
 ### Test Results
 
@@ -380,7 +369,7 @@ buildah unshare -- bats tests/image_content.bats --filter "Plymouth"
 ✓ OS should be Fedora Linux
 ✓ Package installation verified
 ...
-52 tests, 0 failures
+All listed categories should pass with zero failures on a healthy branch.
 ```
 
 **Failure:**

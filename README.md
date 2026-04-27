@@ -12,8 +12,8 @@
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#contents)
 
 Declarative bootc image builder for Fedora Linux. YAML blueprints define OS
-images, Python tools transpile them to Containerfiles, Docker Buildx builds them,
-and GitHub Actions pushes signed images to GHCR.
+images, Python tools transpile them to Containerfiles, the local pipeline builds
+them with Buildah, and GitHub Actions publishes signed images to GHCR.
 
 > **Warning** -- This project is highly experimental. There are no guarantees
 > about stability, data safety, or fitness for any purpose.
@@ -41,6 +41,7 @@ and GitHub Actions pushes signed images to GHCR.
 ### Use a published image
 
 ```bash
+make start-exousia-registry
 make local-mirror
 sudo bootc switch localhost:5000/exousia:latest
 sudo bootc upgrade && sudo systemctl reboot
@@ -56,7 +57,7 @@ sudo bootc upgrade && sudo systemctl reboot
 
 ```bash
 git clone https://github.com/borninthedark/exousia.git && cd exousia
-make build
+make local-build
 ```
 
 ---
@@ -68,7 +69,7 @@ make build
 graph LR
     A["adnyeus.yml<br/>(blueprint)"] --> B["Python transpiler<br/>(tools/*.py)"]
     B --> C["Containerfile"]
-    C --> D["Docker Buildx"]
+    C --> D["Buildah / Buildx"]
     D --> E["GHCR<br/>(signed image)"]
     B -.-> F["package_loader.py"]
     B -.-> G["resolve_build_config.py"]
@@ -104,10 +105,10 @@ graph TD
 |----------|------|------|
 | **Urahara** | `urahara.yml` | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori |
 | **Hikifune** | `hikifune.yml` | CI: Ruff, Black, isort, pytest |
-| **Uhin** | `uhin.yml` | Security: Hadolint, Checkov, Trivy config scan, Bandit |
-| **Hiyori** | `hiyori.yml` | Build, Trivy image scan artifact, SBOM submission, Cosign, semver release |
+| **Uhin** | `uhin.yml` | Security: file-structure gate, overlay Bats, Hadolint, Checkov, Trivy config scan, Bandit, OSV-Scanner |
+| **Hiyori** | `hiyori.yml` | Build, Trivy image scan artifact, SBOM submission, OpenSCAP, Cosign, semver release |
 | **Kon** | `kon.yml` | Advanced CodeQL analysis for Python and GitHub Actions |
-| **Nemu** | `nemu.yml` | Post-CI: generates STATUS.md |
+| **Nemu** | `nemu.yml` | Post-CI: commits refreshed STATUS.md |
 | **Mayuri** | `mayuri.yml` | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara |
 
 Urahara calls Hikifune and Uhin in parallel. When both pass, Hiyori builds,
@@ -155,9 +156,10 @@ the blueprint directly.
 
 This project is designed to be used with the official **[borninthedark/dotfiles](https://github.com/borninthedark/dotfiles)** repository.
 
-The image uses the `chezmoi` module to automatically initialize these dotfiles
-on first login for all users, providing a consistent development environment
-"out of the box".
+The image includes a `chezmoi` module configuration for these dotfiles. At the
+moment, the blueprint enables the user services globally (`all-users: true`),
+so dotfile initialization/update is not purely opt-in even though desktop and
+session behavior remain primarily system-defined under `/etc`.
 
 ---
 
@@ -168,11 +170,15 @@ deploying, register your key:
 
 ```bash
 mkdir -p ~/.config/Yubico
-pamu2fcfg > ~/.config/Yubico/u2f_keys       # primary key
-pamu2fcfg -n >> ~/.config/Yubico/u2f_keys    # backup key (recommended)
+tmpfile=$(mktemp)
+pamu2fcfg > "$tmpfile"        # primary key
+pamu2fcfg -n >> "$tmpfile"    # backup key (recommended)
+sudo install -m 0600 "$tmpfile" /etc/Yubico/u2f_keys
+rm -f "$tmpfile"
 ```
 
-`sudo` accepts YubiKey as an alternative to password by default. See
+`login` and `sudo` both accept YubiKey as an alternative to password by
+default. See
 [Fedora YubiKey Quick Docs](https://docs.fedoraproject.org/en-US/quick-docs/using-yubikeys/).
 
 ---
@@ -186,12 +192,6 @@ Configure in GitHub **Settings > Secrets and variables > Actions**.
 | Name | Purpose |
 |------|---------|
 | `GHCR_PAT` | GHCR personal access token for CI RPM override pulls and local/manual registry access |
-
-**Variables:**
-
-| Name | Purpose | Required |
-|------|---------|----------|
-| `REGISTRY_URL` | Registry URL (defaults to `ghcr.io`) | No |
 
 Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 

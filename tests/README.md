@@ -6,15 +6,18 @@ Bats-based integration tests for bootc container images.
 
 ```bash
 # Build and test via Makefile
-make build
-make test
+make local-build
+make overlay-test
+make local-test
 
 # Or run directly
+buildah unshare -- bats tests/overlay_content.bats
+
 export TEST_IMAGE_TAG=localhost:5000/exousia:latest
-buildah unshare -- bats -r tests/
+buildah unshare -- bats tests/image_content.bats
 
 # Verbose mode
-buildah unshare -- bats -r tests/ --verbose-run
+buildah unshare -- bats tests/image_content.bats --verbose-run
 ```
 
 ## Structure

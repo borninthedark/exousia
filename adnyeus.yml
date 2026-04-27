@@ -204,6 +204,7 @@ modules:
   - type: script
     scripts:
       - mkdir -p /var/lib/aide
+      - gzip -nc /dev/null > /var/lib/aide/aide.db.gz
       - aide --init
       - mv -f /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
 

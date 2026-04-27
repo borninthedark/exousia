@@ -91,7 +91,7 @@ test-cov:
 		output = subprocess.check_output(['uv', 'run', 'coverage', 'report', '--format=total'], text=True).strip(); \
 		total = float(output); \
 		print(f'Total coverage: {total}%'); \
-		sys.exit(0 if total >= 85.0 else 1)"
+		sys.exit(0 if total >= 95.0 else 1)"
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
@@ -206,7 +206,7 @@ overlay-test:
 local-test:
 	@echo "==> Running bats tests against localhost:5000/exousia:$(TAG)..."
 	podman run --rm localhost:5000/exousia:$(TAG) cat /etc/os-release
-	bats tests/image_content.bats
+	TEST_IMAGE_TAG=localhost:5000/exousia:$(TAG) buildah unshare -- bats tests/image_content.bats
 
 # ===========================================================================
 # Quadlets — infrastructure (all apps)
