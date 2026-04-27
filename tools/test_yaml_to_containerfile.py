@@ -286,6 +286,31 @@ def test_final_cleanup_avoids_wholesale_run_deletion():
     assert "/run/tor" in output
 
 
+def test_aide_init_uses_new_database_then_promotes_it():
+    """AIDE init must write a .new database and promote it into the stable path."""
+
+    config = yaml.safe_load(Path("adnyeus.yml").read_text())
+    context = BuildContext(
+        image_type="fedora-sway-atomic",
+        fedora_version="43",
+        enable_plymouth=True,
+        use_upstream_sway_config=False,
+        base_image="quay.io/fedora/fedora-sway-atomic:43",
+        distro="fedora",
+        window_manager="sway",
+    )
+
+    output = ContainerfileGenerator(config, context).generate()
+
+    assert "aide --init" in output
+    assert "mv -f /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz" in output
+
+    aide_conf = Path("overlays/base/configs/aide.conf").read_text()
+    assert "database_in=file:/var/lib/aide/aide.db.gz" in aide_conf
+    assert "database_out=file:/var/lib/aide/aide.db.new.gz" in aide_conf
+    assert "database=file:" not in aide_conf
+
+
 def test_enable_plymouth_generates_env():
     """Test that ENABLE_PLYMOUTH is generated as ENV, not a standalone instruction."""
     config = {
