@@ -143,35 +143,21 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Install OpenSCAP
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y openscap-utils wget unzip
-
-      - name: Download Fedora SCAP Security Guide
-        run: |
-          wget -q https://github.com/ComplianceAsCode/content/releases/latest/download/scap-security-guide-latest.zip
-          unzip -q scap-security-guide-latest.zip
-
-      - name: Pull and export image filesystem
+      - name: Login to GHCR
         run: |
           echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
-          docker pull ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
-          CONTAINER_ID=$(docker create ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }})
-          mkdir -p rootfs
-          docker export "$CONTAINER_ID" | tar -xf - -C rootfs
-          docker rm "$CONTAINER_ID"
 
-      - name: Run OpenSCAP scan
+      - name: Run OpenSCAP scan inside Fedora image
         run: |
-          oscap-chroot rootfs xccdf eval \
-            --profile xccdf_org.ssgproject.content_profile_standard \
-            --results oscap-results.xml \
-            --report oscap-report.html \
-            scap-security-guide-*/ssg-fedora-ds.xml || true
+          IMAGE="${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}"
+          docker run --rm -v "$PWD:/results:z" "$IMAGE" bash -c '
+            dnf install -y openscap-scanner scap-security-guide && \
+            oscap xccdf eval \
+              --profile xccdf_org.ssgproject.content_profile_standard \
+              --results /results/oscap-results.xml \
+              --report /results/oscap-report.html \
+              /usr/share/xml/scap/ssg/content/ssg-fedora-ds.xml || true
+          '
 
       - name: Upload OpenSCAP report
         if: always()
