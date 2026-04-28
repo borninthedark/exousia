@@ -20,8 +20,9 @@ podman --version
 ### Quick Start
 
 ```bash
-# Build your container image first
-make build
+# Build and publish your local test image first
+make start-exousia-registry
+make local-build
 
 # Generate a raw disk image for testing
 sudo podman run \
@@ -30,6 +31,7 @@ sudo podman run \
     --pull=newer \
     --security-opt label=type:unconfined_t \
     -v /var/lib/containers/storage:/var/lib/containers/storage \
+    -v /tmp/exousia-output:/output \
     quay.io/centos-bootc/bootc-image-builder:latest \
     --type raw \
     --local \
@@ -55,14 +57,14 @@ sudo podman run \
     --pull=newer \
     --security-opt label=type:unconfined_t \
     -v /var/lib/containers/storage:/var/lib/containers/storage \
-    -v $(pwd)/output:/output \
+    -v /tmp/exousia-output:/output \
     quay.io/centos-bootc/bootc-image-builder:latest \
     --type qcow2 \
     --local \
     localhost:5000/exousia:latest
 ```
 
-The output will be in `./output/qcow2/disk.qcow2`.
+The output will be in `/tmp/exousia-output/qcow2/disk.qcow2`.
 
 ## Testing with Virtual Machines
 
@@ -71,14 +73,14 @@ The output will be in `./output/qcow2/disk.qcow2`.
 1. Build a qcow2 image:
 
 ```bash
-mkdir -p ./output
+mkdir -p /tmp/exousia-output
 sudo podman run \
     --rm \
     --privileged \
     --pull=newer \
     --security-opt label=type:unconfined_t \
     -v /var/lib/containers/storage:/var/lib/containers/storage \
-    -v $(pwd)/output:/output \
+    -v /tmp/exousia-output:/output \
     quay.io/centos-bootc/bootc-image-builder:latest \
     --type qcow2 \
     --local \
@@ -89,7 +91,7 @@ sudo podman run \
    - Open virt-manager
    - Create New Virtual Machine
    - Choose "Import existing disk image"
-   - Browse to `./output/qcow2/disk.qcow2`
+   - Browse to `/tmp/exousia-output/qcow2/disk.qcow2`
    - Set OS to "Fedora 42" or similar
    - Allocate resources (4GB RAM, 2 CPUs recommended)
    - Complete the wizard
@@ -104,7 +106,7 @@ sudo podman run \
     --pull=newer \
     --security-opt label=type:unconfined_t \
     -v /var/lib/containers/storage:/var/lib/containers/storage \
-    -v $(pwd)/output:/output \
+    -v /tmp/exousia-output:/output \
     quay.io/centos-bootc/bootc-image-builder:latest \
     --type raw \
     --local \
@@ -114,7 +116,7 @@ sudo podman run \
 qemu-system-x86_64 \
     -m 4096 \
     -smp 2 \
-    -drive file=./output/raw/disk.raw,format=raw \
+    -drive file=/tmp/exousia-output/raw/disk.raw,format=raw \
     -enable-kvm \
     -cpu host
 ```
@@ -142,7 +144,7 @@ sync
 1. **Test container first**: Always run your container tests before building disk images
 
    ```bash
-   make test
+   make local-test
    ```
 
 2. **Check image size**: Review your container image size to estimate disk space needed
@@ -197,7 +199,7 @@ podman run --rm localhost:5000/exousia:latest bootc container lint
 **Solution**: Clean up old builds:
 
 ```bash
-rm -rf ./output
+rm -rf /tmp/exousia-output
 podman system prune -a
 ```
 
@@ -229,5 +231,5 @@ The bootc-image-builder can be integrated into your CI/CD pipeline:
 
 ## See Also
 
-- [TESTING.md](TESTING.md) - Container image testing
+- [testing/README.md](testing/README.md) - Container image testing
 - [README.md](../README.md) - Project overview

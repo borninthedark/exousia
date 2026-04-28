@@ -15,6 +15,7 @@ sway/
 ├── repos/            # Custom YUM/DNF repository definitions
 ├── scripts/
 │   ├── runtime/      # Runtime scripts (autotiling, lid, volume)
+│   ├── runtime/      # Runtime scripts (layered-include, lid, volume-helper)
 │   └── setup/        # Build-time setup scripts
 └── session/
     ├── sway.desktop   # Wayland session file

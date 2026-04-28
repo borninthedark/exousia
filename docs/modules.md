@@ -190,7 +190,9 @@ Configures chezmoi dotfile management with systemd user services.
 
 Exousia keeps desktop and session configuration authoritative at the system
 level under `/etc`. If you use `chezmoi` for user dotfiles, prefer
-`all-users: false` unless you explicitly want global per-user activation.
+`all-users: false` unless you explicitly want global per-user activation. The
+current `adnyeus.yml` blueprint still sets `all-users: true`, so treat this as
+recommended direction rather than a description of the live default.
 
 ```yaml
 - type: chezmoi

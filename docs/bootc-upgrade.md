@@ -173,36 +173,16 @@ done
 
 ### Scheduled Upgrades
 
-Using systemd timers for automatic updates:
+Exousia already ships `bootc-fetch-apply-updates.timer` with a staged override.
+Use that built-in path first:
 
 ```bash
-# Create timer unit
-sudo tee /etc/systemd/system/bootc-upgrade.timer << 'EOF'
-[Unit]
-Description=Bootc upgrade timer
-
-[Timer]
-OnCalendar=Sun *-*-* 03:00:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-EOF
-
-# Create service unit
-sudo tee /etc/systemd/system/bootc-upgrade.service << 'EOF'
-[Unit]
-Description=Bootc upgrade service
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/bootc upgrade
-ExecStartPost=/usr/bin/systemctl reboot
-EOF
-
-# Enable timer
-sudo systemctl enable --now bootc-upgrade.timer
+systemctl status bootc-fetch-apply-updates.timer
+systemctl list-timers bootc-fetch-apply-updates.timer
 ```
+
+If you need a custom maintenance-window timer instead, treat a hand-rolled
+`bootc-upgrade.timer` as an alternative override rather than the default path.
 
 ### Pinning Deployments
 
@@ -314,7 +294,7 @@ sudo bootc upgrade --apply
 
 - [README.md](../README.md) - Using pre-built images
 - [bootc-image-builder.md](bootc-image-builder.md) - Testing disk images locally
-- [TESTING.md](TESTING.md) - Container image testing
+- [testing/README.md](testing/README.md) - Container image testing
 - [bootc Project](https://github.com/bootc-dev/bootc)
 
 ## Community Resources

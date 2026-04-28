@@ -23,10 +23,10 @@ Exousia uses a 12th Division-themed GitHub Actions pipeline (Shinigami Research 
 |----------|------|------|
 | **Urahara** | `urahara.yml` | 12th -- Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate |
 | **Hikifune** | `hikifune.yml` | 12th -- CI: Ruff, Black, isort, pytest |
-| **Uhin** | `uhin.yml` | 12th -- Security: Hadolint, Checkov, Trivy config scan, Bandit |
+| **Uhin** | `uhin.yml` | 12th -- Security: Hadolint, Checkov, Trivy config scan, Bandit, OSV-Scanner |
 | **Hiyori** | `hiyori.yml` | 12th -- Build, Trivy scan artifact, SBOM submission, Cosign, semver release |
 | **Kon** | `kon.yml` | 12th -- Advanced CodeQL analysis for Python and GitHub Actions |
-| **Nemu** | `nemu.yml` | 12th -- Post-CI: status artifact and summary |
+| **Nemu** | `nemu.yml` | 12th -- Post-CI: refreshes tracked `STATUS.md` from the latest main-branch Urahara run |
 | **Mayuri** | `mayuri.yml` | 12th -- Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):
@@ -43,12 +43,6 @@ Configure in GitHub repository settings under **Settings > Secrets and variables
 | Name | Purpose |
 |------|---------|
 | `GHCR_PAT` | GHCR personal access token for CI RPM override pulls and local/manual registry access |
-
-**Variables:**
-
-| Name | Purpose | Required |
-|------|---------|----------|
-| `REGISTRY_URL` | Registry URL (defaults to `ghcr.io`) | No |
 
 Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 

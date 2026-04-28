@@ -50,7 +50,7 @@ uv run python tools/dry_check.py --functions-only --path tools
 | `-c, --config PATH` | Path to YAML configuration file | Required |
 | `-o, --output PATH` | Output Containerfile path | stdout |
 | `--image-type TYPE` | Base image type | From config |
-| `--fedora-version VER` | Fedora version number (for example `43`, `44`, or `rawhide`) | `43` |
+| `--fedora-version VER` | Fedora version number (for example `43`, `44`, or `rawhide`) | From config (`image-version`), falling back to `43` |
 | `--resolved-package-plan PATH` | Write resolved package plan JSON | -- |
 | `--enable-plymouth` | Enable Plymouth boot splash | `true` |
 | `--disable-plymouth` | Disable Plymouth boot splash | -- |
@@ -75,7 +75,8 @@ Notes:
 
 - `--json` is the easiest way to inspect RPM and DNF group provenance.
 - If you pass `--common`, the default common bundle set is not added implicitly.
-- Use explicit bundle names like `base-core`; `base` is a logical aggregate, not a real bundle file.
+- `base.yml` exists as a compatibility shim, but explicit common-set selection
+  should still use concrete `base-*` names such as `base-core`.
 
 ## Tests
 
@@ -83,10 +84,13 @@ Notes:
 |-----------|--------|
 | `test_yaml_to_containerfile.py` | Transpiler output, module rendering, conditionals |
 | `test_package_loader.py` | Package loading, merging, YAML parsing |
+| `test_generator_cli.py` | Generator CLI behavior and argument handling |
+| `test_generator_processors.py` | Generator module processors and rendering branches |
 | `test_distro_mapper.py` | Image type to base image mapping |
 | `test_package_dependency_checker.py` | Dependency resolution and conflict detection |
 | `test_dry_check.py` | DRY enforcement tool |
 | `test_resolve_build_config.py` | CI build parameter resolution |
+| `test_validator.py` | Validation rules for generator inputs |
 
 Run tests:
 

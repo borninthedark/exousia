@@ -38,15 +38,18 @@ All Quadlet definitions live in `overlays/deploy/`:
 | File | Type | Purpose |
 |------|------|---------|
 | `forgejo.container` | Container | Self-hosted git forge (ports 3000, 2222) |
+| `forgejo-db.container` | Container | Forgejo PostgreSQL backend |
 | `forgejo-runner.container` | Container | Forgejo Actions CI runner |
 | `exousia-registry.container` | Container | Local container registry (port 5000) |
+| `freebsd.container` | Container | Standalone FreeBSD runtime container |
 | `plane-*.container` | Container | Plane app, data services, and proxy (port 8080) |
 | `forgejo-data.volume` | Volume | Persistent Forgejo data |
+| `forgejo-db-data.volume` | Volume | Persistent Forgejo database data |
 | `forgejo-runner-data.volume` | Volume | Persistent runner data |
 | `exousia-registry-data.volume` | Volume | Persistent registry storage |
 | `plane-*.volume` | Volume | Persistent Plane data services |
+| `plane.env.example` | Template | Plane environment template |
 | `exousia.network` | Network | Shared network (10.89.1.0/24) |
-| `plane.env.example` | Env file template | Plane configuration copied to user config at runtime |
 
 ## Prerequisites
 
@@ -63,34 +66,32 @@ These tools are already included in the bootc image:
 
 ```bash
 make quadlet-install
-make quadlet-start
 ```
 
-This installs all Quadlet definitions but only starts the local registry by
-default.
+This copies all `.container`, `.volume`, and `.network` files to
+`~/.config/containers/systemd/` and reloads systemd. Services are disabled
+by default — use app-specific targets to start them.
 
 ### Optionally enable Forgejo and Plane later
 
 ```bash
 # Forgejo
-systemctl --user start forgejo forgejo-runner
+make forgejo-start
 
 # Plane
-make plane-env-init
-make plane-quadlet-start
+make plane-install   # creates /etc/exousia/plane/plane.env from template
+make plane-start     # starts plane-proxy (systemd pulls in all dependencies)
 ```
 
-This copies all `.container`, `.volume`, and `.network` files to
-`~/.config/containers/systemd/`, reloads systemd, and starts the local
-registry. `make plane-env-init` creates
-`~/.config/exousia/plane/plane.env` (or `/etc/exousia/plane/plane.env` for system-wide), and `make plane-quadlet-start` brings up
-Plane on the same Podman network so it can integrate with Forgejo by service
-name.
+`make plane-install` copies the env template to `/etc/exousia/plane/plane.env`
+and runs `quadlet-install`. `make plane-start` brings up the full Plane stack
+on the shared Podman network so it can integrate with Forgejo by service name.
 
 ### Verify services are running
 
 ```bash
-make quadlet-status
+make plane-status
+make forgejo-status
 
 # Registry health check
 curl -s localhost:5000/v2/
@@ -177,14 +178,28 @@ skopeo list-tags docker://localhost:5000/exousia --tls-verify=false
 ## Service Management
 
 ```bash
-make quadlet-start             # Start the local registry only
-make plane-quadlet-start       # Start Plane in the documented service order
-make plane-quadlet-stop        # Stop the full Plane stack
-make plane-quadlet-status      # Show Plane service status
-make plane-quadlet-logs        # Follow Plane logs
-make quadlet-stop              # Stop the local registry
-make quadlet-status            # Show local registry status
-make quadlet-logs              # Follow local registry logs
+# Plane
+make plane-install             # Copy quadlets + create env file
+make plane-start               # Start Plane (systemd resolves full dep graph)
+make plane-stop                # Stop the full Plane stack
+make plane-status              # Show Plane service status
+make plane-logs                # Follow Plane logs
+
+# Forgejo
+make forgejo-start             # Start Forgejo + runner
+make forgejo-stop              # Stop Forgejo
+make forgejo-status            # Show Forgejo service status
+make forgejo-logs              # Follow Forgejo logs
+
+# Standalone containers (pattern rules)
+make start-<name>              # Start any quadlet (e.g. make start-freebsd)
+make stop-<name>               # Stop a standalone quadlet
+make status-<name>             # Show status of a standalone quadlet
+make logs-<name>               # Follow logs of a standalone quadlet
+
+# Infrastructure
+make quadlet-install           # Copy all quadlets to ~/.config/containers/systemd/
+make quadlet-uninstall         # Remove the currently managed local stack quadlets and stop those services
 ```
 
 ## Plane + Forgejo

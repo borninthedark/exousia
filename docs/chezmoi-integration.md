@@ -1,13 +1,15 @@
 # Chezmoi Integration
 
 This guide explains how Exousia integrates chezmoi for optional dotfile
-management using the BlueBuild chezmoi module.
+management using Exousia's own generator-side `chezmoi` module handling.
 
 ## Overview
 
 Exousia ships the chezmoi tooling, but keeps desktop and session behavior
-authoritative at the system level under `/etc`. User-level dotfile management is
-opt-in. This integration provides:
+authoritative at the system level under `/etc`. The current blueprint still
+enables chezmoi user services globally, so dotfile management is available
+system-wide even though the session stack is designed to remain system-first.
+This integration provides:
 
 - **Build-time installation**: chezmoi is installed as an RPM package during the image build
 - **Optional initialization**: the dotfiles repository can be cloned on first user login
@@ -23,11 +25,12 @@ During image build, the chezmoi module:
 - ✅ Installs chezmoi from Fedora RPM repos to `/usr/bin/chezmoi`
 - ✅ Copies systemd user unit files with placeholder values
 - ✅ Substitutes the repository URL, conflict policy, and timer intervals into the unit files
-- ✅ Leaves activation opt-in unless `all-users: true` is explicitly configured
+- ✅ Currently enables user services globally because the active blueprint sets
+  `all-users: true`
 
-### Phase 2: Opt-in User Login
+### Phase 2: User Login
 
-When a user opts in and logs in:
+When a user logs in under the current blueprint:
 
 - 🚀 The `chezmoi-init.service` runs automatically
 - 🚀 Dotfiles repository is cloned to `~/.local/share/chezmoi`
@@ -45,18 +48,17 @@ After initialization, if the timer is enabled:
 
 ## Configuration
 
-The chezmoi module is declared in the blueprint files:
+The chezmoi module is declared in the tracked blueprint files:
 
 - `adnyeus.yml`
-- `yaml-definitions/sway-atomic.yml`
-- `yaml-definitions/sway-bootc.yml`
+- `yaml-definitions/sway.yml`
 
 ### Current Settings
 
 ```yaml
 type: chezmoi
 repository: "https://github.com/borninthedark/dotfiles"
-all-users: false               # Per-user opt-in by default
+all-users: true                # Current blueprint enables services globally
 file-conflict-policy: skip     # Skip files with local changes
 run-every: "1d"                # Update once per day
 wait-after-boot: "5m"          # Wait 5 minutes after boot
@@ -67,7 +69,7 @@ wait-after-boot: "5m"          # Wait 5 minutes after boot
 | Option | Value | Description |
 |--------|-------|-------------|
 | `repository` | `https://github.com/borninthedark/dotfiles` | Git repository URL for dotfiles |
-| `all-users` | `false` | Keep user dotfile activation opt-in so system-level desktop config stays authoritative |
+| `all-users` | `true` | Current blueprint enables global user-service activation |
 | `file-conflict-policy` | `skip` | Skip files with local changes |
 | `run-every` | `1d` | Update interval (1 day) |
 | `wait-after-boot` | `5m` | Delay before first update after boot |
@@ -407,7 +409,7 @@ systemctl --user enable chezmoi-init.service chezmoi-update.timer
 
 ## Build-Time Tests
 
-Tests in `custom-tests/` verify chezmoi integration at two stages:
+Tests in `tests/` verify chezmoi integration at two stages:
 
 **`overlay_content.bats`** (before build — checks source files):
 
@@ -490,8 +492,8 @@ This means a push to the dotfiles repository will result in a rebuilt image with
 The chezmoi module is enabled in:
 
 - **Adnyeus** (`adnyeus.yml`) - DevSecOps-hardened Fedora bootc image with Sway
-- **Sway Atomic** (`yaml-definitions/sway-atomic.yml`)
-- **Sway Bootc** (`yaml-definitions/sway-bootc.yml`)
+- **Primary blueprint** (`adnyeus.yml`)
+- **Sway variant example** (`yaml-definitions/sway.yml`)
 
 ## References
 

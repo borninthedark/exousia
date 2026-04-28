@@ -15,7 +15,7 @@ to the transpiler directly.
 ## Usage
 
 ```bash
-uv run python tools/yaml-to-containerfile.py \
+uv run python -m generator \
   --config yaml-definitions/sway.yml \
   --output Dockerfile.generated
 ```

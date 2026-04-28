@@ -43,8 +43,8 @@ simple for the whole Exousia project:
 Bootstrap the Plane environment file, then start the stack:
 
 ```bash
-make plane-env-init
-make plane-quadlet-start
+make plane-install
+make plane-start
 ```
 
 The startup sequence follows Plane's Podman Quadlet guidance: shared network,

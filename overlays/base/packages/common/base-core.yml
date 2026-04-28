@@ -16,6 +16,7 @@ spec:
     - cargo
     - git
     - htop
+    - btop
     - etckeeper
     - fastfetch
     - podman-compose

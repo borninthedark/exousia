@@ -35,7 +35,7 @@ if [ -f /etc/sway/environment ]; then
 fi
 
 ## Unexport internal variables
-_SWAY_EXTRA_ARGS="$SWAY_EXTRA_ARGS"
+_SWAY_EXTRA_ARGS="${SWAY_EXTRA_ARGS:-}"
 unset SWAY_EXTRA_ARGS
 
 ## Log all exported WLR_ variables
@@ -46,4 +46,5 @@ if _WLR_VARS=$(env | grep '^WLR_'); then
 fi
 
 # Start sway with extra arguments and send output to the journal
-exec systemd-cat -- $_SWAY_COMMAND $_SWAY_EXTRA_ARGS "$@"
+# shellcheck disable=SC2086
+exec systemd-cat -- "$_SWAY_COMMAND" $_SWAY_EXTRA_ARGS "$@"

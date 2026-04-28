@@ -91,12 +91,12 @@ Available helpers from bats-file:
 
 ```bash
 @test "Feature X should work for specific image type" {
-    if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
+    if [[ "$BUILD_TYPE" == "fedora-bootc" ]]; then
         # Test fedora-bootc specific feature
         assert_file_exists "$MOUNT_POINT/specific/file"
     else
         # Inform that test was skipped
-        echo "# Skipping test for $IMAGE_TYPE" >&3
+        echo "# Skipping test for $BUILD_TYPE" >&3
     fi
 }
 ```
@@ -257,7 +257,7 @@ assert_output --partial "expected text"
 
 ```bash
 @test "Directory structure should be correct for fedora-bootc" {
-    if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
+    if [[ "$BUILD_TYPE" == "fedora-bootc" ]]; then
         assert_dir_exists "$MOUNT_POINT/var/roothome"
         assert_dir_exists "$MOUNT_POINT/var/opt"
 
@@ -267,7 +267,7 @@ assert_output --partial "expected text"
         run readlink "$MOUNT_POINT/opt"
         assert_output "/var/opt"
     else
-        echo "# Skipping fedora-bootc directory structure check for $IMAGE_TYPE" >&3
+        echo "# Skipping fedora-bootc directory structure check for $BUILD_TYPE" >&3
     fi
 }
 ```
@@ -276,14 +276,14 @@ assert_output --partial "expected text"
 
 ```bash
 @test "Greetd service should be enabled for fedora-bootc" {
-    if [[ "$IMAGE_TYPE" == "fedora-bootc" ]]; then
+    if [[ "$BUILD_TYPE" == "fedora-bootc" ]]; then
         run buildah run "$CONTAINER" -- systemctl is-enabled greetd.service
         assert_success "greetd should be enabled for fedora-bootc"
 
         run buildah run "$CONTAINER" -- systemctl get-default
         assert_output "graphical.target"
     else
-        echo "# Skipping greetd service check for $IMAGE_TYPE" >&3
+        echo "# Skipping greetd service check for $BUILD_TYPE" >&3
     fi
 }
 ```
@@ -334,7 +334,7 @@ buildah unshare -- bats -r tests/ --show-output-of-passing-tests
 
 ```bash
 @test "debug test" {
-    echo "IMAGE_TYPE=$IMAGE_TYPE" >&3
+    echo "BUILD_TYPE=$BUILD_TYPE" >&3
     echo "MOUNT_POINT=$MOUNT_POINT" >&3
     ls -la "$MOUNT_POINT/usr/local/bin/" >&3
 
@@ -414,13 +414,13 @@ assert_file_exists "$MOUNT_POINT/path/in/container"
 
 ```bash
 # Wrong
-if [[ "$IMAGE_TYPE" != "fedora-bootc" ]]; then
+if [[ "$BUILD_TYPE" != "fedora-bootc" ]]; then
     return 0
 fi
 
 # Right
-if [[ "$IMAGE_TYPE" != "fedora-bootc" ]]; then
-    echo "# Skipping for $IMAGE_TYPE" >&3
+if [[ "$BUILD_TYPE" != "fedora-bootc" ]]; then
+    echo "# Skipping for $BUILD_TYPE" >&3
     return 0
 fi
 ```
@@ -451,5 +451,5 @@ fi
 - [bats-support Helpers](https://github.com/bats-core/bats-support)
 - [bats-assert Assertions](https://github.com/bats-core/bats-assert)
 - [bats-file File Helpers](https://github.com/bats-core/bats-file)
-- [Test Suite Guide](./guide.md)
+- [Test Suite Guide](../testing/guide.md)
 - [Troubleshooting](./troubleshooting.md)

@@ -16,7 +16,7 @@ overlays/
 |-----------|---------|
 | [base/](base/) | PAM, polkit, tmpfiles, sysusers, packages, build tools |
 | [sway/](sway/) | Sway configs, greetd, runtime and setup scripts, repos, session files |
-| [deploy/](deploy/) | Quadlet `.container` files for Forgejo, runner, and local registry |
+| [deploy/](deploy/) | Quadlet `.container` files for Forgejo, runner, Plane, FreeBSD, the shared network, and the local registry |
 
 ## How Overlays Work
 

@@ -4,8 +4,8 @@
 	build push build-atomic build-bootc readme \
 	quadlet-install quadlet-uninstall \
 	local-build local-push local-mirror overlay-test local-test \
-	plane-install plane-start plane-stop plane-status plane-logs
-
+	plane-install plane-start plane-stop plane-status plane-logs \
+	forgejo-start forgejo-stop forgejo-status forgejo-logs
 # Variables
 TAG ?= latest
 IMAGE ?= ghcr.io/borninthedark/exousia
@@ -49,6 +49,12 @@ help:
 	@echo "  plane-status    Show Plane service status"
 	@echo "  plane-logs      Follow Plane logs"
 	@echo ""
+	@echo "Forgejo (git forge — 3 services)"
+	@echo "  forgejo-start     Start Forgejo in dependency order"
+	@echo "  forgejo-stop      Stop Forgejo"
+	@echo "  forgejo-status    Show Forgejo service status"
+	@echo "  forgejo-logs      Follow Forgejo logs"
+	@echo ""
 	@echo "Standalone containers"
 	@echo "  start-<name>    Start a standalone quadlet (e.g. make start-freebsd)"
 	@echo "  stop-<name>     Stop a standalone quadlet"
@@ -85,7 +91,7 @@ test-cov:
 		output = subprocess.check_output(['uv', 'run', 'coverage', 'report', '--format=total'], text=True).strip(); \
 		total = float(output); \
 		print(f'Total coverage: {total}%'); \
-		sys.exit(0 if total >= 85.0 else 1)"
+		sys.exit(0 if total >= 95.0 else 1)"
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
@@ -200,7 +206,7 @@ overlay-test:
 local-test:
 	@echo "==> Running bats tests against localhost:5000/exousia:$(TAG)..."
 	podman run --rm localhost:5000/exousia:$(TAG) cat /etc/os-release
-	bats tests/image_content.bats
+	TEST_IMAGE_TAG=localhost:5000/exousia:$(TAG) buildah unshare -- bats tests/image_content.bats
 
 # ===========================================================================
 # Quadlets — infrastructure (all apps)
@@ -279,3 +285,24 @@ status-%:
 
 logs-%:
 	journalctl --user -u $*.service -f
+
+# ===========================================================================
+# Forgejo (git forge — 3 services)
+# ===========================================================================
+
+FORGEJO_SERVICES_ALL := forgejo-db forgejo forgejo-runner
+
+forgejo-start:
+	systemctl --user start forgejo-runner.service
+	@echo "Forgejo started — http://localhost:3000"
+
+forgejo-stop:
+	systemctl --user stop $(FORGEJO_SERVICES_ALL) 2>/dev/null || true
+	systemctl --user reset-failed 2>/dev/null || true
+	@echo "Forgejo stopped."
+
+forgejo-status:
+	@systemctl --user status $(FORGEJO_SERVICES_ALL) --no-pager 2>/dev/null || true
+
+forgejo-logs:
+	journalctl --user -u forgejo.service -f

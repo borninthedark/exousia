@@ -86,7 +86,12 @@ assert_has_shebang() {
 }
 
 @test "Skeleton Yubico path should symlink to /etc/Yubico" {
-    assert_symlink_to "$OVERLAY_ROOT/base/configs/skel/.config/Yubico" "/etc/Yubico"
+    local link="$OVERLAY_ROOT/base/configs/skel/.config/Yubico"
+    # Use -L to check if the link exists without following it to the host filesystem
+    run test -L "$link"
+    assert_success "Symlink $link should exist"
+    run readlink "$link"
+    assert_output "/etc/Yubico"
 }
 
 @test "Libvirt polkit rule should exist and reference org.libvirt.unix.manage" {
@@ -166,11 +171,17 @@ assert_has_shebang() {
 # ============================================================
 
 @test "build-zfs-kmod script should exist and have shebang" {
+    if ! is_build_flag_set "enable_zfs"; then
+        skip "ZFS is not enabled in adnyeus.yml"
+    fi
     assert_file_exists "$OVERLAY_ROOT/base/tools/build-zfs-kmod"
     assert_has_shebang "$OVERLAY_ROOT/base/tools/build-zfs-kmod"
 }
 
 @test "build-zfs-kmod should be executable" {
+    if ! is_build_flag_set "enable_zfs"; then
+        skip "ZFS is not enabled in adnyeus.yml"
+    fi
     run test -x "$OVERLAY_ROOT/base/tools/build-zfs-kmod"
     assert_success
 }
@@ -269,17 +280,19 @@ assert_has_shebang() {
 }
 
 @test "Sway environment file should export locale" {
-    assert_file_exists "$OVERLAY_ROOT/sway/session/environment"
-    run grep -q "LANG=en_US.UTF-8" "$OVERLAY_ROOT/sway/session/environment"
+    local env_file="$OVERLAY_ROOT/sway/configs/sway/environment"
+    assert_file_exists "$env_file"
+    run grep -q "LANG=en_US.UTF-8" "$env_file"
     assert_success "environment should set LANG"
-    run grep -q "LC_ALL=en_US.UTF-8" "$OVERLAY_ROOT/sway/session/environment"
+    run grep -q "LC_ALL=en_US.UTF-8" "$env_file"
     assert_success "environment should set LC_ALL"
 }
 
 @test "Sway environment should set Wayland variables" {
-    run grep -q "MOZ_ENABLE_WAYLAND=1" "$OVERLAY_ROOT/sway/session/environment"
+    local env_file="$OVERLAY_ROOT/sway/configs/sway/environment"
+    run grep -q "MOZ_ENABLE_WAYLAND=1" "$env_file"
     assert_success "environment should enable Wayland for Firefox"
-    run grep -q "QT_QPA_PLATFORM=wayland" "$OVERLAY_ROOT/sway/session/environment"
+    run grep -q "QT_QPA_PLATFORM=wayland" "$env_file"
     assert_success "environment should set Qt to Wayland"
 }
 

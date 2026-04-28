@@ -1,5 +1,6 @@
 # Build artifacts and local outputs
 build/
+output/
 image.tar
 *.log
 
@@ -53,6 +54,7 @@ CLAUDE_GEMINI_CODEX.md
 docs/ansible.md
 docs/fedora-bootc-migration-plan.md
 PLANE_SETUP_NOTES.md
+FORGEJO_SETUP_NOTES.md
 # CI status tracked by Nemu workflow
 .claude/
 .gemini/
