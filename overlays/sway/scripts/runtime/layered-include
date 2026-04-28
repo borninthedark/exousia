@@ -14,9 +14,10 @@ patterns loaded over the earlier matches.
 
 import os
 import sys
-from hashlib import sha256
 from glob import iglob
-from os.path import basename, expandvars, join as join_paths
+from hashlib import sha256
+from os.path import basename, expandvars
+from os.path import join as join_paths
 
 
 def wordexp(value: str):
@@ -39,7 +40,7 @@ for arg in sys.argv[1:]:
 # This step is required because the filenames may contain $IFS characters
 # (whitespaces — I don't expect this to happen, but can't exclude the
 # possibility), and wordexp(3) will handle that quite bad.
-dirname = join_paths(os.environ['XDG_RUNTIME_DIR'], 'sway')
+dirname = join_paths(os.environ["XDG_RUNTIME_DIR"], "sway")
 os.makedirs(dirname, exist_ok=True)
 fnhash = sha256("\n".join(sys.argv).encode("UTF-8"))
 fname = join_paths(dirname, f"layered-include-{str(fnhash.hexdigest())}.conf")

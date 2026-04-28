@@ -18,7 +18,8 @@ log_and_print() {
     local level=$1
     shift
     local message="$*"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 
     echo "[$timestamp] [$level] $message" | tee -a "$LOG_FILE"
 }
@@ -67,8 +68,10 @@ count_installed_apps() {
 verify_apps() {
     log_and_print "INFO" "Checking installed flatpak applications..."
 
-    local system_apps=$(count_installed_apps "system")
-    local user_apps=$(count_installed_apps "user")
+    local system_apps
+    system_apps=$(count_installed_apps "system")
+    local user_apps
+    user_apps=$(count_installed_apps "user")
 
     echo ""
     echo "Installed Applications:"
@@ -119,7 +122,8 @@ verify_apps() {
 verify_runtimes() {
     log_and_print "INFO" "Checking installed flatpak runtimes..."
 
-    local runtime_count=$(flatpak list --runtime 2>/dev/null | wc -l)
+    local runtime_count
+    runtime_count=$(flatpak list --runtime 2>/dev/null | wc -l)
 
     echo ""
     echo "Installed Runtimes: $runtime_count"
