@@ -95,6 +95,7 @@ spec:
       - dunst
       - rofi
       - rofi-wayland
+      - tuned-ppd
     features: []
   replaces:
     - foot
