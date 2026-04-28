@@ -129,6 +129,12 @@ systemctl --user daemon-reload
 systemctl --user start forgejo-runner
 ```
 
+## CI/CD Matrix Builds
+
+The GitHub Actions pipeline builds the blueprint's `image-version` by default.
+To build multiple Fedora versions in parallel, use workflow dispatch.
+See [Matrix Builds](matrix-builds.md) for details.
+
 ## Build Workflow
 
 ### Build and push to local registry

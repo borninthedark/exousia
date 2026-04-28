@@ -419,7 +419,7 @@ Extend or complement [tools/test_resolve_build_config.py](../tools/test_resolve_
 
 ### Image-content tests
 
-The current BATS tests in [custom-tests/image_content.bats](../custom-tests/image_content.bats) should be able to consume or reference the resolved manifest so expectations are derived from declared intent rather than being entirely handwritten.
+The current BATS tests in [tests/image_content.bats](../tests/image_content.bats) should be able to consume or reference the resolved manifest so expectations are derived from declared intent rather than being entirely handwritten.
 
 That creates a stronger contract:
 

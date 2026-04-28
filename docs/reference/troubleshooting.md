@@ -670,7 +670,7 @@ podman build . 2>&1 | less
 
 ## References
 
-- [Test Suite Guide](./guide.md)
+- [Test Suite Guide](../testing/guide.md)
 - [Writing Tests](./writing-tests.md)
 - [bootc Project](https://github.com/bootc-dev/bootc)
 - [bats-core Documentation](https://bats-core.readthedocs.io/)

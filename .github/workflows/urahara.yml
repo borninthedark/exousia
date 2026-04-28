@@ -6,6 +6,9 @@
 #   Hikifune -> CI: lint + test
 #   Uhin     -> Security scanning
 #   Hiyori   -> Build -> scan + sign -> release
+#
+# Matrix builds: push/schedule build all target versions in parallel.
+# workflow_dispatch builds the single selected version.
 
 name: "Urahara - Orchestrator"
 
@@ -26,15 +29,11 @@ on:
           - "fedora-sway-atomic"
           - "fedora-bootc"
         default: "fedora-sway-atomic"
-      distro_version:
-        description: "Fedora version"
-        required: true
-        type: choice
-        options:
-          - "43"
-          - "44"
-          - "rawhide"
-        default: "43"
+      distro_versions:
+        description: "Fedora versions to build (comma-separated, e.g. 43 or 43,44). Leave empty to use blueprint default."
+        required: false
+        type: string
+        default: ""
       enable_plymouth:
         description: "Enable Plymouth boot splash"
         required: true
@@ -51,23 +50,37 @@ permissions:
   id-token: write
 
 jobs:
-  # -- Read default version from blueprint so we don't hardcode it --
+  # -- Read defaults and build version matrix --
   defaults:
     name: "Resolve Defaults"
     runs-on: ubuntu-latest
     outputs:
-      distro_version: ${{ steps.read.outputs.version }}
+      primary_version: ${{ steps.read.outputs.version }}
+      versions: ${{ steps.matrix.outputs.versions }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           sparse-checkout: adnyeus.yml
           sparse-checkout-cone-mode: false
+
       - name: Read image-version from blueprint
         id: read
         run: |
           VERSION=$(grep '^image-version:' adnyeus.yml | awk '{print $2}')
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Blueprint default version: ${VERSION}"
+          echo "Blueprint primary version: ${VERSION}"
+
+      - name: Build version matrix
+        id: matrix
+        run: |
+          INPUT="${{ inputs.distro_versions }}"
+          if [[ -z "$INPUT" ]]; then
+            # No override — use blueprint default
+            INPUT="${{ steps.read.outputs.version }}"
+          fi
+          JSON=$(echo "$INPUT" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | jq -R . | jq -sc .)
+          echo "versions=${JSON}" >> $GITHUB_OUTPUT
+          echo "Matrix: ${JSON}"
 
   # -- Hikifune (CI) + Uhin (Security) run in parallel --
   hikifune:
@@ -83,16 +96,21 @@ jobs:
     permissions:
       contents: read
 
-  # -- Hiyori (Build) runs after both pass --
+  # -- Hiyori (Build) runs after both pass, once per version --
   hiyori:
-    name: "Hiyori (Build)"
+    name: "Hiyori (f${{ matrix.distro_version }})"
     needs: [defaults, hikifune, uhin]
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork != true
+    strategy:
+      fail-fast: false
+      matrix:
+        distro_version: ${{ fromJSON(needs.defaults.outputs.versions) }}
     uses: ./.github/workflows/hiyori.yml
     with:
       image_type: ${{ inputs.image_type || 'fedora-sway-atomic' }}
-      distro_version: ${{ inputs.distro_version || needs.defaults.outputs.distro_version }}
+      distro_version: ${{ matrix.distro_version }}
       enable_plymouth: ${{ inputs.enable_plymouth == '' && true || inputs.enable_plymouth }}
+      is_primary: ${{ matrix.distro_version == needs.defaults.outputs.primary_version }}
     secrets: inherit
     permissions:
       contents: write
