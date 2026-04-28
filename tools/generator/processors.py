@@ -338,7 +338,7 @@ class ModuleProcessorsMixin:
                     "            PKG_VER=$(rpm -qp --queryformat '%{EVR}' \"$rpm\"); \\"
                 )
                 self.lines.append(
-                    '            INSTALLED_VER=$(rpm -q --queryformat \'%{EVR}\' "$PKG_NAME" 2>/dev/null || echo ""); \\'
+                    '            INSTALLED_VER=$(rpm -q --queryformat \'%{EVR}\' "$PKG_NAME" 2>/dev/null) || INSTALLED_VER=""; \\'
                 )
                 self.lines.append(
                     '            if [ -z "$INSTALLED_VER" ] || [ "$(rpm --eval "%{lua:print(rpm.vercmp(\\"$PKG_VER\\", \\"$INSTALLED_VER\\"))}")" = "1" ]; then \\'
@@ -356,7 +356,7 @@ class ModuleProcessorsMixin:
                 self.lines.append("    fi; \\")
 
             self.lines.append('    if [ -n "$OVERRIDE_PKGS" ]; then \\')
-            self.lines.append("        dnf install -y $OVERRIDE_PKGS; \\")
+            self.lines.append("        dnf install -y --skip-broken $OVERRIDE_PKGS; \\")
             self.lines.append("    fi; \\")
 
             # Final cleanup of all override stages

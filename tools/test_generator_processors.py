@@ -907,7 +907,7 @@ class TestProcessPackageLoaderModuleOverrides:
         assert "rpm.vercmp" in output
         assert "PKG_NAME=$(rpm -qp" in output
         assert "OVERRIDE_PKGS=" in output
-        assert "dnf install -y $OVERRIDE_PKGS" in output
+        assert "dnf install -y --skip-broken $OVERRIDE_PKGS" in output
 
     def test_smart_overrides_use_evr_format(self):
         """EVR (Epoch:Version-Release) format is used for accurate version comparison."""
@@ -943,8 +943,8 @@ class TestProcessPackageLoaderModuleOverrides:
             gen._process_package_loader_module({"window_manager": "sway"})
 
         output = "\n".join(gen.lines)
-        # Empty fallback when package is not installed
-        assert '|| echo ""' in output
+        # rpm -q exit code sets INSTALLED_VER to empty when package is not installed
+        assert ') || INSTALLED_VER=""' in output
         # When INSTALLED_VER is empty, override is always included
         assert '[ -z "$INSTALLED_VER" ]' in output
 
@@ -965,6 +965,23 @@ class TestProcessPackageLoaderModuleOverrides:
         output = "\n".join(gen.lines)
         # rpm.vercmp returns 1 for newer, 0 for equal, -1 for older
         assert '= "1"' in output
+
+    def test_smart_overrides_skip_broken_for_cross_version(self):
+        """Override install uses --skip-broken for cross-version RPM resilience."""
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = [
+            {"package": "flatpak", "image": "ghcr.io/test/flatpak", "reason": "test fix"}
+        ]
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+
+        output = "\n".join(gen.lines)
+        assert "dnf install -y --skip-broken $OVERRIDE_PKGS" in output
 
     def test_smart_overrides_no_rpmdevtools_dependency(self):
         """rpmdevtools must not be required; rpm.vercmp is built-in."""
