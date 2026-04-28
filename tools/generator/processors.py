@@ -273,8 +273,8 @@ class ModuleProcessorsMixin:
         self.lines.append("# hadolint ignore=DL3041,SC2086")
         self.lines.append("RUN set -euxo pipefail; \\")
 
-        # Install dnf5 and build requirements for smart overrides
-        self.lines.append("    dnf install -y dnf5 dnf5-plugins rpmdevtools && \\")
+        # Install dnf5
+        self.lines.append("    dnf install -y dnf5 dnf5-plugins && \\")
         self.lines.append("    rm -f /usr/bin/dnf && ln -s /usr/bin/dnf5 /usr/bin/dnf; \\")
 
         # Add repositories (RPMFusion for Fedora)
@@ -335,13 +335,13 @@ class ModuleProcessorsMixin:
                     "            PKG_NAME=$(rpm -qp --queryformat '%{NAME}' \"$rpm\"); \\"
                 )
                 self.lines.append(
-                    "            PKG_VER=$(rpm -qp --queryformat '%{VERSION}-%{RELEASE}' \"$rpm\"); \\"
+                    "            PKG_VER=$(rpm -qp --queryformat '%{EVR}' \"$rpm\"); \\"
                 )
                 self.lines.append(
-                    '            INSTALLED_VER=$(rpm -q --queryformat \'%{VERSION}-%{RELEASE}\' "$PKG_NAME" 2>/dev/null || echo "0"); \\'
+                    '            INSTALLED_VER=$(rpm -q --queryformat \'%{EVR}\' "$PKG_NAME" 2>/dev/null || echo ""); \\'
                 )
                 self.lines.append(
-                    '            if [ "$INSTALLED_VER" = "0" ] || rpmdev-vercmp "$PKG_VER" "$INSTALLED_VER" | grep -q "newer"; then \\'
+                    '            if [ -z "$INSTALLED_VER" ] || [ "$(rpm --eval "%{lua:print(rpm.vercmp(\\"$PKG_VER\\", \\"$INSTALLED_VER\\"))}")" = "1" ]; then \\'
                 )
                 self.lines.append(
                     '                echo "  - Including override: $PKG_NAME ($PKG_VER > $INSTALLED_VER)"; \\'
