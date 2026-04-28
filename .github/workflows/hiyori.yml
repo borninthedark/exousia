@@ -18,6 +18,10 @@ on:
         description: "Enable Plymouth boot splash"
         type: boolean
         default: true
+      is_primary:
+        description: "Primary build — receives :latest tag and triggers release"
+        type: boolean
+        default: false
 
 env:
   REGISTRY_URL: ghcr.io
@@ -29,7 +33,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Bootc Image
+    name: Build (${{ inputs.distro_version }})
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
@@ -38,6 +42,7 @@ jobs:
       image_ref: ${{ steps.image.outputs.image }}
       build_type: ${{ steps.config.outputs.build_image_type }}
       enable_plymouth: ${{ steps.config.outputs.enable_plymouth }}
+      distro_version: ${{ inputs.distro_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -65,11 +70,13 @@ jobs:
         id: tag
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
-          TAG="${{ steps.config.outputs.build_image_type }}-${SHORT_SHA}"
+          FVER="f${{ inputs.distro_version }}"
+          TAG="${{ steps.config.outputs.build_image_type }}-${FVER}-${SHORT_SHA}"
           BRANCH="${GITHUB_REF_NAME//\//-}"
           ROLLING=$([[ "${{ github.event_name }}" == "schedule" ]] && echo "true" || echo "false")
-          ROLLING_TAG="rolling-$(date -u +%Y%m%d-%H%M)"
+          ROLLING_TAG="rolling-${FVER}-$(date -u +%Y%m%d-%H%M)"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "fver=$FVER" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
           echo "rolling=$ROLLING" >> $GITHUB_OUTPUT
           echo "rolling_tag=$ROLLING_TAG" >> $GITHUB_OUTPUT
@@ -102,32 +109,36 @@ jobs:
           push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
           tags: |
             ${{ steps.image.outputs.image }}:${{ steps.tag.outputs.tag }}
-            ${{ steps.image.outputs.image }}:${{ steps.tag.outputs.branch }}
+            ${{ steps.image.outputs.image }}:${{ steps.tag.outputs.fver }}
+            ${{ steps.image.outputs.image }}:${{ steps.tag.outputs.branch }}-${{ steps.tag.outputs.fver }}
+            ${{ inputs.is_primary && format('{0}:{1}', steps.image.outputs.image, steps.tag.outputs.branch) || '' }}
+            ${{ inputs.is_primary && format('{0}:latest', steps.image.outputs.image) || '' }}
             ${{ steps.tag.outputs.rolling == 'true' && format('{0}:{1}', steps.image.outputs.image, steps.tag.outputs.rolling_tag) || '' }}
-            ${{ steps.tag.outputs.rolling == 'true' && format('{0}:current', steps.image.outputs.image) || '' }}
-            ${{ steps.image.outputs.image }}:latest
+            ${{ steps.tag.outputs.rolling == 'true' && inputs.is_primary && format('{0}:current', steps.image.outputs.image) || '' }}
           build-args: |
             FEDORA_VERSION=${{ steps.config.outputs.build_version }}
             IMAGE_TYPE=${{ steps.config.outputs.build_image_type }}
             ENABLE_PLYMOUTH=${{ steps.config.outputs.enable_plymouth }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ inputs.distro_version }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.distro_version }}
 
       - name: Build summary
         if: always()
         run: |
-          echo "## Hiyori: Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "## Hiyori: Build Results (Fedora ${{ inputs.distro_version }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Image | \`${{ steps.image.outputs.image }}:${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Type | ${{ steps.config.outputs.build_image_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Fedora | ${{ inputs.distro_version }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Plymouth | ${{ steps.config.outputs.enable_plymouth }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Primary | ${{ inputs.is_primary }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Digest | \`${{ steps.build-push.outputs.digest }}\` |" >> $GITHUB_STEP_SUMMARY
 
   # -- Scan + Sign + Compliance run in parallel after build --
   oscap:
-    name: OpenSCAP Compliance
+    name: OpenSCAP (${{ inputs.distro_version }})
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
@@ -135,43 +146,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Install OpenSCAP and Security Guide
+      - name: Install OpenSCAP
         run: |
           sudo apt-get update
-          sudo apt-get install -y libopenscap8 wget
+          sudo apt-get install -y openscap-utils wget unzip
 
       - name: Download Fedora SCAP Security Guide
         run: |
-          # Fedora content is distributed in the scap-security-guide package on Fedora,
-          # but we can grab the latest data stream from the upstream repository.
-          wget https://github.com/ComplianceAsCode/content/releases/latest/download/scap-security-guide-latest.zip
-          unzip scap-security-guide-latest.zip
+          wget -q https://github.com/ComplianceAsCode/content/releases/latest/download/scap-security-guide-latest.zip
+          unzip -q scap-security-guide-latest.zip
 
-      - name: Pull image for scanning
+      - name: Pull and export image filesystem
         run: |
           echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
           docker pull ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
+          CONTAINER_ID=$(docker create ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }})
+          mkdir -p rootfs
+          docker export "$CONTAINER_ID" | tar -xf - -C rootfs
+          docker rm "$CONTAINER_ID"
 
       - name: Run OpenSCAP scan
         run: |
-          # We use the 'standard' profile for Fedora.
-          # Note: oscap-docker/podman isn't easily available on ubuntu-latest runners,
-          # so we use the oscap tool directly against the mounted container root or
-          # use a specialized action if available. Here we use the oscap-ssh pattern
-          # against a local container.
-
-          CONTAINER_ID=$(docker run -d --entrypoint /bin/sh ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }} -c "sleep 3600")
-
-          # Evaluate against Fedora default content
-          oscap-ssh root@localhost 22 xccdf eval \
+          oscap-chroot rootfs xccdf eval \
             --profile xccdf_org.ssgproject.content_profile_standard \
             --results oscap-results.xml \
             --report oscap-report.html \
             scap-security-guide-*/ssg-fedora-ds.xml || true
 
-          docker rm -f $CONTAINER_ID
-
       - name: Upload OpenSCAP report
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: openscap-report-${{ needs.build.outputs.image_tag }}
@@ -181,7 +184,7 @@ jobs:
           retention-days: 14
 
   scan:
-    name: Trivy Image Scan
+    name: Trivy (${{ inputs.distro_version }})
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
@@ -230,7 +233,7 @@ jobs:
       - name: Publish Trivy report to summary
         if: always()
         run: |
-          echo "## Hiyori: Trivy Image Scan" >> $GITHUB_STEP_SUMMARY
+          echo "## Hiyori: Trivy Image Scan (Fedora ${{ inputs.distro_version }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- Image: \`${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Artifact: \`trivy-image-scan-${{ needs.build.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
@@ -250,7 +253,7 @@ jobs:
           fi
 
   sign:
-    name: Cosign Image
+    name: Cosign (${{ inputs.distro_version }})
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -268,12 +271,16 @@ jobs:
           cosign sign --yes \
             "${{ needs.build.outputs.image_ref }}@${{ needs.build.outputs.image_digest }}"
 
-  # -- Release runs after scan + sign --
+  # -- Release runs after scan + sign, only for primary version --
   release:
     name: Semantic Release
     needs: [build, scan, sign]
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
+    if: >-
+      inputs.is_primary &&
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main' &&
+      !contains(github.event.head_commit.message, '[skip ci]')
     timeout-minutes: 15
     steps:
       - name: Checkout
