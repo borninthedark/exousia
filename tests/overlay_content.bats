@@ -87,7 +87,9 @@ assert_has_shebang() {
 
 @test "Skeleton Yubico path should symlink to /etc/Yubico" {
     local link="$OVERLAY_ROOT/base/configs/skel/.config/Yubico"
-    assert_file_exists "$link"
+    # Use -L to check if the link exists without following it to the host filesystem
+    run test -L "$link"
+    assert_success "Symlink $link should exist"
     run readlink "$link"
     assert_output "/etc/Yubico"
 }
