@@ -883,3 +883,43 @@ class TestGeneratorComprehensive:
         gen = _make_generator()
         gen._process_git_clone_module({"repos": [{"url": "http://test"}]})
         assert any("no 'files' defined" in line for line in gen.lines)
+
+
+# --- Smart Override Tests ---
+
+
+class TestProcessPackageLoaderModuleOverrides:
+    def test_smart_overrides_rendered(self):
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = [
+            {"package": "flatpak", "image": "ghcr.io/test/flatpak", "reason": "test fix"}
+        ]
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+
+        output = "\n".join(gen.lines)
+        assert "COPY --from=ghcr.io/test/flatpak" in output
+        assert "rpmdev-vercmp" in output
+        assert "PKG_NAME=$(rpm -qp" in output
+        assert "OVERRIDE_PKGS=" in output
+        assert "dnf install -y $OVERRIDE_PKGS" in output
+
+    def test_no_overrides_rendered_simply(self):
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = []
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+
+        output = "\n".join(gen.lines)
+        assert "rpmdev-vercmp" not in output
+        assert "Processing RPM overrides" not in output

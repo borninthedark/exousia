@@ -273,8 +273,8 @@ class ModuleProcessorsMixin:
         self.lines.append("# hadolint ignore=DL3041,SC2086")
         self.lines.append("RUN set -euxo pipefail; \\")
 
-        # Install dnf5
-        self.lines.append("    dnf install -y dnf5 dnf5-plugins && \\")
+        # Install dnf5 and build requirements for smart overrides
+        self.lines.append("    dnf install -y dnf5 dnf5-plugins rpmdevtools && \\")
         self.lines.append("    rm -f /usr/bin/dnf && ln -s /usr/bin/dnf5 /usr/bin/dnf; \\")
 
         # Add repositories (RPMFusion for Fedora)
@@ -322,10 +322,46 @@ class ModuleProcessorsMixin:
                     f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\"
                 )
 
-        # Install RPM overrides
-        for idx in range(len(rpm_overrides)):
-            stage = f"rpm-override-{idx}"
-            self.lines.append(f"    dnf install -y /tmp/{stage}/*.rpm && rm -rf /tmp/{stage}; \\")
+        # Smart RPM Overrides: only install if newer than system version
+        if rpm_overrides:
+            self.lines.append('    echo "==> Processing RPM overrides..."; \\')
+            self.lines.append('    OVERRIDE_PKGS=""; \\')
+            for idx in range(len(rpm_overrides)):
+                stage = f"rpm-override-{idx}"
+                self.lines.append(f"    if [ -d /tmp/{stage} ]; then \\")
+                self.lines.append(f"        for rpm in /tmp/{stage}/*.rpm; do \\")
+                self.lines.append('            [ -e "$rpm" ] || continue; \\')
+                self.lines.append(
+                    "            PKG_NAME=$(rpm -qp --queryformat '%{NAME}' \"$rpm\"); \\"
+                )
+                self.lines.append(
+                    "            PKG_VER=$(rpm -qp --queryformat '%{VERSION}-%{RELEASE}' \"$rpm\"); \\"
+                )
+                self.lines.append(
+                    '            INSTALLED_VER=$(rpm -q --queryformat \'%{VERSION}-%{RELEASE}\' "$PKG_NAME" 2>/dev/null || echo "0"); \\'
+                )
+                self.lines.append(
+                    '            if [ "$INSTALLED_VER" = "0" ] || rpmdev-vercmp "$PKG_VER" "$INSTALLED_VER" | grep -q "newer"; then \\'
+                )
+                self.lines.append(
+                    '                echo "  - Including override: $PKG_NAME ($PKG_VER > $INSTALLED_VER)"; \\'
+                )
+                self.lines.append('                OVERRIDE_PKGS="$OVERRIDE_PKGS $rpm"; \\')
+                self.lines.append("            else \\")
+                self.lines.append(
+                    '                echo "  - Skipping override: $PKG_NAME ($PKG_VER is not newer than $INSTALLED_VER)"; \\'
+                )
+                self.lines.append("            fi; \\")
+                self.lines.append("        done; \\")
+                self.lines.append("    fi; \\")
+
+            self.lines.append('    if [ -n "$OVERRIDE_PKGS" ]; then \\')
+            self.lines.append("        dnf install -y $OVERRIDE_PKGS; \\")
+            self.lines.append("    fi; \\")
+
+            # Final cleanup of all override stages
+            for idx in range(len(rpm_overrides)):
+                self.lines.append(f"    rm -rf /tmp/rpm-override-{idx}; \\")
 
         # Upgrade and cleanup
         self.lines.append("    dnf upgrade -y; \\")
