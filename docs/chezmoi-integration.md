@@ -9,6 +9,8 @@ Exousia ships the chezmoi tooling, but keeps desktop and session behavior
 authoritative at the system level under `/etc`. The current blueprint still
 enables chezmoi user services globally, so dotfile management is available
 system-wide even though the session stack is designed to remain system-first.
+User-home mutations from chezmoi are outside Exousia's rollback/rebase
+compatibility guarantee.
 This integration provides:
 
 - **Build-time installation**: chezmoi is installed as an RPM package during the image build
@@ -44,7 +46,8 @@ After initialization, if the timer is enabled:
 - 🔄 The `chezmoi-update.timer` runs daily (configurable)
 - 🔄 Waits 5 minutes after boot before first update (configurable)
 - 🔄 Updates dotfiles from the repository
-- 🔄 Replaces local changes with repository version (configurable)
+- 🔄 Preserves local changes by default (`skip`) or replaces them when
+  explicitly configured with `replace`
 
 ## Configuration
 

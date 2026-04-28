@@ -322,10 +322,46 @@ class ModuleProcessorsMixin:
                     f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\"
                 )
 
-        # Install RPM overrides
-        for idx in range(len(rpm_overrides)):
-            stage = f"rpm-override-{idx}"
-            self.lines.append(f"    dnf install -y /tmp/{stage}/*.rpm && rm -rf /tmp/{stage}; \\")
+        # Smart RPM Overrides: only install if newer than system version
+        if rpm_overrides:
+            self.lines.append('    echo "==> Processing RPM overrides..."; \\')
+            self.lines.append('    OVERRIDE_PKGS=""; \\')
+            for idx in range(len(rpm_overrides)):
+                stage = f"rpm-override-{idx}"
+                self.lines.append(f"    if [ -d /tmp/{stage} ]; then \\")
+                self.lines.append(f"        for rpm in /tmp/{stage}/*.rpm; do \\")
+                self.lines.append('            [ -e "$rpm" ] || continue; \\')
+                self.lines.append(
+                    "            PKG_NAME=$(rpm -qp --queryformat '%{NAME}' \"$rpm\"); \\"
+                )
+                self.lines.append(
+                    "            PKG_VER=$(rpm -qp --queryformat '%{EVR}' \"$rpm\"); \\"
+                )
+                self.lines.append(
+                    '            INSTALLED_VER=$(rpm -q --queryformat \'%{EVR}\' "$PKG_NAME" 2>/dev/null) || INSTALLED_VER=""; \\'
+                )
+                self.lines.append(
+                    '            if [ -z "$INSTALLED_VER" ] || [ "$(rpm --eval "%{lua:print(rpm.vercmp(\\"$PKG_VER\\", \\"$INSTALLED_VER\\"))}")" = "1" ]; then \\'
+                )
+                self.lines.append(
+                    '                echo "  - Including override: $PKG_NAME ($PKG_VER > $INSTALLED_VER)"; \\'
+                )
+                self.lines.append('                OVERRIDE_PKGS="$OVERRIDE_PKGS $rpm"; \\')
+                self.lines.append("            else \\")
+                self.lines.append(
+                    '                echo "  - Skipping override: $PKG_NAME ($PKG_VER is not newer than $INSTALLED_VER)"; \\'
+                )
+                self.lines.append("            fi; \\")
+                self.lines.append("        done; \\")
+                self.lines.append("    fi; \\")
+
+            self.lines.append('    if [ -n "$OVERRIDE_PKGS" ]; then \\')
+            self.lines.append("        dnf install -y --skip-broken $OVERRIDE_PKGS; \\")
+            self.lines.append("    fi; \\")
+
+            # Final cleanup of all override stages
+            for idx in range(len(rpm_overrides)):
+                self.lines.append(f"    rm -rf /tmp/rpm-override-{idx}; \\")
 
         # Upgrade and cleanup
         self.lines.append("    dnf upgrade -y; \\")

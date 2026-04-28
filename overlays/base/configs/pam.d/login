@@ -12,6 +12,7 @@ password   include      system-auth
 session    required     pam_selinux.so close
 session    required     pam_loginuid.so
 session    required     pam_selinux.so open
+session    required     pam_lastlog.so showfailed
 session    optional     pam_keyinit.so force revoke
 session    include      system-auth
 session    include      postlogin

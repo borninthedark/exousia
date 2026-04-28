@@ -4,10 +4,10 @@
 
 name: exousia
 description: DevSecOps-hardened Fedora bootc image with Sway desktop
-image-version: 43
+image-version: 44
 
 # Base image configuration - can be overridden via build args
-base-image: quay.io/fedora/fedora-sway-atomic
+base-image: quay.io/fedora/fedora-sway-atomic:44
 image-type: fedora-bootc  # or fedora-bootc
 
 # Desktop environment selection
@@ -177,10 +177,9 @@ modules:
         bin: autotiling
         entry-point: "from autotiling.main import main\\nmain()"
 
-  # Flatpak setup - Boot-time installation via default-flatpaks module
-  # The module creates systemd services that automatically:
-  # 1. Set up the Flathub remote on first boot (if not already present)
-  # 2. Install all configured flatpak applications
+  # Flatpak setup - first-boot install lists via default-flatpaks module
+  # The module writes scope-specific install manifests consumed by the
+  # default-flatpaks service path at runtime.
   # See: https://blue-build.org/reference/modules/default-flatpaks/
   - from-file: overlays/base/packages/common/flatpaks.yml
 
@@ -203,6 +202,30 @@ modules:
   # Security: Initialize AIDE database
   - type: script
     scripts:
+      - |
+        mkdir -p /etc/dnf /etc/dnf/dnf.conf.d
+        if [ -f /etc/dnf/dnf.conf ]; then
+          grep -q '^gpgcheck=' /etc/dnf/dnf.conf \
+            && sed -ri 's/^gpgcheck=.*/gpgcheck=1/' /etc/dnf/dnf.conf \
+            || echo 'gpgcheck=1' >> /etc/dnf/dnf.conf
+        fi
+        if [ -f /etc/dnf/libdnf5.conf ]; then
+          grep -q '^gpgcheck=' /etc/dnf/libdnf5.conf \
+            && sed -ri 's/^gpgcheck=.*/gpgcheck=1/' /etc/dnf/libdnf5.conf \
+            || echo 'gpgcheck=1' >> /etc/dnf/libdnf5.conf
+        fi
+        printf '%s\n' 'gpgcheck=1' 'localpkg_gpgcheck=1' > /etc/dnf/dnf.conf.d/99-exousia-security.conf
+      - |
+        if [ -f /etc/login.defs ]; then
+          sed -ri 's/^PASS_MAX_DAYS.*/PASS_MAX_DAYS\t365/' /etc/login.defs || true
+          sed -ri 's/^PASS_MIN_DAYS.*/PASS_MIN_DAYS\t1/' /etc/login.defs || true
+        fi
+      - |
+        for pam_file in /etc/pam.d/system-auth /etc/pam.d/password-auth; do
+          if [ -f "$pam_file" ]; then
+            sed -ri 's/\bnullok\b//g; s/\bnullresetok\b//g; s/  +/ /g' "$pam_file"
+          fi
+        done
       - mkdir -p /var/lib/aide
       - gzip -nc /dev/null > /var/lib/aide/aide.db.gz
       - aide --init
@@ -254,9 +277,12 @@ modules:
         - bootc-fetch-apply-updates.timer
         - update-system-flatpaks.timer
         - tuned.service
+        - auditd.service
+        - firewalld.service
     user:
       enabled:
         # chezmoi-init.service and chezmoi-update.timer are enabled by the chezmoi module
+        - ensure-user-flathub-remote.service
         - update-user-flatpaks.timer
     default-target: graphical.target
 

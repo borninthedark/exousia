@@ -183,9 +183,9 @@ Suggested `resolved-build-plan.json` shape:
 {
   "image": {
     "name": "exousia",
-    "base_image": "quay.io/fedora/fedora-sway-atomic:43",
+    "base_image": "quay.io/fedora/fedora-sway-atomic:44",
     "image_type": "fedora-bootc",
-    "version": "43"
+    "version": "44"
   },
   "selection": {
     "window_manager": "sway",

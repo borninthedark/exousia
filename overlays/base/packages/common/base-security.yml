@@ -15,6 +15,9 @@ spec:
     - lynis
     - openssl
     - aide
+    - audit
+    - firewalld
+    - openssh-server
     - rkhunter
   conflicts:
     packages: []

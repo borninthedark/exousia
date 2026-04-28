@@ -883,3 +883,158 @@ class TestGeneratorComprehensive:
         gen = _make_generator()
         gen._process_git_clone_module({"repos": [{"url": "http://test"}]})
         assert any("no 'files' defined" in line for line in gen.lines)
+
+
+# --- Smart Override Tests ---
+
+
+class TestProcessPackageLoaderModuleOverrides:
+    def test_smart_overrides_rendered(self):
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = [
+            {"package": "flatpak", "image": "ghcr.io/test/flatpak", "reason": "test fix"}
+        ]
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+
+        output = "\n".join(gen.lines)
+        assert "COPY --from=ghcr.io/test/flatpak" in output
+        assert "rpm.vercmp" in output
+        assert "PKG_NAME=$(rpm -qp" in output
+        assert "OVERRIDE_PKGS=" in output
+        assert "dnf install -y --skip-broken $OVERRIDE_PKGS" in output
+
+    def test_smart_overrides_use_evr_format(self):
+        """EVR (Epoch:Version-Release) format is used for accurate version comparison."""
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = [
+            {"package": "flatpak", "image": "ghcr.io/test/flatpak", "reason": "test fix"}
+        ]
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+
+        output = "\n".join(gen.lines)
+        # Must use %{EVR} (Epoch:Version-Release), not %{VERSION}-%{RELEASE}
+        assert "%{EVR}" in output
+        assert "%{VERSION}-%{RELEASE}" not in output
+
+    def test_smart_overrides_fallback_empty_for_uninstalled(self):
+        """Uninstalled packages fall back to empty string so override always applies."""
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = [
+            {"package": "flatpak", "image": "ghcr.io/test/flatpak", "reason": "test fix"}
+        ]
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+
+        output = "\n".join(gen.lines)
+        # rpm -q exit code sets INSTALLED_VER to empty when package is not installed
+        assert ') || INSTALLED_VER=""' in output
+        # When INSTALLED_VER is empty, override is always included
+        assert '[ -z "$INSTALLED_VER" ]' in output
+
+    def test_smart_overrides_vercmp_checks_newer(self):
+        """rpm.vercmp returns 1 when first arg is newer; only install if newer."""
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = [
+            {"package": "flatpak", "image": "ghcr.io/test/flatpak", "reason": "test fix"}
+        ]
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+
+        output = "\n".join(gen.lines)
+        # rpm.vercmp returns 1 for newer, 0 for equal, -1 for older
+        assert '= "1"' in output
+
+    def test_smart_overrides_skip_broken_for_cross_version(self):
+        """Override install uses --skip-broken for cross-version RPM resilience."""
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = [
+            {"package": "flatpak", "image": "ghcr.io/test/flatpak", "reason": "test fix"}
+        ]
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+
+        output = "\n".join(gen.lines)
+        assert "dnf install -y --skip-broken $OVERRIDE_PKGS" in output
+
+    def test_smart_overrides_no_rpmdevtools_dependency(self):
+        """rpmdevtools must not be required; rpm.vercmp is built-in."""
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = [
+            {"package": "flatpak", "image": "ghcr.io/test/flatpak", "reason": "test fix"}
+        ]
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+
+        output = "\n".join(gen.lines)
+        assert "rpmdevtools" not in output
+        assert "rpmdev-vercmp" not in output
+
+    def test_smart_overrides_multiple_overrides(self):
+        """Multiple overrides each get their own stage directory and comparison."""
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = [
+            {"package": "flatpak", "image": "ghcr.io/test/flatpak", "reason": "CVE fix"},
+            {"package": "bubblewrap", "image": "ghcr.io/test/bubblewrap", "reason": "CVE fix"},
+        ]
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+
+        output = "\n".join(gen.lines)
+        assert "COPY --from=ghcr.io/test/flatpak" in output
+        assert "COPY --from=ghcr.io/test/bubblewrap" in output
+        assert "/tmp/rpm-override-0" in output  # nosec B108
+        assert "/tmp/rpm-override-1" in output  # nosec B108
+        # Each stage gets its own vercmp loop
+        assert output.count("rpm.vercmp") == 2
+
+    def test_no_overrides_rendered_simply(self):
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = []
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+
+        output = "\n".join(gen.lines)
+        assert "rpm.vercmp" not in output
+        assert "Processing RPM overrides" not in output

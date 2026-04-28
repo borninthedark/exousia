@@ -11,13 +11,4 @@ metadata:
 
 spec:
   stage: build
-  overrides:
-    - package: flatpak
-      version: ">= 1.16.6"
-      image: ghcr.io/borninthedark/flatpak-rpms:1.16.6
-      reason: CVE remediation (disclosed 2026-04-12)
-      replaces:
-        - flatpak
-        - flatpak-libs
-        - flatpak-session-helper
-        - flatpak-selinux
+  overrides: []

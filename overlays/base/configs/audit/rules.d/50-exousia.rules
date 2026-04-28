@@ -1,0 +1,36 @@
+-w /etc/group -p wa -k identity
+-w /etc/passwd -p wa -k identity
+-w /etc/gshadow -p wa -k identity
+-w /etc/shadow -p wa -k identity
+-w /etc/security/opasswd -p wa -k identity
+-w /etc/sudoers -p wa -k scope
+-w /etc/sudoers.d/ -p wa -k scope
+-w /var/log/lastlog -p wa -k logins
+-w /var/run/faillock -p wa -k logins
+-w /var/log/btmp -p wa -k logins
+-w /var/log/wtmp -p wa -k logins
+-w /etc/selinux/ -p wa -k MAC-policy
+-w /etc/localtime -p wa -k time-change
+-w /etc/issue -p wa -k system-locale
+-w /etc/issue.net -p wa -k system-locale
+-w /etc/hosts -p wa -k system-locale
+-w /etc/hostname -p wa -k system-locale
+-w /etc/NetworkManager/ -p wa -k system-locale
+-w /etc/sysconfig/network -p wa -k system-locale
+-a always,exit -F arch=b64 -S adjtimex -S settimeofday -S clock_settime -k time-change
+-a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -S clock_settime -k time-change
+-a always,exit -F arch=b64 -S chmod -S fchmod -S fchmodat -S chown -S fchown -S fchownat -S lchown -S setxattr -S lsetxattr -S fsetxattr -S removexattr -S lremovexattr -S fremovexattr -k perm_mod
+-a always,exit -F arch=b32 -S chmod -S fchmod -S fchmodat -S chown -S fchown -S fchownat -S lchown -S setxattr -S lsetxattr -S fsetxattr -S removexattr -S lremovexattr -S fremovexattr -k perm_mod
+-a always,exit -F arch=b64 -S unlink -S unlinkat -S rename -S renameat -S rmdir -k delete
+-a always,exit -F arch=b32 -S unlink -S unlinkat -S rename -S renameat -S rmdir -k delete
+-a always,exit -F arch=b64 -S mount -S umount2 -k mounts
+-a always,exit -F arch=b32 -S mount -S umount -S umount2 -k mounts
+-a always,exit -F arch=b64 -S init_module -S finit_module -S delete_module -k modules
+-a always,exit -F arch=b32 -S init_module -S delete_module -k modules
+-a always,exit -F arch=b64 -S open -S openat -S open_by_handle_at -S creat -S truncate -S ftruncate -F exit=-EACCES -k access
+-a always,exit -F arch=b64 -S open -S openat -S open_by_handle_at -S creat -S truncate -S ftruncate -F exit=-EPERM -k access
+-a always,exit -F arch=b32 -S open -S openat -S creat -S truncate -S ftruncate -F exit=-EACCES -k access
+-a always,exit -F arch=b32 -S open -S openat -S creat -S truncate -S ftruncate -F exit=-EPERM -k access
+-a always,exit -F path=/usr/bin/sudo -F perm=x -F auid>=1000 -F auid!=-1 -k privileged
+-a always,exit -F path=/usr/bin/su -F perm=x -F auid>=1000 -F auid!=-1 -k privileged
+-e 2
