@@ -53,6 +53,8 @@ assert_has_shebang() {
     assert_dir_exists "$OVERLAY_ROOT/base/configs/pam.d"
     assert_dir_exists "$OVERLAY_ROOT/base/configs/tmpfiles.d"
     assert_dir_exists "$OVERLAY_ROOT/base/configs/polkit-1"
+    assert_dir_exists "$OVERLAY_ROOT/base/configs/audit"
+    assert_dir_exists "$OVERLAY_ROOT/base/configs/ssh"
 }
 
 @test "PAM sudo config should exist" {
@@ -76,6 +78,11 @@ assert_has_shebang() {
 @test "PAM login should reference U2F" {
     run grep -q "u2f-sufficient" "$OVERLAY_ROOT/base/configs/pam.d/login"
     assert_success "login PAM config should include u2f-sufficient"
+}
+
+@test "PAM login should display failed login history" {
+    run grep -q "pam_lastlog.so showfailed" "$OVERLAY_ROOT/base/configs/pam.d/login"
+    assert_success "login PAM config should include pam_lastlog showfailed"
 }
 
 @test "PAM U2F include files should use shared /etc/Yubico authfile" {
@@ -104,6 +111,23 @@ assert_has_shebang() {
     assert_file_exists "$OVERLAY_ROOT/base/configs/tmpfiles.d/libvirt.conf"
     run grep -q "/var/lib/libvirt" "$OVERLAY_ROOT/base/configs/tmpfiles.d/libvirt.conf"
     assert_success "tmpfiles config should reference /var/lib/libvirt"
+}
+
+@test "Security hardening configs should exist" {
+    assert_file_exists "$OVERLAY_ROOT/base/configs/audit/auditd.conf"
+    assert_file_exists "$OVERLAY_ROOT/base/configs/audit/rules.d/50-exousia.rules"
+    assert_file_exists "$OVERLAY_ROOT/base/configs/audit/plugins.d/syslog.conf"
+    assert_file_exists "$OVERLAY_ROOT/base/configs/firewalld/firewalld.conf"
+    assert_file_exists "$OVERLAY_ROOT/base/configs/ssh/sshd_config.d/50-exousia-hardening.conf"
+    assert_file_exists "$OVERLAY_ROOT/base/configs/issue"
+    assert_file_exists "$OVERLAY_ROOT/base/configs/issue.net"
+}
+
+@test "User Flathub remote service should exist and use user-scope flatpak remote-add" {
+    local service="$OVERLAY_ROOT/base/systemd/user/ensure-user-flathub-remote.service"
+    assert_file_exists "$service"
+    run grep -q "flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo" "$service"
+    assert_success "User flathub service should configure the user-scope remote"
 }
 
 # ============================================================

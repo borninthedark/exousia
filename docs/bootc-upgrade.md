@@ -16,8 +16,23 @@ Unlike traditional package managers, bootc treats your entire OS as a container 
 This approach provides:
 
 - **Atomic updates**: All-or-nothing upgrades
-- **Automatic rollback**: If boot fails, previous version is used
+- **Rollback-ready deployments**: Previous deployments remain available for
+  boot selection or manual rollback
 - **Predictable state**: Same image everywhere (dev, test, prod)
+
+## Explicit Compatibility Goal
+
+Exousia is intended to stay compatible with same-version Fedora Atomic rebases.
+The project support goal is:
+
+- `Fedora Atomic -> Exousia -> Fedora Atomic`
+- same Fedora major version in both directions
+- no destructive migration requirement outside normal `/etc` and `/var` state
+
+That means Exousia should avoid one-way first-boot mutations, custom partition
+assumptions, or boot flow changes that would prevent a user from rebasing back
+to the matching Fedora Atomic lineage later. Cross-major-version rebases and
+other image-family changes are not implied by this compatibility goal.
 
 ## Basic Upgrade Commands
 
@@ -63,6 +78,17 @@ sudo bootc switch localhost:5000/exousia:current
 make local-mirror
 sudo bootc switch localhost:5000/exousia:latest
 ```
+
+### Rebase Compatibility Notes
+
+For round-trip rebases, keep the Fedora major version aligned:
+
+- Fedora Atomic 44 -> Exousia 44
+- Exousia 44 -> Fedora Atomic 44
+
+Do not treat cross-major rebases and image-family changes as the same
+operation. Change Fedora major versions separately from changing the image
+family whenever you want a reversible path.
 
 ## Upgrade Workflow Best Practices
 
@@ -121,6 +147,8 @@ After rebooting:
    - Network connectivity works
    - Audio/video devices function
    - Applications launch successfully
+   - Rebase-sensitive services still behave correctly:
+     `greetd`, NetworkManager, Flatpak, portals, and boot health
 
 3. **Check logs for issues**
 
@@ -130,9 +158,11 @@ After rebooting:
 
 ## Rollback Procedures
 
-### Automatic Rollback
+### Automatic Fallback Caveat
 
-If the system fails to boot after an upgrade, systemd will automatically boot the previous deployment. No manual intervention needed!
+Some boot flows may fall back to an older deployment after a failed boot, but
+that behavior depends on the surrounding bootloader and health-policy path. Do
+not treat automatic fallback as a guaranteed Exousia feature.
 
 ### Manual Rollback
 
@@ -170,6 +200,17 @@ for host in prod1 prod2 prod3; do
     sleep 300  # Wait 5 minutes between hosts
 done
 ```
+
+### Round-Trip Rebase Validation
+
+Before declaring a release safe for general use, validate:
+
+1. Fedora Atomic -> Exousia
+2. Exousia -> Fedora Atomic
+3. login, networking, Flatpak, and boot health after both directions
+
+This is a release-policy goal even when the CI path cannot fully automate the
+end-to-end rebase test yet.
 
 ### Scheduled Upgrades
 
@@ -247,7 +288,8 @@ sudo cp ~/.config/containers/auth.json /etc/ostree/auth.json
 
 ### Issue: System boots to old deployment after upgrade
 
-**Cause**: New deployment may have failed boot, triggering automatic rollback
+**Cause**: The new deployment may have failed boot, or the boot chain may have
+selected an older deployment based on host-specific policy
 
 **Solution**:
 
@@ -264,7 +306,9 @@ sudo cp ~/.config/containers/auth.json /etc/ostree/auth.json
 
 - `quay.io/fedora/fedora-bootc`
 - `quay.io/fedora/fedora-sway-atomic`
-- `quay.io/fedora-ostree-desktops/*-atomic`
+
+Other Fedora Atomic families should be treated as unverified return paths
+unless Exousia documents them explicitly.
 
 Always pin these bases to a specific OS or desktop environment version. When a
 supported image reference is untagged, the tooling will automatically append
@@ -283,7 +327,7 @@ sudo bootc upgrade --apply
 
 1. ✅ **Always check status** before and after upgrades
 2. ✅ **Test in VMs first** before bare metal
-3. ✅ **Keep two deployments** for safety (automatic)
+3. ✅ **Keep multiple deployments** available for rollback safety
 4. ✅ **Monitor logs** after upgrades
 5. ✅ **Use specific tags** for production systems
 6. ✅ **Document your rollback plan**

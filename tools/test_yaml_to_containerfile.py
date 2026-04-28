@@ -56,6 +56,31 @@ def test_generator_is_stateless():
     print("✓ Generator is stateless - multiple generate() calls work correctly")
 
 
+def test_adnyeus_enables_security_baseline_services_and_hardening():
+    """The root blueprint should carry the security baseline controls."""
+    root = Path(__file__).parent.parent
+    adnyeus = yaml.safe_load((root / "adnyeus.yml").read_text())
+
+    systemd_modules = [m for m in adnyeus["modules"] if m.get("type") == "systemd"]
+    assert systemd_modules, "Expected a systemd module in adnyeus.yml"
+    enabled = systemd_modules[0]["system"]["enabled"]
+    assert "auditd.service" in enabled
+    assert "firewalld.service" in enabled
+    user_enabled = systemd_modules[0]["user"]["enabled"]
+    assert "ensure-user-flathub-remote.service" in user_enabled
+
+    script_blocks = [
+        "\n".join(module.get("scripts", []))
+        for module in adnyeus["modules"]
+        if module.get("type") == "script"
+    ]
+    merged = "\n".join(script_blocks)
+    assert "gpgcheck=1" in merged
+    assert "PASS_MAX_DAYS" in merged
+    assert "nullok" in merged
+    assert "aide --init" in merged
+
+
 def test_rpm_module_includes_common_remove_packages():
     """Ensure rpm-ostree modules respect the shared removal list."""
 

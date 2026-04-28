@@ -5,6 +5,16 @@ Exousia currently supports Fedora-based image generation for both
 defaults to a `fedora-sway-atomic` base image, even when other image types are
 still supported by the toolchain and tests.
 
+That statement covers build-tool support, not identical operational maturity.
+Today:
+
+- the root blueprint default is `fedora-sway-atomic`
+- the toolchain can generate both `fedora-sway-atomic` and `fedora-bootc`
+- the pure `fedora-bootc` base remains an explicit migration target rather
+  than the established default desktop base
+- the rebase compatibility goal is same-version Fedora Atomic -> Exousia ->
+  Fedora Atomic, not arbitrary cross-family or cross-major rebases
+
 ## Fedora Atomic Variants
 
 | Image Type | Desktop Environment | Base Image |
@@ -19,7 +29,7 @@ still supported by the toolchain and tests.
 1. Go to **Actions** → **Urahara - Orchestrator**
 2. Click **Run workflow**
 3. Select your desired **image type** (e.g., `fedora-bootc` or `fedora-sway-atomic`)
-4. Select the Fedora version (`43`, `44`, or `rawhide`)
+4. Select the Fedora version (`44`, `rawhide`, or another explicitly supplied version)
 5. Click **Run workflow**
 
 Images are tagged with:
@@ -43,6 +53,8 @@ uv run python -m generator \
 buildah build -f Containerfile.sway -t localhost/fedora-sway-atomic .
 
 ```
+
+The default root blueprint now targets Fedora `44`.
 
 ### Image Tags
 

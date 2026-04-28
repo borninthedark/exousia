@@ -8,7 +8,8 @@
 > respective copyright holders.
 
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/urahara.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/urahara.yml)
-[![Last Build: Fedora 43 / Sway](https://img.shields.io/badge/Last%20Build-Fedora%2043%20/%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/actions/workflows/urahara.yml?query=branch%3Amain+is%3Asuccess)
+[![Kon](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/kon.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Kon)](https://github.com/borninthedark/exousia/actions/workflows/kon.yml)
+[![Default Blueprint: Fedora 44 / Sway](https://img.shields.io/badge/Default%20Blueprint-Fedora%2044%20/%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/blob/main/adnyeus.yml)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#contents)
 
 Declarative bootc image builder for Fedora Linux. YAML blueprints define OS
@@ -27,9 +28,7 @@ them with Buildah, and GitHub Actions publishes signed images to GHCR.
 - [CI/CD Pipeline](#cicd-pipeline)
 - [Customizing Builds](#customizing-builds)
 - [Official Dotfiles](#official-dotfiles)
-- [YubiKey Authentication](#yubikey-authentication)
-- [Required Secrets and Variables](#required-secrets-and-variables)
-- [CVE Remediation](#cve-remediation)
+- [Security](#security)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
 - [Acknowledgments](#acknowledgments)
@@ -52,6 +51,9 @@ sudo bootc upgrade && sudo systemctl reboot
 > ```bash
 > flatpak remote-add --if-not-exists --system flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 > ```
+>
+> The image also ships a user service that ensures the per-user Flathub remote
+> exists on login.
 
 ### Build locally
 
@@ -114,6 +116,11 @@ graph TD
 Urahara calls Hikifune and Uhin in parallel. When both pass, Hiyori builds,
 signs, scans, and cuts a semver release on `main`.
 
+Exousia explicitly aims to remain rebase-compatible with the matching Fedora
+Atomic desktop lineage. The support goal is that a system can move from a
+Fedora Atomic image to Exousia and back again on the same Fedora major version
+without requiring destructive migration steps.
+
 ---
 
 ## Customizing Builds
@@ -139,7 +146,7 @@ the blueprint directly.
 | `overlays/sway/configs/greetd/` | greetd display manager |
 | `overlays/sway/configs/plymouth/` | Boot splash themes |
 | `overlays/base/configs/pam.d/` | PAM authentication (YubiKey U2F) |
-| `overlays/sway/scripts/runtime/` | Runtime scripts (autotiling, lid, volume) |
+| `overlays/sway/scripts/runtime/` | Runtime scripts (layered-include, lid, volume-helper) |
 | `overlays/sway/scripts/setup/` | Build-time setup scripts |
 
 ### Desktop and boot
@@ -159,11 +166,15 @@ This project is designed to be used with the official **[borninthedark/dotfiles]
 The image includes a `chezmoi` module configuration for these dotfiles. At the
 moment, the blueprint enables the user services globally (`all-users: true`),
 so dotfile initialization/update is not purely opt-in even though desktop and
-session behavior remain primarily system-defined under `/etc`.
+session behavior remain primarily system-defined under `/etc`. Treat that as a
+current implementation detail, not the preferred long-term desktop contract.
+Changes under user home directories are outside the rollback/rebase guarantee.
 
 ---
 
-## YubiKey Authentication
+## Security
+
+### YubiKey Authentication
 
 Exousia ships PAM U2F modules for YubiKey hardware authentication. After
 deploying, register your key:
@@ -183,7 +194,7 @@ default. See
 
 ---
 
-## Required Secrets and Variables
+### Required Secrets and Variables
 
 Configure in GitHub **Settings > Secrets and variables > Actions**.
 
@@ -197,7 +208,25 @@ Secrets propagate to child workflows via `secrets: inherit` in Urahara.
 
 ---
 
-## CVE Remediation
+### Compliance and OpenSCAP
+
+OpenSCAP is part of Hiyori's non-PR image validation path. The current
+hardening baseline now covers:
+
+- AIDE database initialization during image assembly
+- global DNF GPG-check enforcement
+- PAM login history display and no-empty-password hardening
+- SSH hardening drop-ins for empty-password and root-login denial
+- auditd baseline configuration and rules
+- firewalld default-zone configuration
+
+Some OpenSCAP items remain host- or profile-dependent rather than purely
+image-local, especially GRUB kernel arguments and RPM verification noise caused
+by intentional image customization.
+
+---
+
+### CVE Remediation
 
 Current Trivy findings, active remediations, and the RPM override workflow are
 tracked in [docs/cve-remediation.md](docs/cve-remediation.md).

@@ -16,9 +16,9 @@ default. Matrix builds are opt-in through manual dispatch.
 | Value | Behavior |
 |-------|----------|
 | *(empty)* | Build blueprint default (`image-version`) |
-| `43` | Build Fedora 43 only |
 | `44` | Build Fedora 44 only |
-| `43,44` | Build Fedora 43 and 44 in parallel |
+| `43` | Build Fedora 43 only (compatibility / backtest case) |
+| `44,rawhide` | Build Fedora 44 and rawhide in parallel |
 | `43,44,rawhide` | Build three versions in parallel |
 
 ## Default Behavior
@@ -45,7 +45,7 @@ All builds (primary and non-primary) receive:
 
 - Version-scoped tag: `:f43`, `:f44`
 - Branch-version tag: `:main-f43`, `:main-f44`
-- Build-specific tag: `:fedora-sway-atomic-f43-abc12345`
+- Build-specific tag: `:fedora-sway-atomic-f44-abc12345`
 - Trivy scan + artifact upload
 - OpenSCAP compliance scan
 - Cosign signature
@@ -56,7 +56,8 @@ The matrix pattern is designed to extend to additional dimensions:
 
 - **Window manager**: `sway`, future alternatives
 - **Desktop environment**: `kde`, `mate`
-- **Image type**: `fedora-sway-atomic`, `fedora-bootc`
+- **Image type**: current `fedora-sway-atomic` default plus the planned pure
+  `fedora-bootc` base target
 
 These will be additive inputs in Urahara when the blueprint supports them.
 

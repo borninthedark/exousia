@@ -105,7 +105,7 @@ for most use cases.
 ```yaml
 - type: rpm-ostree
   repos:
-    - https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm
+    - https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-44.noarch.rpm
   config-manager:
     - fedora-cisco-openh264
   install:
@@ -192,7 +192,8 @@ Exousia keeps desktop and session configuration authoritative at the system
 level under `/etc`. If you use `chezmoi` for user dotfiles, prefer
 `all-users: false` unless you explicitly want global per-user activation. The
 current `adnyeus.yml` blueprint still sets `all-users: true`, so treat this as
-recommended direction rather than a description of the live default.
+recommended direction rather than a description of the live default. Changes in
+user home directories are outside the rollback/rebase compatibility guarantee.
 
 ```yaml
 - type: chezmoi
@@ -260,7 +261,7 @@ available as RPMs.
       type: python
       module: autotiling
       bin: autotiling
-      entry-point: "from autotiling.main import main\\nmain()"
+  entry-point: "from autotiling.main import main\\nmain()"
 ```
 
 ### Install Types
@@ -275,7 +276,7 @@ an entry-point script:
 | `branch` | no | — | Branch to clone |
 | `module` | no | name with `-` → `_` | Python module directory name |
 | `bin` | no | name | Binary name in `/usr/local/bin/` |
-| `entry-point` | no | `from <module>.main import main\nmain()` | Python entry point code |
+| `entry-point` | no | `from <module>.main import main\nmain()` | Module-level Python entry point code for all `repos[]` entries in this module |
 
 **`script`** — Installs a single script:
 
@@ -321,7 +322,9 @@ those signed with the configured key from `ghcr.io/borninthedark`.
 
 ## `default-flatpaks`
 
-Generates flatpak install lists for first-boot installation via systemd.
+Generates flatpak install lists consumed by the first-boot flatpak service
+path. The generator writes the manifests; the runtime service/install flow
+uses them later.
 
 ```yaml
 - type: default-flatpaks
@@ -342,6 +345,8 @@ Generates flatpak install lists for first-boot installation via systemd.
 | `configurations[].install` | yes | List of flatpak app IDs |
 
 Install lists are written to `/usr/share/exousia/flatpaks/<scope>-install.list`.
+This module does not itself emit the systemd service units; it provides the
+manifest inputs that the default-flatpaks runtime path uses.
 
 ---
 

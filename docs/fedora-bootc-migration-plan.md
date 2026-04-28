@@ -12,6 +12,10 @@ capability currently inherited from `fedora-sway-atomic` is either:
 - explicitly layered by Exousia, or
 - intentionally dropped with a documented reason.
 
+The migration also needs to preserve the project's explicit compatibility goal:
+same-version `fedora-sway-atomic -> Exousia -> fedora-sway-atomic` rebases
+must remain viable without destructive migration steps.
+
 ## Why this move
 
 - reduce hidden desktop behavior inherited from the Sway atomic image
@@ -138,6 +142,8 @@ Required assertions:
 - portal packages and services are present
 - PipeWire/WirePlumber stack is present
 - Flatpak remote and Flatpak helper units still work
+- same-version round-trip rebases preserve login, network, Flatpak, and boot
+  health when moving to Exousia and back to `fedora-sway-atomic`
 
 Likely test files:
 
@@ -185,4 +191,6 @@ The migration is complete when:
 - `adnyeus.yml` uses `quay.io/fedora/fedora-bootc`
 - all required desktop/session behavior is explicitly declared by Exousia
 - Bats and Python tests pass against the new base
+- same-version `fedora-sway-atomic -> Exousia -> fedora-sway-atomic`
+  rebase validation passes for login, network, Flatpak, and boot health
 - docs no longer assume `fedora-sway-atomic` inheritance for desktop behavior

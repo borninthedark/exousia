@@ -192,7 +192,8 @@ git clone https://github.com/bats-core/bats-assert test/test_helper/bats-assert
 git clone https://github.com/bats-core/bats-file test/test_helper/bats-file
 ```
 
-1. In CI, libraries are installed via `bats-core/bats-action@3.0.0`
+1. In CI, Bats is provisioned via the pinned `bats-core/bats-action` step in
+   `uhin.yml`
 
 ---
 

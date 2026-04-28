@@ -30,7 +30,7 @@ on:
           - "fedora-bootc"
         default: "fedora-sway-atomic"
       distro_versions:
-        description: "Fedora versions to build (comma-separated, e.g. 43 or 43,44). Leave empty to use blueprint default."
+        description: "Fedora versions to build (comma-separated, e.g. 44 or 44,rawhide). Leave empty to use blueprint default."
         required: false
         type: string
         default: ""
