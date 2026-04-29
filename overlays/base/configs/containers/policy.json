@@ -12,7 +12,7 @@
           "fulcio": {
             "caPath": "/etc/pki/cosign/fulcio_v1.crt.pem",
             "oidcIssuer": "https://token.actions.githubusercontent.com",
-            "subjectEmail": ""
+            "subjectEmail": "https://github.com/borninthedark/exousia/.github/workflows/hiyori.yml@refs/heads/main"
           },
           "rekorPublicKeyPath": "/etc/pki/cosign/rekor.pub",
           "signedIdentity": {
