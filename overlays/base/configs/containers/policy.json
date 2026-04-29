@@ -1,0 +1,64 @@
+{
+  "default": [
+    {
+      "type": "reject"
+    }
+  ],
+  "transports": {
+    "docker": {
+      "ghcr.io/borninthedark": [
+        {
+          "type": "sigstoreSigned",
+          "fulcio": {
+            "caPath": "/etc/pki/cosign/fulcio_v1.crt.pem",
+            "oidcIssuer": "https://token.actions.githubusercontent.com",
+            "subjectEmail": ""
+          },
+          "rekorPublicKeyPath": "/etc/pki/cosign/rekor.pub",
+          "signedIdentity": {
+            "type": "matchRepository"
+          }
+        }
+      ],
+      "docker.io": [
+        {
+          "type": "insecureAcceptAnything"
+        }
+      ],
+      "quay.io": [
+        {
+          "type": "insecureAcceptAnything"
+        }
+      ],
+      "registry.access.redhat.com": [
+        {
+          "type": "insecureAcceptAnything"
+        }
+      ],
+      "registry.fedoraproject.org": [
+        {
+          "type": "insecureAcceptAnything"
+        }
+      ],
+      "": [
+        {
+          "type": "insecureAcceptAnything"
+        }
+      ]
+    },
+    "atomic": {
+      "": [
+        {
+          "type": "insecureAcceptAnything"
+        }
+      ]
+    },
+    "containers-storage": {
+      "": [
+        {
+          "type": "insecureAcceptAnything"
+        }
+      ]
+    }
+  }
+}

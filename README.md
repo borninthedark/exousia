@@ -8,8 +8,8 @@
 > respective copyright holders.
 
 [![Reiatsu](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/urahara.yml?branch=main&style=for-the-badge&logo=zap&logoColor=white&label=Reiatsu&color=00A4EF)](https://github.com/borninthedark/exousia/actions/workflows/urahara.yml)
-[![Kon](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/kon.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Kon)](https://github.com/borninthedark/exousia/actions/workflows/kon.yml)
-[![Default Blueprint: Fedora 44 / Sway](https://img.shields.io/badge/Default%20Blueprint-Fedora%2044%20/%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/blob/main/adnyeus.yml)
+[![Kon](https://img.shields.io/github/actions/workflow/status/borninthedark/exousia/kon.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Kon-sama)](https://github.com/borninthedark/exousia/actions/workflows/kon.yml)
+[![Asauchi: Fedora 44 / Sway](https://img.shields.io/badge/Asauchi-Fedora%2044%20/%20Sway-0A74DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/borninthedark/exousia/blob/main/adnyeus.yml)
 [![Highly Experimental](https://img.shields.io/badge/Highly%20Experimental-DANGER%21-E53935?style=for-the-badge&logo=skull&logoColor=white)](#contents)
 
 Declarative bootc image builder for Fedora Linux. YAML blueprints define OS
@@ -37,23 +37,26 @@ them with Buildah, and GitHub Actions publishes signed images to GHCR.
 
 ## Quick Start
 
-### Use a published image
+### Rebase onto a published image
+
+First rebase is unverified (the image ships its own sigstore policy):
 
 ```bash
-make start-exousia-registry
-make local-mirror
-sudo bootc switch localhost:5000/exousia:latest
-sudo bootc upgrade && sudo systemctl reboot
+sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/borninthedark/exousia:latest
+sudo systemctl reboot
 ```
 
-> Exousia delivers desktop apps via Flatpak. Set up Flathub before switching:
->
-> ```bash
-> flatpak remote-add --if-not-exists --system flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-> ```
->
-> The image also ships a user service that ensures the per-user Flathub remote
-> exists on login.
+After the first boot, the image's signature policy is active. All subsequent
+upgrades are automatically verified via cosign/sigstore. To explicitly rebase
+with verification:
+
+```bash
+sudo rpm-ostree rebase ostree-image-signed:docker://ghcr.io/borninthedark/exousia:latest
+sudo systemctl reboot
+```
+
+> Exousia delivers desktop apps via Flatpak. The image ships a user service
+> that sets up the Flathub remote on first login.
 
 ### Build locally
 
@@ -109,7 +112,7 @@ graph TD
 | **Hikifune** | `hikifune.yml` | CI: Ruff, Black, isort, pytest |
 | **Uhin** | `uhin.yml` | Security: file-structure gate, overlay Bats, Hadolint, Checkov, Trivy config scan, Bandit, OSV-Scanner |
 | **Hiyori** | `hiyori.yml` | Build, Trivy image scan artifact, SBOM submission, OpenSCAP, Cosign, semver release |
-| **Kon** | `kon.yml` | Advanced CodeQL analysis for Python and GitHub Actions |
+| **Kon-sama** | `kon.yml` | Advanced CodeQL analysis for Python and GitHub Actions |
 | **Nemu** | `nemu.yml` | Post-CI: commits refreshed STATUS.md |
 | **Mayuri** | `mayuri.yml` | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara |
 
@@ -163,12 +166,7 @@ the blueprint directly.
 
 This project is designed to be used with the official **[borninthedark/dotfiles](https://github.com/borninthedark/dotfiles)** repository.
 
-The image includes a `chezmoi` module configuration for these dotfiles. At the
-moment, the blueprint enables the user services globally (`all-users: true`),
-so dotfile initialization/update is not purely opt-in even though desktop and
-session behavior remain primarily system-defined under `/etc`. Treat that as a
-current implementation detail, not the preferred long-term desktop contract.
-Changes under user home directories are outside the rollback/rebase guarantee.
+The image uses chezmoi to sync these dotfiles at boot via systemd user services.
 
 ---
 
