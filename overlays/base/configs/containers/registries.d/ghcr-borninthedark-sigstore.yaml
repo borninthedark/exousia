@@ -1,0 +1,3 @@
+docker:
+  ghcr.io/borninthedark:
+    use-sigstore-attachments: true
