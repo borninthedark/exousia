@@ -569,6 +569,23 @@ class TestProcessSigningModule:
         gen._process_signing_module({"policy-file": "overlays/policy.json"})
         assert any("COPY" in line and "policy.json" in line for line in gen.lines)
 
+    def test_policy_file_skips_inline_echo(self):
+        """When policy-file is set, no inline echo should overwrite it."""
+        gen = _make_generator()
+        gen._process_signing_module({"policy-file": "overlays/base/configs/containers/policy.json"})
+        output = "\n".join(gen.lines)
+        assert "echo " not in output or "policy.json" not in output.split("echo")[0]
+        assert "COPY" in output
+        assert "overlays/base/configs/containers/policy.json" in output
+
+    def test_no_policy_file_writes_inline(self):
+        """Without policy-file, inline echo is the fallback."""
+        gen = _make_generator()
+        gen._process_signing_module({})
+        output = "\n".join(gen.lines)
+        assert "echo " in output
+        assert "policy.json" in output
+
 
 # --- _process_default_flatpaks_module ---
 
