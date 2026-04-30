@@ -1,0 +1,161 @@
+# Sealed Boot Pipeline — Wraps base Exousia image with measured boot chain
+# Runs after Hiyori builds the base image. Uses podman (not buildx) for
+# oci-archive and chunkah rechunking support.
+#
+# Required secrets:
+#   SECUREBOOT_KEY  — PEM-encoded Secure Boot db private key
+#   SECUREBOOT_CERT — PEM-encoded Secure Boot db certificate
+#   GHCR_PAT       — GHCR push token
+#
+name: "Sealed Boot"
+
+on:
+  workflow_call:
+    inputs:
+      base_image:
+        description: "Base Exousia image ref (e.g. ghcr.io/borninthedark/exousia:f44-abcd1234)"
+        type: string
+        required: true
+      distro_version:
+        description: "Fedora version"
+        type: string
+        required: true
+      is_primary:
+        description: "Primary build — receives :latest-sealed tag"
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      base_image:
+        description: "Base Exousia image ref to seal"
+        required: true
+        type: string
+      distro_version:
+        description: "Fedora version"
+        required: true
+        type: string
+        default: "44"
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+env:
+  REGISTRY_URL: ghcr.io
+
+jobs:
+  seal:
+    name: Seal (${{ inputs.distro_version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install podman
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq podman
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GHCR_PAT }}" | podman login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+      - name: Write Secure Boot keys
+        run: |
+          mkdir -p sealed/keys/db
+          echo "${{ secrets.SECUREBOOT_KEY }}" > sealed/keys/db/db.key
+          echo "${{ secrets.SECUREBOOT_CERT }}" > sealed/keys/db/db.pem
+
+      - name: Build systemd-boot (signed)
+        working-directory: sealed
+        run: |
+          podman build \
+            -t exousia-systemd-boot:${{ inputs.distro_version }} \
+            --build-arg=RELEASE=${{ inputs.distro_version }} \
+            --secret=id=secureboot_key,src=keys/db/db.key \
+            --secret=id=secureboot_crt,src=keys/db/db.pem \
+            -f Containerfile.systemd-boot
+
+      - name: Build tools
+        working-directory: sealed
+        run: |
+          podman build \
+            -t exousia-tools:${{ inputs.distro_version }} \
+            --build-arg=RELEASE=${{ inputs.distro_version }} \
+            -f Containerfile.tools
+
+      - name: Build sealed image
+        working-directory: sealed
+        run: |
+          podman build \
+            --build-arg=BASE=${{ inputs.base_image }} \
+            --build-arg=SYSTEMDBOOT=localhost/exousia-systemd-boot:${{ inputs.distro_version }} \
+            --build-arg=TOOLS=localhost/exousia-tools:${{ inputs.distro_version }} \
+            -t sealed-exousia:${{ inputs.distro_version }} \
+            --skip-unused-stages=false \
+            -v "$(pwd):/run/src" \
+            --security-opt=label=disable \
+            --secret=id=secureboot_key,src=keys/db/db.key \
+            --secret=id=secureboot_crt,src=keys/db/db.pem \
+            -f Containerfile \
+            .
+
+      - name: Generate sealed image tags
+        id: tags
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE="${{ env.REGISTRY_URL }}/${OWNER}/${REPO}"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          FVER="f${{ inputs.distro_version }}"
+
+          TAG="sealed-${FVER}-${SHORT_SHA}"
+          echo "image=${IMAGE}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "fver=${FVER}" >> $GITHUB_OUTPUT
+
+      - name: Push sealed image
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          IMAGE="${{ steps.tags.outputs.image }}"
+          TAG="${{ steps.tags.outputs.tag }}"
+          FVER="${{ steps.tags.outputs.fver }}"
+
+          podman tag sealed-exousia:${{ inputs.distro_version }} "${IMAGE}:${TAG}"
+          podman tag sealed-exousia:${{ inputs.distro_version }} "${IMAGE}:sealed-${FVER}"
+          podman push "${IMAGE}:${TAG}"
+          podman push "${IMAGE}:sealed-${FVER}"
+
+          if [[ "${{ inputs.is_primary }}" == "true" ]]; then
+            podman tag sealed-exousia:${{ inputs.distro_version }} "${IMAGE}:sealed-latest"
+            podman push "${IMAGE}:sealed-latest"
+          fi
+
+      - name: Install cosign
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+
+      - name: Sign sealed image
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          IMAGE="${{ steps.tags.outputs.image }}"
+          TAG="${{ steps.tags.outputs.tag }}"
+          DIGEST=$(podman inspect --format='{{.Digest}}' "${IMAGE}:${TAG}")
+          cosign sign --yes "${IMAGE}@${DIGEST}"
+
+      - name: Cleanup keys
+        if: always()
+        run: rm -rf sealed/keys
+
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## Sealed Boot Results (Fedora ${{ inputs.distro_version }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Base Image | \`${{ inputs.base_image }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Sealed Tag | \`${{ steps.tags.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Primary | ${{ inputs.is_primary }} |" >> $GITHUB_STEP_SUMMARY

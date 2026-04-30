@@ -55,6 +55,11 @@ on:
         required: true
         type: boolean
         default: true
+      enable_sealed:
+        description: "Build sealed boot image (requires SB key secrets)"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -133,10 +138,30 @@ jobs:
       packages: write
       id-token: write
 
+  # -- Sealed Boot (optional, after Hiyori) --
+  sealed:
+    name: "Sealed (f${{ matrix.distro_version }})"
+    needs: [defaults, hiyori]
+    if: inputs.enable_sealed == true && github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        distro_version: ${{ fromJSON(needs.defaults.outputs.versions) }}
+    uses: ./.github/workflows/sealed.yml
+    with:
+      base_image: ghcr.io/borninthedark/exousia:f${{ matrix.distro_version }}
+      distro_version: ${{ matrix.distro_version }}
+      is_primary: ${{ matrix.distro_version == needs.defaults.outputs.primary_version }}
+    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
   # -- Gate: summary of all jobs --
   gate:
     name: "Gate (Summary)"
-    needs: [hikifune, uhin, hiyori]
+    needs: [hikifune, uhin, hiyori, sealed]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -149,10 +174,12 @@ jobs:
           echo "| Hikifune (CI) | ${{ needs.hikifune.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Uhin (Security) | ${{ needs.uhin.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Hiyori (Build) | ${{ needs.hiyori.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Sealed Boot | ${{ needs.sealed.result }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if any job failed
         if: >-
           needs.hikifune.result == 'failure' ||
           needs.uhin.result == 'failure' ||
-          needs.hiyori.result == 'failure'
+          needs.hiyori.result == 'failure' ||
+          (needs.sealed.result == 'failure')
         run: exit 1

@@ -31,10 +31,10 @@ export TEST_IMAGE_TAG=localhost:5000/exousia:latest
 buildah unshare -- bats -r tests/
 ```
 
-**Using Make:**
+**Using just:**
 
 ```bash
-make local-test
+just local-test
 ```
 
 ---
@@ -527,10 +527,10 @@ buildah run "$CONTAINER" -- systemctl list-unit-files | grep greetd
 
 ```bash
 # Build locally first
-make build
+just build
 
 # Then test
-make local-test
+just local-test
 ```
 
 1. Use SSD for build/test operations
@@ -626,9 +626,9 @@ git diff HEAD~1 tests/
 
 ```bash
 # Clean build
-make clean
-make local-build
-make local-test
+just clean
+just local-build
+just local-test
 ```
 
 ### 5. Open an Issue

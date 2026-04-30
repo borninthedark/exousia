@@ -1,0 +1,16 @@
+# Exousia Sealed Boot — Build environment with ukify + sbsigntools + bootc
+# Reference: travier/fedora-atomic-desktops-sealed
+
+ARG RELEASE=44
+FROM registry.fedoraproject.org/fedora-minimal:${RELEASE}
+RUN --mount=type=tmpfs,target=/run \
+    --mount=type=tmpfs,target=/tmp \
+    --mount=type=tmpfs,target=/var \
+    <<EORUN
+set -euo pipefail
+set -x
+rm -f "/etc/yum.repos.d/fedora-cisco-openh264.repo"
+dnf install -y systemd-ukify sbsigntools jq
+dnf install -y --enablerepo=updates-testing --refresh bootc
+mkdir -p /boot/EFI/Linux
+EORUN

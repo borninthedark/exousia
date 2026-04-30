@@ -1,0 +1,6 @@
+# Exousia Sealed Boot — sbctl container for Secure Boot key generation
+# Reference: travier/fedora-atomic-desktops-sealed
+
+FROM docker.io/archlinux:latest
+RUN pacman -Syu --noconfirm sbctl
+ENTRYPOINT ["sbctl"]
