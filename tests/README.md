@@ -5,10 +5,10 @@ Bats-based integration tests for bootc container images.
 ## Running Tests
 
 ```bash
-# Build and test via Makefile
-make local-build
-make overlay-test
-make local-test
+# Build and test via justfile
+just local-build
+just overlay-test
+just local-test
 
 # Or run directly
 buildah unshare -- bats tests/overlay_content.bats

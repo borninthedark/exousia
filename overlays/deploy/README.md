@@ -20,7 +20,7 @@ All quadlets are **disabled by default** (`[Install]` is commented out).
 Install the quadlet files, then explicitly start the services you need:
 
 ```bash
-make quadlet-install   # Install quadlet files to systemd
+just quadlet-install   # Install quadlet files to systemd
 ```
 
 To enable auto-start on login, uncomment `[Install]` / `WantedBy=default.target`
@@ -43,8 +43,8 @@ simple for the whole Exousia project:
 Bootstrap the Plane environment file, then start the stack:
 
 ```bash
-make plane-install
-make plane-start
+just plane-install
+just plane-start
 ```
 
 The startup sequence follows Plane's Podman Quadlet guidance: shared network,

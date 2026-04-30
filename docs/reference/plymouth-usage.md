@@ -43,7 +43,7 @@ The Plymouth boot splash system has been modularized into separate components:
 
 ```bash
 # Using local build flow
-make local-build
+just local-build
 
 # Using Podman directly
 podman build \
@@ -318,7 +318,7 @@ ls -la /usr/share/plymouth/themes/
 
 ```bash
 # Run the image Bats suite against your built image
-make local-test
+just local-test
 ```
 
 ### Manual Testing in Container

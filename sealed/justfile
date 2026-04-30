@@ -1,0 +1,183 @@
+# Exousia Sealed Boot — Build recipes
+# Reference: travier/fedora-atomic-desktops-sealed
+#
+# Usage:
+#   just generate-secure-boot-keys       # One-time key generation
+#   just build-all <base_image>          # Full sealed build pipeline
+#   just qcow2                           # Create QCOW2 disk image
+#   just generate-ovmf-vars              # OVMF vars with SB keys
+#   just libvirt <disk_image>            # Boot in libvirt VM
+
+# Fedora release version (from blueprint)
+release := "44"
+
+# Secure Boot key paths
+sb_key := "keys/db/db.key"
+sb_cert := "keys/db/db.pem"
+
+# Container image tags for local builds
+systemd_boot_image := "localhost/exousia-systemd-boot:" + release
+tools_image := "localhost/exousia-tools:" + release
+
+# Generate Secure Boot keys using sbctl
+generate-secure-boot-keys:
+    #!/bin/bash
+    set -euo pipefail
+    podman build -t exousia-sbctl -f Containerfile.sbctl
+    podman run --rm -ti --security-opt=label=disable \
+        --volume "$(pwd):/run/src" --workdir /run/src \
+        localhost/exousia-sbctl:latest create-keys --config sbctl.conf
+
+# Sign systemd-boot with Secure Boot keys
+sign-systemd-boot:
+    #!/bin/bash
+    set -euo pipefail
+    podman build \
+        -t exousia-systemd-boot:{{release}} \
+        --build-arg=RELEASE={{release}} \
+        --secret=id=secureboot_key,src={{sb_key}} \
+        --secret=id=secureboot_crt,src={{sb_cert}} \
+        -f Containerfile.systemd-boot
+
+# Build the UKI signing tools container
+build-tools:
+    #!/bin/bash
+    set -euo pipefail
+    podman build \
+        -t exousia-tools:{{release}} \
+        --build-arg=RELEASE={{release}} \
+        -f Containerfile.tools
+
+# Build and sign a UKI addon
+uki-addon name commandline:
+    #!/bin/bash
+    set -euo pipefail
+    podman build \
+        -t exousia-uki-addon-{{name}}:{{release}} \
+        --build-arg=TOOLS={{tools_image}} \
+        --build-arg=NAME={{name}} \
+        --build-arg=COMMANDLINE="{{commandline}}" \
+        --secret=id=secureboot_key,src={{sb_key}} \
+        --secret=id=secureboot_crt,src={{sb_cert}} \
+        -f Containerfile.uki-addon
+
+# Build the full sealed image (all stages)
+# Requires: sign-systemd-boot and build-tools to have been run first
+build base_image:
+    #!/bin/bash
+    set -euo pipefail
+    podman build \
+        --build-arg=BASE={{base_image}} \
+        --build-arg=SYSTEMDBOOT={{systemd_boot_image}} \
+        --build-arg=TOOLS={{tools_image}} \
+        -t exousia-sealed:{{release}} \
+        --skip-unused-stages=false \
+        -v "$(pwd):/run/src" \
+        --security-opt=label=disable \
+        --secret=id=secureboot_key,src={{sb_key}} \
+        --secret=id=secureboot_crt,src={{sb_cert}} \
+        -f Containerfile \
+        .
+
+# Build everything from scratch (keys must already exist)
+build-all base_image: sign-systemd-boot build-tools (build base_image)
+
+# ---------------------------------------------------------------------------
+# QCOW2 + libvirt testing
+# ---------------------------------------------------------------------------
+
+# How to connect to libvirt
+libvirt_uri := "qemu:///system"
+
+# Install the sealed image to a QCOW2 disk image
+qcow2:
+    #!/bin/bash
+    set -euo pipefail
+    if ! command -v bootc-image-builder &>/dev/null && ! command -v bcvk &>/dev/null; then
+        echo "ERROR: bootc-image-builder or bcvk required"
+        echo "Install via: podman pull quay.io/centos-bootc/bootc-image-builder"
+        exit 1
+    fi
+    podman run --rm -it --privileged \
+        --security-opt=label=type:unconfined_t \
+        -v "$(pwd):/output" \
+        -v /var/lib/containers/storage:/var/lib/containers/storage \
+        quay.io/centos-bootc/bootc-image-builder:latest \
+        --type qcow2 \
+        --rootfs btrfs \
+        --local \
+        localhost/exousia-sealed:{{release}}
+    echo "==> QCOW2 image created: exousia-sealed-{{release}}.qcow2"
+
+# Generate OVMF variable file with custom Secure Boot keys
+generate-ovmf-vars:
+    #!/bin/bash
+    set -euo pipefail
+    if [[ ! -d "keys" ]]; then
+        echo "ERROR: Missing Secure Boot keys — run 'just generate-secure-boot-keys' first"
+        exit 1
+    fi
+    GUID=$(cat keys/GUID)
+    virt-fw-vars \
+        --input "/usr/share/edk2/ovmf/OVMF_VARS_4M.secboot.qcow2" \
+        --secure-boot \
+        --set-pk  "$GUID" "keys/PK/PK.pem" \
+        --add-kek "$GUID" "keys/KEK/KEK.pem" \
+        --add-db  "$GUID" "keys/db/db.pem" \
+        -o "OVMF_VARS_CUSTOM.qcow2"
+    echo "==> OVMF vars with custom SB keys: OVMF_VARS_CUSTOM.qcow2"
+
+# Boot the QCOW2 image with libvirt (requires generate-ovmf-vars first)
+libvirt disk_image:
+    #!/bin/bash
+    set -euo pipefail
+    DEST="${HOME}/.local/share/libvirt/images"
+    mkdir -p "${DEST}"
+
+    name="exousia-sealed-{{release}}"
+    image="{{disk_image}}"
+    ovmf_vars="${DEST}/${name}_ovmf_vars.qcow2"
+
+    if [[ ! -f "OVMF_VARS_CUSTOM.qcow2" ]]; then
+        echo "ERROR: Run 'just generate-ovmf-vars' first"
+        exit 1
+    fi
+    cp "OVMF_VARS_CUSTOM.qcow2" "${ovmf_vars}"
+
+    VCPUS="4"
+    RAM_MB="4096"
+
+    OVMF_CODE="/usr/share/edk2/ovmf/OVMF_CODE_4M.secboot.qcow2"
+    OVMF_VARS_TEMPLATE="/usr/share/edk2/ovmf/OVMF_VARS_4M.secboot.qcow2"
+
+    loader="loader=${OVMF_CODE},loader.readonly=yes,loader.type=pflash,loader_secure=yes"
+    nvram="nvram=${ovmf_vars},nvram.template=${OVMF_VARS_TEMPLATE}"
+    features="firmware.feature0.name=secure-boot,firmware.feature0.enabled=yes,firmware.feature1.name=enrolled-keys,firmware.feature1.enabled=yes"
+    uefi_arg="uefi,${loader},${nvram},${features}"
+
+    virt-install --connect="{{libvirt_uri}}" \
+        --name="${name}" \
+        --vcpus="${VCPUS}" \
+        --memory="${RAM_MB}" \
+        --os-variant="fedora43" \
+        --import \
+        --disk="size=20,backing_store=${image}" \
+        --network bridge=virbr0 \
+        --machine q35 \
+        --boot "${uefi_arg}" \
+        --tpm "backend.type=emulator,backend.version=2.0,model=tpm-tis" \
+        --noautoconsole
+    echo "==> VM '${name}' created. Connect with: virsh console ${name}"
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+# Inspect a UKI or UKI addon
+inspect uki:
+    #!/bin/bash
+    set -euo pipefail
+    podman run --rm -ti --security-opt=label=disable \
+        --volume "$(pwd):/run/src" --workdir /run/src \
+        {{tools_image}} \
+        ukify inspect "/run/src/{{uki}}"

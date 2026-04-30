@@ -21,8 +21,8 @@ podman --version
 
 ```bash
 # Build and publish your local test image first
-make start-exousia-registry
-make local-build
+just start exousia-registry
+just local-build
 
 # Generate a raw disk image for testing
 sudo podman run \
@@ -144,7 +144,7 @@ sync
 1. **Test container first**: Always run your container tests before building disk images
 
    ```bash
-   make local-test
+   just local-test
    ```
 
 2. **Check image size**: Review your container image size to estimate disk space needed

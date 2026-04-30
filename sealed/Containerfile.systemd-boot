@@ -1,0 +1,28 @@
+# Exousia Sealed Boot — Sign systemd-boot EFI binary with Secure Boot keys
+# Reference: travier/fedora-atomic-desktops-sealed
+
+ARG RELEASE=44
+FROM registry.fedoraproject.org/fedora-minimal:${RELEASE} AS builder
+
+RUN <<EORUN
+set -euo pipefail
+set -x
+rm -f "/etc/yum.repos.d/fedora-cisco-openh264.repo"
+dnf install -y systemd-boot-unsigned sbsigntools && dnf clean all
+EORUN
+
+RUN --mount=type=tmpfs,target=/run \
+    --mount=type=secret,id=secureboot_key \
+    --mount=type=secret,id=secureboot_crt \
+    <<EORUN
+set -euo pipefail
+set -x
+sbsign \
+    --key /run/secrets/secureboot_key \
+    --cert /run/secrets/secureboot_crt \
+    --output /systemd-bootx64.efi \
+    /usr/lib/systemd/boot/efi/systemd-bootx64.efi
+EORUN
+
+FROM scratch
+COPY --from=builder /systemd-bootx64.efi /systemd-bootx64.efi

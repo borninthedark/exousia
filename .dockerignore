@@ -6,6 +6,7 @@
 .gitignore
 .dockerignore
 Makefile
+justfile
 README.md
 LICENSE
 

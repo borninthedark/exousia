@@ -26,6 +26,7 @@ Exousia uses a 12th Division-themed GitHub Actions pipeline (Shinigami Research 
 | **Uhin** | `uhin.yml` | 12th -- Security: Hadolint, Checkov, Trivy config scan, Bandit, OSV-Scanner |
 | **Hiyori** | `hiyori.yml` | 12th -- Build, Trivy scan artifact, SBOM submission, Cosign, semver release ([matrix builds](matrix-builds.md)) |
 | **Kon** | `kon.yml` | 12th -- Advanced CodeQL analysis for Python and GitHub Actions |
+| **Sealed** | `sealed.yml` | 12th -- Sealed boot: wraps base image with signed boot chain, composefs, UKI |
 | **Nemu** | `nemu.yml` | 12th -- Post-CI: refreshes tracked `STATUS.md` from the latest main-branch Urahara run |
 | **Mayuri** | `mayuri.yml` | 12th -- Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
 
@@ -43,6 +44,8 @@ Configure in GitHub repository settings under **Settings > Secrets and variables
 | Name | Purpose |
 |------|---------|
 | `GHCR_PAT` | GHCR personal access token for CI RPM override pulls and local/manual registry access |
+| `SECUREBOOT_KEY` | PEM-encoded Secure Boot db private key (sealed boot only) |
+| `SECUREBOOT_CERT` | PEM-encoded Secure Boot db certificate (sealed boot only) |
 
 Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 
@@ -80,6 +83,7 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 - **[package-management-and-container-builds.md](package-management-and-container-builds.md)** -- Typed package-set model and resolved build-plan direction
 - **[local-build-pipeline.md](local-build-pipeline.md)** -- Quadlet services, local build, GHCR publication, and local registry mirroring
 
+- **[sealed-boot.md](sealed-boot.md)** -- Sealed boot architecture, key management, and usage
 - **[security-boundaries.md](security-boundaries.md)** -- Security model and boundaries
 
 ## Reference
