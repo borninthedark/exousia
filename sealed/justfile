@@ -1,0 +1,70 @@
+# Exousia Sealed Boot — Build recipes
+# Reference: travier/fedora-atomic-desktops-sealed
+#
+# Usage:
+#   just generate-secure-boot-keys   # One-time key generation
+#   just sign-systemd-boot           # Sign systemd-boot EFI
+#   just build-tools                 # Build UKI signing toolchain
+#   just uki-addon <name> <cmdline>  # Build a signed UKI addon
+
+# Fedora release version (from blueprint)
+release := "44"
+
+# Secure Boot key paths
+sb_key := "keys/db/db.key"
+sb_cert := "keys/db/db.pem"
+
+# Container image tags for local builds
+systemd_boot_image := "localhost/exousia-systemd-boot:" + release
+tools_image := "localhost/exousia-tools:" + release
+
+# Generate Secure Boot keys using sbctl
+generate-secure-boot-keys:
+    #!/bin/bash
+    set -euo pipefail
+    podman build -t exousia-sbctl -f Containerfile.sbctl
+    podman run --rm -ti --security-opt=label=disable \
+        --volume "$(pwd):/run/src" --workdir /run/src \
+        localhost/exousia-sbctl:latest create-keys --config sbctl.conf
+
+# Sign systemd-boot with Secure Boot keys
+sign-systemd-boot:
+    #!/bin/bash
+    set -euo pipefail
+    podman build \
+        -t exousia-systemd-boot:{{release}} \
+        --build-arg=RELEASE={{release}} \
+        --secret=id=secureboot_key,src={{sb_key}} \
+        --secret=id=secureboot_crt,src={{sb_cert}} \
+        -f Containerfile.systemd-boot
+
+# Build the UKI signing tools container
+build-tools:
+    #!/bin/bash
+    set -euo pipefail
+    podman build \
+        -t exousia-tools:{{release}} \
+        --build-arg=RELEASE={{release}} \
+        -f Containerfile.tools
+
+# Build and sign a UKI addon
+uki-addon name commandline:
+    #!/bin/bash
+    set -euo pipefail
+    podman build \
+        -t exousia-uki-addon-{{name}}:{{release}} \
+        --build-arg=TOOLS={{tools_image}} \
+        --build-arg=NAME={{name}} \
+        --build-arg=COMMANDLINE="{{commandline}}" \
+        --secret=id=secureboot_key,src={{sb_key}} \
+        --secret=id=secureboot_crt,src={{sb_cert}} \
+        -f Containerfile.uki-addon
+
+# Inspect a UKI or UKI addon
+inspect uki:
+    #!/bin/bash
+    set -euo pipefail
+    podman run --rm -ti --security-opt=label=disable \
+        --volume "$(pwd):/run/src" --workdir /run/src \
+        {{tools_image}} \
+        ukify inspect "/run/src/{{uki}}"

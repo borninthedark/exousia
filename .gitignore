@@ -46,6 +46,11 @@ Thumbs.db
 .env
 env/
 
+# Sealed boot — Secure Boot keys (generated locally, never committed)
+sealed/keys/
+sealed/sbctl.conf
+sealed/*.qcow2
+
 # LLM agent context files — local only, never committed (parity with .chezmoiignore)
 CLAUDE.md
 GEMINI.md
