@@ -140,3 +140,14 @@ repos:
         types: [python]
         pass_filenames: false
         always_run: true
+
+  # Konsō — dead code detection for tools/ directory
+  - repo: local
+    hooks:
+      - id: konso-check
+        name: konso-check (tools/)
+        entry: uv run python tools/konso_check.py --path tools
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true

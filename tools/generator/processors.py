@@ -453,8 +453,7 @@ class ModuleProcessorsMixin:
                 if src and dst:
                     commands.append(f"install -m {mode} {clone_dir}/{src} {dst}")
             commands.append(f"rm -rf {clone_dir}")
-        if commands:
-            self._render_script_lines(commands, "set -euxo pipefail")
+        self._render_script_lines(commands, "set -euxo pipefail")
 
     def _process_github_install_module(self, module: dict[str, Any]):
         """Process github-install module (install packages from GitHub repos).
@@ -514,8 +513,7 @@ class ModuleProcessorsMixin:
 
             commands.append(f"rm -rf {clone_dir}")
 
-        if commands:
-            self._render_script_lines(commands, "set -euxo pipefail")
+        self._render_script_lines(commands, "set -euxo pipefail")
 
     def _process_signing_module(self, module: dict[str, Any]):
         """Process signing module (image signature verification policy).
@@ -540,8 +538,7 @@ class ModuleProcessorsMixin:
         if cosign_key:
             self.lines.append(f"COPY --chmod=0644 {cosign_key} /etc/pki/containers/cosign.pub")
 
-        if commands:
-            self._render_script_lines(commands, "set -euxo pipefail")
+        self._render_script_lines(commands, "set -euxo pipefail")
 
         if policy_file:
             self.lines.append(f"COPY --chmod=0644 {policy_file} /etc/containers/policy.json")
@@ -574,8 +571,7 @@ class ModuleProcessorsMixin:
                     f"printf '%b\\n' '{list_content}' > /usr/share/exousia/flatpaks/{scope}-install.list"
                 )
 
-        if commands:
-            self._render_script_lines(commands, "set -euxo pipefail")
+        self._render_script_lines(commands, "set -euxo pipefail")
 
     def _evaluate_condition(self, condition: str) -> bool:
         """Evaluate a condition string against current context."""
