@@ -543,48 +543,56 @@ class TestLoadCommonRemovePackages:
 
 
 class TestProcessSigningModule:
-    def test_default_enforce_mode(self):
+    def test_installs_skopeo_and_creates_dirs(self):
         gen = _make_generator()
         gen._process_signing_module({})
         output = "\n".join(gen.lines)
         assert "dnf install -y --skip-unavailable skopeo" in output
+        assert "dnf clean all" in output
         assert "mkdir -p /etc/containers/registries.d" in output
         assert "mkdir -p /etc/pki/containers" in output
-        assert "sigstoreSigned" in output
-        assert "policy.json" in output
 
-    def test_warn_mode(self):
-        gen = _make_generator()
-        gen._process_signing_module({"verification": "warn"})
-        output = "\n".join(gen.lines)
-        assert "insecureAcceptAnything" in output
-
-    def test_cosign_key_copy(self):
+    def test_cosign_key_copies_to_pki(self):
         gen = _make_generator()
         gen._process_signing_module({"cosign-key": "keys/cosign.pub"})
-        assert any("COPY" in line for line in gen.lines)
+        assert "COPY --chmod=0644 keys/cosign.pub /etc/pki/containers/cosign.pub" in gen.lines
 
-    def test_policy_file_override(self):
-        gen = _make_generator()
-        gen._process_signing_module({"policy-file": "overlays/policy.json"})
-        assert any("COPY" in line and "policy.json" in line for line in gen.lines)
-
-    def test_policy_file_skips_inline_echo(self):
-        """When policy-file is set, no inline echo should overwrite it."""
+    def test_policy_file_copies_overlay(self):
         gen = _make_generator()
         gen._process_signing_module({"policy-file": "overlays/base/configs/containers/policy.json"})
-        output = "\n".join(gen.lines)
-        assert "echo " not in output or "policy.json" not in output.split("echo")[0]
-        assert "COPY" in output
-        assert "overlays/base/configs/containers/policy.json" in output
+        assert (
+            "COPY --chmod=0644 overlays/base/configs/containers/policy.json /etc/containers/policy.json"
+            in gen.lines
+        )
 
-    def test_no_policy_file_writes_inline(self):
-        """Without policy-file, inline echo is the fallback."""
+    def test_policy_file_never_emits_echo(self):
+        gen = _make_generator()
+        gen._process_signing_module({"policy-file": "overlays/policy.json"})
+        output = "\n".join(gen.lines)
+        assert "echo" not in output
+
+    def test_no_policy_file_emits_warning(self):
         gen = _make_generator()
         gen._process_signing_module({})
+        assert "# WARNING: no policy-file set — provide an overlay policy.json" in gen.lines
+
+    def test_cosign_key_with_policy_file(self):
+        gen = _make_generator()
+        gen._process_signing_module(
+            {
+                "cosign-key": "keys/cosign.pub",
+                "policy-file": "overlays/policy.json",
+            }
+        )
         output = "\n".join(gen.lines)
-        assert "echo " in output
-        assert "policy.json" in output
+        assert "COPY --chmod=0644 keys/cosign.pub /etc/pki/containers/cosign.pub" in output
+        assert "COPY --chmod=0644 overlays/policy.json /etc/containers/policy.json" in output
+        assert "echo" not in output
+
+    def test_no_cosign_key_skips_pki_copy(self):
+        gen = _make_generator()
+        gen._process_signing_module({"policy-file": "overlays/policy.json"})
+        assert not any("cosign.pub" in line for line in gen.lines)
 
 
 # --- _process_default_flatpaks_module ---
@@ -821,7 +829,7 @@ class TestGeneratorComprehensive:
                     "type": "git-clone",
                     "repos": [{"url": "u", "files": [{"src": "s", "dst": "d"}]}],
                 },
-                {"type": "signing", "verification": "warn"},
+                {"type": "signing", "policy-file": "overlays/policy.json"},
                 {
                     "type": "default-flatpaks",
                     "configurations": [{"scope": "system", "install": ["app"]}],
@@ -860,7 +868,7 @@ class TestGeneratorComprehensive:
                     "type": "github-install",
                     "repos": [{"url": "u", "name": "test", "type": "python"}],
                 },
-                {"type": "signing", "verification": "enforce"},
+                {"type": "signing", "policy-file": "overlays/policy.json"},
             ],
         }
         gen = ContainerfileGenerator(config, context)

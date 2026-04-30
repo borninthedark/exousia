@@ -521,13 +521,11 @@ class ModuleProcessorsMixin:
         """Process signing module (image signature verification policy).
 
         Configures the built image to verify container signatures using
-        cosign/sigstore. When a policy-file is provided, it is COPYed as
-        the authoritative policy.json (the overlay file is the source of
-        truth). Otherwise, an inline policy is generated as a fallback.
+        cosign/sigstore. Requires a policy-file overlay as the source of
+        truth — no inline policy generation.
         """
         cosign_key = module.get("cosign-key")
         policy_file = module.get("policy-file")
-        verification_mode = module.get("verification", "enforce")
 
         commands: list[str] = []
 
@@ -542,25 +540,13 @@ class ModuleProcessorsMixin:
         if cosign_key:
             self.lines.append(f"COPY --chmod=0644 {cosign_key} /etc/pki/containers/cosign.pub")
 
+        if commands:
+            self._render_script_lines(commands, "set -euxo pipefail")
+
         if policy_file:
-            # Use the provided policy file — COPY runs after the RUN block
-            # so it overwrites any earlier COPY from the configs overlay
-            if commands:
-                self._render_script_lines(commands, "set -euxo pipefail")
             self.lines.append(f"COPY --chmod=0644 {policy_file} /etc/containers/policy.json")
         else:
-            # No policy file — generate an inline fallback
-            if verification_mode == "enforce":
-                policy_content = (
-                    '{"default":[{"type":"reject"}],'
-                    '"transports":{"docker":{"ghcr.io/borninthedark":'
-                    '[{"type":"sigstoreSigned","keyPath":"/etc/pki/containers/cosign.pub"}]}}}'
-                )
-            else:
-                policy_content = '{"default":[{"type":"insecureAcceptAnything"}]}'
-            commands.append(f"echo '{policy_content}' > /etc/containers/policy.json")
-            if commands:
-                self._render_script_lines(commands, "set -euxo pipefail")
+            self.lines.append("# WARNING: no policy-file set — provide an overlay policy.json")
 
     def _process_default_flatpaks_module(self, module: dict[str, Any]):
         """Process default-flatpaks module (first-boot flatpak installation).
