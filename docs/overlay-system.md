@@ -12,10 +12,13 @@ overlays/
 ├── base/                               # Shared across all image types
 │   ├── configs/
 │   │   ├── aide.conf                  # AIDE intrusion detection configuration
-│   │   ├── containers/               # Podman registry configuration
+│   │   ├── containers/               # Podman registry and signature policy
+│   │   │   ├── policy.json           # Container signature verification policy
 │   │   │   ├── registries.conf
-│   │   │   └── registries.conf.d/01-local-registry.conf
+│   │   │   ├── registries.conf.d/01-local-registry.conf
+│   │   │   └── registries.d/ghcr-borninthedark-sigstore.yaml
 │   │   ├── pam.d/                     # PAM authentication (login, sudo, U2F)
+│   │   ├── pki/cosign/               # Sigstore trust root (Fulcio CA, Rekor key)
 │   │   ├── polkit-1/rules.d/         # Polkit authorization rules
 │   │   ├── security/limits.d/        # Realtime audio resource limits
 │   │   ├── skel/.config/             # User-level defaults (sway, waybar, swaylock)
@@ -113,7 +116,8 @@ generates `COPY` directives. The general mapping:
 | `base/configs/pam.d/` | `/etc/pam.d/` | PAM authentication modules |
 | `base/configs/polkit-1/` | `/etc/polkit-1/` | Authorization policies |
 | `base/configs/tmpfiles.d/` | `/etc/tmpfiles.d/` | Temp file rules (libvirt) |
-| `base/configs/containers/` | `/etc/containers/` | Podman registry configuration |
+| `base/configs/containers/` | `/etc/containers/` | Podman registry config, signature policy, sigstore attachments |
+| `base/configs/pki/cosign/` | `/etc/pki/cosign/` | Sigstore trust root (Fulcio CA cert, Rekor public key) |
 | `base/configs/security/limits.d/` | `/etc/security/limits.d/` | Realtime resource limits |
 | `base/configs/sysctl.d/` | `/etc/sysctl.d/` | Kernel tuning parameters |
 | `base/configs/aide.conf` | `/etc/aide.conf` | AIDE intrusion detection config |
