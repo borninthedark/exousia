@@ -231,8 +231,9 @@ modules:
       - aide --init
       - mv -f /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
 
-  # Enable image signing support
+  # Enable image signing support — overlay policy.json is the source of truth
   - type: signing
+    policy-file: overlays/base/configs/containers/policy.json
 
   # Plymouth configuration (all images when enabled)
   - type: script

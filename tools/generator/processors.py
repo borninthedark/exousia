@@ -453,8 +453,7 @@ class ModuleProcessorsMixin:
                 if src and dst:
                     commands.append(f"install -m {mode} {clone_dir}/{src} {dst}")
             commands.append(f"rm -rf {clone_dir}")
-        if commands:
-            self._render_script_lines(commands, "set -euxo pipefail")
+        self._render_script_lines(commands, "set -euxo pipefail")
 
     def _process_github_install_module(self, module: dict[str, Any]):
         """Process github-install module (install packages from GitHub repos).
@@ -514,19 +513,17 @@ class ModuleProcessorsMixin:
 
             commands.append(f"rm -rf {clone_dir}")
 
-        if commands:
-            self._render_script_lines(commands, "set -euxo pipefail")
+        self._render_script_lines(commands, "set -euxo pipefail")
 
     def _process_signing_module(self, module: dict[str, Any]):
         """Process signing module (image signature verification policy).
 
         Configures the built image to verify container signatures using
-        cosign/sigstore. This embeds the public key and policy so the
-        running system can verify its own image provenance.
+        cosign/sigstore. Requires a policy-file overlay as the source of
+        truth — no inline policy generation.
         """
         cosign_key = module.get("cosign-key")
         policy_file = module.get("policy-file")
-        verification_mode = module.get("verification", "enforce")
 
         commands: list[str] = []
 
@@ -539,28 +536,14 @@ class ModuleProcessorsMixin:
         commands.append("mkdir -p /etc/pki/containers")
 
         if cosign_key:
-            # Copy the cosign public key into the image
             self.lines.append(f"COPY --chmod=0644 {cosign_key} /etc/pki/containers/cosign.pub")
 
-        # Configure signature verification policy
-        if verification_mode == "enforce":
-            policy_content = (
-                '{"default":[{"type":"reject"}],'
-                '"transports":{"docker":{"ghcr.io/borninthedark":'
-                '[{"type":"sigstoreSigned","keyPath":"/etc/pki/containers/cosign.pub"}]}}}'
-            )
-        else:
-            # warn mode — accept all but log
-            policy_content = '{"default":[{"type":"insecureAcceptAnything"}]}'
-
-        commands.append(f"echo '{policy_content}' > /etc/containers/policy.json")
+        self._render_script_lines(commands, "set -euxo pipefail")
 
         if policy_file:
-            # Override with user-provided policy
             self.lines.append(f"COPY --chmod=0644 {policy_file} /etc/containers/policy.json")
-
-        if commands:
-            self._render_script_lines(commands, "set -euxo pipefail")
+        else:
+            self.lines.append("# WARNING: no policy-file set — provide an overlay policy.json")
 
     def _process_default_flatpaks_module(self, module: dict[str, Any]):
         """Process default-flatpaks module (first-boot flatpak installation).
@@ -588,8 +571,7 @@ class ModuleProcessorsMixin:
                     f"printf '%b\\n' '{list_content}' > /usr/share/exousia/flatpaks/{scope}-install.list"
                 )
 
-        if commands:
-            self._render_script_lines(commands, "set -euxo pipefail")
+        self._render_script_lines(commands, "set -euxo pipefail")
 
     def _evaluate_condition(self, condition: str) -> bool:
         """Evaluate a condition string against current context."""

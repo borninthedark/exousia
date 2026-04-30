@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
-from dry_check import CodeBlock, DuplicationDetector, _hash_content, find_python_files, main
+from check_utils import find_python_files
+from dry_check import CodeBlock, DuplicationDetector, _hash_content, main
 
 # ---------------------------------------------------------------------------
 # _hash_content
@@ -227,7 +230,20 @@ class TestReport:
     def test_no_duplicates_message(self):
         dd = DuplicationDetector()
         lines = dd.report_lines()
-        assert any("No significant" in ln for ln in lines)
+        assert any("dry-check: scanned" in ln for ln in lines)
+        assert any("no significant" in ln for ln in lines)
+
+    def test_no_duplicates_functions_mode(self):
+        dd = DuplicationDetector()
+        dd.blocks = [CodeBlock(Path("a.py"), 1, 5, "x")]
+        lines = dd.report_lines(use_functions=True)
+        assert any("functions" in ln for ln in lines)
+
+    def test_no_duplicates_blocks_mode(self):
+        dd = DuplicationDetector()
+        dd.blocks = [CodeBlock(Path("a.py"), 1, 5, "x")]
+        lines = dd.report_lines(use_functions=False)
+        assert any("code blocks" in ln for ln in lines)
 
     def test_report_with_duplicates(self, tmp_path):
         body = (
@@ -242,8 +258,9 @@ class TestReport:
         (tmp_path / "two.py").write_text(body)
         dd = DuplicationDetector(min_lines=3)
         dd.find_duplicates([tmp_path / "one.py", tmp_path / "two.py"], use_functions=True)
-        lines = dd.report_lines()
+        lines = dd.report_lines(use_functions=True)
         report_text = "\n".join(lines)
+        assert "dry-check: scanned" in report_text
         assert "DUPLICATION REPORT" in report_text
         assert "REMEDIATION TASKS" in report_text
         assert "EXACT DUPLICATE" in report_text

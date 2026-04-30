@@ -192,6 +192,22 @@ class TestProcessScriptModule:
         gen._process_script_module({"scripts": ["   "]})
         assert gen.lines == []
 
+    def test_single_multiline_all_blank_lines(self):
+        gen = _make_generator()
+        gen._process_script_module({"scripts": ["\n\n\n"]})
+        assert gen.lines == []
+
+    def test_multiple_scripts_empty_stripped(self):
+        gen = _make_generator()
+        gen._process_script_module({"scripts": ["  ", "   "]})
+        assert gen.lines == []
+
+    def test_multiple_scripts_mixed_empty(self):
+        gen = _make_generator()
+        gen._process_script_module({"scripts": ["  ", "echo real"]})
+        output = "\n".join(gen.lines)
+        assert "echo real" in output
+
 
 # --- _process_rpm_module ---
 
@@ -273,6 +289,23 @@ class TestProcessRpmModule:
         # nano should appear only once in the remove command
         remove_line = [line for line in gen.lines if "Removing" in line][0]
         assert "1 packages" in remove_line
+
+    def test_conditional_install_empty_packages(self):
+        gen = _make_generator(context=_make_context(image_type="fedora-bootc"))
+        with patch.object(gen, "_load_common_remove_packages", return_value=[]):
+            gen._process_rpm_module(
+                {
+                    "install-conditional": [
+                        {
+                            "condition": 'image-type == "fedora-bootc"',
+                            "packages": [],
+                        }
+                    ],
+                    "install": [],
+                }
+            )
+        output = "\n".join(gen.lines)
+        assert "conditional packages" not in output
 
 
 # --- _process_systemd_module ---
@@ -374,6 +407,18 @@ class TestProcessChezmoiModule:
             "chezmoi-update.timer" not in output.split("enable")[-1] if "enable" in output else True
         )
 
+    def test_chezmoi_both_disabled_no_enable(self):
+        gen = _make_generator()
+        gen._process_chezmoi_module(
+            {
+                "repository": "https://github.com/user/dots.git",
+                "disable-init": True,
+                "disable-update": True,
+            }
+        )
+        output = "\n".join(gen.lines)
+        assert "systemctl" not in output
+
 
 # --- _process_git_clone_module ---
 
@@ -450,6 +495,22 @@ class TestProcessGitCloneModule:
         assert "git-clone-0" in output
         assert "git-clone-1" in output
 
+    def test_file_missing_src_skipped(self):
+        gen = _make_generator()
+        gen._process_git_clone_module(
+            {
+                "repos": [
+                    {
+                        "url": "https://github.com/a/a.git",
+                        "files": [{"dst": "/x"}, {"src": "y", "dst": "/y"}],
+                    }
+                ]
+            }
+        )
+        output = "\n".join(gen.lines)
+        assert "install -m 0644" in output
+        assert output.count("install -m") == 1
+
 
 # --- _evaluate_condition ---
 
@@ -501,6 +562,10 @@ class TestEvaluateCondition:
         gen = _make_generator()
         assert gen._evaluate_condition('unknown_field == "x"') is False
 
+    def test_bare_string_returns_false(self):
+        gen = _make_generator()
+        assert gen._evaluate_condition("some_flag") is False
+
     def test_quoted_values(self):
         gen = _make_generator(context=_make_context(image_type="fedora-bootc"))
         assert gen._evaluate_condition("image-type == 'fedora-bootc'") is True
@@ -527,6 +592,71 @@ class TestProcessPackageLoaderModule:
             gen._process_package_loader_module({"window_manager": "sway"})
         assert any("ERROR" in line for line in gen.lines)
 
+    def test_non_fedora_skips_rpmfusion(self):
+        gen = _make_generator(context=_make_context(distro="centos"))
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = []
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+        output = "\n".join(gen.lines)
+        assert "rpmfusion" not in output
+
+    def test_group_installs_and_removals(self):
+        gen = _make_generator(context=_make_context(distro="fedora"))
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {
+                "install": [{"name": "vim"}],
+                "remove": [],
+                "groups": {
+                    "install": [{"name": "Multimedia"}],
+                    "remove": [{"name": "LibreOffice"}],
+                },
+            }
+        }
+        mock_loader.load_rpm_overrides.return_value = []
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+        output = "\n".join(gen.lines)
+        assert "dnf group install -y 'Multimedia'" in output
+        assert "dnf group remove -y 'LibreOffice'" in output
+
+    def test_no_install_packages(self):
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [], "remove": [{"name": "nano"}], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = []
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+        output = "\n".join(gen.lines)
+        assert "dnf install -y --skip-unavailable" not in output
+        assert "dnf remove -y nano" in output
+
+    def test_sys_path_insert_when_missing(self):
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = []
+        tools_dir = str(Path(__file__).parent)
+        original_path = sys.path.copy()
+        try:
+            sys.path[:] = [p for p in sys.path if p != tools_dir]
+            with patch("package_loader.PackageLoader", return_value=mock_loader):
+                gen._process_package_loader_module({"window_manager": "sway"})
+            assert tools_dir in sys.path
+        finally:
+            sys.path[:] = original_path
+
 
 # --- _load_common_remove_packages ---
 
@@ -543,31 +673,56 @@ class TestLoadCommonRemovePackages:
 
 
 class TestProcessSigningModule:
-    def test_default_enforce_mode(self):
+    def test_installs_skopeo_and_creates_dirs(self):
         gen = _make_generator()
         gen._process_signing_module({})
         output = "\n".join(gen.lines)
         assert "dnf install -y --skip-unavailable skopeo" in output
+        assert "dnf clean all" in output
         assert "mkdir -p /etc/containers/registries.d" in output
         assert "mkdir -p /etc/pki/containers" in output
-        assert "sigstoreSigned" in output
-        assert "policy.json" in output
 
-    def test_warn_mode(self):
-        gen = _make_generator()
-        gen._process_signing_module({"verification": "warn"})
-        output = "\n".join(gen.lines)
-        assert "insecureAcceptAnything" in output
-
-    def test_cosign_key_copy(self):
+    def test_cosign_key_copies_to_pki(self):
         gen = _make_generator()
         gen._process_signing_module({"cosign-key": "keys/cosign.pub"})
-        assert any("COPY" in line for line in gen.lines)
+        assert "COPY --chmod=0644 keys/cosign.pub /etc/pki/containers/cosign.pub" in gen.lines
 
-    def test_policy_file_override(self):
+    def test_policy_file_copies_overlay(self):
+        gen = _make_generator()
+        gen._process_signing_module({"policy-file": "overlays/base/configs/containers/policy.json"})
+        assert (
+            "COPY --chmod=0644 overlays/base/configs/containers/policy.json /etc/containers/policy.json"
+            in gen.lines
+        )
+
+    def test_policy_file_never_emits_echo(self):
         gen = _make_generator()
         gen._process_signing_module({"policy-file": "overlays/policy.json"})
-        assert any("COPY" in line and "policy.json" in line for line in gen.lines)
+        output = "\n".join(gen.lines)
+        assert "echo" not in output
+
+    def test_no_policy_file_emits_warning(self):
+        gen = _make_generator()
+        gen._process_signing_module({})
+        assert "# WARNING: no policy-file set — provide an overlay policy.json" in gen.lines
+
+    def test_cosign_key_with_policy_file(self):
+        gen = _make_generator()
+        gen._process_signing_module(
+            {
+                "cosign-key": "keys/cosign.pub",
+                "policy-file": "overlays/policy.json",
+            }
+        )
+        output = "\n".join(gen.lines)
+        assert "COPY --chmod=0644 keys/cosign.pub /etc/pki/containers/cosign.pub" in output
+        assert "COPY --chmod=0644 overlays/policy.json /etc/containers/policy.json" in output
+        assert "echo" not in output
+
+    def test_no_cosign_key_skips_pki_copy(self):
+        gen = _make_generator()
+        gen._process_signing_module({"policy-file": "overlays/policy.json"})
+        assert not any("cosign.pub" in line for line in gen.lines)
 
 
 # --- _process_default_flatpaks_module ---
@@ -804,7 +959,7 @@ class TestGeneratorComprehensive:
                     "type": "git-clone",
                     "repos": [{"url": "u", "files": [{"src": "s", "dst": "d"}]}],
                 },
-                {"type": "signing", "verification": "warn"},
+                {"type": "signing", "policy-file": "overlays/policy.json"},
                 {
                     "type": "default-flatpaks",
                     "configurations": [{"scope": "system", "install": ["app"]}],
@@ -843,7 +998,7 @@ class TestGeneratorComprehensive:
                     "type": "github-install",
                     "repos": [{"url": "u", "name": "test", "type": "python"}],
                 },
-                {"type": "signing", "verification": "enforce"},
+                {"type": "signing", "policy-file": "overlays/policy.json"},
             ],
         }
         gen = ContainerfileGenerator(config, context)

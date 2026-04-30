@@ -16,24 +16,14 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+from check_utils import find_python_files
+
 # Defaults
 DEFAULT_MIN_LINES = 5
 DEFAULT_SIMILARITY = 0.8
 DEFAULT_MAX_WINDOW = 50
 DEFAULT_MIN_CONTENT_LEN = 20
 COMMENT_RATIO_THRESHOLD = 0.5
-
-DEFAULT_EXCLUDE_DIRS = frozenset(
-    {
-        ".git",
-        "__pycache__",
-        ".venv",
-        "venv",
-        "node_modules",
-        ".pytest_cache",
-        ".mypy_cache",
-    }
-)
 
 
 def _hash_content(content: str) -> str:
@@ -177,13 +167,20 @@ class DuplicationDetector:
 
     # -- reporting ---------------------------------------------------------
 
-    def report_lines(self) -> list[str]:
+    def report_lines(self, *, use_functions: bool = False) -> list[str]:
         """Return the duplication report as a list of plain-text lines."""
-        if not self.duplicates:
-            return ["No significant code duplication found."]
-
+        mode = "functions" if use_functions else "code blocks"
         lines: list[str] = []
-        lines.append(f"Found {len(self.duplicates)} duplicate code blocks")
+        lines.append(
+            f"dry-check: scanned {len(self.blocks)} {mode} "
+            f"(similarity threshold: {self.similarity_threshold:.0%})"
+        )
+
+        if not self.duplicates:
+            lines.append("dry-check: no significant code duplication found")
+            return lines
+
+        lines.append(f"\nFound {len(self.duplicates)} duplicate code blocks")
         lines.append("")
         lines.append("=" * 80)
         lines.append("DUPLICATION REPORT")
@@ -227,19 +224,6 @@ class DuplicationDetector:
         return lines
 
 
-def find_python_files(
-    root: Path,
-    exclude_dirs: frozenset[str] | None = None,
-) -> list[Path]:
-    """Recursively find ``*.py`` files under *root*, skipping excluded dirs."""
-    if exclude_dirs is None:
-        exclude_dirs = DEFAULT_EXCLUDE_DIRS
-
-    return sorted(
-        p for p in root.rglob("*.py") if not any(excluded in p.parts for excluded in exclude_dirs)
-    )
-
-
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point.  Returns 0 on success, 1 if duplicates found."""
     parser = argparse.ArgumentParser(description="Detect code duplication in Python files")
@@ -254,6 +238,7 @@ def main(argv: list[str] | None = None) -> int:
 
     files = find_python_files(root)
     if not files:
+        print("dry-check: no Python files found")
         return 1
 
     detector = DuplicationDetector(
@@ -262,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     detector.find_duplicates(files, use_functions=args.functions_only)
 
-    for line in detector.report_lines():
+    for line in detector.report_lines(use_functions=args.functions_only):
         print(line)
 
     return 1 if detector.duplicates else 0
