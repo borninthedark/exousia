@@ -5,9 +5,9 @@ Entry point for the Exousia test docs.
 ## Quick Start
 
 ```bash
-make test                                          # pytest (tools/)
-make overlay-test                                  # bats overlay validation
-make local-test                                    # bats against built image
+just test                                          # pytest (tools/)
+just overlay-test                                  # bats overlay validation
+just local-test                                    # bats against built image
 
 export TEST_IMAGE_TAG=localhost:5000/exousia:latest
 buildah unshare -- bats -r tests/
@@ -28,7 +28,7 @@ The suite validates built images and source overlays with:
 - image-aware assertions for `fedora-bootc` and `fedora-sway-atomic`
 - verification of package selection, overlay staging, services, Flatpak setup, and bootc compliance
 
-`make local-test` is the supported Make entrypoint for the built-image Bats
+`just local-test` is the supported entrypoint for the built-image Bats
 suite. It now exports `TEST_IMAGE_TAG` and runs the image suite under
 `buildah unshare`, matching the direct invocation shown above.
 

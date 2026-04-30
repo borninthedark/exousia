@@ -65,7 +65,7 @@ These tools are already included in the bootc image:
 ### Install and start Quadlet services
 
 ```bash
-make quadlet-install
+just quadlet-install
 ```
 
 This copies all `.container`, `.volume`, and `.network` files to
@@ -76,22 +76,22 @@ by default — use app-specific targets to start them.
 
 ```bash
 # Forgejo
-make forgejo-start
+just forgejo-start
 
 # Plane
-make plane-install   # creates /etc/exousia/plane/plane.env from template
-make plane-start     # starts plane-proxy (systemd pulls in all dependencies)
+just plane-install   # creates /etc/exousia/plane/plane.env from template
+just plane-start     # starts plane-proxy (systemd pulls in all dependencies)
 ```
 
-`make plane-install` copies the env template to `/etc/exousia/plane/plane.env`
-and runs `quadlet-install`. `make plane-start` brings up the full Plane stack
+`just plane-install` copies the env template to `/etc/exousia/plane/plane.env`
+and runs `quadlet-install`. `just plane-start` brings up the full Plane stack
 on the shared Podman network so it can integrate with Forgejo by service name.
 
 ### Verify services are running
 
 ```bash
-make plane-status
-make forgejo-status
+just plane-status
+just forgejo-status
 
 # Registry health check
 curl -s localhost:5000/v2/
@@ -140,8 +140,8 @@ See [Matrix Builds](matrix-builds.md) for details.
 ### Build and push to local registry
 
 ```bash
-make local-build              # tags as localhost:5000/exousia:latest
-make local-build TAG=v1.2.3   # tags as localhost:5000/exousia:v1.2.3
+just local-build              # tags as localhost:5000/exousia:latest
+just local-build TAG=v1.2.3   # tags as localhost:5000/exousia:v1.2.3
 ```
 
 This runs the full pipeline:
@@ -153,22 +153,22 @@ This runs the full pipeline:
 ### Test the local image
 
 ```bash
-make local-test               # runs bats tests against latest
-make local-test TAG=v1.2.3    # runs bats tests against specific tag
+just local-test               # runs bats tests against latest
+just local-test TAG=v1.2.3    # runs bats tests against specific tag
 ```
 
 ### Publish to GHCR
 
 ```bash
-make local-push               # copies latest to ghcr.io/borninthedark/exousia:latest
-make local-push TAG=v1.2.3    # copies specific tag
+just local-push               # copies latest to ghcr.io/borninthedark/exousia:latest
+just local-push TAG=v1.2.3    # copies specific tag
 ```
 
 ### Mirror GHCR back into the local registry for bootc
 
 ```bash
-make local-mirror             # copies latest from GHCR to localhost:5000/exousia:latest
-make local-mirror TAG=v1.2.3  # copies specific tag
+just local-mirror             # copies latest from GHCR to localhost:5000/exousia:latest
+just local-mirror TAG=v1.2.3  # copies specific tag
 ```
 
 ### Verify
@@ -185,27 +185,27 @@ skopeo list-tags docker://localhost:5000/exousia --tls-verify=false
 
 ```bash
 # Plane
-make plane-install             # Copy quadlets + create env file
-make plane-start               # Start Plane (systemd resolves full dep graph)
-make plane-stop                # Stop the full Plane stack
-make plane-status              # Show Plane service status
-make plane-logs                # Follow Plane logs
+just plane-install             # Copy quadlets + create env file
+just plane-start               # Start Plane (systemd resolves full dep graph)
+just plane-stop                # Stop the full Plane stack
+just plane-status              # Show Plane service status
+just plane-logs                # Follow Plane logs
 
 # Forgejo
-make forgejo-start             # Start Forgejo + runner
-make forgejo-stop              # Stop Forgejo
-make forgejo-status            # Show Forgejo service status
-make forgejo-logs              # Follow Forgejo logs
+just forgejo-start             # Start Forgejo + runner
+just forgejo-stop              # Stop Forgejo
+just forgejo-status            # Show Forgejo service status
+just forgejo-logs              # Follow Forgejo logs
 
 # Standalone containers (pattern rules)
-make start-<name>              # Start any quadlet (e.g. make start-freebsd)
-make stop-<name>               # Stop a standalone quadlet
-make status-<name>             # Show status of a standalone quadlet
-make logs-<name>               # Follow logs of a standalone quadlet
+just start <name>              # Start any quadlet (e.g. just start freebsd)
+just stop <name>               # Stop a standalone quadlet
+just status <name>             # Show status of a standalone quadlet
+just logs <name>               # Follow logs of a standalone quadlet
 
 # Infrastructure
-make quadlet-install           # Copy all quadlets to ~/.config/containers/systemd/
-make quadlet-uninstall         # Remove the currently managed local stack quadlets and stop those services
+just quadlet-install           # Copy all quadlets to ~/.config/containers/systemd/
+just quadlet-uninstall         # Remove the currently managed local stack quadlets and stop those services
 ```
 
 ## Plane + Forgejo

@@ -30,9 +30,9 @@ tests/
 ## Common Commands
 
 ```bash
-make test                                          # pytest (tools/)
-make overlay-test                                  # bats overlay validation
-make local-test                                    # bats against built image
+just test                                          # pytest (tools/)
+just overlay-test                                  # bats overlay validation
+just local-test                                    # bats against built image
 buildah unshare -- bats -r tests/
 buildah unshare -- bats tests/image_content.bats --filter "Plymouth"
 ```

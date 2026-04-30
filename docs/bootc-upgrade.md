@@ -63,19 +63,19 @@ sudo systemctl reboot
 
 ```bash
 # Mirror the desired tag from GHCR first
-make local-mirror TAG=v1.2.0
+just local-mirror TAG=v1.2.0
 
 # Switch to a specific tag
 sudo bootc switch localhost:5000/exousia:v1.2.0
 
 # Mirror the rolling daily build
-make local-mirror TAG=current
+just local-mirror TAG=current
 
 # Switch to the rolling daily build
 sudo bootc switch localhost:5000/exousia:current
 
 # Mirror latest and switch back
-make local-mirror
+just local-mirror
 sudo bootc switch localhost:5000/exousia:latest
 ```
 

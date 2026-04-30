@@ -290,20 +290,20 @@ sudo dnf install buildah
 
 ### Local Execution
 
-#### Using Make (Recommended)
+#### Using just (Recommended)
 
 ```bash
 # Pytest (tools/)
-make test
+just test
 
 # Pre-build overlay validation
-make overlay-test
+just overlay-test
 
 # Bats against built image
-make local-test
+just local-test
 
 # With specific image tag
-make local-test TAG=custom
+just local-test TAG=custom
 ```
 
 #### Direct Execution
@@ -325,15 +325,15 @@ buildah unshare -- bats -r tests/ --verbose-run
 #### Test fedora-bootc Build
 
 ```bash
-make build-bootc
-make local-test
+just build-bootc
+just local-test
 ```
 
 #### Test fedora-sway-atomic Build
 
 ```bash
-make build-atomic
-make local-test
+just build-atomic
+just local-test
 ```
 
 ### Debugging Failed Tests
@@ -356,7 +356,7 @@ Today the split is:
 
 - `Hikifune`: Python linting and pytest
 - `Uhin`: static/security checks plus `tests/overlay_content.bats`
-- local/manual image Bats: `make local-test`
+- local/manual image Bats: `just local-test`
 
 The built-image Bats suite still remains local/manual because it depends on a
 prebuilt image and rootless `buildah unshare` execution.

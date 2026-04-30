@@ -359,7 +359,7 @@ sudo systemctl reboot
 
 ```bash
 git clone https://github.com/borninthedark/exousia.git && cd exousia
-make local-build
+just local-build
 ```
 
 ---
