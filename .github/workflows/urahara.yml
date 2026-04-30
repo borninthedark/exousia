@@ -15,10 +15,26 @@ name: "Urahara - Orchestrator"
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "tests/**"
+      - "*.md"
+      - "LICENSE"
+      - ".pre-commit-config.yaml"
+      - "tools/generate-readme.py"
+      - "tools/test_*.py"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "tests/**"
+      - "*.md"
+      - "LICENSE"
+      - ".pre-commit-config.yaml"
+      - "tools/generate-readme.py"
+      - "tools/test_*.py"
   schedule:
-    - cron: "10 0,8,16 * * *"  # Every 8 hours: 00:10, 08:10, 16:10 UTC
+    - cron: "10 0,12 * * *"  # Every 12 hours: 00:10, 12:10 UTC
   workflow_dispatch:
     inputs:
       image_type:
