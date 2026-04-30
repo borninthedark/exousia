@@ -1,0 +1,134 @@
+# Exousia Sealed Boot — Main sealed image build
+# Wraps an existing Exousia image with a fully measured boot chain:
+#   systemd-boot (SB-signed) -> UKI (signed + measured) -> composefs root
+#
+# Reference: travier/fedora-atomic-desktops-sealed
+#
+# Required build args:
+#   BASE           — Exousia image to seal (e.g. ghcr.io/borninthedark/exousia:44)
+#   SYSTEMDBOOT    — Signed systemd-boot container (from Containerfile.systemd-boot)
+#   TOOLS          — UKI tools container (from Containerfile.tools)
+#
+# Required build secrets:
+#   secureboot_key — Secure Boot db private key (PEM)
+#   secureboot_crt — Secure Boot db certificate (PEM)
+
+ARG BASE=overridden
+ARG SYSTEMDBOOT=overridden
+ARG TOOLS=overridden
+
+# -- Stage 1: Import signed systemd-boot EFI binary --
+FROM $SYSTEMDBOOT AS systemd-boot
+
+# -- Stage 2: Build the sealed rootfs --
+FROM $BASE AS rootfs
+
+RUN --mount=type=tmpfs,target=/run \
+    --mount=type=tmpfs,target=/tmp \
+    --mount=type=tmpfs,target=/var \
+    <<EORUN
+set -euo pipefail
+set -x
+
+# Install systemd-boot (will be replaced by signed version) and fsverity utils
+dnf install -y fsverity-utils systemd-boot-unsigned && dnf clean all
+
+# Uninstall bootupd (no systemd-boot support yet)
+rpm -e bootupd || true
+rm -vrf "/usr/lib/bootupd/updates"
+
+# Mount the root filesystem read-write with btrfs compression
+cat > "/usr/lib/bootc/kargs.d/10-rootfs.toml" << 'EOF'
+kargs = ["rw", "rootflags=compress=zstd:1"]
+EOF
+
+# Default to btrfs for bootc install
+cat > "/usr/lib/bootc/install/80-rootfs.toml" << 'EOF'
+[install.filesystem.root]
+type = "btrfs"
+EOF
+
+# Dracut: disable xattr setting at build time
+# https://github.com/dracut-ng/dracut-ng/issues/1561
+cat > "/usr/lib/dracut/dracut.conf.d/20-bootc-base.conf" << 'EOF'
+export DRACUT_NO_XATTR=1
+EOF
+
+# Enable composefs backend in dracut
+cat > "/usr/lib/dracut/dracut.conf.d/20-bootc-composefs.conf" << 'EOF'
+add_dracutmodules+=" bootc "
+EOF
+
+# Rebuild initramfs with bootc-initramfs-setup
+kver=$(cd "/usr/lib/modules" && echo *)
+dracut -vf --install "/etc/passwd /etc/group" "/usr/lib/modules/$kver/initramfs.img" "$kver"
+
+# Prepare EFI directory
+mkdir -p /boot/EFI/Linux
+EORUN
+
+# Replace systemd-boot with signed version
+COPY --from=systemd-boot /systemd-bootx64.efi /usr/lib/systemd/boot/efi/systemd-bootx64.efi
+
+# -- Stage 3: Lint --
+FROM rootfs AS lint
+RUN bootc container lint
+
+# -- Stage 4: Rechunk for correct composefs hash --
+FROM quay.io/coreos/chunkah AS chunkah
+RUN --mount=from=rootfs,src=/,target=/chunkah,ro \
+    --mount=type=bind,target=/run/src,rw \
+        chunkah build \
+            --max-layers 128 \
+            --prune /ostree \
+            --prune /sysroot/ostree \
+            > /run/src/out.ociarchive
+
+FROM oci-archive:out.ociarchive AS rootfs-chunked
+LABEL containers.bootc 1
+LABEL org.opencontainers.image.title="Exousia Sealed"
+LABEL org.opencontainers.image.source="https://github.com/borninthedark/exousia"
+LABEL org.opencontainers.image.licenses="MIT"
+ENV container=oci
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]
+
+# -- Stage 5: Generate and sign UKI --
+FROM $TOOLS AS sealed-uki
+RUN --mount=type=tmpfs,target=/run \
+    --mount=type=tmpfs,target=/tmp \
+    --mount=type=tmpfs,target=/var/tmp \
+    --mount=type=secret,id=secureboot_key \
+    --mount=type=secret,id=secureboot_crt \
+    --mount=type=bind,from=rootfs-chunked,src=/,target=/run/target \
+    <<EORUN
+set -euo pipefail
+set -x
+
+target="/run/target"
+output="/boot/EFI/Linux"
+secrets="/run/secrets"
+
+# Find kernel version
+kver=$(bootc container inspect --rootfs "${target}" --json | jq -r '.kernel.version')
+if [ -z "$kver" ] || [ "$kver" = "null" ]; then
+    echo "Error: No kernel found" >&2
+    exit 1
+fi
+
+# Build signed UKI
+# bootc container ukify computes composefs digest, reads kargs.d, and invokes ukify
+bootc container ukify \
+    --rootfs "${target}" \
+    -- \
+    --measure \
+    --json pretty \
+    --output "${output}/${kver}.efi" \
+    --signtool sbsign \
+    --secureboot-private-key "${secrets}/secureboot_key" \
+    --secureboot-certificate "${secrets}/secureboot_crt"
+EORUN
+
+# -- Stage 6: Final image with UKI --
+FROM rootfs-chunked AS final
+COPY --from=sealed-uki /boot/EFI/Linux /boot/EFI/Linux

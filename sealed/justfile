@@ -60,6 +60,27 @@ uki-addon name commandline:
         --secret=id=secureboot_crt,src={{sb_cert}} \
         -f Containerfile.uki-addon
 
+# Build the full sealed image (all stages)
+# Requires: sign-systemd-boot and build-tools to have been run first
+build base_image:
+    #!/bin/bash
+    set -euo pipefail
+    podman build \
+        --build-arg=BASE={{base_image}} \
+        --build-arg=SYSTEMDBOOT={{systemd_boot_image}} \
+        --build-arg=TOOLS={{tools_image}} \
+        -t exousia-sealed:{{release}} \
+        --skip-unused-stages=false \
+        -v "$(pwd):/run/src" \
+        --security-opt=label=disable \
+        --secret=id=secureboot_key,src={{sb_key}} \
+        --secret=id=secureboot_crt,src={{sb_cert}} \
+        -f Containerfile \
+        .
+
+# Build everything from scratch (keys must already exist)
+build-all base_image: sign-systemd-boot build-tools (build base_image)
+
 # Inspect a UKI or UKI addon
 inspect uki:
     #!/bin/bash
