@@ -38,7 +38,7 @@ def _read_outputs(tmp_path, **kwargs):
     """Helper: call render_outputs and return parsed key=value dict."""
     defaults = {
         "build_version": "43",
-        "build_image_type": "fedora-bootc",
+        "build_image_type": "fedora-sway-atomic",
         "os_family": "fedora",
         "os_version": "43",
         "resolved_config": Path("Dockerfile.generated"),
@@ -99,7 +99,7 @@ def test_render_outputs_appends_to_existing(tmp_path):
     render_outputs(
         output_file,
         build_version="43",
-        build_image_type="fedora-bootc",
+        build_image_type="fedora-sway-atomic",
         os_family="fedora",
         os_version="43",
         resolved_config=Path("Dockerfile.generated"),

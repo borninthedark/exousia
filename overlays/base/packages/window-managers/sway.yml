@@ -64,6 +64,7 @@ spec:
     - grim
     - slurp
     - swappy
+    - wf-recorder
     - brightnessctl
     - network-manager-applet
     - nm-connection-editor

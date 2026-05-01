@@ -37,16 +37,13 @@ on:
     - cron: "10 0,12 * * *"  # Every 12 hours: 00:10, 12:10 UTC
   workflow_dispatch:
     inputs:
-      image_type:
-        description: "Fedora image type to build"
-        required: true
-        type: choice
-        options:
-          - "fedora-bootc"
-          - "fedora-sway-atomic"
-        default: "fedora-bootc"
+      image_types:
+        description: "Image types to build (comma-separated, e.g. fedora-sway-atomic or fedora-sway-atomic,fedora-bootc)"
+        required: false
+        type: string
+        default: "fedora-sway-atomic"
       distro_versions:
-        description: "Fedora versions to build (comma-separated, e.g. 44 or 44,rawhide). Leave empty to use blueprint default."
+        description: "Fedora versions to build (comma-separated, e.g. 44 or 43,44). Leave empty to use blueprint default."
         required: false
         type: string
         default: ""
@@ -78,6 +75,7 @@ jobs:
     outputs:
       primary_version: ${{ steps.read.outputs.version }}
       versions: ${{ steps.matrix.outputs.versions }}
+      image_types: ${{ steps.matrix.outputs.image_types }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -91,17 +89,26 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Blueprint primary version: ${VERSION}"
 
-      - name: Build version matrix
+      - name: Build matrix
         id: matrix
         run: |
-          INPUT="${{ inputs.distro_versions }}"
-          if [[ -z "$INPUT" ]]; then
-            # No override — use blueprint default
-            INPUT="${{ steps.read.outputs.version }}"
+          # Resolve version matrix
+          VER_INPUT="${{ inputs.distro_versions }}"
+          if [[ -z "$VER_INPUT" ]]; then
+            VER_INPUT="${{ steps.read.outputs.version }}"
           fi
-          JSON=$(echo "$INPUT" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | jq -R . | jq -sc .)
-          echo "versions=${JSON}" >> $GITHUB_OUTPUT
-          echo "Matrix: ${JSON}"
+          VER_JSON=$(echo "$VER_INPUT" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | jq -R . | jq -sc .)
+          echo "versions=${VER_JSON}" >> $GITHUB_OUTPUT
+          echo "Version matrix: ${VER_JSON}"
+
+          # Resolve image type matrix
+          TYPE_INPUT="${{ inputs.image_types }}"
+          if [[ -z "$TYPE_INPUT" ]]; then
+            TYPE_INPUT="fedora-sway-atomic"
+          fi
+          TYPE_JSON=$(echo "$TYPE_INPUT" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | jq -R . | jq -sc .)
+          echo "image_types=${TYPE_JSON}" >> $GITHUB_OUTPUT
+          echo "Image type matrix: ${TYPE_JSON}"
 
   # -- Hikifune (CI) + Uhin (Security) run in parallel --
   hikifune:
@@ -119,19 +126,20 @@ jobs:
 
   # -- Hiyori (Build) runs after both pass, once per version --
   hiyori:
-    name: "Hiyori (f${{ matrix.distro_version }})"
+    name: "Hiyori (${{ matrix.image_type }}/f${{ matrix.distro_version }})"
     needs: [defaults, hikifune, uhin]
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork != true
     strategy:
       fail-fast: false
       matrix:
         distro_version: ${{ fromJSON(needs.defaults.outputs.versions) }}
+        image_type: ${{ fromJSON(needs.defaults.outputs.image_types) }}
     uses: ./.github/workflows/hiyori.yml
     with:
-      image_type: ${{ inputs.image_type || 'fedora-bootc' }}
+      image_type: ${{ matrix.image_type }}
       distro_version: ${{ matrix.distro_version }}
       enable_plymouth: ${{ inputs.enable_plymouth == '' && true || inputs.enable_plymouth }}
-      is_primary: ${{ matrix.distro_version == needs.defaults.outputs.primary_version }}
+      is_primary: ${{ matrix.distro_version == needs.defaults.outputs.primary_version && matrix.image_type == 'fedora-sway-atomic' }}
     secrets: inherit
     permissions:
       contents: write
@@ -142,14 +150,17 @@ jobs:
   sealed:
     name: "Sealed (f${{ matrix.distro_version }})"
     needs: [defaults, hiyori]
-    if: inputs.enable_sealed == true && github.event_name != 'pull_request'
+    if: >-
+      inputs.enable_sealed == true &&
+      github.event_name != 'pull_request' &&
+      contains(needs.defaults.outputs.image_types, 'fedora-bootc')
     strategy:
       fail-fast: false
       matrix:
         distro_version: ${{ fromJSON(needs.defaults.outputs.versions) }}
     uses: ./.github/workflows/sealed.yml
     with:
-      base_image: ghcr.io/borninthedark/exousia:f${{ matrix.distro_version }}
+      base_image: ghcr.io/borninthedark/exousia:bootc-f${{ matrix.distro_version }}
       distro_version: ${{ matrix.distro_version }}
       is_primary: ${{ matrix.distro_version == needs.defaults.outputs.primary_version }}
     secrets: inherit

@@ -13,7 +13,6 @@ spec:
     - neovim
     - rtkit
     - gnome-disk-utility
-    - cargo
     - git
     - htop
     - btop
