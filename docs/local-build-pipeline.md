@@ -16,6 +16,7 @@ graph LR
         PL["Plane<br/>:8080"]
         TMP["Temporal<br/>:7233/:8233"]
         OLL["Ollama<br/>:11434"]
+        OWU["Open WebUI<br/>:3080"]
     end
 
     subgraph BUILD["Build Pipeline"]
@@ -49,6 +50,7 @@ All Quadlet definitions live in `overlays/deploy/`:
 | `temporal-server.container` | Container | Temporal workflow engine (gRPC port 7233) |
 | `temporal-db.container` | Container | Temporal PostgreSQL persistence |
 | `temporal-ui.container` | Container | Temporal web dashboard (port 8233) |
+| `open-webui.container` | Container | Open WebUI chat interface for Ollama (port 3080) |
 | `forgejo-data.volume` | Volume | Persistent Forgejo data |
 | `forgejo-db-data.volume` | Volume | Persistent Forgejo database data |
 | `forgejo-runner-data.volume` | Volume | Persistent runner data |
@@ -56,6 +58,7 @@ All Quadlet definitions live in `overlays/deploy/`:
 | `ollama-data.volume` | Volume | Persistent Ollama model storage |
 | `plane-*.volume` | Volume | Persistent Plane data services |
 | `temporal-db-data.volume` | Volume | Persistent Temporal database storage |
+| `open-webui-data.volume` | Volume | Persistent Open WebUI data |
 | `plane.env.example` | Template | Plane environment template |
 | `exousia.network` | Network | Shared network (10.89.1.0/24) |
 
@@ -283,6 +286,36 @@ curl http://localhost:11434/api/generate \
 
 The API is available at `http://localhost:11434` and on the shared network
 at `http://ollama:11434` for other containers.
+
+## Open WebUI (Chat Interface)
+
+Open WebUI provides a browser-based chat interface for Ollama/Qwen3. It
+requires Ollama to be running — the quadlet declares `Requires=ollama.service`.
+
+### Enable and start
+
+```bash
+just engage open-webui
+```
+
+Ollama must be engaged first (`just engage ollama`). The Open WebUI quadlet
+will pull Ollama in automatically via its systemd dependency.
+
+### Verify
+
+```bash
+curl -s -o /dev/null -w "%{http_code}" http://localhost:3080
+```
+
+The UI is available at `http://localhost:3080`. On first visit, create an admin
+account. Qwen3 8B will appear automatically in the model list since Open WebUI
+connects to Ollama via `http://ollama:11434` on the shared network.
+
+### Disable
+
+```bash
+just disengage open-webui
+```
 
 ## Temporal (Agent Orchestration)
 

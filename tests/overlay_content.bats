@@ -413,6 +413,18 @@ assert_has_shebang() {
     assert_success "plane-proxy.container should use exousia.network"
 }
 
+@test "Open WebUI quadlets should exist" {
+    assert_file_exists "$OVERLAY_ROOT/deploy/open-webui.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/open-webui-data.volume"
+}
+
+@test "Open WebUI should use exousia network and require Ollama" {
+    run grep -q "^Network=exousia.network" "$OVERLAY_ROOT/deploy/open-webui.container"
+    assert_success "open-webui.container should use exousia.network"
+    run grep -q "^Requires=ollama.service" "$OVERLAY_ROOT/deploy/open-webui.container"
+    assert_success "open-webui.container should require ollama.service"
+}
+
 @test "Temporal quadlets should exist" {
     assert_file_exists "$OVERLAY_ROOT/deploy/temporal-server.container"
     assert_file_exists "$OVERLAY_ROOT/deploy/temporal-db.container"
