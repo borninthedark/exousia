@@ -200,6 +200,8 @@ just forgejo-status            # Show Forgejo service status
 just forgejo-logs              # Follow Forgejo logs
 
 # Standalone containers (pattern rules)
+just engage <name>             # Enable a quadlet: copy files, reload, start (e.g. just engage ollama)
+just disengage <name>          # Disable a quadlet: stop service, remove files
 just start <name>              # Start any quadlet (e.g. just start freebsd)
 just stop <name>               # Stop a standalone quadlet
 just status <name>             # Show status of a standalone quadlet
@@ -238,12 +240,10 @@ is ~5 GB download.
 ### Enable and start
 
 ```bash
-mkdir -p ~/.config/containers/systemd/
-cp /usr/share/containers/systemd/ollama.container ~/.config/containers/systemd/
-cp /usr/share/containers/systemd/ollama-data.volume ~/.config/containers/systemd/
-systemctl --user daemon-reload
-systemctl --user start ollama
+just engage ollama
 ```
+
+This copies the quadlet files, reloads systemd, and starts the service.
 
 The `ExecStartPost` directive automatically pulls `qwen3:8b` on first start.
 Monitor progress:

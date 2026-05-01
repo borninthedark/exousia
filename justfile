@@ -280,6 +280,40 @@ plane-logs:
 # Standalone containers (just start <name>, just stop <name>, etc.)
 # ---------------------------------------------------------------------------
 
+# Enable a quadlet: copy its files, reload systemd, and start the service
+engage name:
+    #!/bin/bash
+    set -euo pipefail
+    mkdir -p ~/.config/containers/systemd/
+    for ext in container volume network; do
+        src="overlays/deploy/{{name}}.${ext}"
+        if [ -f "$src" ]; then
+            cp "$src" ~/.config/containers/systemd/
+            echo "Copied ${src}"
+        fi
+    done
+    # Also copy associated data volumes (e.g. ollama-data.volume)
+    for vol in overlays/deploy/{{name}}-*.volume; do
+        [ -f "$vol" ] || continue
+        cp "$vol" ~/.config/containers/systemd/
+        echo "Copied ${vol}"
+    done
+    systemctl --user daemon-reload
+    systemctl --user start {{name}}.service
+    echo "{{name}} engaged."
+
+# Disable a quadlet: stop the service and remove its files
+disengage name:
+    #!/bin/bash
+    set -euo pipefail
+    systemctl --user stop {{name}}.service 2>/dev/null || true
+    rm -f ~/.config/containers/systemd/{{name}}.container
+    rm -f ~/.config/containers/systemd/{{name}}.volume
+    rm -f ~/.config/containers/systemd/{{name}}.network
+    rm -f ~/.config/containers/systemd/{{name}}-*.volume
+    systemctl --user daemon-reload
+    echo "{{name}} disengaged."
+
 # Start a standalone quadlet
 start name:
     systemctl --user start {{name}}.service
