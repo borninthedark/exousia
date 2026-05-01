@@ -32,6 +32,7 @@ spec:
     - xdg-utils
     - xdg-user-dirs
     - xdg-dbus-proxy
+    - flatpak
     - flatpak-xdg-utils
     - xdg-desktop-portal
     - xdg-desktop-portal-wlr
