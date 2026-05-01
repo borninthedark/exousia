@@ -206,8 +206,8 @@ just forgejo-status            # Show Forgejo service status
 just forgejo-logs              # Follow Forgejo logs
 
 # Temporal
-just temporal-start             # Start Temporal (systemd resolves full dep graph)
-just temporal-stop              # Stop the full Temporal stack
+just temporal-start             # Engage and start Temporal (3 services)
+just temporal-stop              # Stop and disengage Temporal
 just temporal-status            # Show Temporal service status
 just temporal-logs              # Follow Temporal logs
 
@@ -293,15 +293,18 @@ the web UI.
 ### Enable and start
 
 ```bash
+just temporal-start
+```
+
+This engages all three quadlets (db, server, ui), copies them to
+`~/.config/containers/systemd/`, reloads systemd, and starts the services.
+
+Individual services can also be engaged separately:
+
+```bash
 just engage temporal-db
 just engage temporal-server
 just engage temporal-ui
-```
-
-Or use the app-specific target (requires quadlets already installed):
-
-```bash
-just temporal-start
 ```
 
 The auto-setup image creates the database schema on first boot. Monitor
@@ -328,8 +331,8 @@ endpoint at `localhost:7233` (or `temporal:7233` from other containers on
 ### Service management
 
 ```bash
-just temporal-start    # Start all 3 services
-just temporal-stop     # Stop all 3 services
+just temporal-start    # Engage and start all 3 services
+just temporal-stop     # Stop and disengage all 3 services
 just temporal-status   # Show service status
 just temporal-logs     # Follow logs
 ```
