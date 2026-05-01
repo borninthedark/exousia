@@ -17,6 +17,8 @@ Podman Quadlet container definitions for local infrastructure services.
 | `temporal-db.container` | Temporal | Temporal PostgreSQL persistence |
 | `temporal-db-data.volume` | Temporal | Persistent Temporal database storage |
 | `temporal-ui.container` | Temporal | Temporal web dashboard |
+| `open-webui.container` | Open WebUI | Chat interface for Ollama/Qwen3 (port 3080) |
+| `open-webui-data.volume` | Open WebUI | Persistent Open WebUI data |
 
 ## Usage
 
@@ -72,6 +74,20 @@ just temporal-status
 
 See [Temporal Orchestration Plan](../../docs/plan-temporal-orchestration.md) for
 the full architecture and workflow design.
+
+### Open WebUI
+
+Open WebUI provides a browser-based chat interface for Ollama. It requires
+Ollama to be running (declared via `Requires=ollama.service`):
+
+- browser-facing URL: `http://localhost:3080`
+- in-network URL: `http://open-webui:8080`
+- connects to Ollama via `http://ollama:11434` on `exousia.network`
+
+```bash
+just engage open-webui
+just disengage open-webui
+```
 
 ## See Also
 

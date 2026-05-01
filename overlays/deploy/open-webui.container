@@ -1,0 +1,22 @@
+[Unit]
+Description=Open WebUI — chat interface for Ollama/Qwen3
+After=ollama.service
+Requires=ollama.service
+
+[Container]
+Image=ghcr.io/open-webui/open-webui:main
+ContainerName=open-webui
+PublishPort=127.0.0.1:3080:8080
+Volume=open-webui-data.volume:/app/backend/data
+Network=exousia.network:alias=open-webui
+Environment=OLLAMA_BASE_URL=http://ollama:11434
+Environment=RAG_EMBEDDING_MODEL=
+Environment=WEBUI_AUTH=true
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+# [Install]
+# WantedBy=default.target

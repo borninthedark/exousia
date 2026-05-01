@@ -16,6 +16,7 @@ graph LR
         PL["Plane<br/>:8080"]
         TMP["Temporal<br/>:7233/:8233"]
         OLL["Ollama<br/>:11434"]
+        OWU["Open WebUI<br/>:3080"]
     end
 
     subgraph BUILD["Build Pipeline"]
@@ -49,6 +50,7 @@ All Quadlet definitions live in `overlays/deploy/`:
 | `temporal-server.container` | Container | Temporal workflow engine (gRPC port 7233) |
 | `temporal-db.container` | Container | Temporal PostgreSQL persistence |
 | `temporal-ui.container` | Container | Temporal web dashboard (port 8233) |
+| `open-webui.container` | Container | Open WebUI chat interface for Ollama (port 3080) |
 | `forgejo-data.volume` | Volume | Persistent Forgejo data |
 | `forgejo-db-data.volume` | Volume | Persistent Forgejo database data |
 | `forgejo-runner-data.volume` | Volume | Persistent runner data |
@@ -56,6 +58,7 @@ All Quadlet definitions live in `overlays/deploy/`:
 | `ollama-data.volume` | Volume | Persistent Ollama model storage |
 | `plane-*.volume` | Volume | Persistent Plane data services |
 | `temporal-db-data.volume` | Volume | Persistent Temporal database storage |
+| `open-webui-data.volume` | Volume | Persistent Open WebUI data |
 | `plane.env.example` | Template | Plane environment template |
 | `exousia.network` | Network | Shared network (10.89.1.0/24) |
 
@@ -206,8 +209,8 @@ just forgejo-status            # Show Forgejo service status
 just forgejo-logs              # Follow Forgejo logs
 
 # Temporal
-just temporal-start             # Start Temporal (systemd resolves full dep graph)
-just temporal-stop              # Stop the full Temporal stack
+just temporal-start             # Engage and start Temporal (3 services)
+just temporal-stop              # Stop and disengage Temporal
 just temporal-status            # Show Temporal service status
 just temporal-logs              # Follow Temporal logs
 
@@ -284,6 +287,36 @@ curl http://localhost:11434/api/generate \
 The API is available at `http://localhost:11434` and on the shared network
 at `http://ollama:11434` for other containers.
 
+## Open WebUI (Chat Interface)
+
+Open WebUI provides a browser-based chat interface for Ollama/Qwen3. It
+requires Ollama to be running — the quadlet declares `Requires=ollama.service`.
+
+### Enable and start
+
+```bash
+just engage open-webui
+```
+
+Ollama must be engaged first (`just engage ollama`). The Open WebUI quadlet
+will pull Ollama in automatically via its systemd dependency.
+
+### Verify
+
+```bash
+curl -s -o /dev/null -w "%{http_code}" http://localhost:3080
+```
+
+The UI is available at `http://localhost:3080`. On first visit, create an admin
+account. Qwen3 8B will appear automatically in the model list since Open WebUI
+connects to Ollama via `http://ollama:11434` on the shared network.
+
+### Disable
+
+```bash
+just disengage open-webui
+```
+
 ## Temporal (Agent Orchestration)
 
 Temporal provides durable workflow orchestration for coordinating LLM agents.
@@ -293,15 +326,18 @@ the web UI.
 ### Enable and start
 
 ```bash
+just temporal-start
+```
+
+This engages all three quadlets (db, server, ui), copies them to
+`~/.config/containers/systemd/`, reloads systemd, and starts the services.
+
+Individual services can also be engaged separately:
+
+```bash
 just engage temporal-db
 just engage temporal-server
 just engage temporal-ui
-```
-
-Or use the app-specific target (requires quadlets already installed):
-
-```bash
-just temporal-start
 ```
 
 The auto-setup image creates the database schema on first boot. Monitor
@@ -328,8 +364,8 @@ endpoint at `localhost:7233` (or `temporal:7233` from other containers on
 ### Service management
 
 ```bash
-just temporal-start    # Start all 3 services
-just temporal-stop     # Stop all 3 services
+just temporal-start    # Engage and start all 3 services
+just temporal-stop     # Stop and disengage all 3 services
 just temporal-status   # Show service status
 just temporal-logs     # Follow logs
 ```

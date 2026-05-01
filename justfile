@@ -334,33 +334,39 @@ logs name:
     journalctl --user -u {{name}}.service -f
 
 # ---------------------------------------------------------------------------
-# Temporal (workflow orchestration — 3 services)
+# Temporal (workflow orchestration — 3 services, opt-in via engage)
 # ---------------------------------------------------------------------------
 
-temporal_services_all := "temporal-db temporal-server temporal-ui"
+temporal_services := "temporal-db temporal-server temporal-ui"
 
-# Start Temporal in dependency order
+# Engage and start the full Temporal stack
 temporal-start:
-    systemctl --user start temporal-ui.service
-    @echo "Temporal started — UI: http://localhost:8233, gRPC: localhost:7233"
+    #!/bin/bash
+    set -euo pipefail
+    for svc in {{temporal_services}}; do
+        just engage "$svc"
+    done
+    echo "Temporal started — UI: http://localhost:8233, gRPC: localhost:7233"
 
-# Stop Temporal
+# Stop and disengage the full Temporal stack
 temporal-stop:
     #!/bin/bash
-    systemctl --user stop {{temporal_services_all}} 2>/dev/null || true
-    systemctl --user reset-failed 2>/dev/null || true
-    echo "Temporal stopped."
+    set -euo pipefail
+    for svc in temporal-ui temporal-server temporal-db; do
+        just disengage "$svc"
+    done
+    echo "Temporal stopped and disengaged."
 
 # Show Temporal service status
 temporal-status:
     #!/bin/bash
-    systemctl --user status {{temporal_services_all}} --no-pager 2>/dev/null || true
+    systemctl --user status {{temporal_services}} --no-pager 2>/dev/null || true
 
 # Follow Temporal logs
 temporal-logs:
     #!/bin/bash
     units=""
-    for svc in {{temporal_services_all}}; do
+    for svc in {{temporal_services}}; do
         units="$units -u $svc"
     done
     journalctl --user $units -f

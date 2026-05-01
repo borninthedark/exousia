@@ -107,7 +107,9 @@ overlays/
     ├── temporal-server.container     # Temporal workflow engine
     ├── temporal-db.container         # Temporal PostgreSQL persistence
     ├── temporal-db-data.volume       # Temporal database storage
-    └── temporal-ui.container         # Temporal web dashboard
+    ├── temporal-ui.container         # Temporal web dashboard
+    ├── open-webui.container          # Open WebUI chat interface
+    └── open-webui-data.volume        # Open WebUI persistent data
 ```
 
 ---
