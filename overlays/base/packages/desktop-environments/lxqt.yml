@@ -1,0 +1,102 @@
+# LXQt Desktop Environment Package Definition
+# Lightweight Qt-based desktop — integrates with Sway via shared components
+# (lxqt-policykit, xdg-desktop-portal-lxqt, qt6ct).
+# Status: WIP baseline for multi-DE support.
+
+apiVersion: exousia.packages/v1alpha1
+kind: PackageBundle
+
+metadata:
+  name: de-lxqt
+  type: desktop-environment
+  description: Lightweight Qt desktop environment
+  homepage: https://lxqt-project.org/
+
+spec:
+  source: rpm
+  stage: build
+  groups:
+    install:
+      - lxqt-desktop
+  packages:
+    # Core LXQt session
+    - lxqt-session
+    - lxqt-panel
+    - lxqt-runner
+    - lxqt-config
+    - lxqt-globalkeys
+    - lxqt-notificationd
+    - lxqt-powermanagement
+    - lxqt-about
+    # Authentication
+    - lxqt-policykit
+    - sddm
+    # File manager
+    - pcmanfm-qt
+    - libfm-qt
+    - gvfs
+    - gvfs-mtp
+    - gvfs-gphoto2
+    # Terminal
+    - qterminal
+    # Theming
+    - lxqt-themes
+    - lxqt-config-appearance
+    - qt6ct
+    - kvantum
+    - adwaita-icon-theme
+    - adwaita-gtk2-theme
+    - breeze-cursor-theme
+    # XDG integration
+    - xdg-utils
+    - xdg-user-dirs
+    - xdg-dbus-proxy
+    - flatpak
+    - flatpak-xdg-utils
+    - xdg-desktop-portal
+    - xdg-desktop-portal-lxqt
+    # Audio (PipeWire)
+    - pipewire
+    - pipewire-alsa
+    - pipewire-pulseaudio
+    - pipewire-utils
+    - wireplumber
+    - pavucontrol-qt
+    - playerctl
+    # Display
+    - xorg-x11-server-Xwayland
+    - mesa-dri-drivers
+    - mesa-vulkan-drivers
+    # Fonts
+    - google-noto-sans-fonts
+    - google-noto-serif-fonts
+    - dejavu-sans-fonts
+    - dejavu-sans-mono-fonts
+    - liberation-fonts-all
+    # Network
+    - network-manager-applet
+    - nm-connection-editor
+    # Bluetooth
+    - bluez-tools
+    - blueman
+    # Power
+    - tlp
+    - powertop
+    # Media
+    - lximage-qt
+    - qpdfview
+    # Screenshot
+    - screengrab
+    # Utilities
+    - jq
+    - curl
+    # Boot splash
+    - plymouth
+    - plymouth-system-theme
+    - plymouth-plugin-two-step
+  conflicts:
+    packages:
+      - tuned-ppd
+    features: []
+  requires:
+    features: []
