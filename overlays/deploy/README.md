@@ -13,6 +13,10 @@ Podman Quadlet container definitions for local infrastructure services.
 | `plane-*.container` | Plane | Local project planning stack on the shared `exousia.network` |
 | `plane-*.volume` | Plane | Persistent Plane data volumes for Postgres, Valkey, RabbitMQ, and MinIO |
 | `plane.env.example` | Plane | Example environment file for the Quadlet-managed Plane stack |
+| `temporal-server.container` | Temporal | Durable workflow engine for LLM agent orchestration |
+| `temporal-db.container` | Temporal | Temporal PostgreSQL persistence |
+| `temporal-db-data.volume` | Temporal | Persistent Temporal database storage |
+| `temporal-ui.container` | Temporal | Temporal web dashboard |
 
 ## Usage
 
@@ -49,6 +53,25 @@ just plane-start
 
 The startup sequence follows Plane's Podman Quadlet guidance: shared network,
 core dependencies, backend services, then frontend services.
+
+### Temporal
+
+Temporal provides durable workflow orchestration for coordinating LLM agents
+(Claude, Gemini, Codex, Qwen3). It shares `exousia.network` with all other
+services:
+
+- browser-facing Temporal UI: `http://localhost:8233`
+- gRPC endpoint (for workers): `localhost:7233`
+- in-network gRPC endpoint: `temporal:7233`
+
+```bash
+just temporal-start
+just temporal-stop
+just temporal-status
+```
+
+See [Temporal Orchestration Plan](../../docs/plan-temporal-orchestration.md) for
+the full architecture and workflow design.
 
 ## See Also
 

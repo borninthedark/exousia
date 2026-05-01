@@ -217,9 +217,12 @@ quadlet-uninstall:
     systemctl --user stop plane-proxy plane-live plane-admin plane-space plane-web \
         plane-migrator plane-beat-worker plane-worker plane-api \
         plane-minio plane-mq plane-redis plane-db 2>/dev/null || true
+    systemctl --user stop temporal-ui temporal-server temporal-db 2>/dev/null || true
     systemctl --user reset-failed 2>/dev/null || true
     rm -f ~/.config/containers/systemd/plane-*.container
     rm -f ~/.config/containers/systemd/plane-*-data.volume
+    rm -f ~/.config/containers/systemd/temporal-*.container
+    rm -f ~/.config/containers/systemd/temporal-*-data.volume
     rm -f ~/.config/containers/systemd/freebsd.container
     rm -f ~/.config/containers/systemd/exousia.network
     systemctl --user daemon-reload
@@ -329,6 +332,38 @@ status name:
 # Follow logs of a standalone quadlet
 logs name:
     journalctl --user -u {{name}}.service -f
+
+# ---------------------------------------------------------------------------
+# Temporal (workflow orchestration — 3 services)
+# ---------------------------------------------------------------------------
+
+temporal_services_all := "temporal-db temporal-server temporal-ui"
+
+# Start Temporal in dependency order
+temporal-start:
+    systemctl --user start temporal-ui.service
+    @echo "Temporal started — UI: http://localhost:8233, gRPC: localhost:7233"
+
+# Stop Temporal
+temporal-stop:
+    #!/bin/bash
+    systemctl --user stop {{temporal_services_all}} 2>/dev/null || true
+    systemctl --user reset-failed 2>/dev/null || true
+    echo "Temporal stopped."
+
+# Show Temporal service status
+temporal-status:
+    #!/bin/bash
+    systemctl --user status {{temporal_services_all}} --no-pager 2>/dev/null || true
+
+# Follow Temporal logs
+temporal-logs:
+    #!/bin/bash
+    units=""
+    for svc in {{temporal_services_all}}; do
+        units="$units -u $svc"
+    done
+    journalctl --user $units -f
 
 # ---------------------------------------------------------------------------
 # Forgejo (git forge — 3 services)

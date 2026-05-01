@@ -1,0 +1,24 @@
+[Unit]
+Description=Temporal workflow engine
+After=temporal-db.service
+Requires=temporal-db.service
+
+[Container]
+Image=docker.io/temporalio/auto-setup:latest
+ContainerName=temporal-server
+PublishPort=127.0.0.1:7233:7233
+Network=exousia.network:alias=temporal
+Environment=DB=postgres12
+Environment=DB_PORT=5432
+Environment=POSTGRES_USER=temporal
+Environment=POSTGRES_PWD=temporal
+Environment=POSTGRES_SEEDS=temporal-db
+Environment=DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+# [Install]
+# WantedBy=default.target
