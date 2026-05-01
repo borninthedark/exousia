@@ -14,6 +14,7 @@ The 12th Division is the Shinigami Research and Development Institute.
 | **Kon** | `kon.yml` | 12th | Advanced CodeQL analysis for Python and GitHub Actions |
 | **Nemu** | `nemu.yml` | 12th | Post-CI: commits refreshed `STATUS.md` with the latest orchestration result |
 | **Mayuri** | `mayuri.yml` | 12th | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
+| **Sealed** | `sealed.yml` | 12th | Sealed boot: wraps base image with signed systemd-boot, UKI, and composefs |
 
 ## Captains
 
@@ -27,9 +28,9 @@ The 12th Division is the Shinigami Research and Development Institute.
 ## Pipeline Flow
 
 ```text
-Urahara -> Hikifune + Uhin (parallel) -> Hiyori -> Gate
-                                                    |
-Nemu (on Urahara completion, main only) <-----------+
+Urahara -> Hikifune + Uhin (parallel) -> Hiyori -> Sealed (optional) -> Gate
+                                                                          |
+Nemu (on Urahara completion, main only) <---------------------------------+
 
 Mayuri (scheduled, independent) -> triggers Urahara if dotfiles changed
 ```

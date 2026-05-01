@@ -11,6 +11,8 @@ Python tools for managing the Exousia bootc image build process.
 | `package_loader/` | Package-loader package for typed YAML package definitions (`uv run python -m package_loader`) |
 | `generate-readme.py` | Auto-generates README.md from build configuration (pre-commit hook) |
 | `dry_check.py` | DRY enforcement -- detects code duplication via AST analysis |
+| `konso_check.py` | Konsō (魂葬) -- dead code detection via AST analysis |
+| `check_utils.py` | Shared utilities for check tools (file discovery) |
 
 ## Usage
 
@@ -41,6 +43,9 @@ uv run python -m package_loader --wm sway --json
 
 # Run DRY check on tools/
 uv run python tools/dry_check.py --functions-only --path tools
+
+# Run dead code check on tools/
+uv run python tools/konso_check.py --path tools
 ```
 
 ## CLI Options (`uv run python -m generator`)
@@ -89,6 +94,7 @@ Notes:
 | `test_distro_mapper.py` | Image type to base image mapping |
 | `test_package_dependency_checker.py` | Dependency resolution and conflict detection |
 | `test_dry_check.py` | DRY enforcement tool |
+| `test_konso_check.py` | Dead code detection tool |
 | `test_resolve_build_config.py` | CI build parameter resolution |
 | `test_validator.py` | Validation rules for generator inputs |
 
