@@ -229,6 +229,49 @@ the shared Exousia network:
 3. `plane-api.service`, `plane-worker.service`, `plane-beat-worker.service`, `plane-migrator.service`
 4. `plane-web.service`, `plane-space.service`, `plane-admin.service`, `plane-live.service`, `plane-proxy.service`
 
+## Ollama (Local LLM Inference)
+
+Ollama runs Qwen3 8B locally for AI-assisted development. The quadlet is
+disabled by default — Qwen3 8B needs ~5 GB RAM and the initial model pull
+is ~5 GB download.
+
+### Enable and start
+
+```bash
+mkdir -p ~/.config/containers/systemd/
+cp /usr/share/containers/systemd/ollama.container ~/.config/containers/systemd/
+cp /usr/share/containers/systemd/ollama-data.volume ~/.config/containers/systemd/
+systemctl --user daemon-reload
+systemctl --user start ollama
+```
+
+The `ExecStartPost` directive automatically pulls `qwen3:8b` on first start.
+Monitor progress:
+
+```bash
+podman logs -f ollama
+```
+
+### Auto-start on login (optional)
+
+```bash
+sed -i 's/# \[Install\]/[Install]/' ~/.config/containers/systemd/ollama.container
+sed -i 's/# WantedBy=default.target/WantedBy=default.target/' ~/.config/containers/systemd/ollama.container
+systemctl --user daemon-reload
+systemctl --user enable ollama
+```
+
+### Verify
+
+```bash
+curl http://localhost:11434/api/tags          # List available models
+curl http://localhost:11434/api/generate \
+  -d '{"model":"qwen3:8b","prompt":"hello"}'  # Test inference
+```
+
+The API is available at `http://localhost:11434` and on the shared network
+at `http://ollama:11434` for other containers.
+
 ## Troubleshooting
 
 ### Registry connection refused
