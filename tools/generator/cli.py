@@ -138,7 +138,7 @@ Examples:
         sys.exit(0)
 
     # Determine build context
-    image_type = args.image_type or config.get("image-type", "fedora-sway-atomic")
+    image_type = args.image_type or config.get("image-type", "fedora-bootc")
     fedora_version = args.fedora_version or str(config.get("image-version", "43"))
     enable_plymouth = args.enable_plymouth and not args.disable_plymouth
     enable_zfs = args.enable_zfs and not args.disable_zfs

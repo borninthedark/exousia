@@ -305,18 +305,16 @@ Configures container image signature verification using cosign/sigstore.
 ```yaml
 - type: signing
   cosign-key: keys/cosign.pub        # optional
-  policy-file: policy/custom.json    # optional
-  verification: enforce              # or "warn"
+  policy-file: overlays/base/configs/containers/policy.json
 ```
 
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `cosign-key` | no | — | Path to cosign public key |
-| `policy-file` | no | — | Custom policy JSON to COPY into image |
-| `verification` | no | `enforce` | `enforce` (reject unsigned) or `warn` (accept all) |
+| `cosign-key` | no | — | Path to cosign public key to COPY into image |
+| `policy-file` | no | — | Overlay policy.json to COPY as `/etc/containers/policy.json` |
 
-When `verification: enforce`, the generated policy rejects all images except
-those signed with the configured key from `ghcr.io/borninthedark`.
+The `policy-file` overlay is the sole source of truth for container signature
+verification policy. If omitted, a build warning is emitted.
 
 ---
 

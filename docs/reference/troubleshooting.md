@@ -563,7 +563,7 @@ Build timeout exceeded
 
 **Solutions:**
 
-1. Increase timeout in Makefile or CI:
+1. Increase timeout in justfile or CI:
 
 ```yaml
 # GitHub Actions

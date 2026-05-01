@@ -42,11 +42,13 @@ All Quadlet definitions live in `overlays/deploy/`:
 | `forgejo-runner.container` | Container | Forgejo Actions CI runner |
 | `exousia-registry.container` | Container | Local container registry (port 5000) |
 | `freebsd.container` | Container | Standalone FreeBSD runtime container |
+| `ollama.container` | Container | Ollama local LLM inference server — Qwen3 8B (port 11434) |
 | `plane-*.container` | Container | Plane app, data services, and proxy (port 8080) |
 | `forgejo-data.volume` | Volume | Persistent Forgejo data |
 | `forgejo-db-data.volume` | Volume | Persistent Forgejo database data |
 | `forgejo-runner-data.volume` | Volume | Persistent runner data |
 | `exousia-registry-data.volume` | Volume | Persistent registry storage |
+| `ollama-data.volume` | Volume | Persistent Ollama model storage |
 | `plane-*.volume` | Volume | Persistent Plane data services |
 | `plane.env.example` | Template | Plane environment template |
 | `exousia.network` | Network | Shared network (10.89.1.0/24) |

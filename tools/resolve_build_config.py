@@ -19,7 +19,7 @@ except Exception as exc:
     YAML_SELECTOR_IMPORT_ERROR = exc
 
 
-DEFAULT_IMAGE_TYPE = "fedora-sway-atomic"
+DEFAULT_IMAGE_TYPE = "fedora-bootc"
 _BLUEPRINT = Path(__file__).resolve().parent.parent / "adnyeus.yml"
 
 

@@ -9,7 +9,7 @@ on:
       image_type:
         description: "Fedora image type to build"
         type: string
-        default: "fedora-sway-atomic"
+        default: "fedora-bootc"
       distro_version:
         description: "Fedora version (passed from Urahara, sourced from blueprint)"
         type: string
