@@ -1,0 +1,20 @@
+[Unit]
+Description=Temporal web UI
+After=temporal-server.service
+Requires=temporal-server.service
+
+[Container]
+Image=docker.io/temporalio/ui:latest
+ContainerName=temporal-ui
+PublishPort=127.0.0.1:8233:8080
+Network=exousia.network:alias=temporal-ui
+Environment=TEMPORAL_ADDRESS=temporal:7233
+Environment=TEMPORAL_CORS_ORIGINS=http://localhost:8233
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+# [Install]
+# WantedBy=default.target

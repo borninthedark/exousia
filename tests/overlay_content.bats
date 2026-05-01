@@ -413,6 +413,25 @@ assert_has_shebang() {
     assert_success "plane-proxy.container should use exousia.network"
 }
 
+@test "Temporal quadlets should exist" {
+    assert_file_exists "$OVERLAY_ROOT/deploy/temporal-server.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/temporal-db.container"
+    assert_file_exists "$OVERLAY_ROOT/deploy/temporal-ui.container"
+}
+
+@test "Temporal data volumes should exist" {
+    assert_file_exists "$OVERLAY_ROOT/deploy/temporal-db-data.volume"
+}
+
+@test "Temporal quadlets should use the shared exousia network" {
+    run grep -q "^Network=exousia.network" "$OVERLAY_ROOT/deploy/temporal-server.container"
+    assert_success "temporal-server.container should use exousia.network"
+    run grep -q "^Network=exousia.network" "$OVERLAY_ROOT/deploy/temporal-db.container"
+    assert_success "temporal-db.container should use exousia.network"
+    run grep -q "^Network=exousia.network" "$OVERLAY_ROOT/deploy/temporal-ui.container"
+    assert_success "temporal-ui.container should use exousia.network"
+}
+
 # ============================================================
 # Chezmoi systemd units
 # ============================================================

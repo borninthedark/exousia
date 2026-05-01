@@ -14,6 +14,8 @@ graph LR
         RN["Forgejo Runner"]
         REG["Local Registry<br/>:5000"]
         PL["Plane<br/>:8080"]
+        TMP["Temporal<br/>:7233/:8233"]
+        OLL["Ollama<br/>:11434"]
     end
 
     subgraph BUILD["Build Pipeline"]
@@ -44,12 +46,16 @@ All Quadlet definitions live in `overlays/deploy/`:
 | `freebsd.container` | Container | Standalone FreeBSD runtime container |
 | `ollama.container` | Container | Ollama local LLM inference server — Qwen3 8B (port 11434) |
 | `plane-*.container` | Container | Plane app, data services, and proxy (port 8080) |
+| `temporal-server.container` | Container | Temporal workflow engine (gRPC port 7233) |
+| `temporal-db.container` | Container | Temporal PostgreSQL persistence |
+| `temporal-ui.container` | Container | Temporal web dashboard (port 8233) |
 | `forgejo-data.volume` | Volume | Persistent Forgejo data |
 | `forgejo-db-data.volume` | Volume | Persistent Forgejo database data |
 | `forgejo-runner-data.volume` | Volume | Persistent runner data |
 | `exousia-registry-data.volume` | Volume | Persistent registry storage |
 | `ollama-data.volume` | Volume | Persistent Ollama model storage |
 | `plane-*.volume` | Volume | Persistent Plane data services |
+| `temporal-db-data.volume` | Volume | Persistent Temporal database storage |
 | `plane.env.example` | Template | Plane environment template |
 | `exousia.network` | Network | Shared network (10.89.1.0/24) |
 
@@ -199,6 +205,12 @@ just forgejo-stop              # Stop Forgejo
 just forgejo-status            # Show Forgejo service status
 just forgejo-logs              # Follow Forgejo logs
 
+# Temporal
+just temporal-start             # Start Temporal (systemd resolves full dep graph)
+just temporal-stop              # Stop the full Temporal stack
+just temporal-status            # Show Temporal service status
+just temporal-logs              # Follow Temporal logs
+
 # Standalone containers (pattern rules)
 just engage <name>             # Enable a quadlet: copy files, reload, start (e.g. just engage ollama)
 just disengage <name>          # Disable a quadlet: stop service, remove files
@@ -271,6 +283,59 @@ curl http://localhost:11434/api/generate \
 
 The API is available at `http://localhost:11434` and on the shared network
 at `http://ollama:11434` for other containers.
+
+## Temporal (Agent Orchestration)
+
+Temporal provides durable workflow orchestration for coordinating LLM agents.
+The stack is 3 containers: PostgreSQL, the Temporal server (auto-setup), and
+the web UI.
+
+### Enable and start
+
+```bash
+just engage temporal-db
+just engage temporal-server
+just engage temporal-ui
+```
+
+Or use the app-specific target (requires quadlets already installed):
+
+```bash
+just temporal-start
+```
+
+The auto-setup image creates the database schema on first boot. Monitor
+progress:
+
+```bash
+just temporal-logs
+```
+
+### Verify
+
+```bash
+# Temporal UI
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8233
+
+# gRPC health (requires grpcurl or temporal CLI)
+temporal operator cluster health --address localhost:7233
+```
+
+The UI is available at `http://localhost:8233`. Workers connect to the gRPC
+endpoint at `localhost:7233` (or `temporal:7233` from other containers on
+`exousia.network`).
+
+### Service management
+
+```bash
+just temporal-start    # Start all 3 services
+just temporal-stop     # Stop all 3 services
+just temporal-status   # Show service status
+just temporal-logs     # Follow logs
+```
+
+See [Temporal Orchestration Plan](plan-temporal-orchestration.md) for the full
+architecture, workflow design, and phased rollout.
 
 ## Troubleshooting
 

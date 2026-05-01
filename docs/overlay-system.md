@@ -103,7 +103,11 @@ overlays/
     ├── ollama-data.volume            # Ollama model storage
     ├── plane-*.container             # Plane services (13 containers)
     ├── plane-*.volume                # Plane persistent storage
-    └── plane.env.example             # Plane env template
+    ├── plane.env.example             # Plane env template
+    ├── temporal-server.container     # Temporal workflow engine
+    ├── temporal-db.container         # Temporal PostgreSQL persistence
+    ├── temporal-db-data.volume       # Temporal database storage
+    └── temporal-ui.container         # Temporal web dashboard
 ```
 
 ---
