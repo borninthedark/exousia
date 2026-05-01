@@ -1,0 +1,18 @@
+[Unit]
+Description=Ollama local LLM inference server (Qwen3)
+
+[Container]
+Image=docker.io/ollama/ollama:latest
+ContainerName=ollama
+PublishPort=127.0.0.1:11434:11434
+Volume=ollama-data.volume:/root/.ollama
+Network=exousia.network:alias=ollama
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+ExecStartPost=/usr/bin/podman exec ollama ollama pull qwen3:8b
+
+# [Install]
+# WantedBy=default.target

@@ -7,7 +7,7 @@ inputs:
     default: 'adnyeus.yml'
   image_type:
     description: 'Image type (fedora-bootc, fedora-sway-atomic)'
-    default: 'fedora-sway-atomic'
+    default: 'fedora-bootc'
   distro_version:
     description: 'Fedora version (defaults to image-version from adnyeus.yml)'
     default: ''

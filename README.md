@@ -295,6 +295,7 @@ This project uses AI-assisted development tools:
 - **[Claude Code](https://claude.ai/claude-code)** (Anthropic)
 - **[Gemini CLI](https://github.com/google-gemini/gemini-cli)** (Google)
 - **[ChatGPT Codex](https://openai.com/index/openai-codex/)** (OpenAI)
+- **[Qwen3](https://ollama.com/library/qwen3)** via [Ollama](https://ollama.com/) (local inference)
 - **[GitHub Dependabot](https://docs.github.com/en/code-security/dependabot)**
 - [github-actions[bot]](https://github.com/apps/github-actions) -- automated releases and tagging
 

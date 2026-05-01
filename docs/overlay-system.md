@@ -99,6 +99,8 @@ overlays/
     ├── forgejo-*.volume              # Forgejo persistent storage
     ├── forgejo-runner.container      # Forgejo Actions runner
     ├── freebsd.container             # FreeBSD standalone container
+    ├── ollama.container              # Ollama local LLM inference (Qwen3)
+    ├── ollama-data.volume            # Ollama model storage
     ├── plane-*.container             # Plane services (13 containers)
     ├── plane-*.volume                # Plane persistent storage
     └── plane.env.example             # Plane env template
