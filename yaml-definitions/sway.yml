@@ -4,7 +4,7 @@
 
 name: exousia-sway
 description: Custom Fedora bootc image with Sway desktop environment
-image-version: 43
+image-version: 44
 
 # Base image configuration
 base-image: quay.io/fedora/fedora-bootc

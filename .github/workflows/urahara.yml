@@ -42,9 +42,9 @@ on:
         required: true
         type: choice
         options:
-          - "fedora-sway-atomic"
           - "fedora-bootc"
-        default: "fedora-sway-atomic"
+          - "fedora-sway-atomic"
+        default: "fedora-bootc"
       distro_versions:
         description: "Fedora versions to build (comma-separated, e.g. 44 or 44,rawhide). Leave empty to use blueprint default."
         required: false
@@ -128,7 +128,7 @@ jobs:
         distro_version: ${{ fromJSON(needs.defaults.outputs.versions) }}
     uses: ./.github/workflows/hiyori.yml
     with:
-      image_type: ${{ inputs.image_type || 'fedora-sway-atomic' }}
+      image_type: ${{ inputs.image_type || 'fedora-bootc' }}
       distro_version: ${{ matrix.distro_version }}
       enable_plymouth: ${{ inputs.enable_plymouth == '' && true || inputs.enable_plymouth }}
       is_primary: ${{ matrix.distro_version == needs.defaults.outputs.primary_version }}
