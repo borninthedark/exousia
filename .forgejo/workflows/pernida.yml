@@ -298,7 +298,7 @@ jobs:
 
           VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 
-          buildah bud --layers \
+          buildah bud --layers --tls-verify=false \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}" \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}" \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${VERSION}" \
