@@ -87,11 +87,20 @@ podman run --rm \
   -v systemd-forgejo-runner-data:/data \
   code.forgejo.org/forgejo/runner:9.1.1 \
   sh -c 'forgejo-runner generate-config > /data/config.yaml && \
-    sed -i "s|docker_host: \"-\"|docker_host: \"unix:///var/run/docker.sock\"|" /data/config.yaml && \
+    sed -i "s|docker_host: \"-\"|docker_host: \"\"|" /data/config.yaml && \
     sed -i "s|file: .runner|file: /data/.runner|" /data/config.yaml && \
     sed -i "s|privileged: false|privileged: true|" /data/config.yaml && \
-    sed -i "s|valid_volumes: \[\]|valid_volumes:\n    - /var/run/docker.sock\n    - \"**\"|" /data/config.yaml'
+    sed -i "s|valid_volumes: \[\]|valid_volumes:\n    - \"**\"|" /data/config.yaml'
 ```
+
+The key changes from defaults:
+
+| Setting | Default | Changed To | Reason |
+|---------|---------|------------|--------|
+| `docker_host` | `"-"` | `""` | Auto-detect without socket forwarding to job containers |
+| `runner.file` | `.runner` | `/data/.runner` | Absolute path required with `keep-id` (can't write to `/`) |
+| `privileged` | `false` | `true` | Required for buildah in Gremmy build jobs |
+| `valid_volumes` | `[]` | `["**"]` | Allow job containers to mount workspace volumes |
 
 ## Daemon Configuration Reference
 
@@ -119,17 +128,46 @@ runner:
 container:
   network: ""                # auto-create per-job networks
   privileged: true           # required for buildah/podman-in-podman
-  docker_host: "unix:///var/run/docker.sock"
+  docker_host: ""            # auto-detect, do NOT mount into job containers
   valid_volumes:
-    - /var/run/docker.sock
-    - "**"
+    - "**"                   # allow job containers to mount any volume
 ```
 
-- `docker_host` — points to the mounted Podman socket. The default (`"-"`)
-  auto-detects but fails in this setup because the socket path inside the
-  runner container differs from the standard Docker location. Setting it
-  explicitly to `unix:///var/run/docker.sock` matches the volume mount in
-  the quadlet.
+- `docker_host` — controls how the runner communicates with the container
+  runtime and whether it forwards the socket into job containers.
+
+  **This setting is the most critical for rootless Podman.** The wrong
+  value causes `mkdir /var/run/docker.sock: permission denied` when
+  creating job containers. Here's why:
+
+  When `docker_host` is set to an explicit path like
+  `unix:///var/run/docker.sock`, the runner daemon can connect to the
+  Podman API socket fine (because the quadlet mounts it at that path).
+  However, the runner also tries to **forward** that socket into every job
+  container it creates — it passes a bind-mount flag like
+  `-v /var/run/docker.sock:/var/run/docker.sock` to the `docker create`
+  call. In rootless Podman, the container runtime cannot `mkdir` at
+  `/var/run/docker.sock` inside the job container's filesystem because the
+  process runs as a non-root user. This results in:
+
+  ```text
+  failed to create container: 'Error response from daemon: make cli opts():
+  making volume mountpoint for volume /var/run/docker.sock:
+  mkdir /var/run/docker.sock: permission denied'
+  ```
+
+  **Resolution:** Set `docker_host` to `""` (empty string). This tells the
+  runner to auto-detect an available Docker/Podman socket without attempting
+  to mount it into job containers. The runner itself still communicates with
+  Podman via the socket mounted by the quadlet, but job containers don't
+  get the socket forwarded — which is the correct behavior since job
+  containers don't need Docker-in-Docker access.
+
+  | Value | Behavior | Rootless Podman |
+  |-------|----------|-----------------|
+  | `""` or `"-"` | Auto-detect, no mount forwarding | Works |
+  | `"automount"` | Auto-detect + mount into job containers | Fails (permission denied) |
+  | `"unix:///var/run/docker.sock"` | Explicit path + mount into job containers | Fails (permission denied) |
 
 - `privileged: true` — required for job containers that run buildah or
   podman (e.g., Gremmy build jobs). Without this, container builds inside
@@ -138,7 +176,6 @@ container:
 - `valid_volumes` — controls which volumes job containers can mount. The
   default (`[]`) blocks all volume mounts. Setting `"**"` allows any volume,
   which is needed for job containers to access the workspace and build cache.
-  `/var/run/docker.sock` is explicitly listed for Docker-in-Docker patterns.
 
 ### Cache section
 
@@ -254,7 +291,7 @@ podman volume rm systemd-forgejo-runner-data
 | `permission denied` on `/data/.runner` | Volume ownership mismatch with `keep-id` | Use `:U` volume flag |
 | `docker_host config was invalid` | Missing or default daemon config | Generate `/data/config.yaml` with explicit `docker_host` |
 | `start-limit-hit` | Rapid restart loop from earlier failures | `systemctl --user reset-failed forgejo-runner.service` |
-| `mkdir /var/run/docker.sock: permission denied` | Job containers can't create socket mountpoint | Set `privileged: true` and `valid_volumes: ["**"]` in config.yaml |
+| `mkdir /var/run/docker.sock: permission denied` | `docker_host` set to explicit path or `automount` — runner tries to forward socket into job containers, rootless podman can't mkdir | Set `docker_host: ""` in config.yaml (empty = auto-detect without forwarding) |
 | Runner exits immediately (status 0) | Image default cmd is `forgejo-runner` (shows help) | Quadlet must set `Exec=forgejo-runner daemon` |
 | `Could not start the cache server` | Cache port conflict (non-fatal warning) | Ignorable — cache is disabled but jobs still run |
 
