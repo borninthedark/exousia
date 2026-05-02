@@ -7,7 +7,7 @@ Podman Quadlet container definitions for local infrastructure services.
 | File | Service | Purpose |
 |------|---------|---------|
 | `forgejo.container` | Forgejo | Local Git forge for development |
-| `forgejo-runner.container` | Forgejo Runner | Executes Forgejo Actions workflows |
+| `forgejo-runner.container` | Forgejo Runner | Executes Forgejo Actions workflows ([setup guide](../../docs/forgejo-runner.md)) |
 | `exousia-registry.container` | Container Registry | Local OCI registry at `localhost:5000` |
 | `freebsd.container` | FreeBSD | FreeBSD 14.4 runtime environment on the shared `exousia.network` |
 | `plane-*.container` | Plane | Local project planning stack on the shared `exousia.network` |

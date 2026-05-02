@@ -14,7 +14,7 @@ name: "Urahara - Orchestrator"
 
 on:
   push:
-    branches: [main]
+    branches: [main, "uryu/*"]
     paths-ignore:
       - "docs/**"
       - "tests/**"
@@ -66,6 +66,7 @@ permissions:
   contents: read
   packages: write
   id-token: write
+  pull-requests: write
 
 jobs:
   # -- Read defaults and build version matrix --
@@ -194,3 +195,44 @@ jobs:
           needs.hiyori.result == 'failure' ||
           (needs.sealed.result == 'failure')
         run: exit 1
+
+      - name: Checkout (for gh CLI)
+        if: >-
+          github.ref != 'refs/heads/main' &&
+          github.event_name == 'push'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Create promotion PR (feature branch)
+        if: >-
+          github.ref != 'refs/heads/main' &&
+          github.event_name == 'push' &&
+          needs.hikifune.result == 'success' &&
+          needs.uhin.result == 'success' &&
+          (needs.hiyori.result == 'success' || needs.hiyori.result == 'skipped')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+
+          PR_BODY="## Automated Promotion PR
+
+          All checks passed on feature branch push:
+          - Hikifune (CI): ${{ needs.hikifune.result }}
+          - Uhin (Security): ${{ needs.uhin.result }}
+          - Hiyori (Build): ${{ needs.hiyori.result }}
+
+          Created by Urahara pipeline."
+
+          EXISTING=$(gh pr list --head "${BRANCH}" --base main --state open --json number --jq '.[0].number // empty')
+
+          if [ -n "${EXISTING}" ]; then
+            gh pr edit "${EXISTING}" --body "${PR_BODY}"
+            echo "Updated existing promotion PR #${EXISTING} for ${BRANCH}"
+          else
+            gh pr create \
+              --title "promote: ${BRANCH} -> main" \
+              --base main \
+              --head "${BRANCH}" \
+              --body "${PR_BODY}"
+            echo "Created promotion PR: ${BRANCH} -> main"
+          fi
