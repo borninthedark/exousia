@@ -98,7 +98,7 @@ podman run --rm \
     sed -i "s|privileged: false|privileged: true|" /data/config.yaml && \
     sed -i "s|valid_volumes: \[\]|valid_volumes:\n    - \"**\"|" /data/config.yaml && \
     sed -i "s|network: \"\"|network: \"systemd-exousia\"|" /data/config.yaml && \
-    sed -i "s|options:$|options: --cpus 4 --memory 15g|" /data/config.yaml'
+    sed -i "s|options:$|options: --cpus 2 --memory 8g|" /data/config.yaml'
 ```
 
 The key changes from defaults:
@@ -110,7 +110,7 @@ The key changes from defaults:
 | `privileged` | `false` | `true` | Required for buildah in Gremmy build jobs |
 | `valid_volumes` | `[]` | `["**"]` | Allow job containers to mount workspace volumes |
 | `container.network` | `""` | `"systemd-exousia"` | Job containers must resolve `forgejo` hostname for checkout |
-| `container.options` | (empty) | `--cpus 4 --memory 15g` | Allocate host resources to job containers for faster builds |
+| `container.options` | (empty) | `--cpus 2 --memory 8g` | Allocate host resources to job containers for faster builds |
 
 ## Daemon Configuration Reference
 
@@ -122,7 +122,7 @@ Key settings for the Podman rootless environment:
 ```yaml
 runner:
   file: /data/.runner        # absolute path — relative paths fail with keep-id
-  capacity: 1                # concurrent jobs (increase for parallel pipelines)
+  capacity: 3                # concurrent jobs — allows Bambietta/Askin/Gremmy in parallel
   timeout: 3h                # max job duration
   shutdown_timeout: 3h       # graceful shutdown window for running jobs
   fetch_interval: 2s         # polling interval for new jobs
@@ -139,7 +139,7 @@ container:
   network: "systemd-exousia" # job containers join the shared network
   privileged: true           # required for buildah/podman-in-podman
   docker_host: ""            # auto-detect, do NOT mount into job containers
-  options: --cpus 4 --memory 15g  # resource limits for job containers
+  options: --cpus 2 --memory 8g   # resource limits per job container
   valid_volumes:
     - "**"                   # allow job containers to mount any volume
 ```
@@ -190,11 +190,10 @@ container:
   | `"unix:///var/run/docker.sock"` | Explicit path + mount into job containers | Fails (permission denied) |
 
 - `options` — extra flags passed to `podman run` when creating job
-  containers. `--cpus 4 --memory 15g` allocates 4 of 8 host CPU cores and
-  15GB of 29GB RAM to each job container, comparable to GitHub Actions hosted
-  runners (4 cores / 16GB). Adjust these
-  values based on host capacity — leave headroom for the host OS, Forgejo,
-  and other services.
+  containers. `--cpus 2 --memory 8g` allocates 2 cores and 8GB per job.
+  With `capacity: 3`, up to 3 jobs run in parallel (6 cores / 24GB max),
+  leaving 2 cores / 5GB for the host OS, Forgejo, and other services.
+  Adjust values based on host capacity.
 
 - `privileged: true` — required for job containers that run buildah or
   podman (e.g., Gremmy build jobs). Without this, container builds inside

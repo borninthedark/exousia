@@ -1,7 +1,7 @@
 # Pernida Parnkjas — Sternritter C "The Compulsory"
 # Forgejo Orchestrator: promotion-style build pipeline.
 #
-# Job containers: 4 CPUs, 15GB RAM (see docs/forgejo-runner.md)
+# Job containers: 2 CPUs, 8GB RAM × 3 parallel (see docs/forgejo-runner.md)
 #
 # All jobs are inlined (not workflow_call) to avoid Forgejo's label
 # dispatch bug where called workflow jobs get empty runner labels.
