@@ -1,6 +1,6 @@
 # Pernida Parnkjas — Sternritter C "The Compulsory"
 # Forgejo Orchestrator: calls Bambietta (CI) + Askin (Security) in parallel,
-# then Gremmy (Build), then gate.
+# then Gremmy (Build), then pushes to GitHub on success.
 # Forgejo-local parity with Urahara (GitHub Actions).
 #
 # Vandenreich Pipeline:
@@ -8,6 +8,9 @@
 #   Bambietta  -> CI: lint + test
 #   Askin      -> Security scanning
 #   Gremmy     -> Build & push to local registry
+#   Gate       -> Push to GitHub on success
+#
+# Requires GHCR_PAT in the runner environment (repo scope for GitHub push).
 
 name: "Pernida — Orchestrator"
 
@@ -73,7 +76,7 @@ jobs:
       distro_version: ${{ needs.defaults.outputs.primary_version }}
       enable_plymouth: true
 
-  # -- Gate: summary of all jobs --
+  # -- Gate: summary + push to GitHub on success --
   gate:
     name: "Gate (Summary)"
     needs: [bambietta, askin, gremmy]
@@ -96,3 +99,20 @@ jobs:
           needs.askin.result == 'failure' ||
           needs.gremmy.result == 'failure'
         run: exit 1
+
+      - name: Push to GitHub
+        if: >-
+          github.event_name != 'pull_request' &&
+          needs.bambietta.result == 'success' &&
+          needs.askin.result == 'success' &&
+          (needs.gremmy.result == 'success' || needs.gremmy.result == 'skipped')
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          REPO_URL="https://x-access-token:${GHCR_PAT}@github.com/borninthedark/exousia.git"
+
+          git clone --bare --single-branch --branch "${BRANCH}" \
+            "${{ github.server_url }}/${{ github.repository }}.git" /tmp/push-repo
+          cd /tmp/push-repo
+
+          git push "${REPO_URL}" "${BRANCH}:${BRANCH}" --force-with-lease
+          echo "Pushed ${BRANCH} to GitHub"
