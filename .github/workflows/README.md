@@ -62,12 +62,16 @@ merge the branch into `main`. If a PR already exists, it skips creation.
 
 ## Forgejo Actions — Vandenreich Pipeline
 
-| Sternritter | File | Schrift | Role |
-|-------------|------|---------|------|
-| **Pernida** | `pernida.yml` | The Compulsory (C) | Orchestrator: calls Bambietta + Askin in parallel, then Gremmy, then gate |
-| **Bambietta** | `bambietta.yml` | The Explode (E) | CI: Ruff, Black, isort, pytest |
-| **Askin** | `askin.yml` | The Deathdealing (D) | Security: file-structure, overlay Bats, Hadolint, Checkov, Trivy, Bandit, OSV-Scanner |
-| **Gremmy** | `gremmy.yml` | The Visionary (V) | Build with buildah, push to local registry (`localhost:5000`) |
+| Sternritter | Schrift | Role |
+|-------------|---------|------|
+| **Pernida** | The Compulsory (C) | Orchestrator (`pernida.yml`) — all jobs inlined |
+| **Bambietta** | The Explode (E) | CI: Ruff, Black, isort, pytest |
+| **Askin** | The Deathdealing (D) | Security: file-structure, overlay Bats, Hadolint, Checkov, Trivy, Bandit, OSV-Scanner |
+| **Gremmy** | The Visionary (V) | Build with buildah, push to local registry (`localhost:5000`) |
+
+All Vandenreich jobs are inlined into `pernida.yml` (not separate
+`workflow_call` files) to avoid a Forgejo label dispatch bug where called
+workflow jobs receive empty runner labels and never get picked up.
 
 ### Image Tags (Forgejo / Local Registry)
 
