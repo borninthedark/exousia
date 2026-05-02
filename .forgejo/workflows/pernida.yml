@@ -208,7 +208,7 @@ jobs:
         run: hadolint --ignore DL3041 --ignore DL3059 --ignore DL4006 --ignore SC3040 Dockerfile.generated
 
       - name: Install Checkov
-        run: pip install -q checkov
+        run: uv tool install checkov
 
       - name: Checkov (Containerfile)
         run: |
