@@ -386,13 +386,19 @@ jobs:
           BRANCH="${GITHUB_REF_NAME}"
           API_URL="${{ github.server_url }}/api/v1"
 
+          PR_BODY="Automated promotion PR created by Pernida pipeline.\\n\\nAll checks passed:\\n- Bambietta (CI): ${{ needs.bambietta.result }}\\n- Askin (Security): ${{ needs.askin.result }}\\n- Gremmy (Build): ${{ needs.gremmy.result }}"
+
           # Check if a PR already exists for this branch
           EXISTING=$(curl -s -H "Authorization: token ${FORGEJO_TOKEN}" \
             "${API_URL}/repos/${{ github.repository }}/pulls?state=open&head=${{ github.repository_owner }}:${BRANCH}" \
-            | python3 -c "import json,sys; prs=json.load(sys.stdin); print(len(prs))" 2>/dev/null || echo "0")
+            | python3 -c "import json,sys; prs=json.load(sys.stdin); print(prs[0]['number'] if prs else '')" 2>/dev/null || echo "")
 
-          if [ "${EXISTING}" -gt 0 ]; then
-            echo "Promotion PR already exists for ${BRANCH} — skipping"
+          if [ -n "${EXISTING}" ]; then
+            curl -s -X PATCH -H "Authorization: token ${FORGEJO_TOKEN}" \
+              -H "Content-Type: application/json" \
+              "${API_URL}/repos/${{ github.repository }}/pulls/${EXISTING}" \
+              -d "{\"body\": \"${PR_BODY}\"}"
+            echo "Updated existing promotion PR #${EXISTING} for ${BRANCH}"
           else
             curl -s -X POST -H "Authorization: token ${FORGEJO_TOKEN}" \
               -H "Content-Type: application/json" \
@@ -401,7 +407,7 @@ jobs:
                 \"title\": \"promote: ${BRANCH} -> main\",
                 \"head\": \"${BRANCH}\",
                 \"base\": \"main\",
-                \"body\": \"Automated promotion PR created by Pernida pipeline.\\n\\nAll checks passed:\\n- Bambietta (CI): ${{ needs.bambietta.result }}\\n- Askin (Security): ${{ needs.askin.result }}\\n- Gremmy (Build): ${{ needs.gremmy.result }}\"
+                \"body\": \"${PR_BODY}\"
               }"
             echo "Created promotion PR: ${BRANCH} -> main"
           fi

@@ -214,25 +214,25 @@ jobs:
         run: |
           BRANCH="${GITHUB_REF_NAME}"
 
-          EXISTING=$(gh pr list --head "${BRANCH}" --base main --state open --json number --jq 'length')
-
-          if [ "${EXISTING}" -gt 0 ]; then
-            echo "Promotion PR already exists for ${BRANCH} — skipping"
-          else
-            gh pr create \
-              --title "promote: ${BRANCH} -> main" \
-              --base main \
-              --head "${BRANCH}" \
-              --body "$(cat <<'BODY'
-          ## Automated Promotion PR
+          PR_BODY="## Automated Promotion PR
 
           All checks passed on feature branch push:
           - Hikifune (CI): ${{ needs.hikifune.result }}
           - Uhin (Security): ${{ needs.uhin.result }}
           - Hiyori (Build): ${{ needs.hiyori.result }}
 
-          Created by Urahara pipeline.
-          BODY
-          )"
+          Created by Urahara pipeline."
+
+          EXISTING=$(gh pr list --head "${BRANCH}" --base main --state open --json number --jq '.[0].number // empty')
+
+          if [ -n "${EXISTING}" ]; then
+            gh pr edit "${EXISTING}" --body "${PR_BODY}"
+            echo "Updated existing promotion PR #${EXISTING} for ${BRANCH}"
+          else
+            gh pr create \
+              --title "promote: ${BRANCH} -> main" \
+              --base main \
+              --head "${BRANCH}" \
+              --body "${PR_BODY}"
             echo "Created promotion PR: ${BRANCH} -> main"
           fi
