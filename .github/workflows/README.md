@@ -39,9 +39,24 @@ Nemu (on Urahara completion, main only) <---------------------------------+
 Mayuri (scheduled, independent) -> triggers Urahara if dotfiles changed
 ```
 
+### Pipeline Flow (GitHub)
+
+```text
+Feature branch (uryu/*):
+  Urahara -> Hikifune + Uhin (parallel) -> Hiyori (skipped on forks)
+    -> Gate creates promotion PR to main
+
+Main branch:
+  Urahara -> Hikifune + Uhin (parallel) -> Hiyori (:prod on GHCR)
+    -> Sealed (optional) -> Gate
+```
+
+On successful feature branch pushes, the Gate job auto-creates a PR to
+merge the branch into `main`. If a PR already exists, it skips creation.
+
 ### Triggers
 
-- **Urahara**: push/PR to main, scheduled at 00:10 / 12:10 UTC, manual dispatch
+- **Urahara**: push to `main` or `uryu/*`, PR to main, scheduled at 00:10 / 12:10 UTC, manual dispatch
 - **Mayuri**: scheduled at 04:10 / 12:10 / 20:10 UTC, manual dispatch
 - **Nemu**: `workflow_run` after Urahara completes on main
 
