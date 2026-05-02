@@ -72,7 +72,7 @@ graph TD
 
 | Service | Image | Host Port | Network Alias | Depends On |
 |---------|-------|-----------|---------------|------------|
-| `exousia-registry` | `registry:2` | 5000 | - | `exousia.network` |
+| `exousia-registry` | `registry:2` | 5000 | `registry` | `exousia.network` |
 | `freebsd` | `freebsd/freebsd-runtime:14.4` | - | - | `exousia.network` |
 | `k3s` | `rancher/k3s:latest` | 6443, 80, 443 | `k3s` | `exousia.network` |
 
@@ -201,6 +201,7 @@ All ports bind to `127.0.0.1` only (no external exposure).
 | `plane-redis-data` | Plane Redis | `/data` |
 | `plane-mq-data` | Plane RabbitMQ | `/var/lib/rabbitmq` |
 | `plane-minio-data` | Plane MinIO | `/data` |
+| `buildah-layers` | Forgejo Runner (job containers) | `/var/lib/containers/storage` |
 
 ## Container Image Policy
 

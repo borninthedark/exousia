@@ -147,11 +147,12 @@ container:
 - `network` — the network that job containers join. **Must** be
   `systemd-exousia` (the shared Podman network) so that job containers can
   resolve the `forgejo` hostname when `actions/checkout` clones the
-  repository. The Forgejo instance advertises its clone URL as
-  `http://forgejo:3000/...`, which is only resolvable on `exousia.network`.
-  The default (empty) creates isolated per-job networks where the hostname
-  can't resolve, causing `Could not resolve host: forgejo` errors during
-  checkout.
+  repository, and the `registry` hostname when pushing images to the local
+  registry (`registry:5000`). The Forgejo instance advertises its clone URL
+  as `http://forgejo:3000/...`, which is only resolvable on
+  `exousia.network`. The default (empty) creates isolated per-job networks
+  where hostnames can't resolve, causing `Could not resolve host` errors
+  during checkout or registry push.
 
 - `docker_host` — controls how the runner communicates with the container
   runtime and whether it forwards the socket into job containers.
