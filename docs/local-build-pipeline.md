@@ -43,6 +43,7 @@ All Quadlet definitions live in `overlays/deploy/`:
 | `forgejo.container` | Container | Self-hosted git forge (ports 3000, 2222) |
 | `forgejo-db.container` | Container | Forgejo PostgreSQL backend |
 | `forgejo-runner.container` | Container | Forgejo Actions CI runner |
+| `coredns.container` | Container | CoreDNS local service resolver (port 5353) |
 | `exousia-registry.container` | Container | Local container registry (port 5000) |
 | `freebsd.container` | Container | Standalone FreeBSD runtime container |
 | `ollama.container` | Container | Ollama local LLM inference server — Qwen3 8B (port 11434) |
@@ -315,6 +316,75 @@ connects to Ollama via `http://ollama:11434` on the shared network.
 
 ```bash
 just disengage open-webui
+```
+
+## CoreDNS (Local Service Resolution)
+
+CoreDNS resolves `*.exousia.local` hostnames to `127.0.0.1`, so local
+services are accessible by name instead of port numbers.
+
+| Hostname | Service | Port |
+|----------|---------|------|
+| `forgejo.exousia.local` | Forgejo | 3000 |
+| `registry.exousia.local` | Container Registry | 5000 |
+| `plane.exousia.local` | Plane | 8080 |
+| `ollama.exousia.local` | Ollama | 11434 |
+| `webui.exousia.local` | Open WebUI | 3080 |
+| `temporal.exousia.local` | Temporal gRPC | 7233 |
+| `temporal-ui.exousia.local` | Temporal UI | 8233 |
+
+### Enable and start
+
+```bash
+# Copy config files
+mkdir -p ~/.config/coredns
+cp overlays/deploy/coredns/Corefile ~/.config/coredns/
+cp overlays/deploy/coredns/exousia.local.zone ~/.config/coredns/
+
+# Engage the quadlet
+just engage coredns
+```
+
+### Configure systemd-resolved
+
+Tell the system resolver to forward `.exousia.local` queries to CoreDNS:
+
+```bash
+sudo mkdir -p /etc/systemd/resolved.conf.d
+sudo tee /etc/systemd/resolved.conf.d/exousia-local.conf <<'EOF'
+[Resolve]
+DNS=127.0.0.1:5353
+Domains=~exousia.local
+EOF
+sudo systemctl restart systemd-resolved
+```
+
+### Verify
+
+```bash
+resolvectl query forgejo.exousia.local
+dig @127.0.0.1 -p 5353 forgejo.exousia.local
+```
+
+### Adding new services
+
+Edit `~/.config/coredns/exousia.local.zone`, add an A record, then:
+
+```bash
+podman restart coredns
+```
+
+### Browser access
+
+DNS resolves the hostname, but you still need the port in the URL
+(`http://forgejo.exousia.local:3000`) unless you add a reverse proxy.
+A future Caddy/Traefik quadlet could handle port-free access via
+`:80`/`:443`.
+
+### Disable
+
+```bash
+just disengage coredns
 ```
 
 ## Temporal (Agent Orchestration)

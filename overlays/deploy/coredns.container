@@ -1,0 +1,17 @@
+[Unit]
+Description=CoreDNS local service resolver
+
+[Container]
+Image=docker.io/coredns/coredns:1.12.1
+ContainerName=coredns
+AutoUpdate=registry
+Network=exousia.network
+PublishPort=127.0.0.1:5353:53/tcp
+PublishPort=127.0.0.1:5353:53/udp
+Volume=%h/.config/coredns:/etc/coredns:ro
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

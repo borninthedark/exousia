@@ -73,6 +73,7 @@ graph TD
 | Service | Image | Host Port | Network Alias | Depends On |
 |---------|-------|-----------|---------------|------------|
 | `exousia-registry` | `registry:2` | 5000 | `registry` | `exousia.network` |
+| `coredns` | `coredns/coredns:1.12.1` | 5353 (tcp+udp) | `coredns` | `exousia.network` |
 | `freebsd` | `freebsd/freebsd-runtime:14.4` | - | - | `exousia.network` |
 | `k3s` | `rancher/k3s:latest` | 6443, 80, 443 | `k3s` | `exousia.network` |
 
@@ -216,6 +217,7 @@ Each registry namespace must be explicitly allowlisted:
 | `docker.io/makeplane` | Plane services |
 | `docker.io/minio` | Plane MinIO |
 | `docker.io/valkey` | Plane Redis (Valkey) |
+| `docker.io/coredns` | CoreDNS |
 | `codeberg.org/forgejo` | Forgejo |
 | `code.forgejo.org/forgejo` | Forgejo Runner |
 | `docker.io/catthehacker` | Forgejo Runner job containers (`ubuntu:act-latest`) |
