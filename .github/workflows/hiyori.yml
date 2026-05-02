@@ -142,7 +142,7 @@ jobs:
     name: OpenSCAP (${{ inputs.distro_version }})
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     steps:
       - name: Login to GHCR
         run: |
@@ -174,7 +174,7 @@ jobs:
     name: Trivy (${{ inputs.distro_version }})
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     timeout-minutes: 15
     env:
       TRIVY_PASSWORD: ${{ secrets.GHCR_PAT }}
