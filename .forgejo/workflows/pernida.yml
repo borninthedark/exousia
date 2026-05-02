@@ -207,13 +207,6 @@ jobs:
       - name: Hadolint
         run: hadolint --ignore DL3041 --ignore DL3059 --ignore DL4006 --ignore SC3040 Dockerfile.generated
 
-      - name: Upload generated Containerfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: containerfile-generated
-          path: Dockerfile.generated
-          retention-days: 1
-
       - name: Install Checkov
         run: pip install -q checkov
 
