@@ -384,5 +384,5 @@ jobs:
           cd /tmp/push-repo
 
           CODEBERG_URL="https://borninthedark:${CODEBERG_TOKEN}@codeberg.org/borninthedark/exousia.git"
-          git push "${CODEBERG_URL}" "${BRANCH}:${BRANCH}" --force-with-lease
+          git push "${CODEBERG_URL}" "${BRANCH}:${BRANCH}" --force
           echo "Pushed ${BRANCH} to Codeberg"
