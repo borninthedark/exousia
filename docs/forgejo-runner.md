@@ -205,6 +205,26 @@ container:
   default (`[]`) blocks all volume mounts. Setting `"**"` allows any volume,
   which is needed for job containers to access the workspace and build cache.
 
+### Tuning resources at runtime
+
+Capacity and resource limits can be changed without re-registration:
+
+```bash
+# Edit config inside the running volume
+podman exec forgejo-runner sed -i 's/capacity: .*/capacity: 1/' /data/config.yaml
+podman exec forgejo-runner sed -i 's/--cpus [0-9]* --memory [0-9]*g/--cpus 6 --memory 24g/' /data/config.yaml
+
+# Restart to apply
+systemctl --user restart forgejo-runner
+```
+
+Common profiles:
+
+| Profile | Capacity | CPUs/job | RAM/job | Host reserved |
+|---------|----------|----------|---------|---------------|
+| Default | 2 | 3 | 12GB | 2 cores |
+| Heavy build | 1 | 6 | 24GB | 2 cores |
+
 ### Cache section
 
 ```yaml
