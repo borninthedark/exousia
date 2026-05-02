@@ -16,7 +16,7 @@
 #   Askin      -> Security scanning
 #   Gremmy     -> Build & push to local registry
 #
-# Requires GHCR_PAT in Forgejo Actions secrets.
+# Requires CODEBERG_TOKEN in Forgejo Actions secrets.
 
 name: "Pernida — Orchestrator"
 
@@ -369,13 +369,12 @@ jobs:
           needs.gremmy.result == 'failure'
         run: exit 1
 
-      - name: Push to remotes (GitHub + Codeberg)
+      - name: Push to Codeberg
         if: >-
           needs.bambietta.result == 'success' &&
           needs.askin.result == 'success' &&
           needs.gremmy.result == 'success'
         env:
-          GHCR_PAT: ${{ secrets.GHCR_PAT }}
           CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
         run: |
           BRANCH="${GITHUB_REF_NAME}"
@@ -384,12 +383,6 @@ jobs:
             "${{ github.server_url }}/${{ github.repository }}.git" /tmp/push-repo
           cd /tmp/push-repo
 
-          # Push to GitHub
-          GITHUB_URL="https://borninthedark:${GHCR_PAT}@github.com/borninthedark/exousia.git"
-          git push "${GITHUB_URL}" "${BRANCH}:${BRANCH}" --force-with-lease
-          echo "Pushed ${BRANCH} to GitHub"
-
-          # Push to Codeberg
           CODEBERG_URL="https://borninthedark:${CODEBERG_TOKEN}@codeberg.org/borninthedark/exousia.git"
           git push "${CODEBERG_URL}" "${BRANCH}:${BRANCH}" --force-with-lease
           echo "Pushed ${BRANCH} to Codeberg"
