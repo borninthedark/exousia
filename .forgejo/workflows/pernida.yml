@@ -50,8 +50,8 @@ on:
       - "tools/test_*.py"
 
 env:
-  LOCAL_REGISTRY: forgejo:3000
-  IMAGE_NAME: uryu/exousia
+  LOCAL_REGISTRY: registry:5000
+  IMAGE_NAME: exousia
 
 jobs:
   # -- Resolve Defaults --
@@ -311,16 +311,6 @@ jobs:
 
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "fver=${FVER}" >> $GITHUB_OUTPUT
-
-      - name: Login to Forgejo container registry
-        if: github.event_name != 'pull_request'
-        env:
-          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
-        run: |
-          skopeo login "${LOCAL_REGISTRY}" \
-            --username "${{ github.repository_owner }}" \
-            --password "${FORGEJO_TOKEN}" \
-            --tls-verify=false
 
       - name: Push to local registry
         if: github.event_name != 'pull_request'
