@@ -98,7 +98,7 @@ podman run --rm \
     sed -i "s|privileged: false|privileged: true|" /data/config.yaml && \
     sed -i "s|valid_volumes: \[\]|valid_volumes:\n    - \"**\"|" /data/config.yaml && \
     sed -i "s|network: \"\"|network: \"systemd-exousia\"|" /data/config.yaml && \
-    sed -i "s|options:$|options: --cpus 2 --memory 8g -v buildah-layers:/var/lib/containers/storage|" /data/config.yaml'
+    sed -i "s|options:$|options: --cpus 3 --memory 12g -v buildah-layers:/var/lib/containers/storage|" /data/config.yaml'
 ```
 
 The key changes from defaults:
@@ -122,7 +122,7 @@ Key settings for the Podman rootless environment:
 ```yaml
 runner:
   file: /data/.runner        # absolute path — relative paths fail with keep-id
-  capacity: 3                # concurrent jobs — allows Bambietta/Askin/Gremmy in parallel
+  capacity: 2                # concurrent jobs (2×3 CPUs + 2 host = 8 cores)
   timeout: 3h                # max job duration
   shutdown_timeout: 3h       # graceful shutdown window for running jobs
   fetch_interval: 2s         # polling interval for new jobs
@@ -139,7 +139,7 @@ container:
   network: "systemd-exousia" # job containers join the shared network
   privileged: true           # required for buildah/podman-in-podman
   docker_host: ""            # auto-detect, do NOT mount into job containers
-  options: --cpus 2 --memory 8g -v buildah-layers:/var/lib/containers/storage
+  options: --cpus 3 --memory 12g -v buildah-layers:/var/lib/containers/storage
   valid_volumes:
     - "**"                   # allow job containers to mount any volume
 ```
@@ -191,12 +191,11 @@ container:
   | `"unix:///var/run/docker.sock"` | Explicit path + mount into job containers | Fails (permission denied) |
 
 - `options` — extra flags passed to `podman run` when creating job
-  containers. `--cpus 2 --memory 8g` allocates 2 cores and 8GB per job.
+  containers. `--cpus 3 --memory 12g` allocates 3 cores and 12GB per job.
   `-v buildah-layers:/var/lib/containers/storage` provides a persistent
   layer cache so buildah reuses unchanged layers across builds. With
-  `capacity: 3`, up to 3 jobs run in parallel (6 cores / 24GB max),
-  leaving 2 cores / 5GB for the host OS, Forgejo, and other services.
-  Adjust values based on host capacity.
+  `capacity: 2`, up to 2 jobs run in parallel (6 cores / 24GB max),
+  leaving 2 cores for the host OS, Forgejo, and other services.
 
 - `privileged: true` — required for job containers that run buildah or
   podman (e.g., Gremmy build jobs). Without this, container builds inside
