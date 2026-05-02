@@ -1,0 +1,33 @@
+{
+	local_certs
+}
+
+forgejo.exousia.local {
+	tls internal
+	reverse_proxy forgejo:3000
+}
+
+plane.exousia.local {
+	tls internal
+	reverse_proxy plane-proxy:8080
+}
+
+ollama.exousia.local {
+	tls internal
+	reverse_proxy ollama:11434
+}
+
+webui.exousia.local {
+	tls internal
+	reverse_proxy open-webui:3080
+}
+
+temporal.exousia.local {
+	tls internal
+	reverse_proxy temporal-ui:8233
+}
+
+registry.exousia.local {
+	tls internal
+	reverse_proxy registry:5000
+}

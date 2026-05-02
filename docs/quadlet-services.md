@@ -74,6 +74,7 @@ graph TD
 |---------|-------|-----------|---------------|------------|
 | `exousia-registry` | `registry:2` | 5000 | `registry` | `exousia.network` |
 | `coredns` | `coredns/coredns:1.12.1` | 5353 (tcp+udp) | `coredns` | `exousia.network` |
+| `caddy` | `caddy:2-alpine` | 80, 443 | `caddy` | `exousia.network`, `coredns` |
 | `freebsd` | `freebsd/freebsd-runtime:14.4` | - | - | `exousia.network` |
 | `k3s` | `rancher/k3s:latest` | 6443, 80, 443 | `k3s` | `exousia.network` |
 
@@ -211,7 +212,7 @@ Each registry namespace must be explicitly allowlisted:
 
 | Namespace | Required By |
 |-----------|-------------|
-| `docker.io/library` | postgres, rabbitmq, registry |
+| `docker.io/library` | postgres, rabbitmq, registry, caddy |
 | `docker.io/ollama` | Ollama |
 | `docker.io/temporalio` | Temporal server, Temporal UI |
 | `docker.io/makeplane` | Plane services |

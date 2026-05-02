@@ -43,6 +43,7 @@ All Quadlet definitions live in `overlays/deploy/`:
 | `forgejo.container` | Container | Self-hosted git forge (ports 3000, 2222) |
 | `forgejo-db.container` | Container | Forgejo PostgreSQL backend |
 | `forgejo-runner.container` | Container | Forgejo Actions CI runner |
+| `caddy.container` | Container | Caddy reverse proxy + HTTPS (ports 80, 443) |
 | `coredns.container` | Container | CoreDNS local service resolver (port 5353) |
 | `exousia-registry.container` | Container | Local container registry (port 5000) |
 | `freebsd.container` | Container | Standalone FreeBSD runtime container |
@@ -374,17 +375,87 @@ Edit `~/.config/coredns/exousia.local.zone`, add an A record, then:
 podman restart coredns
 ```
 
-### Browser access
-
-DNS resolves the hostname, but you still need the port in the URL
-(`http://forgejo.exousia.local:3000`) unless you add a reverse proxy.
-A future Caddy/Traefik quadlet could handle port-free access via
-`:80`/`:443`.
-
 ### Disable
 
 ```bash
 just disengage coredns
+```
+
+## Caddy (Reverse Proxy + HTTPS)
+
+Caddy provides port-free HTTPS access to all local services. Combined
+with CoreDNS, services are accessible at `https://forgejo.exousia.local`
+with auto-generated TLS certificates.
+
+### Prerequisites
+
+Enable rootless binding to privileged ports (one-time, persists across
+reboots):
+
+```bash
+sudo tee /etc/sysctl.d/90-unprivileged-ports.conf <<'EOF'
+net.ipv4.ip_unprivileged_port_start=80
+EOF
+sudo sysctl -p /etc/sysctl.d/90-unprivileged-ports.conf
+```
+
+### Enable and start
+
+```bash
+# Copy Caddyfile
+mkdir -p ~/.config/caddy
+cp overlays/deploy/caddy/Caddyfile ~/.config/caddy/
+
+# Engage the quadlet
+just engage caddy
+```
+
+### Trust Caddy's internal CA
+
+Caddy generates its own root CA for `tls internal`. Trust it once so
+browsers don't show certificate warnings:
+
+```bash
+podman exec caddy cat /data/caddy/pki/authorities/local/root.crt | \
+  sudo tee /etc/pki/ca-trust/source/anchors/caddy-local.crt
+sudo update-ca-trust
+```
+
+### Service URLs
+
+| URL | Backend |
+|-----|---------|
+| `https://forgejo.exousia.local` | forgejo:3000 |
+| `https://plane.exousia.local` | plane-proxy:8080 |
+| `https://ollama.exousia.local` | ollama:11434 |
+| `https://webui.exousia.local` | open-webui:3080 |
+| `https://temporal.exousia.local` | temporal-ui:8233 |
+| `https://registry.exousia.local` | registry:5000 |
+
+### Adding new services
+
+Edit `~/.config/caddy/Caddyfile`, add a block:
+
+```text
+newservice.exousia.local {
+    tls internal
+    reverse_proxy container-name:port
+}
+```
+
+Then reload:
+
+```bash
+podman exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+Also add an A record to `~/.config/coredns/exousia.local.zone` and restart
+CoreDNS.
+
+### Disable
+
+```bash
+just disengage caddy
 ```
 
 ## Temporal (Agent Orchestration)

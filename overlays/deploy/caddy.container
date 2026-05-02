@@ -1,0 +1,20 @@
+[Unit]
+Description=Caddy reverse proxy for exousia.local
+After=coredns.service
+
+[Container]
+Image=docker.io/library/caddy:2-alpine
+ContainerName=caddy
+AutoUpdate=registry
+Network=exousia.network
+PublishPort=127.0.0.1:80:80/tcp
+PublishPort=127.0.0.1:443:443/tcp
+Volume=%h/.config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+Volume=caddy-data.volume:/data
+Volume=caddy-config.volume:/config
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
