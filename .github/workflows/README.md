@@ -66,12 +66,47 @@ Mayuri (scheduled, independent) -> triggers Urahara if dotfiles changed
 ### Pipeline Flow
 
 ```text
-Pernida -> Bambietta + Askin (parallel) -> Gremmy -> Gate
+Feature branch (uryu/*):
+  Pernida -> Bambietta + Askin (parallel) -> Gremmy (:dev to local registry)
+    -> Gate creates promotion PR to Forgejo main
+
+Pull request (to main):
+  Pernida -> Bambietta + Askin (parallel) -> Gremmy (build-only smoke test)
+
+Main branch:
+  Pernida -> Bambietta + Askin (parallel) -> Gremmy (:dev to local registry)
+    -> Gate pushes to GitHub main -> triggers Urahara -> Hiyori (:prod on GHCR)
 ```
+
+### Promotion Strategy
+
+The Vandenreich pipeline implements a two-stage promotion model:
+
+1. **Feature → Forgejo main**: On successful feature branch builds, the Gate
+   job creates a pull request in Forgejo to merge the feature branch into
+   `main`. This gives the developer a chance to review and merge. If a PR
+   already exists for the branch, it is not duplicated.
+
+2. **Forgejo main → GitHub main**: On successful `main` builds, the Gate
+   job pushes Forgejo's `main` to GitHub via `git push --force-with-lease`.
+   This triggers the GitHub-side Urahara pipeline, which builds the `:prod`
+   image on GHCR.
+
+This keeps Forgejo and GitHub main in sync: feature work goes through
+Forgejo PRs, and successful main builds automatically promote to GitHub.
 
 ### Triggers
 
 - **Pernida**: push to `main` or `uryu/*` branches, PR to main
+
+### Required Secrets (Forgejo)
+
+| Name | Purpose |
+|------|---------|
+| `FORGEJO_TOKEN` | Forgejo access token for creating promotion PRs via API |
+| `GHCR_PAT` | GitHub PAT for pushing main to GitHub (repo scope) |
+
+Configure in Forgejo: **Repository Settings → Actions → Secrets**.
 
 ### Key Differences from GitHub Actions
 
