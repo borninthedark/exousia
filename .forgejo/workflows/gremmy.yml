@@ -79,6 +79,7 @@ jobs:
           echo "fver=${FVER}" >> $GITHUB_OUTPUT
 
       - name: Push to local registry
+        if: github.event_name != 'pull_request'
         run: |
           TAG="${{ steps.build.outputs.tag }}"
           FVER="${{ steps.build.outputs.fver }}"

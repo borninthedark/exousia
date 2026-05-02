@@ -65,11 +65,10 @@ jobs:
     name: "Askin (Security)"
     uses: ./.forgejo/workflows/askin.yml
 
-  # -- Gremmy (Build) runs after both pass --
+  # -- Gremmy (Build) runs after both pass (push + PR smoke test) --
   gremmy:
     name: "Gremmy (Build)"
     needs: [defaults, bambietta, askin]
-    if: github.event_name != 'pull_request'
     uses: ./.forgejo/workflows/gremmy.yml
     with:
       image_type: fedora-sway-atomic
