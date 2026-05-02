@@ -78,11 +78,15 @@ Lifecycle: `just engage exousia-registry` / `just engage freebsd`
 |---------|-------|-----------|---------------|------------|
 | `forgejo-db` | `postgres:14-alpine` | - | `forgejo-db` | `exousia.network` |
 | `forgejo` | `forgejo/forgejo:14.0.2` | 3000, 2222 | `forgejo` | `forgejo-db` |
-| `forgejo-runner` | `forgejo/runner:latest` | - | `forgejo-runner` | `forgejo` |
+| `forgejo-runner` | `code.forgejo.org/forgejo/runner:9.1.1` | - | `forgejo-runner` | `forgejo`, `podman.socket` |
 
 Lifecycle: `just forgejo-start` / `just forgejo-stop`
 
 Dependency chain: `exousia.network` -> `forgejo-db` -> `forgejo` -> `forgejo-runner`
+
+The runner requires `podman.socket` enabled (`systemctl --user enable --now
+podman.socket`) and a one-time manual registration. See
+[Forgejo Runner Setup](forgejo-runner.md) for full setup instructions.
 
 ### AI (inference + chat, 2 services)
 
@@ -197,7 +201,8 @@ Each registry namespace must be explicitly allowlisted:
 | `docker.io/makeplane` | Plane services |
 | `docker.io/minio` | Plane MinIO |
 | `docker.io/valkey` | Plane Redis (Valkey) |
-| `codeberg.org/forgejo` | Forgejo, Forgejo Runner |
+| `codeberg.org/forgejo` | Forgejo |
+| `code.forgejo.org/forgejo` | Forgejo Runner |
 | `ghcr.io/borninthedark` | Exousia images (sigstore-signed) |
 | `ghcr.io/open-webui` | Open WebUI |
 

@@ -4,15 +4,19 @@ After=forgejo.service
 Requires=forgejo.service
 
 [Container]
-Image=codeberg.org/forgejo/runner:latest
+Image=code.forgejo.org/forgejo/runner:9.1.1
 ContainerName=forgejo-runner
-Volume=forgejo-runner-data.volume:/data
+Volume=forgejo-runner-data.volume:/data:U
 Volume=%t/podman/podman.sock:/var/run/docker.sock:ro
 Network=exousia.network:alias=forgejo-runner
 Label=io.containers.autoupdate=registry
-Environment=FORGEJO_INSTANCE_URL=http://forgejo:3000
-Environment=FORGEJO_RUNNER_LABELS=ubuntu-latest:docker://node:20
-Environment=FORGEJO_RUNNER_TOKEN=
+UserNS=keep-id
+SecurityLabelDisable=true
+
+# Registration is a manual one-time step — see docs/forgejo-runner.md
+# After registering, the runner state persists in /data/.runner
+WorkingDir=/data
+Exec=forgejo-runner -c /data/config.yaml daemon
 
 [Service]
 Restart=always
