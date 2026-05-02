@@ -302,23 +302,27 @@ jobs:
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
           TAG="fedora-sway-atomic-${FVER}-${SHORT_SHA}"
 
+          VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+
           buildah bud \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}" \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}" \
-            -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:dev" \
-            -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:latest" \
+            -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${VERSION}" \
+            -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:local" \
             -f Dockerfile.generated .
 
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "fver=${FVER}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Push to local registry
         if: github.event_name != 'pull_request'
         run: |
           TAG="${{ steps.build.outputs.tag }}"
           FVER="${{ steps.build.outputs.fver }}"
+          VERSION="${{ steps.build.outputs.version }}"
 
-          for IMAGE_TAG in "${TAG}" "${FVER}" "dev" "latest"; do
+          for IMAGE_TAG in "${TAG}" "${FVER}" "${VERSION}" "local"; do
             skopeo copy \
               "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" \
               "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" \
