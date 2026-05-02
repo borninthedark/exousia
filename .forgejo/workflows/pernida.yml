@@ -1,45 +1,28 @@
 # Pernida Parnkjas — Sternritter C "The Compulsory"
-# Forgejo Orchestrator: promotion-style build pipeline.
+# Forgejo Orchestrator: local build + push to remotes.
 #
 # Job containers: 2 CPUs, 8GB RAM × 3 parallel (see docs/forgejo-runner.md)
 #
 # All jobs are inlined (not workflow_call) to avoid Forgejo's label
 # dispatch bug where called workflow jobs get empty runner labels.
 #
-# Feature branches (uryu/*):
-#   Bambietta + Askin (parallel) -> Gremmy (build + :dev to local registry)
-#   -> Gate creates a promotion PR to merge into Forgejo main
-#
-# Pull requests (to main):
-#   Bambietta + Askin (parallel) -> Gremmy (build-only smoke test)
-#
-# Main branch:
-#   Bambietta + Askin (parallel) -> Gremmy (build + :dev to local registry)
-#   -> Gate pushes to GitHub main, triggering Urahara -> Hiyori -> :prod on GHCR
+# Flow (uryu/* branches only):
+#   Bambietta + Askin (parallel) -> Gremmy (build + push :local/:latest to registry)
+#   -> Gate pushes branch to GitHub (triggers Urahara on GitHub side)
 #
 # Vandenreich Pipeline:
 #   Pernida    -> Orchestrator (this file — all jobs inlined)
 #   Bambietta  -> CI: lint + test
 #   Askin      -> Security scanning
-#   Gremmy     -> Build & push :dev to local registry
+#   Gremmy     -> Build & push to local registry
 #
-# Requires GHCR_PAT and FORGEJO_TOKEN in Forgejo Actions secrets.
+# Requires GHCR_PAT in Forgejo Actions secrets.
 
 name: "Pernida — Orchestrator"
 
 on:
   push:
-    branches: [main, "uryu/*"]
-    paths-ignore:
-      - "docs/**"
-      - "tests/**"
-      - "*.md"
-      - "LICENSE"
-      - ".pre-commit-config.yaml"
-      - "tools/generate-readme.py"
-      - "tools/test_*.py"
-  pull_request:
-    branches: [main]
+    branches: ["uryu/*"]
     paths-ignore:
       - "docs/**"
       - "tests/**"
@@ -309,6 +292,7 @@ jobs:
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}" \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${VERSION}" \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:local" \
+            -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:latest" \
             -f Dockerfile.generated .
 
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
@@ -322,7 +306,7 @@ jobs:
           FVER="${{ steps.build.outputs.fver }}"
           VERSION="${{ steps.build.outputs.version }}"
 
-          for IMAGE_TAG in "${TAG}" "${FVER}" "${VERSION}" "local"; do
+          for IMAGE_TAG in "${TAG}" "${FVER}" "${VERSION}" "local" "latest"; do
             skopeo copy \
               "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" \
               "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" \
@@ -364,57 +348,20 @@ jobs:
           needs.gremmy.result == 'failure'
         run: exit 1
 
-      - name: Create promotion PR (feature branch)
+      - name: Push to GitHub
         if: >-
-          github.ref != 'refs/heads/main' &&
-          github.event_name == 'push' &&
           needs.bambietta.result == 'success' &&
           needs.askin.result == 'success' &&
           needs.gremmy.result == 'success'
         env:
-          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
         run: |
           BRANCH="${GITHUB_REF_NAME}"
-          API_URL="${{ github.server_url }}/api/v1"
-
-          PR_BODY="Automated promotion PR created by Pernida pipeline.\\n\\nAll checks passed:\\n- Bambietta (CI): ${{ needs.bambietta.result }}\\n- Askin (Security): ${{ needs.askin.result }}\\n- Gremmy (Build): ${{ needs.gremmy.result }}"
-
-          # Check if a PR already exists for this branch
-          EXISTING=$(curl -s -H "Authorization: token ${FORGEJO_TOKEN}" \
-            "${API_URL}/repos/${{ github.repository }}/pulls?state=open&head=${{ github.repository_owner }}:${BRANCH}" \
-            | python3 -c "import json,sys; prs=json.load(sys.stdin); print(prs[0]['number'] if prs else '')" 2>/dev/null || echo "")
-
-          if [ -n "${EXISTING}" ]; then
-            curl -s -X PATCH -H "Authorization: token ${FORGEJO_TOKEN}" \
-              -H "Content-Type: application/json" \
-              "${API_URL}/repos/${{ github.repository }}/pulls/${EXISTING}" \
-              -d "{\"body\": \"${PR_BODY}\"}"
-            echo "Updated existing promotion PR #${EXISTING} for ${BRANCH}"
-          else
-            curl -s -X POST -H "Authorization: token ${FORGEJO_TOKEN}" \
-              -H "Content-Type: application/json" \
-              "${API_URL}/repos/${{ github.repository }}/pulls" \
-              -d "{
-                \"title\": \"promote: ${BRANCH} -> main\",
-                \"head\": \"${BRANCH}\",
-                \"base\": \"main\",
-                \"body\": \"${PR_BODY}\"
-              }"
-            echo "Created promotion PR: ${BRANCH} -> main"
-          fi
-
-      - name: Promote to GitHub (main)
-        if: >-
-          github.ref == 'refs/heads/main' &&
-          needs.bambietta.result == 'success' &&
-          needs.askin.result == 'success' &&
-          needs.gremmy.result == 'success'
-        run: |
           REPO_URL="https://x-access-token:${GHCR_PAT}@github.com/borninthedark/exousia.git"
 
-          git clone --bare --single-branch --branch main \
+          git clone --bare --single-branch --branch "${BRANCH}" \
             "${{ github.server_url }}/${{ github.repository }}.git" /tmp/push-repo
           cd /tmp/push-repo
 
-          git push "${REPO_URL}" "main:main" --force-with-lease
-          echo "Promoted main to GitHub — Urahara will build :prod on GHCR"
+          git push "${REPO_URL}" "${BRANCH}:${BRANCH}" --force-with-lease
+          echo "Pushed ${BRANCH} to GitHub"
