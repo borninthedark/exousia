@@ -97,7 +97,8 @@ podman run --rm \
     sed -i "s|file: .runner|file: /data/.runner|" /data/config.yaml && \
     sed -i "s|privileged: false|privileged: true|" /data/config.yaml && \
     sed -i "s|valid_volumes: \[\]|valid_volumes:\n    - \"**\"|" /data/config.yaml && \
-    sed -i "s|network: \"\"|network: \"systemd-exousia\"|" /data/config.yaml'
+    sed -i "s|network: \"\"|network: \"systemd-exousia\"|" /data/config.yaml && \
+    sed -i "s|options:$|options: --cpus 4 --memory 15g|" /data/config.yaml'
 ```
 
 The key changes from defaults:
@@ -109,6 +110,7 @@ The key changes from defaults:
 | `privileged` | `false` | `true` | Required for buildah in Gremmy build jobs |
 | `valid_volumes` | `[]` | `["**"]` | Allow job containers to mount workspace volumes |
 | `container.network` | `""` | `"systemd-exousia"` | Job containers must resolve `forgejo` hostname for checkout |
+| `container.options` | (empty) | `--cpus 4 --memory 15g` | Allocate host resources to job containers for faster builds |
 
 ## Daemon Configuration Reference
 
@@ -137,6 +139,7 @@ container:
   network: "systemd-exousia" # job containers join the shared network
   privileged: true           # required for buildah/podman-in-podman
   docker_host: ""            # auto-detect, do NOT mount into job containers
+  options: --cpus 4 --memory 15g  # resource limits for job containers
   valid_volumes:
     - "**"                   # allow job containers to mount any volume
 ```
@@ -185,6 +188,13 @@ container:
   | `""` or `"-"` | Auto-detect, no mount forwarding | Works |
   | `"automount"` | Auto-detect + mount into job containers | Fails (permission denied) |
   | `"unix:///var/run/docker.sock"` | Explicit path + mount into job containers | Fails (permission denied) |
+
+- `options` — extra flags passed to `podman run` when creating job
+  containers. `--cpus 4 --memory 15g` allocates 4 of 8 host CPU cores and
+  15GB of 29GB RAM to each job container, comparable to GitHub Actions hosted
+  runners (4 cores / 16GB). Adjust these
+  values based on host capacity — leave headroom for the host OS, Forgejo,
+  and other services.
 
 - `privileged: true` — required for job containers that run buildah or
   podman (e.g., Gremmy build jobs). Without this, container builds inside

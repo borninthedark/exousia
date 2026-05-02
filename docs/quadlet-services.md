@@ -95,7 +95,9 @@ Lifecycle: `just forgejo-start` / `just forgejo-stop`
 Dependency chain: `exousia.network` -> `forgejo-db` -> `forgejo` -> `forgejo-runner`
 
 The runner requires `podman.socket` enabled (`systemctl --user enable --now
-podman.socket`) and a one-time manual registration. See
+podman.socket`) and a one-time manual registration. Job containers are
+allocated 4 CPUs and 15GB RAM via `container.options` in the runner config,
+comparable to GitHub Actions hosted runners. See
 [Forgejo Runner Setup](forgejo-runner.md) for full setup instructions.
 
 ### AI (inference + chat, 2 services)
