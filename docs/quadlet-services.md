@@ -223,6 +223,7 @@ Each registry namespace must be explicitly allowlisted:
 | `ghcr.io/borninthedark` | Exousia images (sigstore-signed) |
 | `ghcr.io/open-webui` | Open WebUI |
 | `quay.io/fedora` | Base image mirror for CI builds |
+| `localhost:5000` | Local registry (`bootc switch`, skopeo) |
 
 The build image's policy (`overlays/base/configs/containers/policy.json`)
 allows all of `docker.io` and `quay.io` — no per-namespace rules needed there.
