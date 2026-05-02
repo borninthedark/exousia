@@ -140,6 +140,7 @@ jobs:
           mkdir -p /usr/lib/bats
           git clone --depth 1 https://github.com/bats-core/bats-support /usr/lib/bats/bats-support
           git clone --depth 1 https://github.com/bats-core/bats-assert /usr/lib/bats/bats-assert
+          git clone --depth 1 https://github.com/bats-core/bats-file /usr/lib/bats/bats-file
 
       - name: Verify required file structure
         run: |
