@@ -385,7 +385,7 @@ jobs:
           cd /tmp/push-repo
 
           # Push to GitHub
-          GITHUB_URL="https://x-access-token:${GHCR_PAT}@github.com/borninthedark/exousia.git"
+          GITHUB_URL="https://borninthedark:${GHCR_PAT}@github.com/borninthedark/exousia.git"
           git push "${GITHUB_URL}" "${BRANCH}:${BRANCH}" --force-with-lease
           echo "Pushed ${BRANCH} to GitHub"
 
