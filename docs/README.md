@@ -17,7 +17,12 @@ Comprehensive documentation for building, testing, and deploying custom Fedora b
 
 ## CI/CD Workflows
 
-Exousia uses a 12th Division-themed GitHub Actions pipeline (Shinigami Research and Development Institute):
+Exousia uses two parallel CI/CD pipelines named after BLEACH factions:
+
+- **GitHub Actions** (12th Division / Shinigami) — production builds to GHCR
+- **Forgejo Actions** (Vandenreich / Quincy) — local dev builds to `localhost:5000`
+
+### GitHub Actions (12th Division)
 
 | Workflow | File | Role |
 |----------|------|------|
@@ -29,6 +34,17 @@ Exousia uses a 12th Division-themed GitHub Actions pipeline (Shinigami Research 
 | **Sealed** | `sealed.yml` | 12th -- Sealed boot: wraps base image with signed boot chain, composefs, UKI |
 | **Nemu** | `nemu.yml` | 12th -- Post-CI: refreshes tracked `STATUS.md` from the latest main-branch Urahara run |
 | **Mayuri** | `mayuri.yml` | 12th -- Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
+
+### Forgejo Actions (Vandenreich)
+
+| Sternritter | File | Schrift | Role |
+|-------------|------|---------|------|
+| **Pernida** | `pernida.yml` | The Compulsory (C) | Orchestrator |
+| **Bambietta** | `bambietta.yml` | The Explode (E) | CI: lint + test |
+| **Askin** | `askin.yml` | The Deathdealing (D) | Security scanning |
+| **Gremmy** | `gremmy.yml` | The Visionary (V) | Build & push to local registry |
+
+Triggers on push to `main` or `uryu/*` branches. Local images tagged `dev`.
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):
 `feat:` minor, `fix:` patch, `feat!:` major.

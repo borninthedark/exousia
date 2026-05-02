@@ -1,0 +1,98 @@
+# Pernida Parnkjas — Sternritter C "The Compulsory"
+# Forgejo Orchestrator: calls Bambietta (CI) + Askin (Security) in parallel,
+# then Gremmy (Build), then gate.
+# Forgejo-local parity with Urahara (GitHub Actions).
+#
+# Vandenreich Pipeline:
+#   Pernida    -> Orchestrator
+#   Bambietta  -> CI: lint + test
+#   Askin      -> Security scanning
+#   Gremmy     -> Build & push to local registry
+
+name: "Pernida — Orchestrator"
+
+on:
+  push:
+    branches: [main, "uryu/*"]
+    paths-ignore:
+      - "docs/**"
+      - "tests/**"
+      - "*.md"
+      - "LICENSE"
+      - ".pre-commit-config.yaml"
+      - "tools/generate-readme.py"
+      - "tools/test_*.py"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "tests/**"
+      - "*.md"
+      - "LICENSE"
+      - ".pre-commit-config.yaml"
+      - "tools/generate-readme.py"
+      - "tools/test_*.py"
+
+jobs:
+  # -- Read defaults --
+  defaults:
+    name: "Resolve Defaults"
+    runs-on: ubuntu-latest
+    outputs:
+      primary_version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: adnyeus.yml
+          sparse-checkout-cone-mode: false
+
+      - name: Read image-version from blueprint
+        id: read
+        run: |
+          VERSION=$(grep '^image-version:' adnyeus.yml | awk '{print $2}')
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Blueprint primary version: ${VERSION}"
+
+  # -- Bambietta (CI) + Askin (Security) run in parallel --
+  bambietta:
+    name: "Bambietta (CI)"
+    uses: ./.forgejo/workflows/bambietta.yml
+
+  askin:
+    name: "Askin (Security)"
+    uses: ./.forgejo/workflows/askin.yml
+
+  # -- Gremmy (Build) runs after both pass --
+  gremmy:
+    name: "Gremmy (Build)"
+    needs: [defaults, bambietta, askin]
+    if: github.event_name != 'pull_request'
+    uses: ./.forgejo/workflows/gremmy.yml
+    with:
+      image_type: fedora-sway-atomic
+      distro_version: ${{ needs.defaults.outputs.primary_version }}
+      enable_plymouth: true
+
+  # -- Gate: summary of all jobs --
+  gate:
+    name: "Gate (Summary)"
+    needs: [bambietta, askin, gremmy]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Pipeline summary
+        run: |
+          echo "## Pernida Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Sternritter | Role | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------------|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Bambietta (E) | CI: lint + test | ${{ needs.bambietta.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Askin (D) | Security scanning | ${{ needs.askin.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Gremmy (V) | Build & push | ${{ needs.gremmy.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if any job failed
+        if: >-
+          needs.bambietta.result == 'failure' ||
+          needs.askin.result == 'failure' ||
+          needs.gremmy.result == 'failure'
+        run: exit 1

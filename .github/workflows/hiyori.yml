@@ -111,6 +111,7 @@ jobs:
             ${{ steps.image.outputs.image }}:${{ steps.tag.outputs.tag }}
             ${{ steps.image.outputs.image }}:${{ steps.tag.outputs.fver }}
             ${{ steps.image.outputs.image }}:${{ steps.tag.outputs.branch }}-${{ steps.tag.outputs.fver }}
+            ${{ inputs.is_primary && format('{0}:prod', steps.image.outputs.image) || '' }}
             ${{ inputs.is_primary && format('{0}:{1}', steps.image.outputs.image, steps.tag.outputs.branch) || '' }}
             ${{ inputs.is_primary && format('{0}:latest', steps.image.outputs.image) || '' }}
             ${{ steps.tag.outputs.rolling == 'true' && format('{0}:{1}', steps.image.outputs.image, steps.tag.outputs.rolling_tag) || '' }}

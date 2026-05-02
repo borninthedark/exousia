@@ -1,31 +1,35 @@
-# 12th Division Pipeline
+# CI/CD Pipelines
 
-GitHub Actions CI/CD workflows named after 12th Division captains and members from BLEACH.
-The 12th Division is the Shinigami Research and Development Institute.
+Two parallel CI/CD pipelines named after BLEACH factions:
 
-## Workflows
+- **GitHub Actions** (`.github/workflows/`) — 12th Division (Shinigami SRDI) — production builds pushed to GHCR
+- **Forgejo Actions** (`.forgejo/workflows/`) — Vandenreich (Quincy Sternritter) — local dev builds pushed to `localhost:5000`
 
-| Captain | File | Division | Role |
-|---------|------|----------|------|
-| **Urahara** | `urahara.yml` | 12th | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate |
-| **Hikifune** | `hikifune.yml` | 12th | CI: Ruff, Black, isort, pytest |
-| **Uhin** | `uhin.yml` | 12th | Security: file-structure gate, overlay Bats, Hadolint, Checkov, Trivy config scan, Bandit, OSV-Scanner |
-| **Hiyori** | `hiyori.yml` | 12th | Build, Trivy image scan artifact, SBOM submission, OpenSCAP, Cosign, semver release |
-| **Kon** | `kon.yml` | 12th | Advanced CodeQL analysis for Python and GitHub Actions |
-| **Nemu** | `nemu.yml` | 12th | Post-CI: commits refreshed `STATUS.md` with the latest orchestration result |
-| **Mayuri** | `mayuri.yml` | 12th | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
-| **Sealed** | `sealed.yml` | 12th | Sealed boot: wraps base image with signed systemd-boot, UKI, and composefs |
+## GitHub Actions — 12th Division Pipeline
 
-## Captains
+| Captain | File | Role |
+|---------|------|------|
+| **Urahara** | `urahara.yml` | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate |
+| **Hikifune** | `hikifune.yml` | CI: Ruff, Black, isort, pytest |
+| **Uhin** | `uhin.yml` | Security: file-structure gate, overlay Bats, Hadolint, Checkov, Trivy config scan, Bandit, OSV-Scanner |
+| **Hiyori** | `hiyori.yml` | Build, Trivy image scan, SBOM, OpenSCAP, Cosign, semver release |
+| **Kon** | `kon.yml` | Advanced CodeQL analysis for Python and GitHub Actions |
+| **Nemu** | `nemu.yml` | Post-CI: commits refreshed `STATUS.md` with the latest orchestration result |
+| **Mayuri** | `mayuri.yml` | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
+| **Sealed** | `sealed.yml` | Sealed boot: wraps base image with signed systemd-boot, UKI, and composefs |
 
-| Captain | Tenure | Notes |
-|---------|--------|-------|
-| Uhin Zenjoji | 1002 A.D. - ? | Deceased — founding captain |
-| Kirio Hikifune | ? - 1891 A.D. | Promoted to Royal Guard (Squad Zero) |
-| Kisuke Urahara | 1891 A.D. - ? | Founder of the SRDI; exile |
-| Mayuri Kurotsuchi | current | Current captain |
+### Image Tags (GitHub / GHCR)
 
-## Pipeline Flow
+| Tag | When Applied |
+|-----|-------------|
+| `prod` | Primary build on main (latest stable) |
+| `latest` | Primary build on main |
+| `f<version>` | Every build (e.g. `f44`) |
+| `<type>-f<ver>-<sha>` | Every build (unique identifier) |
+| `rolling-f<ver>-<date>` | Scheduled builds |
+| `current` | Primary scheduled build |
+
+### Pipeline Flow
 
 ```text
 Urahara -> Hikifune + Uhin (parallel) -> Hiyori -> Sealed (optional) -> Gate
@@ -35,48 +39,71 @@ Nemu (on Urahara completion, main only) <---------------------------------+
 Mayuri (scheduled, independent) -> triggers Urahara if dotfiles changed
 ```
 
-## Triggers
+### Triggers
 
-- **Urahara**: push/PR to main, scheduled at 00:10 / 08:10 / 16:10 UTC, manual dispatch
-- **Mayuri**: scheduled at 04:10 / 12:10 / 20:10 UTC (midpoint between Urahara runs), manual dispatch
+- **Urahara**: push/PR to main, scheduled at 00:10 / 12:10 UTC, manual dispatch
+- **Mayuri**: scheduled at 04:10 / 12:10 / 20:10 UTC, manual dispatch
 - **Nemu**: `workflow_run` after Urahara completes on main
+
+## Forgejo Actions — Vandenreich Pipeline
+
+| Sternritter | File | Schrift | Role |
+|-------------|------|---------|------|
+| **Pernida** | `pernida.yml` | The Compulsory (C) | Orchestrator: calls Bambietta + Askin in parallel, then Gremmy, then gate |
+| **Bambietta** | `bambietta.yml` | The Explode (E) | CI: Ruff, Black, isort, pytest |
+| **Askin** | `askin.yml` | The Deathdealing (D) | Security: file-structure, overlay Bats, Hadolint, Checkov, Trivy, Bandit, OSV-Scanner |
+| **Gremmy** | `gremmy.yml` | The Visionary (V) | Build with buildah, push to local registry (`localhost:5000`) |
+
+### Image Tags (Forgejo / Local Registry)
+
+| Tag | When Applied |
+|-----|-------------|
+| `dev` | Every build (local development) |
+| `latest` | Every build |
+| `f<version>` | Every build (e.g. `f44`) |
+| `<type>-f<ver>-<sha>` | Every build (unique identifier) |
+
+### Pipeline Flow
+
+```text
+Pernida -> Bambietta + Askin (parallel) -> Gremmy -> Gate
+```
+
+### Triggers
+
+- **Pernida**: push to `main` or `uryu/*` branches, PR to main
+
+### Key Differences from GitHub Actions
+
+| Feature | GitHub (12th Division) | Forgejo (Vandenreich) |
+|---------|----------------------|----------------------|
+| Registry | GHCR (`ghcr.io`) | Local (`localhost:5000`) |
+| Image signing | Cosign (OIDC keyless) | Not applicable |
+| SBOM | Submitted to GitHub Dependency Graph | Not applicable |
+| CodeQL | Yes (Kon) | Not available |
+| Status report | Nemu commits STATUS.md | Not applicable |
+| Marketplace actions | SHA-pinned | Replaced with binary installs |
+| Tag prefix | `prod` | `dev` |
+
+## Captains (12th Division)
+
+| Captain | Tenure | Notes |
+|---------|--------|-------|
+| Uhin Zenjoji | 1002 A.D. - ? | Deceased — founding captain |
+| Kirio Hikifune | ? - 1891 A.D. | Promoted to Royal Guard (Squad Zero) |
+| Kisuke Urahara | 1891 A.D. - ? | Founder of the SRDI; exile |
+| Mayuri Kurotsuchi | current | Current captain |
 
 ## Forked PR Policy
 
-Hiyori is skipped on pull requests from forks.
-
-That is intentional: the build path may need repository secrets such as
-`GHCR_PAT` to pull private or restricted RPM override artifacts from GHCR.
-Forked pull requests do not receive repository secrets, so Urahara runs the
-CI and security workflows but leaves the image build/release workflow out of
-that path.
+Hiyori is skipped on pull requests from forks. The build path may need
+repository secrets such as `GHCR_PAT` to pull private RPM overrides from GHCR.
 
 ## Trivy Reporting
 
-Hiyori currently does three things with image-scan results on non-PR runs:
-
-1. saves `trivy-results.txt` as a workflow artifact
-2. publishes the full report in the workflow summary when present
-3. submits an SBOM to GitHub Dependency Graph on `main` and uploads it as an artifact
-
-Hiyori also uploads OpenSCAP compliance artifacts on non-PR runs:
-
-- `openscap-results.xml`
-- `openscap-report.html`
-
-GitHub's native notification email covers workflow status only. The full scan
-content lives in the workflow summary and the uploaded artifacts.
-
-## Dependency and Compliance Scanning
-
-Uhin and Hiyori divide security evidence by stage:
-
-- **Uhin** scans source/config content with Hadolint, Checkov, Trivy config
-  mode, Bandit, OSV-Scanner, and `tests/overlay_content.bats`
-- **Hiyori** scans the built image with Trivy, uploads the full text report,
-  generates an SBOM artifact, and submits that SBOM to GitHub Dependency
-  Graph on `main`
-- **Kon** provides advanced static analysis through CodeQL
+Hiyori saves `trivy-results.txt` as a workflow artifact, publishes the report
+in the workflow summary, and submits an SBOM to GitHub Dependency Graph on
+`main`.
 
 ## CodeQL
 
@@ -85,13 +112,5 @@ Advanced CodeQL is configured in:
 - workflow: `.github/workflows/kon.yml`
 - config file: `.github/codeql/codeql-config.yml`
 
-Current setup:
-
-- languages: `python`, `actions`
-- build mode: `none`
-- query suites: `security-extended`, `security-and-quality`
-- scoped paths:
-  - `tools/`
-  - `.github/workflows/`
-  - `.github/actions/`
-  - `overlays/base/tools/`
+Languages: `python`, `actions`. Query suites: `security-extended`,
+`security-and-quality`.

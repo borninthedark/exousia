@@ -27,11 +27,11 @@ graph LR
 
     FG -->|triggers| RN
     FG -->|integrates| PL
-    RN -->|runs| GEN
+    RN -->|"Pernida pipeline"| GEN
     GEN --> BA
-    BA -->|push| REG
+    BA -->|"push :dev"| REG
     REG -->|promote| SK
-    SK -->|copy| GH["GHCR"]
+    SK -->|"copy :prod"| GH["GHCR"]
 ```
 
 ## Quadlet Files
