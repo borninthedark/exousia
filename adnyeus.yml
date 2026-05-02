@@ -275,7 +275,7 @@ modules:
         - systemd-resolved.service
         - NetworkManager.service
         - greetd.service
-        - bootc-fetch-apply-updates.timer
+        # bootc-fetch-apply-updates.timer — disabled by default, enable manually
         - update-system-flatpaks.timer
         - tuned.service
         - auditd.service

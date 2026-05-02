@@ -1,0 +1,26 @@
+[Unit]
+Description=K3s lightweight Kubernetes
+After=exousia.network
+
+[Container]
+Image=docker.io/rancher/k3s:latest
+ContainerName=k3s
+Volume=k3s-data.volume:/var/lib/rancher/k3s
+Volume=k3s-data.volume:/etc/rancher
+PublishPort=127.0.0.1:6443:6443
+PublishPort=127.0.0.1:80:80
+PublishPort=127.0.0.1:443:443
+Network=exousia.network:alias=k3s
+Label=io.containers.autoupdate=registry
+Environment=K3S_KUBECONFIG_MODE=644
+Exec=server --disable=traefik --tls-san=localhost --tls-san=exousia
+SecurityLabelDisable=true
+AddCapability=NET_ADMIN NET_RAW SYS_ADMIN
+PodmanArgs=--privileged
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+# [Install]
+# WantedBy=default.target

@@ -33,6 +33,10 @@ graph TD
         TU["Temporal UI<br/>:8233"]
     end
 
+    subgraph K3S["Kubernetes"]
+        K3["K3s<br/>:6443/:80/:443"]
+    end
+
     subgraph PLANE["Plane Stack"]
         PDB["plane-db<br/>postgres:15"]
         PRD["plane-redis<br/>valkey:7"]
@@ -53,6 +57,7 @@ graph TD
     NET --> BSD
     NET --> FDB --> FG --> FR
     NET --> OLL --> OWU
+    NET --> K3
     NET --> TDB --> TS --> TU
     NET --> PDB & PRD & PMQ & PMN --> PA
     PA --> PW & PBW & PMG
@@ -69,8 +74,13 @@ graph TD
 |---------|-------|-----------|---------------|------------|
 | `exousia-registry` | `registry:2` | 5000 | - | `exousia.network` |
 | `freebsd` | `freebsd/freebsd-runtime:14.4` | - | - | `exousia.network` |
+| `k3s` | `rancher/k3s:latest` | 6443, 80, 443 | `k3s` | `exousia.network` |
 
-Lifecycle: `just engage exousia-registry` / `just engage freebsd`
+Lifecycle: `just engage exousia-registry` / `just engage freebsd` / `just engage k3s`
+
+K3s runs as a privileged container with `--disable=traefik` (use your own
+ingress). kubeconfig is available at `k3s-data` volume or via
+`podman exec k3s cat /etc/rancher/k3s/k3s.yaml`.
 
 ### Forgejo (git forge, 3 services)
 
@@ -167,6 +177,7 @@ Plane requires an env file at `/etc/exousia/plane/plane.env`. Run
 | 8233 | Temporal UI | HTTP |
 | 9000 | Plane MinIO API | HTTP |
 | 9090 | Plane MinIO Console | HTTP |
+| 6443 | K3s API Server | HTTPS |
 | 11434 | Ollama | HTTP |
 | 15672 | Plane RabbitMQ Console | HTTP |
 
@@ -180,6 +191,7 @@ All ports bind to `127.0.0.1` only (no external exposure).
 | `forgejo-data` | Forgejo | `/data` |
 | `forgejo-db-data` | Forgejo DB | `/var/lib/postgresql/data` |
 | `forgejo-runner-data` | Forgejo Runner | `/data` |
+| `k3s-data` | K3s | `/var/lib/rancher/k3s`, `/etc/rancher` |
 | `ollama-data` | Ollama | `/root/.ollama` |
 | `open-webui-data` | Open WebUI | `/app/backend/data` |
 | `temporal-db-data` | Temporal DB | `/var/lib/postgresql/data` |
@@ -204,6 +216,7 @@ Each registry namespace must be explicitly allowlisted:
 | `codeberg.org/forgejo` | Forgejo |
 | `code.forgejo.org/forgejo` | Forgejo Runner |
 | `docker.io/catthehacker` | Forgejo Runner job containers (`ubuntu:act-latest`) |
+| `docker.io/rancher` | K3s lightweight Kubernetes |
 | `ghcr.io/borninthedark` | Exousia images (sigstore-signed) |
 | `ghcr.io/open-webui` | Open WebUI |
 
