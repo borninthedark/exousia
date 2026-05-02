@@ -132,14 +132,14 @@ jobs:
 
       - name: Install Bats
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq bats
+          apt-get update -qq
+          apt-get install -y -qq bats
 
       - name: Install bats-support and bats-assert
         run: |
-          sudo mkdir -p /usr/lib/bats
-          sudo git clone --depth 1 https://github.com/bats-core/bats-support /usr/lib/bats/bats-support
-          sudo git clone --depth 1 https://github.com/bats-core/bats-assert /usr/lib/bats/bats-assert
+          mkdir -p /usr/lib/bats
+          git clone --depth 1 https://github.com/bats-core/bats-support /usr/lib/bats/bats-support
+          git clone --depth 1 https://github.com/bats-core/bats-assert /usr/lib/bats/bats-assert
 
       - name: Verify required file structure
         run: |
@@ -226,7 +226,7 @@ jobs:
 
       - name: Install Trivy
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 
       - name: Trivy config scan
         run: |
