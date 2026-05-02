@@ -46,7 +46,7 @@ Exousia uses two parallel CI/CD pipelines named after BLEACH factions:
 | **Gremmy** | `gremmy.yml` | The Visionary (V) | Build & push to local registry |
 
 Triggers on push to `uryu/*` branches. On success, the gate pushes the branch
-to GitHub and Codeberg. Local images tagged with SHA, Fedora version, semver,
+to Codeberg. Local images tagged with SHA, Fedora version, semver,
 `:local`, and `:latest`.
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):

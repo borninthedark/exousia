@@ -24,8 +24,9 @@ forgejo-runner`.
 
 | Profile | Capacity | CPUs/job | RAM/job | Use case |
 |---------|----------|----------|---------|----------|
-| Default | 2 | 3 | 12GB | Parallel CI (Bambietta + Askin) |
-| Heavy build | 1 | 6 | 24GB | Full image build (Gremmy) |
+| Max parallel | 3 | 2 | 8GB | All jobs in parallel (Bambietta + Askin + Gremmy) |
+| Balanced | 2 | 3 | 12GB | Parallel CI with more headroom per job |
+| Heavy build | 1 | 6 | 24GB | Single dedicated image build |
 
 ### Switching profiles
 
@@ -35,7 +36,12 @@ podman exec forgejo-runner sed -i 's/capacity: .*/capacity: 1/' /data/config.yam
 podman exec forgejo-runner sed -i 's/--cpus [0-9]* --memory [0-9]*g/--cpus 6 --memory 24g/' /data/config.yaml
 systemctl --user restart forgejo-runner
 
-# Default (parallel CI)
+# Max parallel (3 jobs)
+podman exec forgejo-runner sed -i 's/capacity: .*/capacity: 3/' /data/config.yaml
+podman exec forgejo-runner sed -i 's/--cpus [0-9]* --memory [0-9]*g/--cpus 2 --memory 8g/' /data/config.yaml
+systemctl --user restart forgejo-runner
+
+# Balanced (2 jobs)
 podman exec forgejo-runner sed -i 's/capacity: .*/capacity: 2/' /data/config.yaml
 podman exec forgejo-runner sed -i 's/--cpus [0-9]* --memory [0-9]*g/--cpus 3 --memory 12g/' /data/config.yaml
 systemctl --user restart forgejo-runner

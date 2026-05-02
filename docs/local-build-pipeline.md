@@ -31,7 +31,7 @@ graph LR
     GEN --> BA
     BA -->|"push :local/:latest"| REG
     REG -->|promote| SK
-    SK -->|"push branch"| GH["GitHub / Codeberg"]
+    SK -->|"push branch"| GH["Codeberg"]
 ```
 
 ## Quadlet Files
