@@ -278,6 +278,17 @@ jobs:
             --enable-plymouth \
             --verbose
 
+      - name: Use local base image mirror
+        run: |
+          FVER="${{ needs.defaults.outputs.primary_version }}"
+          # Replace quay.io base with local registry mirror (pre-cached)
+          if skopeo inspect --tls-verify=false "docker://registry:5000/fedora-sway-atomic:${FVER}" >/dev/null 2>&1; then
+            sed -i "s|FROM quay.io/fedora/fedora-sway-atomic:${FVER}|FROM registry:5000/fedora-sway-atomic:${FVER}|" Dockerfile.generated
+            echo "Using local base image mirror: registry:5000/fedora-sway-atomic:${FVER}"
+          else
+            echo "Local mirror not available — using quay.io"
+          fi
+
       - name: Build image with buildah
         id: build
         run: |
@@ -287,7 +298,7 @@ jobs:
 
           VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 
-          buildah bud \
+          buildah bud --layers \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}" \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}" \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${VERSION}" \
@@ -348,20 +359,27 @@ jobs:
           needs.gremmy.result == 'failure'
         run: exit 1
 
-      - name: Push to GitHub
+      - name: Push to remotes (GitHub + Codeberg)
         if: >-
           needs.bambietta.result == 'success' &&
           needs.askin.result == 'success' &&
           needs.gremmy.result == 'success'
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
         run: |
           BRANCH="${GITHUB_REF_NAME}"
-          REPO_URL="https://x-access-token:${GHCR_PAT}@github.com/borninthedark/exousia.git"
 
           git clone --bare --single-branch --branch "${BRANCH}" \
             "${{ github.server_url }}/${{ github.repository }}.git" /tmp/push-repo
           cd /tmp/push-repo
 
-          git push "${REPO_URL}" "${BRANCH}:${BRANCH}" --force-with-lease
+          # Push to GitHub
+          GITHUB_URL="https://x-access-token:${GHCR_PAT}@github.com/borninthedark/exousia.git"
+          git push "${GITHUB_URL}" "${BRANCH}:${BRANCH}" --force-with-lease
           echo "Pushed ${BRANCH} to GitHub"
+
+          # Push to Codeberg
+          CODEBERG_URL="https://borninthedark:${CODEBERG_TOKEN}@codeberg.org/borninthedark/exousia.git"
+          git push "${CODEBERG_URL}" "${BRANCH}:${BRANCH}" --force-with-lease
+          echo "Pushed ${BRANCH} to Codeberg"

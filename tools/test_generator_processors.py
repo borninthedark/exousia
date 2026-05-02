@@ -669,6 +669,44 @@ class TestLoadCommonRemovePackages:
         assert result == []
 
 
+# --- Package install optimization ---
+
+
+class TestPackageInstallOptimizations:
+    def test_weak_deps_disabled(self):
+        """install_weak_deps=False is passed to dnf install."""
+        gen = _make_generator()
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": [{"name": "vim"}, {"name": "git"}], "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = []
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+        output = "\n".join(gen.lines)
+        assert "--setopt=install_weak_deps=False" in output
+
+    def test_single_dnf_install_call(self):
+        """All packages are installed in a single dnf invocation (no chunking)."""
+        gen = _make_generator()
+        packages = [{"name": f"pkg{i}"} for i in range(120)]
+        mock_loader = MagicMock()
+        mock_loader.get_package_plan.return_value = {
+            "rpm": {"install": packages, "remove": [], "groups": {}}
+        }
+        mock_loader.load_rpm_overrides.return_value = []
+
+        with patch("package_loader.PackageLoader", return_value=mock_loader):
+            gen._process_package_loader_module({"window_manager": "sway"})
+        # Should only have ONE dnf install --skip-unavailable line
+        install_lines = [line for line in gen.lines if "dnf install -y --skip-unavailable" in line]
+        assert len(install_lines) == 1
+        # All 120 packages in that single line
+        assert "pkg0" in install_lines[0]
+        assert "pkg119" in install_lines[0]
+
+
 # --- _process_signing_module ---
 
 

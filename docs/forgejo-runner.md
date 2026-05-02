@@ -98,7 +98,7 @@ podman run --rm \
     sed -i "s|privileged: false|privileged: true|" /data/config.yaml && \
     sed -i "s|valid_volumes: \[\]|valid_volumes:\n    - \"**\"|" /data/config.yaml && \
     sed -i "s|network: \"\"|network: \"systemd-exousia\"|" /data/config.yaml && \
-    sed -i "s|options:$|options: --cpus 2 --memory 8g|" /data/config.yaml'
+    sed -i "s|options:$|options: --cpus 2 --memory 8g -v buildah-layers:/var/lib/containers/storage|" /data/config.yaml'
 ```
 
 The key changes from defaults:
@@ -110,7 +110,7 @@ The key changes from defaults:
 | `privileged` | `false` | `true` | Required for buildah in Gremmy build jobs |
 | `valid_volumes` | `[]` | `["**"]` | Allow job containers to mount workspace volumes |
 | `container.network` | `""` | `"systemd-exousia"` | Job containers must resolve `forgejo` hostname for checkout |
-| `container.options` | (empty) | `--cpus 2 --memory 8g` | Allocate host resources to job containers for faster builds |
+| `container.options` | (empty) | `--cpus 2 --memory 8g -v buildah-layers:...` | Resources + persistent layer cache for buildah |
 
 ## Daemon Configuration Reference
 
@@ -139,7 +139,7 @@ container:
   network: "systemd-exousia" # job containers join the shared network
   privileged: true           # required for buildah/podman-in-podman
   docker_host: ""            # auto-detect, do NOT mount into job containers
-  options: --cpus 2 --memory 8g   # resource limits per job container
+  options: --cpus 2 --memory 8g -v buildah-layers:/var/lib/containers/storage
   valid_volumes:
     - "**"                   # allow job containers to mount any volume
 ```
@@ -191,7 +191,9 @@ container:
 
 - `options` — extra flags passed to `podman run` when creating job
   containers. `--cpus 2 --memory 8g` allocates 2 cores and 8GB per job.
-  With `capacity: 3`, up to 3 jobs run in parallel (6 cores / 24GB max),
+  `-v buildah-layers:/var/lib/containers/storage` provides a persistent
+  layer cache so buildah reuses unchanged layers across builds. With
+  `capacity: 3`, up to 3 jobs run in parallel (6 cores / 24GB max),
   leaving 2 cores / 5GB for the host OS, Forgejo, and other services.
   Adjust values based on host capacity.
 
