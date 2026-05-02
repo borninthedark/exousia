@@ -1,0 +1,48 @@
+# Yoruichi Shihōin — 2nd Division — Base Image Mirror
+# Mirrors upstream Fedora base images to GHCR so CI builds never pull from quay.io.
+# Runs weekly and on-demand to keep the mirror fresh.
+name: "Yoruichi - Base Image Mirror"
+
+on:
+  schedule:
+    - cron: "30 3 * * 0"  # Weekly: Sunday 03:30 UTC
+  workflow_dispatch:
+    inputs:
+      fedora_version:
+        description: "Fedora version to mirror"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  packages: write
+
+jobs:
+  mirror:
+    name: Mirror base image (f${{ matrix.version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: ["44"]
+    steps:
+      - name: Determine version
+        id: ver
+        run: |
+          VER="${{ inputs.fedora_version || matrix.version }}"
+          echo "version=${VER}" >> $GITHUB_OUTPUT
+
+      - name: Login to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Mirror fedora-sway-atomic to GHCR
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          SRC="docker://quay.io/fedora/fedora-sway-atomic:${VERSION}"
+          DST="docker://ghcr.io/${{ github.repository_owner }}/fedora-sway-atomic:${VERSION}"
+
+          skopeo copy "${SRC}" "${DST}"
+          echo "Mirrored fedora-sway-atomic:${VERSION} to GHCR"

@@ -29,9 +29,9 @@ graph LR
     FG -->|integrates| PL
     RN -->|"Pernida pipeline"| GEN
     GEN --> BA
-    BA -->|"push :dev"| REG
+    BA -->|"push :local/:latest"| REG
     REG -->|promote| SK
-    SK -->|"copy :prod"| GH["GHCR"]
+    SK -->|"push branch"| GH["Codeberg"]
 ```
 
 ## Quadlet Files
@@ -151,8 +151,8 @@ See [Matrix Builds](matrix-builds.md) for details.
 ### Build and push to local registry
 
 ```bash
-just local-build              # tags as localhost:5000/exousia:latest
-just local-build TAG=v1.2.3   # tags as localhost:5000/exousia:v1.2.3
+just local-build              # builds and pushes to local registry
+just local-build TAG=v1.2.3   # builds with specific tag
 ```
 
 This runs the full pipeline:

@@ -55,6 +55,21 @@ jobs:
           distro_version: ${{ inputs.distro_version }}
           enable_plymouth: ${{ inputs.enable_plymouth }}
 
+      - name: Resolve fastest base image source
+        run: |
+          FVER="${{ inputs.distro_version }}"
+          CONTAINERFILE="${{ steps.config.outputs.containerfile }}"
+          UPSTREAM="quay.io/fedora/fedora-sway-atomic:${FVER}"
+          MIRROR="ghcr.io/${{ github.repository_owner }}/fedora-sway-atomic:${FVER}"
+
+          # Use GHCR mirror if available, fall back to quay.io upstream
+          if skopeo inspect "docker://${MIRROR}" >/dev/null 2>&1; then
+            sed -i "s|FROM ${UPSTREAM}|FROM ${MIRROR}|" "${CONTAINERFILE}"
+            echo "Using GHCR mirror: ${MIRROR}"
+          else
+            echo "GHCR mirror unavailable — using upstream: ${UPSTREAM}"
+          fi
+
       - name: Verify build environment
         run: |
           BUILDAH_VERSION=$(buildah --version | awk '{print $3}') || echo "buildah not found"

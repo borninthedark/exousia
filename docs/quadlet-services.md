@@ -72,7 +72,7 @@ graph TD
 
 | Service | Image | Host Port | Network Alias | Depends On |
 |---------|-------|-----------|---------------|------------|
-| `exousia-registry` | `registry:2` | 5000 | - | `exousia.network` |
+| `exousia-registry` | `registry:2` | 5000 | `registry` | `exousia.network` |
 | `freebsd` | `freebsd/freebsd-runtime:14.4` | - | - | `exousia.network` |
 | `k3s` | `rancher/k3s:latest` | 6443, 80, 443 | `k3s` | `exousia.network` |
 
@@ -95,10 +95,10 @@ Lifecycle: `just forgejo-start` / `just forgejo-stop`
 Dependency chain: `exousia.network` -> `forgejo-db` -> `forgejo` -> `forgejo-runner`
 
 The runner requires `podman.socket` enabled (`systemctl --user enable --now
-podman.socket`) and a one-time manual registration. Job containers are
-allocated 4 CPUs and 15GB RAM via `container.options` in the runner config,
-comparable to GitHub Actions hosted runners. See
-[Forgejo Runner Setup](forgejo-runner.md) for full setup instructions.
+podman.socket`) and a one-time manual registration. Runner capacity is 3
+(parallel jobs), each job container allocated 2 CPUs / 8GB RAM via
+`container.options`, leaving 2 cores for the host. See [Forgejo Runner Setup](forgejo-runner.md) for full
+setup instructions.
 
 ### AI (inference + chat, 2 services)
 
@@ -201,6 +201,7 @@ All ports bind to `127.0.0.1` only (no external exposure).
 | `plane-redis-data` | Plane Redis | `/data` |
 | `plane-mq-data` | Plane RabbitMQ | `/var/lib/rabbitmq` |
 | `plane-minio-data` | Plane MinIO | `/data` |
+| `buildah-layers` | Forgejo Runner (job containers) | `/var/lib/containers/storage` |
 
 ## Container Image Policy
 
@@ -221,6 +222,8 @@ Each registry namespace must be explicitly allowlisted:
 | `docker.io/rancher` | K3s lightweight Kubernetes |
 | `ghcr.io/borninthedark` | Exousia images (sigstore-signed) |
 | `ghcr.io/open-webui` | Open WebUI |
+| `quay.io/fedora` | Base image mirror for CI builds |
+| `localhost:5000` | Local registry (`bootc switch`, skopeo) |
 
 The build image's policy (`overlays/base/configs/containers/policy.json`)
 allows all of `docker.io` and `quay.io` — no per-namespace rules needed there.

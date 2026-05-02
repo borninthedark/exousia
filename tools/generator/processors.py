@@ -308,19 +308,12 @@ class ModuleProcessorsMixin:
             if remove_packages:
                 exclude_flags = " ".join(f"--exclude={pkg}" for pkg in remove_packages) + " "
 
-            chunk_size = 50
-            chunks = [
-                install_packages[i : i + chunk_size]
-                for i in range(0, len(install_packages), chunk_size)
-            ]
-
-            for _i, chunk in enumerate(chunks):
-                packages_str = " ".join(
-                    f"'{pkg}'" if any(c in pkg for c in "><=") else pkg for pkg in chunk
-                )
-                self.lines.append(
-                    f"    dnf install -y --skip-unavailable {exclude_flags}{packages_str}; \\"
-                )
+            packages_str = " ".join(
+                f"'{pkg}'" if any(c in pkg for c in "><=") else pkg for pkg in install_packages
+            )
+            self.lines.append(
+                f"    dnf install -y --skip-unavailable --setopt=install_weak_deps=False {exclude_flags}{packages_str}; \\"
+            )
 
         # Smart RPM Overrides: only install if newer than system version
         if rpm_overrides:

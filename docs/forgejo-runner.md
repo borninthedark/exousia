@@ -98,7 +98,7 @@ podman run --rm \
     sed -i "s|privileged: false|privileged: true|" /data/config.yaml && \
     sed -i "s|valid_volumes: \[\]|valid_volumes:\n    - \"**\"|" /data/config.yaml && \
     sed -i "s|network: \"\"|network: \"systemd-exousia\"|" /data/config.yaml && \
-    sed -i "s|options:$|options: --cpus 4 --memory 15g|" /data/config.yaml'
+    sed -i "s|options:$|options: --cpus 2 --memory 8g -v buildah-layers:/var/lib/containers/storage|" /data/config.yaml'
 ```
 
 The key changes from defaults:
@@ -110,7 +110,7 @@ The key changes from defaults:
 | `privileged` | `false` | `true` | Required for buildah in Gremmy build jobs |
 | `valid_volumes` | `[]` | `["**"]` | Allow job containers to mount workspace volumes |
 | `container.network` | `""` | `"systemd-exousia"` | Job containers must resolve `forgejo` hostname for checkout |
-| `container.options` | (empty) | `--cpus 4 --memory 15g` | Allocate host resources to job containers for faster builds |
+| `container.options` | (empty) | `--cpus 2 --memory 8g -v buildah-layers:...` | Resources + persistent layer cache for buildah |
 
 ## Daemon Configuration Reference
 
@@ -122,7 +122,7 @@ Key settings for the Podman rootless environment:
 ```yaml
 runner:
   file: /data/.runner        # absolute path — relative paths fail with keep-id
-  capacity: 1                # concurrent jobs (increase for parallel pipelines)
+  capacity: 3                # concurrent jobs (3×2 CPUs + 2 host = 8 cores)
   timeout: 3h                # max job duration
   shutdown_timeout: 3h       # graceful shutdown window for running jobs
   fetch_interval: 2s         # polling interval for new jobs
@@ -139,7 +139,7 @@ container:
   network: "systemd-exousia" # job containers join the shared network
   privileged: true           # required for buildah/podman-in-podman
   docker_host: ""            # auto-detect, do NOT mount into job containers
-  options: --cpus 4 --memory 15g  # resource limits for job containers
+  options: --cpus 2 --memory 8g -v buildah-layers:/var/lib/containers/storage
   valid_volumes:
     - "**"                   # allow job containers to mount any volume
 ```
@@ -147,11 +147,12 @@ container:
 - `network` — the network that job containers join. **Must** be
   `systemd-exousia` (the shared Podman network) so that job containers can
   resolve the `forgejo` hostname when `actions/checkout` clones the
-  repository. The Forgejo instance advertises its clone URL as
-  `http://forgejo:3000/...`, which is only resolvable on `exousia.network`.
-  The default (empty) creates isolated per-job networks where the hostname
-  can't resolve, causing `Could not resolve host: forgejo` errors during
-  checkout.
+  repository, and the `registry` hostname when pushing images to the local
+  registry (`registry:5000`). The Forgejo instance advertises its clone URL
+  as `http://forgejo:3000/...`, which is only resolvable on
+  `exousia.network`. The default (empty) creates isolated per-job networks
+  where hostnames can't resolve, causing `Could not resolve host` errors
+  during checkout or registry push.
 
 - `docker_host` — controls how the runner communicates with the container
   runtime and whether it forwards the socket into job containers.
@@ -190,11 +191,12 @@ container:
   | `"unix:///var/run/docker.sock"` | Explicit path + mount into job containers | Fails (permission denied) |
 
 - `options` — extra flags passed to `podman run` when creating job
-  containers. `--cpus 4 --memory 15g` allocates 4 of 8 host CPU cores and
-  15GB of 29GB RAM to each job container, comparable to GitHub Actions hosted
-  runners (4 cores / 16GB). Adjust these
-  values based on host capacity — leave headroom for the host OS, Forgejo,
-  and other services.
+  containers. `--cpus 2 --memory 8g` allocates 2 cores and 8GB per job.
+  `-v buildah-layers:/var/lib/containers/storage` provides a persistent
+  layer cache so buildah reuses unchanged layers across builds. With
+  `capacity: 3`, up to 3 jobs run in parallel (6 cores / 24GB max),
+  leaving 2 cores for the host OS, Forgejo, and other services.
+  See [Resource Tuning](resource-tuning.md) for alternative profiles.
 
 - `privileged: true` — required for job containers that run buildah or
   podman (e.g., Gremmy build jobs). Without this, container builds inside
@@ -203,6 +205,21 @@ container:
 - `valid_volumes` — controls which volumes job containers can mount. The
   default (`[]`) blocks all volume mounts. Setting `"**"` allows any volume,
   which is needed for job containers to access the workspace and build cache.
+
+### Tuning resources at runtime
+
+Capacity and resource limits can be changed without re-registration:
+
+```bash
+# Edit config inside the running volume
+podman exec forgejo-runner sed -i 's/capacity: .*/capacity: 1/' /data/config.yaml
+podman exec forgejo-runner sed -i 's/--cpus [0-9]* --memory [0-9]*g/--cpus 6 --memory 24g/' /data/config.yaml
+
+# Restart to apply
+systemctl --user restart forgejo-runner
+```
+
+See [Resource Tuning](resource-tuning.md) for all profiles and switching commands.
 
 ### Cache section
 

@@ -1,45 +1,28 @@
 # Pernida Parnkjas — Sternritter C "The Compulsory"
-# Forgejo Orchestrator: promotion-style build pipeline.
+# Forgejo Orchestrator: local build + push to remotes.
 #
-# Job containers: 4 CPUs, 15GB RAM (see docs/forgejo-runner.md)
+# Job containers: 2 CPUs, 8GB RAM × 3 parallel (see docs/forgejo-runner.md)
 #
 # All jobs are inlined (not workflow_call) to avoid Forgejo's label
 # dispatch bug where called workflow jobs get empty runner labels.
 #
-# Feature branches (uryu/*):
-#   Bambietta + Askin (parallel) -> Gremmy (build + :dev to local registry)
-#   -> Gate creates a promotion PR to merge into Forgejo main
-#
-# Pull requests (to main):
-#   Bambietta + Askin (parallel) -> Gremmy (build-only smoke test)
-#
-# Main branch:
-#   Bambietta + Askin (parallel) -> Gremmy (build + :dev to local registry)
-#   -> Gate pushes to GitHub main, triggering Urahara -> Hiyori -> :prod on GHCR
+# Flow (uryu/* branches only):
+#   Bambietta + Askin (parallel) -> Gremmy (build + push :local/:latest to registry)
+#   -> Gate pushes branch to GitHub (triggers Urahara on GitHub side)
 #
 # Vandenreich Pipeline:
 #   Pernida    -> Orchestrator (this file — all jobs inlined)
 #   Bambietta  -> CI: lint + test
 #   Askin      -> Security scanning
-#   Gremmy     -> Build & push :dev to local registry
+#   Gremmy     -> Build & push to local registry
 #
-# Requires GHCR_PAT and FORGEJO_TOKEN in Forgejo Actions secrets.
+# Requires CODEBERG_TOKEN in Forgejo Actions secrets.
 
 name: "Pernida — Orchestrator"
 
 on:
   push:
-    branches: [main, "uryu/*"]
-    paths-ignore:
-      - "docs/**"
-      - "tests/**"
-      - "*.md"
-      - "LICENSE"
-      - ".pre-commit-config.yaml"
-      - "tools/generate-readme.py"
-      - "tools/test_*.py"
-  pull_request:
-    branches: [main]
+    branches: ["uryu/*"]
     paths-ignore:
       - "docs/**"
       - "tests/**"
@@ -50,7 +33,7 @@ on:
       - "tools/test_*.py"
 
 env:
-  LOCAL_REGISTRY: localhost:5000
+  LOCAL_REGISTRY: registry:5000
   IMAGE_NAME: exousia
 
 jobs:
@@ -295,6 +278,27 @@ jobs:
             --enable-plymouth \
             --verbose
 
+      - name: Resolve fastest base image source
+        run: |
+          FVER="${{ needs.defaults.outputs.primary_version }}"
+          BASE="quay.io/fedora/fedora-sway-atomic:${FVER}"
+
+          # Priority: local registry > GHCR mirror > quay.io (upstream)
+          if skopeo inspect --tls-verify=false "docker://registry:5000/fedora-sway-atomic:${FVER}" >/dev/null 2>&1; then
+            MIRROR="registry:5000/fedora-sway-atomic:${FVER}"
+            echo "Using local registry mirror"
+          elif skopeo inspect "docker://ghcr.io/borninthedark/fedora-sway-atomic:${FVER}" >/dev/null 2>&1; then
+            MIRROR="ghcr.io/borninthedark/fedora-sway-atomic:${FVER}"
+            echo "Using GHCR mirror"
+          else
+            MIRROR=""
+            echo "No mirror available — using quay.io upstream"
+          fi
+
+          if [ -n "${MIRROR}" ]; then
+            sed -i "s|FROM ${BASE}|FROM ${MIRROR}|" Dockerfile.generated
+          fi
+
       - name: Build image with buildah
         id: build
         run: |
@@ -302,41 +306,33 @@ jobs:
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
           TAG="fedora-sway-atomic-${FVER}-${SHORT_SHA}"
 
-          buildah bud \
+          VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+
+          buildah bud --layers --tls-verify=false \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}" \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}" \
-            -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:dev" \
+            -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${VERSION}" \
+            -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:local" \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:latest" \
             -f Dockerfile.generated .
 
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "fver=${FVER}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Push to local registry
         if: github.event_name != 'pull_request'
         run: |
           TAG="${{ steps.build.outputs.tag }}"
           FVER="${{ steps.build.outputs.fver }}"
+          VERSION="${{ steps.build.outputs.version }}"
 
-          skopeo copy \
-            "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}" \
-            "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}" \
-            --dest-tls-verify=false
-
-          skopeo copy \
-            "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}" \
-            "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}" \
-            --dest-tls-verify=false
-
-          skopeo copy \
-            "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:dev" \
-            "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:dev" \
-            --dest-tls-verify=false
-
-          skopeo copy \
-            "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:latest" \
-            "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:latest" \
-            --dest-tls-verify=false
+          for IMAGE_TAG in "${TAG}" "${FVER}" "${VERSION}" "local" "latest"; do
+            skopeo copy \
+              "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" \
+              "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" \
+              --dest-tls-verify=false
+          done
 
       - name: Build summary
         if: always()
@@ -373,57 +369,20 @@ jobs:
           needs.gremmy.result == 'failure'
         run: exit 1
 
-      - name: Create promotion PR (feature branch)
+      - name: Push to Codeberg
         if: >-
-          github.ref != 'refs/heads/main' &&
-          github.event_name == 'push' &&
           needs.bambietta.result == 'success' &&
           needs.askin.result == 'success' &&
           needs.gremmy.result == 'success'
         env:
-          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+          CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
         run: |
           BRANCH="${GITHUB_REF_NAME}"
-          API_URL="${{ github.server_url }}/api/v1"
 
-          PR_BODY="Automated promotion PR created by Pernida pipeline.\\n\\nAll checks passed:\\n- Bambietta (CI): ${{ needs.bambietta.result }}\\n- Askin (Security): ${{ needs.askin.result }}\\n- Gremmy (Build): ${{ needs.gremmy.result }}"
-
-          # Check if a PR already exists for this branch
-          EXISTING=$(curl -s -H "Authorization: token ${FORGEJO_TOKEN}" \
-            "${API_URL}/repos/${{ github.repository }}/pulls?state=open&head=${{ github.repository_owner }}:${BRANCH}" \
-            | python3 -c "import json,sys; prs=json.load(sys.stdin); print(prs[0]['number'] if prs else '')" 2>/dev/null || echo "")
-
-          if [ -n "${EXISTING}" ]; then
-            curl -s -X PATCH -H "Authorization: token ${FORGEJO_TOKEN}" \
-              -H "Content-Type: application/json" \
-              "${API_URL}/repos/${{ github.repository }}/pulls/${EXISTING}" \
-              -d "{\"body\": \"${PR_BODY}\"}"
-            echo "Updated existing promotion PR #${EXISTING} for ${BRANCH}"
-          else
-            curl -s -X POST -H "Authorization: token ${FORGEJO_TOKEN}" \
-              -H "Content-Type: application/json" \
-              "${API_URL}/repos/${{ github.repository }}/pulls" \
-              -d "{
-                \"title\": \"promote: ${BRANCH} -> main\",
-                \"head\": \"${BRANCH}\",
-                \"base\": \"main\",
-                \"body\": \"${PR_BODY}\"
-              }"
-            echo "Created promotion PR: ${BRANCH} -> main"
-          fi
-
-      - name: Promote to GitHub (main)
-        if: >-
-          github.ref == 'refs/heads/main' &&
-          needs.bambietta.result == 'success' &&
-          needs.askin.result == 'success' &&
-          needs.gremmy.result == 'success'
-        run: |
-          REPO_URL="https://x-access-token:${GHCR_PAT}@github.com/borninthedark/exousia.git"
-
-          git clone --bare --single-branch --branch main \
+          git clone --bare --single-branch --branch "${BRANCH}" \
             "${{ github.server_url }}/${{ github.repository }}.git" /tmp/push-repo
           cd /tmp/push-repo
 
-          git push "${REPO_URL}" "main:main" --force-with-lease
-          echo "Promoted main to GitHub — Urahara will build :prod on GHCR"
+          CODEBERG_URL="https://borninthedark:${CODEBERG_TOKEN}@codeberg.org/borninthedark/exousia.git"
+          git push "${CODEBERG_URL}" "${BRANCH}:${BRANCH}" --force
+          echo "Pushed ${BRANCH} to Codeberg"

@@ -20,7 +20,7 @@ Comprehensive documentation for building, testing, and deploying custom Fedora b
 Exousia uses two parallel CI/CD pipelines named after BLEACH factions:
 
 - **GitHub Actions** (12th Division / Shinigami) — production builds to GHCR
-- **Forgejo Actions** (Vandenreich / Quincy) — local dev builds to `localhost:5000`
+- **Forgejo Actions** (Vandenreich / Quincy) — local dev builds to `registry:5000`
 
 ### GitHub Actions (12th Division)
 
@@ -34,6 +34,7 @@ Exousia uses two parallel CI/CD pipelines named after BLEACH factions:
 | **Sealed** | `sealed.yml` | 12th -- Sealed boot: wraps base image with signed boot chain, composefs, UKI |
 | **Nemu** | `nemu.yml` | 12th -- Post-CI: refreshes tracked `STATUS.md` from the latest main-branch Urahara run |
 | **Mayuri** | `mayuri.yml` | 12th -- Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
+| **Yoruichi** | `yoruichi.yml` | 2nd -- Base Image Mirror: weekly mirror of `quay.io/fedora/fedora-sway-atomic` to GHCR |
 
 ### Forgejo Actions (Vandenreich)
 
@@ -44,7 +45,9 @@ Exousia uses two parallel CI/CD pipelines named after BLEACH factions:
 | **Askin** | `askin.yml` | The Deathdealing (D) | Security scanning |
 | **Gremmy** | `gremmy.yml` | The Visionary (V) | Build & push to local registry |
 
-Triggers on push to `main` or `uryu/*` branches. Local images tagged `dev`.
+Triggers on push to `uryu/*` branches. On success, the gate pushes the branch
+to Codeberg. Local images tagged with SHA, Fedora version, semver,
+`:local`, and `:latest`.
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):
 `feat:` minor, `fix:` patch, `feat!:` major.
@@ -60,6 +63,7 @@ Configure in GitHub repository settings under **Settings > Secrets and variables
 | Name | Purpose |
 |------|---------|
 | `GHCR_PAT` | GHCR personal access token for CI RPM override pulls and local/manual registry access |
+| `CODEBERG_TOKEN` | Codeberg access token for Pernida gate push (Forgejo secret) |
 | `SECUREBOOT_KEY` | PEM-encoded Secure Boot db private key (sealed boot only) |
 | `SECUREBOOT_CERT` | PEM-encoded Secure Boot db certificate (sealed boot only) |
 
@@ -100,6 +104,7 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 - **[local-build-pipeline.md](local-build-pipeline.md)** -- Quadlet services, local build, GHCR publication, and local registry mirroring
 - **[quadlet-services.md](quadlet-services.md)** -- Comprehensive quadlet service map, dependencies, ports, and volumes
 - **[forgejo-runner.md](forgejo-runner.md)** -- Forgejo Actions runner setup, registration, and Podman integration
+- **[resource-tuning.md](resource-tuning.md)** -- Quadlet and runner resource allocation profiles and monitoring
 
 - **[plan-temporal-orchestration.md](plan-temporal-orchestration.md)** -- Temporal agent orchestration architecture and workflow design
 - **[sealed-boot.md](sealed-boot.md)** -- Sealed boot architecture, key management, and usage
