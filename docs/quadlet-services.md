@@ -203,6 +203,7 @@ Each registry namespace must be explicitly allowlisted:
 | `docker.io/valkey` | Plane Redis (Valkey) |
 | `codeberg.org/forgejo` | Forgejo |
 | `code.forgejo.org/forgejo` | Forgejo Runner |
+| `docker.io/catthehacker` | Forgejo Runner job containers (`ubuntu:act-latest`) |
 | `ghcr.io/borninthedark` | Exousia images (sigstore-signed) |
 | `ghcr.io/open-webui` | Open WebUI |
 

@@ -58,6 +58,12 @@ new runner**.
 Registration tokens are single-use and expire. Generate a fresh one each
 time you need to re-register.
 
+The runner label `ubuntu-latest:docker://catthehacker/ubuntu:act-latest`
+maps the `runs-on: ubuntu-latest` label to an image that includes Python,
+Node.js, pip, sudo, and other common CI tools. The minimal `node:20` image
+lacks Python and system package managers, causing failures in jobs that
+install tools via `pip`, `apt-get`, or `uv`.
+
 ### Step 2: Register the runner
 
 ```bash
@@ -70,7 +76,7 @@ podman run --rm \
     --instance http://forgejo:3000 \
     --token <REGISTRATION_TOKEN> \
     --name exousia-runner \
-    --labels "ubuntu-latest:docker://node:20"
+    --labels "ubuntu-latest:docker://catthehacker/ubuntu:act-latest"
 ```
 
 This writes `/data/.runner` with the runner's UUID, auth token, and label

@@ -275,6 +275,11 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Install build tools
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq buildah skopeo
+
       - name: Transpile YAML blueprint
         id: transpile
         run: |
