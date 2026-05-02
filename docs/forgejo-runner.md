@@ -90,7 +90,8 @@ podman run --rm \
     sed -i "s|docker_host: \"-\"|docker_host: \"\"|" /data/config.yaml && \
     sed -i "s|file: .runner|file: /data/.runner|" /data/config.yaml && \
     sed -i "s|privileged: false|privileged: true|" /data/config.yaml && \
-    sed -i "s|valid_volumes: \[\]|valid_volumes:\n    - \"**\"|" /data/config.yaml'
+    sed -i "s|valid_volumes: \[\]|valid_volumes:\n    - \"**\"|" /data/config.yaml && \
+    sed -i "s|network: \"\"|network: \"systemd-exousia\"|" /data/config.yaml'
 ```
 
 The key changes from defaults:
@@ -101,6 +102,7 @@ The key changes from defaults:
 | `runner.file` | `.runner` | `/data/.runner` | Absolute path required with `keep-id` (can't write to `/`) |
 | `privileged` | `false` | `true` | Required for buildah in Gremmy build jobs |
 | `valid_volumes` | `[]` | `["**"]` | Allow job containers to mount workspace volumes |
+| `container.network` | `""` | `"systemd-exousia"` | Job containers must resolve `forgejo` hostname for checkout |
 
 ## Daemon Configuration Reference
 
@@ -126,12 +128,21 @@ runner:
 
 ```yaml
 container:
-  network: ""                # auto-create per-job networks
+  network: "systemd-exousia" # job containers join the shared network
   privileged: true           # required for buildah/podman-in-podman
   docker_host: ""            # auto-detect, do NOT mount into job containers
   valid_volumes:
     - "**"                   # allow job containers to mount any volume
 ```
+
+- `network` — the network that job containers join. **Must** be
+  `systemd-exousia` (the shared Podman network) so that job containers can
+  resolve the `forgejo` hostname when `actions/checkout` clones the
+  repository. The Forgejo instance advertises its clone URL as
+  `http://forgejo:3000/...`, which is only resolvable on `exousia.network`.
+  The default (empty) creates isolated per-job networks where the hostname
+  can't resolve, causing `Could not resolve host: forgejo` errors during
+  checkout.
 
 - `docker_host` — controls how the runner communicates with the container
   runtime and whether it forwards the socket into job containers.
@@ -292,6 +303,7 @@ podman volume rm systemd-forgejo-runner-data
 | `docker_host config was invalid` | Missing or default daemon config | Generate `/data/config.yaml` with explicit `docker_host` |
 | `start-limit-hit` | Rapid restart loop from earlier failures | `systemctl --user reset-failed forgejo-runner.service` |
 | `mkdir /var/run/docker.sock: permission denied` | `docker_host` set to explicit path or `automount` — runner tries to forward socket into job containers, rootless podman can't mkdir | Set `docker_host: ""` in config.yaml (empty = auto-detect without forwarding) |
+| `Could not resolve host: forgejo` | Job containers on isolated network | Set `container.network: "systemd-exousia"` in config.yaml |
 | Runner exits immediately (status 0) | Image default cmd is `forgejo-runner` (shows help) | Quadlet must set `Exec=forgejo-runner daemon` |
 | `Could not start the cache server` | Cache port conflict (non-fatal warning) | Ignorable — cache is disabled but jobs still run |
 
