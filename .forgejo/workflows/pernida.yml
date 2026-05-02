@@ -50,8 +50,8 @@ on:
       - "tools/test_*.py"
 
 env:
-  LOCAL_REGISTRY: localhost:5000
-  IMAGE_NAME: exousia
+  LOCAL_REGISTRY: forgejo:3000
+  IMAGE_NAME: uryu/exousia
 
 jobs:
   # -- Resolve Defaults --
@@ -312,31 +312,28 @@ jobs:
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "fver=${FVER}" >> $GITHUB_OUTPUT
 
+      - name: Login to Forgejo container registry
+        if: github.event_name != 'pull_request'
+        env:
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+        run: |
+          skopeo login "${LOCAL_REGISTRY}" \
+            --username "${{ github.repository_owner }}" \
+            --password "${FORGEJO_TOKEN}" \
+            --tls-verify=false
+
       - name: Push to local registry
         if: github.event_name != 'pull_request'
         run: |
           TAG="${{ steps.build.outputs.tag }}"
           FVER="${{ steps.build.outputs.fver }}"
 
-          skopeo copy \
-            "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}" \
-            "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}" \
-            --dest-tls-verify=false
-
-          skopeo copy \
-            "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}" \
-            "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}" \
-            --dest-tls-verify=false
-
-          skopeo copy \
-            "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:dev" \
-            "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:dev" \
-            --dest-tls-verify=false
-
-          skopeo copy \
-            "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:latest" \
-            "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:latest" \
-            --dest-tls-verify=false
+          for IMAGE_TAG in "${TAG}" "${FVER}" "dev" "latest"; do
+            skopeo copy \
+              "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" \
+              "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" \
+              --dest-tls-verify=false
+          done
 
       - name: Build summary
         if: always()
