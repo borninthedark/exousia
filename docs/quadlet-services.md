@@ -168,6 +168,20 @@ exousia.network
 Plane requires an env file at `/etc/exousia/plane/plane.env`. Run
 `just plane-install` on first setup to create it from the template.
 
+### BookStack (documentation, 2 services)
+
+| Service | Image | Host Port | Network Alias | Depends On |
+|---------|-------|-----------|---------------|------------|
+| `bookstack-db` | `mariadb:11` | - | `bookstack-db` | `exousia.network` |
+| `bookstack` | `solidnerd/bookstack:24.12.1` | 6875 | `bookstack` | `bookstack-db` |
+
+Lifecycle: `just engage bookstack` / `just remove bookstack`
+
+Dependency chain: `exousia.network` -> `bookstack-db` -> `bookstack`
+
+Accessible at `https://docs.exousia.local`. First start creates the database;
+default admin credentials are `admin@admin.com` / `password` — change immediately.
+
 ## Port Summary
 
 | Port | Service | Protocol |
@@ -176,6 +190,7 @@ Plane requires an env file at `/etc/exousia/plane/plane.env`. Run
 | 3000 | Forgejo | HTTP |
 | 3080 | Open WebUI | HTTP |
 | 5000 | Container Registry | HTTP |
+| 6875 | BookStack | HTTP |
 | 7233 | Temporal Server | gRPC |
 | 8080 | Plane Proxy | HTTP |
 | 8233 | Temporal UI | HTTP |
@@ -206,6 +221,9 @@ All ports bind to `127.0.0.1` only (no external exposure).
 | `buildah-layers` | Forgejo Runner (job containers) | `/var/lib/containers/storage` |
 | `caddy-data` | Caddy | `/data` (TLS certs + CA) |
 | `caddy-config` | Caddy | `/config` (runtime config) |
+| `bookstack-data` | BookStack | `/var/www/bookstack/storage/uploads` |
+| `bookstack-files` | BookStack | `/var/www/bookstack/public/uploads` |
+| `bookstack-db-data` | BookStack DB | `/var/lib/mysql` |
 
 ## Container Image Policy
 
@@ -214,7 +232,8 @@ Each registry namespace must be explicitly allowlisted:
 
 | Namespace | Required By |
 |-----------|-------------|
-| `docker.io/library` | postgres, rabbitmq, registry, caddy |
+| `docker.io/library` | postgres, mariadb, rabbitmq, registry, caddy |
+| `docker.io/solidnerd` | BookStack |
 | `docker.io/ollama` | Ollama |
 | `docker.io/temporalio` | Temporal server, Temporal UI |
 | `docker.io/makeplane` | Plane services |
@@ -232,6 +251,60 @@ Each registry namespace must be explicitly allowlisted:
 
 The build image's policy (`overlays/base/configs/containers/policy.json`)
 allows all of `docker.io` and `quay.io` — no per-namespace rules needed there.
+
+## Prerequisites: Networking & Storage
+
+All quadlet services share a single Podman network and use named volumes for
+persistent storage. Both are declared as quadlet unit files — systemd creates
+them automatically when a dependent service starts.
+
+### Network
+
+The shared network is defined in `exousia.network` (quadlet `.network` file):
+
+```ini
+[Network]
+NetworkName=exousia
+Subnet=10.89.1.0/24
+```
+
+Every `.container` quadlet references this network:
+
+```ini
+Network=exousia.network:alias=<service-name>
+```
+
+The `:alias=` suffix registers the container's DNS name on the network, allowing
+inter-container resolution (e.g., `forgejo` can reach `forgejo-db` by name).
+
+### Volumes
+
+Each service's persistent data lives in a named volume declared as a `.volume`
+quadlet file (e.g., `forgejo-data.volume`). These files are minimal:
+
+```ini
+[Volume]
+```
+
+Containers reference them by filename:
+
+```ini
+Volume=forgejo-data.volume:/data
+```
+
+Systemd resolves `.volume` references to `podman volume create` calls on first
+use. Data persists across container restarts and removals — only an explicit
+`podman volume rm` destroys it.
+
+### Login Linger
+
+For user-scoped quadlets to run without an active login session:
+
+```bash
+loginctl enable-linger $USER
+```
+
+This is a one-time setup. Without it, all user services stop when you log out.
 
 ## Lifecycle Commands
 

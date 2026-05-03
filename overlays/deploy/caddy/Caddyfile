@@ -31,3 +31,8 @@ registry.exousia.local {
 	tls internal
 	reverse_proxy registry:5000
 }
+
+docs.exousia.local {
+	tls internal
+	reverse_proxy bookstack:8080
+}

@@ -1,0 +1,20 @@
+[Unit]
+Description=BookStack MariaDB database
+
+[Container]
+Image=docker.io/library/mariadb:11
+ContainerName=bookstack-db
+Environment=MYSQL_ROOT_PASSWORD=bookstack
+Environment=MYSQL_DATABASE=bookstack
+Environment=MYSQL_USER=bookstack
+Environment=MYSQL_PASSWORD=bookstack
+Volume=bookstack-db-data.volume:/var/lib/mysql
+Network=exousia.network:alias=bookstack-db
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

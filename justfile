@@ -290,8 +290,9 @@ engage name:
     set -euo pipefail
     # Expand service groups to their component services
     case "{{name}}" in
-        forgejo)  services="forgejo-db forgejo forgejo-runner" ;;
-        temporal) services="temporal-db temporal-server temporal-ui" ;;
+        forgejo)   services="forgejo-db forgejo forgejo-runner" ;;
+        temporal)  services="temporal-db temporal-server temporal-ui" ;;
+        bookstack) services="bookstack-db bookstack" ;;
         *)        services="{{name}}" ;;
     esac
     # Source: repo checkout or image-installed path
@@ -329,8 +330,9 @@ install name:
     #!/bin/bash
     set -euo pipefail
     case "{{name}}" in
-        forgejo)  services="forgejo-db forgejo forgejo-runner" ;;
-        temporal) services="temporal-db temporal-server temporal-ui" ;;
+        forgejo)   services="forgejo-db forgejo forgejo-runner" ;;
+        temporal)  services="temporal-db temporal-server temporal-ui" ;;
+        bookstack) services="bookstack-db bookstack" ;;
         *)        services="{{name}}" ;;
     esac
     if [ -d "overlays/deploy" ]; then
@@ -363,8 +365,9 @@ disengage name:
     #!/bin/bash
     set -euo pipefail
     case "{{name}}" in
-        forgejo)  services="forgejo-runner forgejo forgejo-db" ;;
-        temporal) services="temporal-ui temporal-server temporal-db" ;;
+        forgejo)   services="forgejo-runner forgejo forgejo-db" ;;
+        temporal)  services="temporal-ui temporal-server temporal-db" ;;
+        bookstack) services="bookstack bookstack-db" ;;
         *)        services="{{name}}" ;;
     esac
     for svc in $services; do
@@ -377,8 +380,9 @@ remove name:
     #!/bin/bash
     set -euo pipefail
     case "{{name}}" in
-        forgejo)  services="forgejo-runner forgejo forgejo-db" ;;
-        temporal) services="temporal-ui temporal-server temporal-db" ;;
+        forgejo)   services="forgejo-runner forgejo forgejo-db" ;;
+        temporal)  services="temporal-ui temporal-server temporal-db" ;;
+        bookstack) services="bookstack bookstack-db" ;;
         *)        services="{{name}}" ;;
     esac
     for svc in $services; do
