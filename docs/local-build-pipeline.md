@@ -360,18 +360,26 @@ reverse_proxy ──► backend container on exousia.network
 | `overlays/deploy/caddy-data.volume` | Caddy TLS cert persistent storage |
 | `overlays/deploy/caddy-config.volume` | Caddy runtime config storage |
 
-CoreDNS resolves `*.exousia.local` hostnames to `127.0.0.1`, so local
-services are accessible by name instead of port numbers.
+CoreDNS uses a wildcard A record (`*.exousia.local → 127.0.0.1`), so any
+new app only needs a Caddyfile entry — no DNS changes required.
 
-| Hostname | Service | Port |
-|----------|---------|------|
+| Hostname | Service | Backend Port |
+|----------|---------|--------------|
 | `forgejo.exousia.local` | Forgejo | 3000 |
 | `registry.exousia.local` | Container Registry | 5000 |
 | `plane.exousia.local` | Plane | 8080 |
 | `ollama.exousia.local` | Ollama | 11434 |
 | `webui.exousia.local` | Open WebUI | 3080 |
-| `temporal.exousia.local` | Temporal gRPC | 7233 |
-| `temporal-ui.exousia.local` | Temporal UI | 8233 |
+| `temporal.exousia.local` | Temporal UI | 8233 |
+
+To add a future app, append a block to `overlays/deploy/caddy/Caddyfile`:
+
+```caddyfile
+newapp.exousia.local {
+    tls internal
+    reverse_proxy container-name:PORT
+}
+```
 
 ### Prerequisites
 
@@ -621,6 +629,23 @@ If the container was started before adding `:z`, restart it to re-label:
 ```bash
 systemctl --user restart coredns
 ```
+
+**Cannot update config files after `:z` relabel:**
+
+The `:z` flag changes file ownership to the container's mapped UID. To
+update config files, stop the container, remove the directory with
+`podman unshare`, recreate, and restart:
+
+```bash
+systemctl --user stop coredns
+podman unshare rm -rf ~/.config/coredns
+mkdir -p ~/.config/coredns
+cp overlays/deploy/coredns/Corefile ~/.config/coredns/
+cp overlays/deploy/coredns/exousia.local.zone ~/.config/coredns/
+systemctl --user start coredns
+```
+
+The `just dns-start` target handles this automatically.
 
 **Resolution not working after dns-start:**
 

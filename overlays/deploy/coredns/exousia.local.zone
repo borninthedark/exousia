@@ -2,7 +2,7 @@ $ORIGIN exousia.local.
 $TTL 60
 
 @       IN SOA  ns.exousia.local. admin.exousia.local. (
-            2026050201 ; serial
+            2026050301 ; serial
             3600       ; refresh
             600        ; retry
             86400      ; expire
@@ -13,18 +13,6 @@ $TTL 60
 
 ns      IN A    127.0.0.1
 
-; Infrastructure
-forgejo     IN A    127.0.0.1
-registry    IN A    127.0.0.1
-runner      IN A    127.0.0.1
-
-; AI / LLM
-ollama      IN A    127.0.0.1
-webui       IN A    127.0.0.1
-
-; Project Management
-plane       IN A    127.0.0.1
-
-; Orchestration
-temporal    IN A    127.0.0.1
-temporal-ui IN A    127.0.0.1
+; Wildcard — all *.exousia.local resolves to loopback.
+; New apps need only a Caddyfile entry, no DNS change.
+*       IN A    127.0.0.1

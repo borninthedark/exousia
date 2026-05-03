@@ -11,8 +11,9 @@ PublishPort=127.0.0.1:2222:2222
 Volume=forgejo-data.volume:/data
 Network=exousia.network:alias=forgejo
 Label=io.containers.autoupdate=registry
-Environment=FORGEJO__server__ROOT_URL=http://localhost:3000
-Environment=FORGEJO__server__SSH_DOMAIN=localhost
+Environment=FORGEJO__server__DOMAIN=forgejo.exousia.local
+Environment=FORGEJO__server__ROOT_URL=https://forgejo.exousia.local
+Environment=FORGEJO__server__SSH_DOMAIN=forgejo.exousia.local
 Environment=FORGEJO__server__SSH_PORT=2222
 Environment=FORGEJO__database__DB_TYPE=postgres
 Environment=FORGEJO__database__HOST=forgejo-db:5432
