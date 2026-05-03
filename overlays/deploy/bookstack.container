@@ -15,6 +15,7 @@ Environment=DB_PORT=3306
 Environment=DB_DATABASE=bookstack
 Environment=DB_USERNAME=bookstack
 Environment=DB_PASSWORD=bookstack
+EnvironmentFile=%h/.config/bookstack/bookstack.env
 Environment=APP_URL=https://docs.exousia.local
 Label=io.containers.autoupdate=registry
 
