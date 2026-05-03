@@ -400,7 +400,9 @@ dns_services := "coredns caddy"
 dns-start:
     #!/bin/bash
     set -euo pipefail
-    # Copy config files
+    # Copy config files (remove first — :z relabel changes ownership)
+    podman unshare rm -rf ~/.config/coredns 2>/dev/null || true
+    rm -rf ~/.config/caddy/Caddyfile 2>/dev/null || true
     mkdir -p ~/.config/coredns ~/.config/caddy
     cp overlays/deploy/coredns/Corefile ~/.config/coredns/
     cp overlays/deploy/coredns/exousia.local.zone ~/.config/coredns/
