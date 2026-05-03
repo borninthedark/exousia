@@ -26,7 +26,7 @@ Exousia uses two parallel CI/CD pipelines named after BLEACH factions:
 
 | Workflow | File | Role |
 |----------|------|------|
-| **Urahara** | `urahara.yml` | 12th -- Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate |
+| **Urahara** | `urahara.yml` | 12th -- Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate (creates promotion PR on feature branch push) |
 | **Hikifune** | `hikifune.yml` | 12th -- CI: Ruff, Black, isort, pytest |
 | **Uhin** | `uhin.yml` | 12th -- Security: Hadolint, Checkov, Trivy config scan, Bandit, OSV-Scanner |
 | **Hiyori** | `hiyori.yml` | 12th -- Build, Trivy scan artifact, SBOM submission, Cosign, semver release ([matrix builds](matrix-builds.md)) |
@@ -46,7 +46,7 @@ Exousia uses two parallel CI/CD pipelines named after BLEACH factions:
 | **Gremmy** | `gremmy.yml` | The Visionary (V) | Build & push to local registry |
 
 Triggers on push to `uryu/*` branches. On success, the gate pushes the branch
-to Codeberg. Local images tagged with SHA, Fedora version, semver,
+to GitHub and Codeberg. Local images tagged with SHA, Fedora version, semver,
 `:local`, and `:latest`.
 
 Version bumps are automatic via [conventional commits](https://www.conventionalcommits.org/):
