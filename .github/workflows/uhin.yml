@@ -89,7 +89,7 @@ jobs:
           retention-days: 1
 
       - name: Checkov (Containerfile)
-        uses: bridgecrewio/checkov-action@3203f966a7ccd680cd8f6aaa3c3c5b0b3e9afa32 # v12
+        uses: bridgecrewio/checkov-action@9201a8e6eaa919e3444d7c4ca691896efde4f033 # v12
         with:
           file: Dockerfile.generated
           framework: dockerfile
