@@ -190,6 +190,7 @@ default admin credentials are `admin@admin.com` / `password` — change immediat
 | 3000 | Forgejo | HTTP |
 | 3080 | Open WebUI | HTTP |
 | 5000 | Container Registry | HTTP |
+| 3030 | Homepage | HTTP |
 | 6875 | BookStack | HTTP |
 | 7233 | Temporal Server | gRPC |
 | 8080 | Plane Proxy | HTTP |
@@ -245,6 +246,7 @@ Each registry namespace must be explicitly allowlisted:
 | `docker.io/catthehacker` | Forgejo Runner job containers (`ubuntu:act-latest`) |
 | `docker.io/rancher` | K3s lightweight Kubernetes |
 | `ghcr.io/borninthedark` | Exousia images (sigstore-signed) |
+| `ghcr.io/gethomepage` | Homepage dashboard |
 | `ghcr.io/open-webui` | Open WebUI |
 | `quay.io/fedora` | Base image mirror for CI builds |
 | `localhost:5000` | Local registry (`bootc switch`, skopeo) |
