@@ -294,17 +294,25 @@ engage name:
         temporal) services="temporal-db temporal-server temporal-ui" ;;
         *)        services="{{name}}" ;;
     esac
+    # Source: repo checkout or image-installed path
+    if [ -d "overlays/deploy" ]; then
+        deploy_dir="overlays/deploy"
+    elif [ -d "/usr/share/exousia/deploy" ]; then
+        deploy_dir="/usr/share/exousia/deploy"
+    else
+        echo "ERROR: no deploy overlay found" >&2; exit 1
+    fi
     mkdir -p ~/.config/containers/systemd/
     for svc in $services; do
         for ext in container volume network; do
-            src="overlays/deploy/${svc}.${ext}"
+            src="${deploy_dir}/${svc}.${ext}"
             if [ -f "$src" ]; then
                 cp "$src" ~/.config/containers/systemd/
                 echo "Copied ${src}"
             fi
         done
         # Also copy associated data volumes (e.g. ollama-data.volume)
-        for vol in overlays/deploy/${svc}-*.volume; do
+        for vol in "${deploy_dir}/${svc}"-*.volume; do
             [ -f "$vol" ] || continue
             cp "$vol" ~/.config/containers/systemd/
             echo "Copied ${vol}"
@@ -316,9 +324,56 @@ engage name:
     systemctl --user start "${last_svc}.service"
     echo "{{name}} engaged (persists across reboots via WantedBy=default.target)."
 
-# Disable a quadlet: stop the service and remove its files
-# Service groups expand in reverse order for clean shutdown
+# Install a quadlet: copy files for reboot persistence without starting
+install name:
+    #!/bin/bash
+    set -euo pipefail
+    case "{{name}}" in
+        forgejo)  services="forgejo-db forgejo forgejo-runner" ;;
+        temporal) services="temporal-db temporal-server temporal-ui" ;;
+        *)        services="{{name}}" ;;
+    esac
+    if [ -d "overlays/deploy" ]; then
+        deploy_dir="overlays/deploy"
+    elif [ -d "/usr/share/exousia/deploy" ]; then
+        deploy_dir="/usr/share/exousia/deploy"
+    else
+        echo "ERROR: no deploy overlay found" >&2; exit 1
+    fi
+    mkdir -p ~/.config/containers/systemd/
+    for svc in $services; do
+        for ext in container volume network; do
+            src="${deploy_dir}/${svc}.${ext}"
+            if [ -f "$src" ]; then
+                cp "$src" ~/.config/containers/systemd/
+                echo "Installed ${src}"
+            fi
+        done
+        for vol in "${deploy_dir}/${svc}"-*.volume; do
+            [ -f "$vol" ] || continue
+            cp "$vol" ~/.config/containers/systemd/
+            echo "Installed ${vol}"
+        done
+    done
+    systemctl --user daemon-reload
+    echo "{{name}} installed (starts on next boot)."
+
+# Disengage a quadlet: stop service but keep files (restarts on reboot)
 disengage name:
+    #!/bin/bash
+    set -euo pipefail
+    case "{{name}}" in
+        forgejo)  services="forgejo-runner forgejo forgejo-db" ;;
+        temporal) services="temporal-ui temporal-server temporal-db" ;;
+        *)        services="{{name}}" ;;
+    esac
+    for svc in $services; do
+        systemctl --user stop "${svc}.service" 2>/dev/null || true
+    done
+    echo "{{name}} disengaged (will restart on reboot)."
+
+# Remove a quadlet: stop service + delete files (opposite of install/engage)
+remove name:
     #!/bin/bash
     set -euo pipefail
     case "{{name}}" in
@@ -334,18 +389,10 @@ disengage name:
         rm -f ~/.config/containers/systemd/${svc}-*.volume
     done
     systemctl --user daemon-reload
-    echo "{{name}} disengaged."
+    echo "{{name}} removed."
 
-# Start a standalone quadlet
-start name:
-    systemctl --user start {{name}}.service
-
-# Stop a standalone quadlet
-stop name:
-    systemctl --user stop {{name}}.service
-
-# Show status of a standalone quadlet
-status name:
+# Show status of a quadlet
+report name:
     systemctl --user status {{name}}.service --no-pager
 
 # Follow logs of a standalone quadlet

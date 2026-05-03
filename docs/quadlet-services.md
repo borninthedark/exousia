@@ -236,12 +236,12 @@ allows all of `docker.io` and `quay.io` — no per-namespace rules needed there.
 ## Lifecycle Commands
 
 ```bash
-# Individual services (any quadlet)
-just engage <name>       # Copy files, reload systemd, start
-just disengage <name>    # Stop, remove files, reload systemd
-just start <name>        # Start (must be engaged)
-just stop <name>         # Stop (keeps files)
-just status <name>       # Show systemd status
+# Quadlet lifecycle
+just install <name>      # Copy files for reboot persistence (no start)
+just engage <name>       # Install + start now
+just disengage <name>    # Stop now, keep files (restarts on reboot)
+just remove <name>       # Stop + delete files (opposite of install)
+just report <name>       # Show systemd status
 just logs <name>         # Follow journal logs
 
 # App-specific stacks

@@ -216,12 +216,12 @@ just temporal-stop              # Stop and disengage Temporal
 just temporal-status            # Show Temporal service status
 just temporal-logs              # Follow Temporal logs
 
-# Standalone containers (pattern rules)
-just engage <name>             # Enable a quadlet: copy files, reload, start (e.g. just engage ollama)
-just disengage <name>          # Disable a quadlet: stop service, remove files
-just start <name>              # Start any quadlet (e.g. just start freebsd)
-just stop <name>               # Stop a standalone quadlet
-just status <name>             # Show status of a standalone quadlet
+# Quadlet lifecycle
+just install <name>            # Copy files for reboot persistence (no start)
+just engage <name>             # Install + start now (e.g. just engage ollama)
+just disengage <name>          # Stop now, keep files (restarts on reboot)
+just remove <name>             # Stop + delete files (opposite of install)
+just report <name>             # Show status of a standalone quadlet
 just logs <name>               # Follow logs of a standalone quadlet
 
 # Infrastructure
@@ -320,6 +320,12 @@ just disengage open-webui
 ```
 
 ## DNS + Reverse Proxy (Local Service Resolution)
+
+> **Note:** `overlays/deploy/` is NOT built into the OCI image. These are
+> host-side quadlet definitions deployed via `just engage` / `just dns-start`.
+
+The naming convention is `<app>.<hostname>.local` — since the machine
+hostname is `exousia`, all services resolve as `*.exousia.local`.
 
 CoreDNS and Caddy form a two-layer local service discovery and TLS
 termination stack. The full request flow:
@@ -649,6 +655,12 @@ The `just dns-start` target handles this automatically.
 
 **Resolution not working after dns-start:**
 
+DNS troubleshooting tools available on the host (from `base-pentest`
+bundle and systemd):
+
+- `resolvectl` — query systemd-resolved directly
+- `dig` / `nslookup` / `host` — from `bind-utils`
+
 Verify systemd-resolved is forwarding `.exousia.local` queries:
 
 ```bash
@@ -656,6 +668,9 @@ resolvectl domain
 # Should show "~exousia.local" on one of the links
 
 resolvectl query forgejo.exousia.local
+
+# Or test CoreDNS directly, bypassing resolved:
+dig @127.0.0.1 -p 5354 forgejo.exousia.local A +short
 ```
 
 If the domain routing is missing, check the drop-in exists:

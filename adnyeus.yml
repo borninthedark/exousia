@@ -266,6 +266,15 @@ modules:
         dst: /usr/lib/systemd/system/bootc-fetch-apply-updates.timer.d/
         mode: "0644"
 
+  # Quadlet deploy overlay — ships as a self-hosted podman app baseline.
+  # Users install via `just engage <app>` which copies from here to
+  # ~/.config/containers/systemd/.
+  - type: files
+    files:
+      - src: overlays/deploy/
+        dst: /usr/share/exousia/deploy/
+        mode: "0644"
+
   # System services (common to all image types)
   # Note: All Quadlets are disabled by default (WantedBy commented out).
   # Start manually or uncomment [Install] to opt in to auto-activation.
