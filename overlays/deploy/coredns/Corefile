@@ -1,0 +1,9 @@
+exousia.local {
+    file /etc/coredns/exousia.local.zone
+    log
+}
+
+. {
+    forward . /etc/resolv.conf
+    cache 30
+}

@@ -372,6 +372,64 @@ temporal-logs:
     journalctl --user $units -f
 
 # ---------------------------------------------------------------------------
+# DNS + Reverse Proxy (CoreDNS + Caddy)
+# ---------------------------------------------------------------------------
+
+dns_services := "coredns caddy"
+
+# Start CoreDNS + Caddy with config setup and systemd-resolved integration
+dns-start:
+    #!/bin/bash
+    set -euo pipefail
+    # Copy config files
+    mkdir -p ~/.config/coredns ~/.config/caddy
+    cp overlays/deploy/coredns/Corefile ~/.config/coredns/
+    cp overlays/deploy/coredns/exousia.local.zone ~/.config/coredns/
+    cp overlays/deploy/caddy/Caddyfile ~/.config/caddy/
+    # Engage quadlets
+    just engage coredns
+    just engage caddy
+    # Configure systemd-resolved for .exousia.local
+    if [ ! -f /etc/systemd/resolved.conf.d/exousia-local.conf ]; then
+        sudo mkdir -p /etc/systemd/resolved.conf.d
+        printf '[Resolve]\nDNS=127.0.0.1:5353\nDomains=~exousia.local\n' | \
+            sudo tee /etc/systemd/resolved.conf.d/exousia-local.conf >/dev/null
+        sudo systemctl restart systemd-resolved
+        echo "Configured systemd-resolved for exousia.local"
+    fi
+    echo "DNS + proxy started — https://forgejo.exousia.local"
+
+# Trust Caddy's internal CA (run once after first start)
+dns-trust-ca:
+    #!/bin/bash
+    set -euo pipefail
+    echo "Waiting for Caddy to generate its root CA..."
+    podman exec caddy sh -c 'while [ ! -f /data/caddy/pki/authorities/local/root.crt ]; do sleep 1; done'
+    podman exec caddy cat /data/caddy/pki/authorities/local/root.crt | \
+        sudo tee /etc/pki/ca-trust/source/anchors/caddy-local.crt >/dev/null
+    sudo update-ca-trust
+    echo "Caddy root CA trusted."
+
+# Stop and disengage DNS + proxy
+dns-stop:
+    #!/bin/bash
+    set -euo pipefail
+    for svc in caddy coredns; do
+        just disengage "$svc"
+    done
+    echo "DNS + proxy stopped."
+
+# Show DNS + proxy status
+dns-status:
+    #!/bin/bash
+    systemctl --user status {{dns_services}} --no-pager 2>/dev/null || true
+
+# Follow DNS + proxy logs
+dns-logs:
+    #!/bin/bash
+    journalctl --user -u coredns.service -u caddy.service -f
+
+# ---------------------------------------------------------------------------
 # Forgejo (git forge — 3 services)
 # ---------------------------------------------------------------------------
 

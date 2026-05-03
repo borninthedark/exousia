@@ -1,0 +1,30 @@
+$ORIGIN exousia.local.
+$TTL 60
+
+@       IN SOA  ns.exousia.local. admin.exousia.local. (
+            2026050201 ; serial
+            3600       ; refresh
+            600        ; retry
+            86400      ; expire
+            60         ; minimum TTL
+        )
+
+        IN NS   ns.exousia.local.
+
+ns      IN A    127.0.0.1
+
+; Infrastructure
+forgejo     IN A    127.0.0.1
+registry    IN A    127.0.0.1
+runner      IN A    127.0.0.1
+
+; AI / LLM
+ollama      IN A    127.0.0.1
+webui       IN A    127.0.0.1
+
+; Project Management
+plane       IN A    127.0.0.1
+
+; Orchestration
+temporal    IN A    127.0.0.1
+temporal-ui IN A    127.0.0.1
