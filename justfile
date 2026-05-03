@@ -303,7 +303,7 @@ engage name:
     done
     systemctl --user daemon-reload
     systemctl --user start {{name}}.service
-    echo "{{name}} engaged."
+    echo "{{name}} engaged (persists across reboots via WantedBy=default.target)."
 
 # Disable a quadlet: stop the service and remove its files
 disengage name:
@@ -392,7 +392,7 @@ dns-start:
     # Configure systemd-resolved for .exousia.local
     if [ ! -f /etc/systemd/resolved.conf.d/exousia-local.conf ]; then
         sudo mkdir -p /etc/systemd/resolved.conf.d
-        printf '[Resolve]\nDNS=127.0.0.1:5353\nDomains=~exousia.local\n' | \
+        printf '[Resolve]\nDNS=127.0.0.1:5354\nDomains=~exousia.local\n' | \
             sudo tee /etc/systemd/resolved.conf.d/exousia-local.conf >/dev/null
         sudo systemctl restart systemd-resolved
         echo "Configured systemd-resolved for exousia.local"

@@ -6,9 +6,10 @@ Image=docker.io/coredns/coredns:1.12.1
 ContainerName=coredns
 AutoUpdate=registry
 Network=exousia.network
-PublishPort=127.0.0.1:5353:53/tcp
-PublishPort=127.0.0.1:5353:53/udp
-Volume=%h/.config/coredns:/etc/coredns:ro
+PublishPort=127.0.0.1:5354:53/tcp
+PublishPort=127.0.0.1:5354:53/udp
+Volume=%h/.config/coredns:/etc/coredns:ro,z
+Exec=-conf /etc/coredns/Corefile
 
 [Service]
 Restart=always

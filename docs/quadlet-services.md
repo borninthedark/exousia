@@ -73,7 +73,7 @@ graph TD
 | Service | Image | Host Port | Network Alias | Depends On |
 |---------|-------|-----------|---------------|------------|
 | `exousia-registry` | `registry:2` | 5000 | `registry` | `exousia.network` |
-| `coredns` | `coredns/coredns:1.12.1` | 5353 (tcp+udp) | `coredns` | `exousia.network` |
+| `coredns` | `coredns/coredns:1.12.1` | 5354 (tcp+udp) | `coredns` | `exousia.network` |
 | `caddy` | `caddy:2-alpine` | 80, 443 | `caddy` | `exousia.network`, `coredns` |
 | `freebsd` | `freebsd/freebsd-runtime:14.4` | - | - | `exousia.network` |
 | `k3s` | `rancher/k3s:latest` | 6443, 80, 443 | `k3s` | `exousia.network` |
@@ -204,6 +204,8 @@ All ports bind to `127.0.0.1` only (no external exposure).
 | `plane-mq-data` | Plane RabbitMQ | `/var/lib/rabbitmq` |
 | `plane-minio-data` | Plane MinIO | `/data` |
 | `buildah-layers` | Forgejo Runner (job containers) | `/var/lib/containers/storage` |
+| `caddy-data` | Caddy | `/data` (TLS certs + CA) |
+| `caddy-config` | Caddy | `/config` (runtime config) |
 
 ## Container Image Policy
 

@@ -44,7 +44,7 @@ All Quadlet definitions live in `overlays/deploy/`:
 | `forgejo-db.container` | Container | Forgejo PostgreSQL backend |
 | `forgejo-runner.container` | Container | Forgejo Actions CI runner |
 | `caddy.container` | Container | Caddy reverse proxy + HTTPS (ports 80, 443) |
-| `coredns.container` | Container | CoreDNS local service resolver (port 5353) |
+| `coredns.container` | Container | CoreDNS local service resolver (port 5354) |
 | `exousia-registry.container` | Container | Local container registry (port 5000) |
 | `freebsd.container` | Container | Standalone FreeBSD runtime container |
 | `ollama.container` | Container | Ollama local LLM inference server — Qwen3 8B (port 11434) |
@@ -319,7 +319,46 @@ connects to Ollama via `http://ollama:11434` on the shared network.
 just disengage open-webui
 ```
 
-## CoreDNS (Local Service Resolution)
+## DNS + Reverse Proxy (Local Service Resolution)
+
+CoreDNS and Caddy form a two-layer local service discovery and TLS
+termination stack. The full request flow:
+
+```text
+Browser / curl
+    │
+    ▼
+systemd-resolved ──► CoreDNS (:5354)
+    │                   returns 127.0.0.1 for *.exousia.local
+    ▼
+Caddy (:443) ──► TLS termination (internal CA)
+    │
+    ▼
+reverse_proxy ──► backend container on exousia.network
+                    (e.g. forgejo:3000, registry:5000)
+```
+
+**Components:**
+
+- **systemd-resolved** — system DNS stub; forwards `.exousia.local` queries
+  to CoreDNS at `127.0.0.1:5354`
+- **CoreDNS** (container, port 5354) — authoritative for `exousia.local` zone;
+  returns `127.0.0.1` A records for all service hostnames
+- **Caddy** (container, ports 80/443) — terminates HTTPS with `tls internal`
+  (auto-generated local CA), reverse proxies to backend containers by name
+  on the shared `exousia.network`
+
+**Key files:**
+
+| File | Purpose |
+|------|---------|
+| `overlays/deploy/coredns/Corefile` | CoreDNS config (zone file reference) |
+| `overlays/deploy/coredns/exousia.local.zone` | A records for all services |
+| `overlays/deploy/caddy/Caddyfile` | Reverse proxy routes + TLS config |
+| `overlays/deploy/coredns.container` | CoreDNS quadlet |
+| `overlays/deploy/caddy.container` | Caddy quadlet |
+| `overlays/deploy/caddy-data.volume` | Caddy TLS cert persistent storage |
+| `overlays/deploy/caddy-config.volume` | Caddy runtime config storage |
 
 CoreDNS resolves `*.exousia.local` hostnames to `127.0.0.1`, so local
 services are accessible by name instead of port numbers.
@@ -537,6 +576,119 @@ grep $(whoami) /etc/subgid
 The local registry uses HTTP (no TLS). Skopeo commands include
 `--tls-verify=false` / `--dest-tls-verify=false` / `--src-tls-verify=false`
 for local registry operations.
+
+### CoreDNS fails to start or resolve
+
+**Port 5353 conflict with avahi-daemon:**
+
+Fedora ships `avahi-daemon` which binds port 5353 for mDNS. CoreDNS is
+configured to use port 5354 instead. If you see `address already in use`
+errors, verify avahi holds 5353:
+
+```bash
+ss -tulnp | grep 5353
+```
+
+The systemd-resolved forwarding rule points at `127.0.0.1:5354` to match.
+
+**Container image rejected by policy.json:**
+
+If podman refuses to pull `docker.io/coredns/coredns`, the container
+signing policy is blocking it. Add an `insecureAcceptAnything` entry:
+
+```bash
+sudo python3 -c "
+import json, pathlib
+p = pathlib.Path('/etc/containers/policy.json')
+policy = json.loads(p.read_text())
+policy['transports'].setdefault('docker', {})['docker.io/coredns/coredns'] = [{'type': 'insecureAcceptAnything'}]
+p.write_text(json.dumps(policy, indent=2))
+"
+```
+
+**Permission denied reading Corefile (SELinux):**
+
+The CoreDNS volume mount uses `:ro,z` to apply a private SELinux label.
+If you see `permission denied` on `/etc/coredns/Corefile`, verify the
+`:z` flag is present in the quadlet:
+
+```ini
+Volume=%h/.config/coredns:/etc/coredns:ro,z
+```
+
+If the container was started before adding `:z`, restart it to re-label:
+
+```bash
+systemctl --user restart coredns
+```
+
+**Resolution not working after dns-start:**
+
+Verify systemd-resolved is forwarding `.exousia.local` queries:
+
+```bash
+resolvectl domain
+# Should show "~exousia.local" on one of the links
+
+resolvectl query forgejo.exousia.local
+```
+
+If the domain routing is missing, check the drop-in exists:
+
+```bash
+cat /etc/systemd/resolved.conf.d/exousia-local.conf
+sudo systemctl restart systemd-resolved
+```
+
+### Caddy fails to bind port 80/443
+
+Rootless containers cannot bind ports below 1024 by default. Apply the
+sysctl and restart Caddy:
+
+```bash
+sudo tee /etc/sysctl.d/90-unprivileged-ports.conf <<'EOF'
+net.ipv4.ip_unprivileged_port_start=80
+EOF
+sudo sysctl -p /etc/sysctl.d/90-unprivileged-ports.conf
+systemctl --user restart caddy
+```
+
+### Caddy HTTPS certificate not trusted
+
+Browsers will show certificate warnings until Caddy's root CA is trusted:
+
+```bash
+just dns-trust-ca
+```
+
+This extracts Caddy's root certificate from the container data volume and
+installs it to `/etc/pki/ca-trust/source/anchors/`. Requires sudo.
+
+### Engaged quadlets not starting after reboot
+
+Quadlet-generated units with `[Install] WantedBy=default.target` auto-start
+on boot as long as the `.container` file exists in
+`~/.config/containers/systemd/`. There is no separate `systemctl enable` step.
+
+If services don't start after reboot, verify:
+
+1. The quadlet file is present:
+
+```bash
+ls ~/.config/containers/systemd/coredns.container
+```
+
+1. Lingering is enabled (required for user services without login session):
+
+```bash
+loginctl enable-linger $(whoami)
+```
+
+1. The quadlet generator produces the unit:
+
+```bash
+/usr/lib/systemd/system-generators/podman-system-generator --user --dryrun 2>&1 | grep coredns
+```
 
 ---
 
