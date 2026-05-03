@@ -201,6 +201,8 @@ jobs:
           github.ref != 'refs/heads/main' &&
           github.event_name == 'push'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
 
       - name: Create promotion PR (feature branch)
         if: >-
@@ -213,24 +215,47 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BRANCH="${GITHUB_REF_NAME}"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          COMMIT_MSG=$(git log -1 --pretty=format:'%s')
 
-          PR_BODY="## Automated Promotion PR
+          # Build commit log since last merge to main
+          COMMITS=$(git log origin/main..HEAD --pretty=format:'- %h %s' 2>/dev/null | head -20)
 
-          All checks passed on feature branch push:
-          - Hikifune (CI): ${{ needs.hikifune.result }}
-          - Uhin (Security): ${{ needs.uhin.result }}
-          - Hiyori (Build): ${{ needs.hiyori.result }}
+          PR_TITLE="promote(${SHORT_SHA}): ${COMMIT_MSG}"
 
-          Created by Urahara pipeline."
+          PR_BODY=$(cat <<'HEREDOC'
+          ## Promotion PR
+
+          **Branch:** ${{ github.ref_name }}
+          **Commit:** ${{ github.sha }}
+          **Triggered by:** ${{ github.actor }}
+
+          ### Pipeline Results
+
+          | Check | Result |
+          |-------|--------|
+          | Hikifune (CI) | ${{ needs.hikifune.result }} |
+          | Uhin (Security) | ${{ needs.uhin.result }} |
+          | Hiyori (Build) | ${{ needs.hiyori.result }} |
+          | Sealed Boot | ${{ needs.sealed.result }} |
+
+          ### Commits
+          HEREDOC
+          )
+          PR_BODY="${PR_BODY}
+          ${COMMITS}
+
+          ---
+          *Created by Urahara pipeline*"
 
           EXISTING=$(gh pr list --head "${BRANCH}" --base main --state open --json number --jq '.[0].number // empty')
 
           if [ -n "${EXISTING}" ]; then
-            gh pr edit "${EXISTING}" --body "${PR_BODY}"
+            gh pr edit "${EXISTING}" --title "${PR_TITLE}" --body "${PR_BODY}"
             echo "Updated existing promotion PR #${EXISTING} for ${BRANCH}"
           else
             gh pr create \
-              --title "promote: ${BRANCH} -> main" \
+              --title "${PR_TITLE}" \
               --base main \
               --head "${BRANCH}" \
               --body "${PR_BODY}"
