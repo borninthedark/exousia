@@ -284,36 +284,55 @@ plane-logs:
 # ---------------------------------------------------------------------------
 
 # Enable a quadlet: copy its files, reload systemd, and start the service
+# Service groups (forgejo, temporal) expand to their full stacks automatically
 engage name:
     #!/bin/bash
     set -euo pipefail
+    # Expand service groups to their component services
+    case "{{name}}" in
+        forgejo)  services="forgejo-db forgejo forgejo-runner" ;;
+        temporal) services="temporal-db temporal-server temporal-ui" ;;
+        *)        services="{{name}}" ;;
+    esac
     mkdir -p ~/.config/containers/systemd/
-    for ext in container volume network; do
-        src="overlays/deploy/{{name}}.${ext}"
-        if [ -f "$src" ]; then
-            cp "$src" ~/.config/containers/systemd/
-            echo "Copied ${src}"
-        fi
-    done
-    # Also copy associated data volumes (e.g. ollama-data.volume)
-    for vol in overlays/deploy/{{name}}-*.volume; do
-        [ -f "$vol" ] || continue
-        cp "$vol" ~/.config/containers/systemd/
-        echo "Copied ${vol}"
+    for svc in $services; do
+        for ext in container volume network; do
+            src="overlays/deploy/${svc}.${ext}"
+            if [ -f "$src" ]; then
+                cp "$src" ~/.config/containers/systemd/
+                echo "Copied ${src}"
+            fi
+        done
+        # Also copy associated data volumes (e.g. ollama-data.volume)
+        for vol in overlays/deploy/${svc}-*.volume; do
+            [ -f "$vol" ] || continue
+            cp "$vol" ~/.config/containers/systemd/
+            echo "Copied ${vol}"
+        done
     done
     systemctl --user daemon-reload
-    systemctl --user start {{name}}.service
+    # Start the last service (dependencies pull in the rest)
+    last_svc="${services##* }"
+    systemctl --user start "${last_svc}.service"
     echo "{{name}} engaged (persists across reboots via WantedBy=default.target)."
 
 # Disable a quadlet: stop the service and remove its files
+# Service groups expand in reverse order for clean shutdown
 disengage name:
     #!/bin/bash
     set -euo pipefail
-    systemctl --user stop {{name}}.service 2>/dev/null || true
-    rm -f ~/.config/containers/systemd/{{name}}.container
-    rm -f ~/.config/containers/systemd/{{name}}.volume
-    rm -f ~/.config/containers/systemd/{{name}}.network
-    rm -f ~/.config/containers/systemd/{{name}}-*.volume
+    case "{{name}}" in
+        forgejo)  services="forgejo-runner forgejo forgejo-db" ;;
+        temporal) services="temporal-ui temporal-server temporal-db" ;;
+        *)        services="{{name}}" ;;
+    esac
+    for svc in $services; do
+        systemctl --user stop "${svc}.service" 2>/dev/null || true
+        rm -f ~/.config/containers/systemd/${svc}.container
+        rm -f ~/.config/containers/systemd/${svc}.volume
+        rm -f ~/.config/containers/systemd/${svc}.network
+        rm -f ~/.config/containers/systemd/${svc}-*.volume
+    done
     systemctl --user daemon-reload
     echo "{{name}} disengaged."
 
@@ -435,17 +454,23 @@ dns-logs:
 
 forgejo_services_all := "forgejo-db forgejo forgejo-runner"
 
-# Start Forgejo in dependency order
+# Engage and start the full Forgejo stack (db + app + runner)
 forgejo-start:
-    systemctl --user start forgejo-runner.service
-    @echo "Forgejo started — http://localhost:3000"
+    #!/bin/bash
+    set -euo pipefail
+    for svc in {{forgejo_services_all}}; do
+        just engage "$svc"
+    done
+    echo "Forgejo started — http://localhost:3000"
 
-# Stop Forgejo
+# Stop and disengage the full Forgejo stack
 forgejo-stop:
     #!/bin/bash
-    systemctl --user stop {{forgejo_services_all}} 2>/dev/null || true
-    systemctl --user reset-failed 2>/dev/null || true
-    echo "Forgejo stopped."
+    set -euo pipefail
+    for svc in forgejo-runner forgejo forgejo-db; do
+        just disengage "$svc"
+    done
+    echo "Forgejo stopped and disengaged."
 
 # Show Forgejo service status
 forgejo-status:
