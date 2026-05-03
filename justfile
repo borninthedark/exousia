@@ -403,6 +403,8 @@ dns-start:
 dns-trust-ca:
     #!/bin/bash
     set -euo pipefail
+    echo "Waiting for Caddy to generate its root CA..."
+    podman exec caddy sh -c 'while [ ! -f /data/caddy/pki/authorities/local/root.crt ]; do sleep 1; done'
     podman exec caddy cat /data/caddy/pki/authorities/local/root.crt | \
         sudo tee /etc/pki/ca-trust/source/anchors/caddy-local.crt >/dev/null
     sudo update-ca-trust
