@@ -297,8 +297,8 @@ engage name:
     # Source: repo checkout or image-installed path
     if [ -d "overlays/deploy" ]; then
         deploy_dir="overlays/deploy"
-    elif [ -d "/usr/share/exousia/deploy" ]; then
-        deploy_dir="/usr/share/exousia/deploy"
+    elif [ -d "/usr/share/exousia/quadlets" ]; then
+        deploy_dir="/usr/share/exousia/quadlets"
     else
         echo "ERROR: no deploy overlay found" >&2; exit 1
     fi
@@ -335,8 +335,8 @@ install name:
     esac
     if [ -d "overlays/deploy" ]; then
         deploy_dir="overlays/deploy"
-    elif [ -d "/usr/share/exousia/deploy" ]; then
-        deploy_dir="/usr/share/exousia/deploy"
+    elif [ -d "/usr/share/exousia/quadlets" ]; then
+        deploy_dir="/usr/share/exousia/quadlets"
     else
         echo "ERROR: no deploy overlay found" >&2; exit 1
     fi

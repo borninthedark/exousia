@@ -272,7 +272,7 @@ modules:
   - type: files
     files:
       - src: overlays/deploy/
-        dst: /usr/share/exousia/deploy/
+        dst: /usr/share/exousia/quadlets/
         mode: "0644"
 
   # System services (common to all image types)

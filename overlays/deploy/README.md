@@ -1,7 +1,7 @@
 # Deploy Overlay
 
 Podman Quadlet definitions for self-hosted apps. This overlay ships in the
-image at `/usr/share/exousia/deploy/` and is also available in the repo at
+image at `/usr/share/exousia/quadlets/` and is also available in the repo at
 `overlays/deploy/`.
 
 ## Lifecycle Commands
