@@ -334,63 +334,11 @@ services are accessible by name instead of port numbers.
 | `temporal.exousia.local` | Temporal gRPC | 7233 |
 | `temporal-ui.exousia.local` | Temporal UI | 8233 |
 
-### Enable and start
-
-```bash
-# Copy config files
-mkdir -p ~/.config/coredns
-cp overlays/deploy/coredns/Corefile ~/.config/coredns/
-cp overlays/deploy/coredns/exousia.local.zone ~/.config/coredns/
-
-# Engage the quadlet
-just engage coredns
-```
-
-### Configure systemd-resolved
-
-Tell the system resolver to forward `.exousia.local` queries to CoreDNS:
-
-```bash
-sudo mkdir -p /etc/systemd/resolved.conf.d
-sudo tee /etc/systemd/resolved.conf.d/exousia-local.conf <<'EOF'
-[Resolve]
-DNS=127.0.0.1:5353
-Domains=~exousia.local
-EOF
-sudo systemctl restart systemd-resolved
-```
-
-### Verify
-
-```bash
-resolvectl query forgejo.exousia.local
-dig @127.0.0.1 -p 5353 forgejo.exousia.local
-```
-
-### Adding new services
-
-Edit `~/.config/coredns/exousia.local.zone`, add an A record, then:
-
-```bash
-podman restart coredns
-```
-
-### Disable
-
-```bash
-just disengage coredns
-```
-
-## Caddy (Reverse Proxy + HTTPS)
-
-Caddy provides port-free HTTPS access to all local services. Combined
-with CoreDNS, services are accessible at `https://forgejo.exousia.local`
-with auto-generated TLS certificates.
-
 ### Prerequisites
 
-Enable rootless binding to privileged ports (one-time, persists across
-reboots):
+Rootless containers cannot bind to ports below 1024 by default. A
+one-time sysctl change allows Caddy to bind `:80` and `:443`. This
+persists across reboots:
 
 ```bash
 sudo tee /etc/sysctl.d/90-unprivileged-ports.conf <<'EOF'
@@ -399,29 +347,47 @@ EOF
 sudo sysctl -p /etc/sysctl.d/90-unprivileged-ports.conf
 ```
 
+This only affects the local loopback (`127.0.0.1`) — no external
+exposure. Without this, Caddy will fail to start with a "permission
+denied" binding error on port 80/443.
+
 ### Enable and start
 
 ```bash
-# Copy Caddyfile
-mkdir -p ~/.config/caddy
-cp overlays/deploy/caddy/Caddyfile ~/.config/caddy/
-
-# Engage the quadlet
-just engage caddy
+just dns-start
 ```
 
-### Trust Caddy's internal CA
+This single command:
 
-Caddy generates its own root CA for `tls internal`. Trust it once so
-browsers don't show certificate warnings:
+1. Copies CoreDNS config (`Corefile`, zone file) to `~/.config/coredns/`
+2. Copies Caddyfile to `~/.config/caddy/`
+3. Engages both quadlets (installs + starts)
+4. Configures systemd-resolved to forward `.exousia.local` to CoreDNS
+   (creates `/etc/systemd/resolved.conf.d/exousia-local.conf`, requires
+   sudo + FIDO tap)
+
+### Trust Caddy's internal CA (one-time)
+
+After the first start, trust Caddy's root CA so browsers accept the
+HTTPS certificates without warnings:
 
 ```bash
-podman exec caddy cat /data/caddy/pki/authorities/local/root.crt | \
-  sudo tee /etc/pki/ca-trust/source/anchors/caddy-local.crt
-sudo update-ca-trust
+just dns-trust-ca
+```
+
+This extracts Caddy's root certificate and adds it to the system trust
+store (`/etc/pki/ca-trust/source/anchors/`). Requires sudo + FIDO tap.
+
+### Verify
+
+```bash
+resolvectl query forgejo.exousia.local
+curl -s https://forgejo.exousia.local
 ```
 
 ### Service URLs
+
+All services accessible via HTTPS with automatic HTTP→HTTPS redirect:
 
 | URL | Backend |
 |-----|---------|
@@ -434,7 +400,8 @@ sudo update-ca-trust
 
 ### Adding new services
 
-Edit `~/.config/caddy/Caddyfile`, add a block:
+- Add an A record to `~/.config/coredns/exousia.local.zone`
+- Add a reverse proxy block to `~/.config/caddy/Caddyfile`:
 
 ```text
 newservice.exousia.local {
@@ -443,19 +410,24 @@ newservice.exousia.local {
 }
 ```
 
-Then reload:
+- Reload both:
 
 ```bash
+podman restart coredns
 podman exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
-Also add an A record to `~/.config/coredns/exousia.local.zone` and restart
-CoreDNS.
+### Status and logs
+
+```bash
+just dns-status
+just dns-logs
+```
 
 ### Disable
 
 ```bash
-just disengage caddy
+just dns-stop
 ```
 
 ## Temporal (Agent Orchestration)
