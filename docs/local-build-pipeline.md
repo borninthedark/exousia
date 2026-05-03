@@ -568,6 +568,50 @@ systemctl --user daemon-reload
 systemctl --user restart forgejo-runner
 ```
 
+### Forgejo Actions workflow troubleshooting
+
+Unlike GitHub Actions, Forgejo doesn't surface workflow logs as easily.
+Use the API to inspect run status and job logs.
+
+**List recent workflow runs:**
+
+```bash
+TOKEN=$(awk '/password/{print $2}' ~/.netrc)
+curl -s 'http://localhost:3000/api/v1/repos/uryu/exousia/actions/runs?limit=5' \
+  -H "Authorization: token ${TOKEN}" | \
+  python3 -c "
+import json, sys
+runs = json.load(sys.stdin).get('workflow_runs', [])
+runs.sort(key=lambda r: r['id'], reverse=True)
+for r in runs[:5]:
+    print(f'ID:{r[\"id\"]} | {r[\"status\"]:>10} | {r[\"title\"][:60]}')
+"
+```
+
+**Get job logs for a specific run:**
+
+```bash
+curl -s "http://localhost:3000/api/v1/repos/uryu/exousia/actions/runs/${RUN_ID}/jobs" \
+  -H "Authorization: token ${TOKEN}" | python3 -m json.tool
+```
+
+**View logs in the browser:**
+
+```text
+https://forgejo.exousia.local/uryu/exousia/actions/runs/<RUN_ID>
+```
+
+**Common failures:**
+
+- **`apt-get` / network failures in job containers:** The runner's job
+  containers need outbound internet. If `archive.ubuntu.com` is unreachable,
+  it's usually transient (DNS restart, network blip). Retrigger with an
+  empty commit: `git commit --allow-empty -m "ci: retrigger" && git push forgejo HEAD`
+- **Job stuck as `running`:** The runner may have crashed. Check
+  `journalctl --user -u forgejo-runner -n 50` and restart if needed.
+- **`WORKFLOW-*` networks accumulating:** Stale job container networks.
+  Clean with `podman network prune`.
+
 ### Port conflicts
 
 Default ports: Forgejo 3000/2222, Registry 5000. Check for conflicts:
