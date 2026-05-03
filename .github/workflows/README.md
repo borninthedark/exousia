@@ -9,14 +9,15 @@ Two parallel CI/CD pipelines named after BLEACH factions:
 
 | Captain | File | Role |
 |---------|------|------|
-| **Urahara** | `urahara.yml` | Orchestrator: calls Hikifune + Uhin in parallel, then Hiyori, then gate |
+| **Urahara** | `urahara.yml` | Orchestrator: calls Muramasa, Hikifune + Uhin in parallel, then Hiyori, then gate |
+| **Muramasa** | (inline job) | Defaults resolver: reads blueprint, builds version/type matrix |
 | **Hikifune** | `hikifune.yml` | CI: Ruff, Black, isort, pytest |
 | **Uhin** | `uhin.yml` | Security: file-structure gate, overlay Bats, Hadolint, Checkov, Trivy config scan, Bandit, OSV-Scanner |
 | **Hiyori** | `hiyori.yml` | Build, Trivy image scan, SBOM, OpenSCAP, Cosign, semver release |
 | **Kon** | `kon.yml` | Advanced CodeQL analysis for Python and GitHub Actions |
 | **Nemu** | `nemu.yml` | Post-CI: commits refreshed `STATUS.md` with the latest orchestration result |
 | **Mayuri** | `mayuri.yml` | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
-| **Sealed** | `sealed.yml` | Sealed boot: wraps base image with signed systemd-boot, UKI, and composefs |
+| **Ulquiorra** | `ulquiorra.yml` | Sealed boot: wraps base image with signed systemd-boot, UKI, and composefs |
 
 ### Image Tags (GitHub / GHCR)
 
@@ -32,9 +33,9 @@ Two parallel CI/CD pipelines named after BLEACH factions:
 ### Pipeline Flow
 
 ```text
-Urahara -> Hikifune + Uhin (parallel) -> Hiyori -> Sealed (optional) -> Gate
-                                                                          |
-Nemu (on Urahara completion, main only) <---------------------------------+
+Urahara -> Muramasa (defaults) -> Hikifune + Uhin (parallel) -> Hiyori -> Ulquiorra (optional) -> Gate
+                                                                                                    |
+Nemu (on Urahara completion, main only) <-----------------------------------------------------------+
 
 Mayuri (scheduled, independent) -> triggers Urahara if dotfiles changed
 ```
@@ -43,12 +44,12 @@ Mayuri (scheduled, independent) -> triggers Urahara if dotfiles changed
 
 ```text
 Feature branch (uryu/*):
-  Urahara -> Hikifune + Uhin (parallel) -> Hiyori (skipped on forks)
+  Urahara -> Muramasa -> Hikifune + Uhin (parallel) -> Hiyori (skipped on forks)
     -> Gate creates promotion PR to main
 
 Main branch:
-  Urahara -> Hikifune + Uhin (parallel) -> Hiyori (:prod on GHCR)
-    -> Sealed (optional) -> Gate
+  Urahara -> Muramasa -> Hikifune + Uhin (parallel) -> Hiyori (:prod on GHCR)
+    -> Ulquiorra (optional) -> Gate
 ```
 
 On successful feature branch pushes, the Gate job auto-creates a PR to

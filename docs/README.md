@@ -31,7 +31,7 @@ Exousia uses two parallel CI/CD pipelines named after BLEACH factions:
 | **Uhin** | `uhin.yml` | 12th -- Security: Hadolint, Checkov, Trivy config scan, Bandit, OSV-Scanner |
 | **Hiyori** | `hiyori.yml` | 12th -- Build, Trivy scan artifact, SBOM submission, Cosign, semver release ([matrix builds](matrix-builds.md)) |
 | **Kon** | `kon.yml` | 12th -- Advanced CodeQL analysis for Python and GitHub Actions |
-| **Sealed** | `sealed.yml` | 12th -- Sealed boot: wraps base image with signed boot chain, composefs, UKI |
+| **Ulquiorra** | `ulquiorra.yml` | Arrancar (Espada 4) -- Sealed boot: wraps base image with signed boot chain, composefs, UKI |
 | **Nemu** | `nemu.yml` | 12th -- Post-CI: refreshes tracked `STATUS.md` from the latest main-branch Urahara run |
 | **Mayuri** | `mayuri.yml` | 12th -- Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
 | **Yoruichi** | `yoruichi.yml` | 2nd -- Base Image Mirror: weekly mirror of `quay.io/fedora/fedora-sway-atomic` to GHCR |

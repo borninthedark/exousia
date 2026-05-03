@@ -1,13 +1,14 @@
-# Sealed Boot Pipeline — Wraps base Exousia image with measured boot chain
-# Runs after Hiyori builds the base image. Uses podman (not buildx) for
-# oci-archive and chunkah rechunking support.
+# Ulquiorra Cifer — Espada 4 (Arrancar) — Sealed Boot
+# Wraps base Exousia image with measured boot chain. Runs after Hiyori
+# builds the base image. Uses podman (not buildx) for oci-archive and
+# chunkah rechunking support.
 #
 # Required secrets:
 #   SECUREBOOT_KEY  — PEM-encoded Secure Boot db private key
 #   SECUREBOOT_CERT — PEM-encoded Secure Boot db certificate
 #   GHCR_PAT       — GHCR push token
 #
-name: "Sealed Boot"
+name: "Ulquiorra - Sealed Boot"
 
 on:
   workflow_call:
