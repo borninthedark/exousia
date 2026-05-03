@@ -9,7 +9,7 @@ AutoUpdate=registry
 Network=exousia.network
 PublishPort=127.0.0.1:80:80/tcp
 PublishPort=127.0.0.1:443:443/tcp
-Volume=%h/.config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+Volume=%h/.config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro,z
 Volume=caddy-data.volume:/data
 Volume=caddy-config.volume:/config
 

@@ -22,5 +22,5 @@ Exec=forgejo-runner -c /data/config.yaml daemon
 Restart=always
 TimeoutStartSec=300
 
-# [Install]
-# WantedBy=default.target
+[Install]
+WantedBy=default.target
