@@ -19,7 +19,7 @@ ollama.exousia.local {
 
 ai.exousia.local {
 	tls internal
-	reverse_proxy open-webui:3080
+	reverse_proxy open-webui:8080
 }
 
 temporal.exousia.local {
