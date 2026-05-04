@@ -9,7 +9,7 @@ forgejo.exousia.local {
 
 plane.exousia.local {
 	tls internal
-	reverse_proxy plane-proxy:8080
+	reverse_proxy plane-proxy:80
 }
 
 ollama.exousia.local {
