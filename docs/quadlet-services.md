@@ -220,7 +220,40 @@ Accessible at `https://kuma.exousia.local`. First start creates admin account.
 Lifecycle: `just engage authelia` / `just disengage authelia`
 
 Accessible at `https://auth.exousia.local`. Config at `~/.config/authelia/`.
-Integrates with Caddy via `forward_auth` directive for SSO across services.
+
+**SSO integration:** All web UIs are protected via Caddy `forward_auth`. The
+Caddyfile uses an `(authelia)` snippet imported per-site:
+
+```caddyfile
+(authelia) {
+    forward_auth authelia:9091 {
+        uri /api/authz/forward-auth
+        copy_headers Remote-User Remote-Groups Remote-Email Remote-Name
+    }
+}
+```
+
+| Protected | Unprotected (no SSO) |
+|-----------|---------------------|
+| Forgejo, Paperless, Open WebUI, Temporal, BookStack, Dashy, Uptime Kuma, Immich, Headscale, changedetection | `auth.exousia.local` (self), `ollama.exousia.local` (API), `registry.exousia.local` (API) |
+
+**SMTP notifications:** Proton Mail SMTP (`smtp.protonmail.ch:465`) via
+`info@princetonstrong.online`. Token stored in `~/.config/authelia/smtp.env`
+(loaded via `EnvironmentFile`). OTP codes for password resets are emailed.
+Filesystem fallback (if SMTP is down): codes written to
+`~/.config/authelia/notification.txt`.
+
+**User database:** `~/.config/authelia/users_database.yml` (file-based, argon2
+hashed passwords). Manage via Authelia web UI or edit the file directly.
+
+**Config files (not in version control):**
+
+| File | Purpose |
+|------|---------|
+| `~/.config/authelia/configuration.yml` | Main config (server, session, storage, notifier) |
+| `~/.config/authelia/users_database.yml` | User accounts + hashed passwords |
+| `~/.config/authelia/smtp.env` | Proton SMTP token |
+| `~/.config/authelia/db.sqlite3` | Session/storage state |
 
 ### Headscale (VPN coordination, 1 service)
 
