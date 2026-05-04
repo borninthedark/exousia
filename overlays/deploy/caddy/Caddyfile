@@ -2,6 +2,13 @@
 	local_certs
 }
 
+(authelia) {
+	forward_auth authelia:9091 {
+		uri /api/authz/forward-auth
+		copy_headers Remote-User Remote-Groups Remote-Email Remote-Name
+	}
+}
+
 auth.exousia.local {
 	tls internal
 	reverse_proxy authelia:9091
@@ -9,11 +16,13 @@ auth.exousia.local {
 
 forgejo.exousia.local {
 	tls internal
+	import authelia
 	reverse_proxy forgejo:3000
 }
 
 paperless.exousia.local {
 	tls internal
+	import authelia
 	reverse_proxy paperless:8000
 }
 
@@ -24,11 +33,13 @@ ollama.exousia.local {
 
 ai.exousia.local {
 	tls internal
+	import authelia
 	reverse_proxy open-webui:8080
 }
 
 temporal.exousia.local {
 	tls internal
+	import authelia
 	reverse_proxy temporal-ui:8080
 }
 
@@ -39,30 +50,36 @@ registry.exousia.local {
 
 docs.exousia.local {
 	tls internal
+	import authelia
 	reverse_proxy bookstack:8080
 }
 
 home.exousia.local {
 	tls internal
+	import authelia
 	reverse_proxy dashy:8080
 }
 
 kuma.exousia.local {
 	tls internal
+	import authelia
 	reverse_proxy uptime-kuma:3001
 }
 
 photos.exousia.local {
 	tls internal
+	import authelia
 	reverse_proxy immich:2283
 }
 
 headscale.exousia.local {
 	tls internal
+	import authelia
 	reverse_proxy headscale:8080
 }
 
 changes.exousia.local {
 	tls internal
+	import authelia
 	reverse_proxy changedetection:5000
 }

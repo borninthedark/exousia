@@ -7,6 +7,7 @@ ContainerName=authelia
 Network=exousia.network:alias=authelia
 PublishPort=127.0.0.1:9091:9091
 Volume=%h/.config/authelia:/config:z
+EnvironmentFile=%h/.config/authelia/smtp.env
 Label=io.containers.autoupdate=registry
 
 [Service]
