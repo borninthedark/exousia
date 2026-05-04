@@ -37,20 +37,13 @@ graph TD
         K3["K3s<br/>:6443/:80/:443"]
     end
 
-    subgraph PLANE["Plane Stack"]
-        PDB["plane-db<br/>postgres:15"]
-        PRD["plane-redis<br/>valkey:7"]
-        PMQ["plane-mq<br/>rabbitmq:3"]
-        PMN["plane-minio<br/>:9000/:9090"]
-        PA["plane-api"]
-        PW["plane-worker"]
-        PBW["plane-beat-worker"]
-        PMG["plane-migrator"]
-        PWB["plane-web"]
-        PS["plane-space"]
-        PAD["plane-admin"]
-        PL["plane-live"]
-        PP["plane-proxy<br/>:8080"]
+    subgraph DOCS["Documentation"]
+        BSDB["bookstack-db<br/>mariadb:11"]
+        BS["BookStack<br/>:6875"]
+    end
+
+    subgraph DASH["Dashboard"]
+        HP["Homepage<br/>:3030"]
     end
 
     NET --> REG
@@ -59,11 +52,8 @@ graph TD
     NET --> OLL --> OWU
     NET --> K3
     NET --> TDB --> TS --> TU
-    NET --> PDB & PRD & PMQ & PMN --> PA
-    PA --> PW & PBW & PMG
-    PA --> PWB --> PS & PAD
-    PA & PRD --> PL
-    PWB & PS & PAD & PL & PA --> PP
+    NET --> BSDB --> BS
+    NET --> HP
 ```
 
 ## Service Groups
@@ -92,7 +82,7 @@ ingress). kubeconfig is available at `k3s-data` volume or via
 | `forgejo` | `forgejo/forgejo:14.0.2` | 3000, 2222 | `forgejo` | `forgejo-db` |
 | `forgejo-runner` | `code.forgejo.org/forgejo/runner:9.1.1` | - | `forgejo-runner` | `forgejo`, `podman.socket` |
 
-Lifecycle: `just forgejo-start` / `just forgejo-stop`
+Lifecycle: `just engage forgejo` / `just disengage forgejo`
 
 Dependency chain: `exousia.network` -> `forgejo-db` -> `forgejo` -> `forgejo-runner`
 
@@ -109,13 +99,13 @@ setup instructions.
 | `ollama` | `ollama/ollama:latest` | 11434 | `ollama` | `exousia.network` |
 | `open-webui` | `open-webui/open-webui:main` | 3080 | `open-webui` | `ollama` |
 
-Lifecycle: `just engage ollama` / `just engage open-webui`
+Lifecycle: `just engage ai` / `just disengage ai`
 
 Dependency chain: `exousia.network` -> `ollama` -> `open-webui`
 
 Open WebUI connects to Ollama via `http://ollama:11434` on the shared network.
-First start creates the database and requires admin account setup at
-`http://localhost:3080`.
+Accessible at `https://ai.exousia.local`. First start creates the database
+and requires admin account setup.
 
 ### Temporal (workflow orchestration, 3 services)
 
@@ -125,48 +115,12 @@ First start creates the database and requires admin account setup at
 | `temporal-server` | `temporalio/auto-setup:latest` | 7233 | `temporal` | `temporal-db` |
 | `temporal-ui` | `temporalio/ui:latest` | 8233 | `temporal-ui` | `temporal-server` |
 
-Lifecycle: `just temporal-start` / `just temporal-stop`
+Lifecycle: `just engage temporal` / `just disengage temporal`
 
 Dependency chain: `exousia.network` -> `temporal-db` -> `temporal-server` -> `temporal-ui`
 
 The auto-setup image creates DB schemas on first boot. Workers connect to
 `localhost:7233` (host) or `temporal:7233` (network).
-
-### Plane (project management, 13 services)
-
-| Service | Image | Host Port | Network Alias | Depends On |
-|---------|-------|-----------|---------------|------------|
-| `plane-db` | `postgres:15.7-alpine` | - | - | `exousia.network` |
-| `plane-redis` | `valkey/valkey:7.2.5-alpine` | - | - | `exousia.network` |
-| `plane-mq` | `rabbitmq:3.13.6-management-alpine` | 15672 | - | `exousia.network` |
-| `plane-minio` | `minio/minio:latest` | 9000, 9090 | - | `exousia.network` |
-| `plane-api` | `makeplane/plane-backend:stable` | - | `api` | db, redis, mq, minio |
-| `plane-worker` | `makeplane/plane-backend:stable` | - | - | api, db, redis, mq, minio |
-| `plane-beat-worker` | `makeplane/plane-backend:stable` | - | - | api, db, redis, mq, minio |
-| `plane-migrator` | `makeplane/plane-backend:stable` | - | - | db, redis, mq, minio |
-| `plane-web` | `makeplane/plane-frontend:stable` | - | `web` | api, worker |
-| `plane-space` | `makeplane/plane-space:stable` | - | `space` | api, worker, web |
-| `plane-admin` | `makeplane/plane-admin:stable` | - | `admin` | api, web |
-| `plane-live` | `makeplane/plane-live:stable` | - | `live` | api, redis |
-| `plane-proxy` | `makeplane/plane-proxy:stable` | 8080 | - | web, space, admin, live, api |
-
-Lifecycle: `just plane-install` (first time) / `just plane-start` / `just plane-stop`
-
-Dependency chain:
-
-```text
-exousia.network
-  └─> plane-db, plane-redis, plane-mq, plane-minio  (data tier)
-        └─> plane-api, plane-migrator                (backend tier)
-              └─> plane-worker, plane-beat-worker     (async tier)
-              └─> plane-web                           (frontend tier)
-                    └─> plane-space, plane-admin       (sub-frontends)
-              └─> plane-live                          (websocket)
-                    └─> plane-proxy                   (reverse proxy)
-```
-
-Plane requires an env file at `/etc/exousia/plane/plane.env`. Run
-`just plane-install` on first setup to create it from the template.
 
 ### BookStack (documentation, 2 services)
 
@@ -193,13 +147,9 @@ default admin credentials are `admin@admin.com` / `password` — change immediat
 | 3030 | Homepage | HTTP |
 | 6875 | BookStack | HTTP |
 | 7233 | Temporal Server | gRPC |
-| 8080 | Plane Proxy | HTTP |
 | 8233 | Temporal UI | HTTP |
-| 9000 | Plane MinIO API | HTTP |
-| 9090 | Plane MinIO Console | HTTP |
 | 6443 | K3s API Server | HTTPS |
 | 11434 | Ollama | HTTP |
-| 15672 | Plane RabbitMQ Console | HTTP |
 
 All ports bind to `127.0.0.1` only (no external exposure).
 
@@ -215,10 +165,6 @@ All ports bind to `127.0.0.1` only (no external exposure).
 | `ollama-data` | Ollama | `/root/.ollama` |
 | `open-webui-data` | Open WebUI | `/app/backend/data` |
 | `temporal-db-data` | Temporal DB | `/var/lib/postgresql/data` |
-| `plane-db-data` | Plane DB | `/var/lib/postgresql/data` |
-| `plane-redis-data` | Plane Redis | `/data` |
-| `plane-mq-data` | Plane RabbitMQ | `/var/lib/rabbitmq` |
-| `plane-minio-data` | Plane MinIO | `/data` |
 | `buildah-layers` | Forgejo Runner (job containers) | `/var/lib/containers/storage` |
 | `caddy-data` | Caddy | `/data` (TLS certs + CA) |
 | `caddy-config` | Caddy | `/config` (runtime config) |
@@ -233,13 +179,10 @@ Each registry namespace must be explicitly allowlisted:
 
 | Namespace | Required By |
 |-----------|-------------|
-| `docker.io/library` | postgres, mariadb, rabbitmq, registry, caddy |
+| `docker.io/library` | postgres, mariadb, registry, caddy |
 | `docker.io/solidnerd` | BookStack |
 | `docker.io/ollama` | Ollama |
 | `docker.io/temporalio` | Temporal server, Temporal UI |
-| `docker.io/makeplane` | Plane services |
-| `docker.io/minio` | Plane MinIO |
-| `docker.io/valkey` | Plane Redis (Valkey) |
 | `docker.io/coredns` | CoreDNS |
 | `codeberg.org/forgejo` | Forgejo |
 | `code.forgejo.org/forgejo` | Forgejo Runner |
@@ -310,27 +253,42 @@ This is a one-time setup. Without it, all user services stop when you log out.
 
 ## Lifecycle Commands
 
+All lifecycle commands are group-aware — pass a service group name to operate on
+the entire stack, or a single service name for individual control.
+
 ```bash
-# Quadlet lifecycle
+# Quadlet lifecycle (works with groups or individual services)
 just install <name>      # Copy files for reboot persistence (no start)
 just engage <name>       # Install + start now
 just disengage <name>    # Stop now, keep files (restarts on reboot)
 just remove <name>       # Stop + delete files (opposite of install)
 just report <name>       # Show systemd status
 just logs <name>         # Follow journal logs
+```
 
-# App-specific stacks
-just forgejo-start       # Start Forgejo (3 services)
-just forgejo-stop        # Stop Forgejo
-just temporal-start      # Engage + start Temporal (3 services)
-just temporal-stop       # Disengage Temporal
-just plane-install       # First-time: create env file + install quadlets
-just plane-start         # Start Plane (13 services)
-just plane-stop          # Stop Plane
+**Service groups:**
 
-# Bulk operations
-just quadlet-install     # Copy ALL quadlet files to systemd
-just quadlet-uninstall   # Stop + remove ALL quadlets
+| Group | Expands To |
+|-------|------------|
+| `forgejo` | `forgejo-db`, `forgejo`, `forgejo-runner` |
+| `ai` | `ollama`, `open-webui` |
+| `temporal` | `temporal-db`, `temporal-server`, `temporal-ui` |
+| `bookstack` | `bookstack-db`, `bookstack` |
+| `dns` | `coredns`, `caddy` |
+
+**Examples:**
+
+```bash
+just engage forgejo      # Install + start all 3 Forgejo services
+just disengage ai        # Stop Ollama + Open WebUI
+just logs temporal       # Follow logs for entire Temporal stack
+just engage k3s          # Single service, no group expansion
+```
+
+**One-time setup commands:**
+
+```bash
+just dns-setup           # Trust Caddy CA + configure systemd-resolved
 ```
 
 ---

@@ -104,6 +104,7 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 - **[local-build-pipeline.md](local-build-pipeline.md)** -- Quadlet services, local build, GHCR publication, and local registry mirroring
 - **[quadlet-services.md](quadlet-services.md)** -- Comprehensive quadlet service map, dependencies, ports, and volumes
 - **[forgejo-runner.md](forgejo-runner.md)** -- Forgejo Actions runner setup, registration, and Podman integration
+- **[forgejo-issues.md](forgejo-issues.md)** -- Issue tracking, labels, milestones, and agent integration
 - **[resource-tuning.md](resource-tuning.md)** -- Quadlet and runner resource allocation profiles and monitoring
 
 - **[plan-temporal-orchestration.md](plan-temporal-orchestration.md)** -- Temporal agent orchestration architecture and workflow design
