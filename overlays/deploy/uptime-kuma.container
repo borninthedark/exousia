@@ -1,0 +1,17 @@
+[Unit]
+Description=Uptime Kuma monitoring
+
+[Container]
+Image=docker.io/louislam/uptime-kuma:2
+ContainerName=uptime-kuma
+Network=exousia.network:alias=uptime-kuma
+PublishPort=127.0.0.1:3001:3001
+Volume=uptime-kuma-data.volume:/app/data
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

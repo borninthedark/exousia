@@ -1,0 +1,17 @@
+[Unit]
+Description=changedetection.io website monitor
+
+[Container]
+Image=ghcr.io/dgtlmoon/changedetection.io:latest
+ContainerName=changedetection
+Network=exousia.network:alias=changedetection
+PublishPort=127.0.0.1:5001:5000
+Volume=changedetection-data.volume:/datastore
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

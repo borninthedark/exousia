@@ -2,14 +2,19 @@
 	local_certs
 }
 
+auth.exousia.local {
+	tls internal
+	reverse_proxy authelia:9091
+}
+
 forgejo.exousia.local {
 	tls internal
 	reverse_proxy forgejo:3000
 }
 
-plane.exousia.local {
+paperless.exousia.local {
 	tls internal
-	reverse_proxy plane-proxy:80
+	reverse_proxy paperless:8000
 }
 
 ollama.exousia.local {
@@ -24,7 +29,7 @@ ai.exousia.local {
 
 temporal.exousia.local {
 	tls internal
-	reverse_proxy temporal-ui:8233
+	reverse_proxy temporal-ui:8080
 }
 
 registry.exousia.local {
@@ -39,5 +44,25 @@ docs.exousia.local {
 
 home.exousia.local {
 	tls internal
-	reverse_proxy homepage:3000
+	reverse_proxy dashy:8080
+}
+
+kuma.exousia.local {
+	tls internal
+	reverse_proxy uptime-kuma:3001
+}
+
+photos.exousia.local {
+	tls internal
+	reverse_proxy immich:2283
+}
+
+headscale.exousia.local {
+	tls internal
+	reverse_proxy headscale:8080
+}
+
+changes.exousia.local {
+	tls internal
+	reverse_proxy changedetection:5000
 }

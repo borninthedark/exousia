@@ -1,0 +1,18 @@
+[Unit]
+Description=Immich machine learning
+After=immich-redis.service
+Requires=immich-redis.service
+
+[Container]
+Image=ghcr.io/immich-app/immich-machine-learning:release
+ContainerName=immich-ml
+Network=exousia.network:alias=immich-ml
+Volume=immich-ml-cache.volume:/cache
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

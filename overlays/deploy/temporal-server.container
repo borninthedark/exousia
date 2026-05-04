@@ -13,7 +13,7 @@ Environment=DB_PORT=5432
 Environment=POSTGRES_USER=temporal
 Environment=POSTGRES_PWD=temporal
 Environment=POSTGRES_SEEDS=temporal-db
-Environment=DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+Environment=SKIP_DYNAMIC_CONFIG_SETUP=true
 Label=io.containers.autoupdate=registry
 
 [Service]

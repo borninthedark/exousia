@@ -1,0 +1,19 @@
+[Unit]
+Description=Paperless-ngx PostgreSQL database
+
+[Container]
+Image=docker.io/library/postgres:18
+ContainerName=paperless-db
+Environment=POSTGRES_DB=paperless
+Environment=POSTGRES_USER=paperless
+Environment=POSTGRES_PASSWORD=paperless
+Volume=paperless-db-data.volume:/var/lib/postgresql
+Network=exousia.network:alias=paperless-db
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

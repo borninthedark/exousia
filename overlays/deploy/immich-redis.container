@@ -1,0 +1,16 @@
+[Unit]
+Description=Immich Redis broker
+
+[Container]
+Image=docker.io/library/redis:8
+ContainerName=immich-redis
+Network=exousia.network:alias=immich-redis
+Volume=immich-redis-data.volume:/data
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

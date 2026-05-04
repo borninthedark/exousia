@@ -193,7 +193,8 @@ install name:
             temporal)  echo "temporal-db temporal-server temporal-ui" ;;
             bookstack) echo "bookstack-db bookstack" ;;
             ai)        echo "ollama open-webui" ;;
-            plane)     echo "plane-db plane-redis plane-mq plane-minio plane-api plane-worker plane-beat-worker plane-migrator plane-web plane-space plane-admin plane-live plane-proxy" ;;
+            paperless) echo "paperless-db paperless-redis paperless" ;;
+            immich)    echo "immich-db immich-redis immich-ml immich" ;;
             dns)       echo "coredns caddy" ;;
             *)         echo "$1" ;;
         esac
@@ -231,7 +232,8 @@ engage name:
             temporal)  echo "temporal-db temporal-server temporal-ui" ;;
             bookstack) echo "bookstack-db bookstack" ;;
             ai)        echo "ollama open-webui" ;;
-            plane)     echo "plane-db plane-redis plane-mq plane-minio plane-api plane-worker plane-beat-worker plane-migrator plane-web plane-space plane-admin plane-live plane-proxy" ;;
+            paperless) echo "paperless-db paperless-redis paperless" ;;
+            immich)    echo "immich-db immich-redis immich-ml immich" ;;
             dns)       echo "coredns caddy" ;;
             *)         echo "$1" ;;
         esac
@@ -253,7 +255,8 @@ disengage name:
             temporal)  echo "temporal-ui temporal-server temporal-db" ;;
             bookstack) echo "bookstack bookstack-db" ;;
             ai)        echo "open-webui ollama" ;;
-            plane)     echo "plane-proxy plane-live plane-admin plane-space plane-web plane-migrator plane-beat-worker plane-worker plane-api plane-minio plane-mq plane-redis plane-db" ;;
+            paperless) echo "paperless paperless-redis paperless-db" ;;
+            immich)    echo "immich immich-ml immich-redis immich-db" ;;
             dns)       echo "caddy coredns" ;;
             *)         echo "$1" ;;
         esac
@@ -275,7 +278,8 @@ remove name:
             temporal)  echo "temporal-ui temporal-server temporal-db" ;;
             bookstack) echo "bookstack bookstack-db" ;;
             ai)        echo "open-webui ollama" ;;
-            plane)     echo "plane-proxy plane-live plane-admin plane-space plane-web plane-migrator plane-beat-worker plane-worker plane-api plane-minio plane-mq plane-redis plane-db" ;;
+            paperless) echo "paperless paperless-redis paperless-db" ;;
+            immich)    echo "immich immich-ml immich-redis immich-db" ;;
             dns)       echo "caddy coredns" ;;
             *)         echo "$1" ;;
         esac
@@ -299,7 +303,8 @@ report name:
             temporal)  echo "temporal-db temporal-server temporal-ui" ;;
             bookstack) echo "bookstack-db bookstack" ;;
             ai)        echo "ollama open-webui" ;;
-            plane)     echo "plane-db plane-redis plane-mq plane-minio plane-api plane-worker plane-beat-worker plane-migrator plane-web plane-space plane-admin plane-live plane-proxy" ;;
+            paperless) echo "paperless-db paperless-redis paperless" ;;
+            immich)    echo "immich-db immich-redis immich-ml immich" ;;
             dns)       echo "coredns caddy" ;;
             *)         echo "$1" ;;
         esac
@@ -319,7 +324,8 @@ logs name:
             temporal)  echo "temporal-db temporal-server temporal-ui" ;;
             bookstack) echo "bookstack-db bookstack" ;;
             ai)        echo "ollama open-webui" ;;
-            plane)     echo "plane-db plane-redis plane-mq plane-minio plane-api plane-worker plane-beat-worker plane-migrator plane-web plane-space plane-admin plane-live plane-proxy" ;;
+            paperless) echo "paperless-db paperless-redis paperless" ;;
+            immich)    echo "immich-db immich-redis immich-ml immich" ;;
             dns)       echo "coredns caddy" ;;
             *)         echo "$1" ;;
         esac
@@ -330,27 +336,6 @@ logs name:
         units="$units -u ${svc}.service"
     done
     journalctl --user $units -f
-
-# ---------------------------------------------------------------------------
-# Plane (first-time setup requires env file)
-# ---------------------------------------------------------------------------
-
-plane_env_src := "overlays/deploy/plane.env.example"
-plane_env_dst := "/etc/exousia/plane/plane.env"
-
-# Set up Plane env file (run once before engage)
-plane-init:
-    #!/bin/bash
-    set -euo pipefail
-    if [ ! -f "{{plane_env_dst}}" ]; then
-        echo "==> Installing Plane env file..."
-        sudo mkdir -p /etc/exousia/plane
-        sudo cp "{{plane_env_src}}" "{{plane_env_dst}}"
-        echo "Edit {{plane_env_dst}} — change SECRET_KEY and MINIO_ROOT_PASSWORD."
-        echo "Then run: just engage plane"
-    else
-        echo "{{plane_env_dst}} already exists."
-    fi
 
 # ---------------------------------------------------------------------------
 # DNS + Reverse Proxy (CoreDNS + Caddy)

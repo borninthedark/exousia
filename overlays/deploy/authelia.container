@@ -1,0 +1,17 @@
+[Unit]
+Description=Authelia SSO authentication server
+
+[Container]
+Image=ghcr.io/authelia/authelia:latest
+ContainerName=authelia
+Network=exousia.network:alias=authelia
+PublishPort=127.0.0.1:9091:9091
+Volume=%h/.config/authelia:/config:z
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target
