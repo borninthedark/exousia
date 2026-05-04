@@ -293,6 +293,7 @@ engage name:
         forgejo)   services="forgejo-db forgejo forgejo-runner" ;;
         temporal)  services="temporal-db temporal-server temporal-ui" ;;
         bookstack) services="bookstack-db bookstack" ;;
+        ai)        services="ollama open-webui" ;;
         *)        services="{{name}}" ;;
     esac
     # Source: repo checkout or image-installed path
@@ -333,6 +334,7 @@ install name:
         forgejo)   services="forgejo-db forgejo forgejo-runner" ;;
         temporal)  services="temporal-db temporal-server temporal-ui" ;;
         bookstack) services="bookstack-db bookstack" ;;
+        ai)        services="ollama open-webui" ;;
         *)        services="{{name}}" ;;
     esac
     if [ -d "overlays/deploy" ]; then
@@ -368,6 +370,7 @@ disengage name:
         forgejo)   services="forgejo-runner forgejo forgejo-db" ;;
         temporal)  services="temporal-ui temporal-server temporal-db" ;;
         bookstack) services="bookstack bookstack-db" ;;
+        ai)        services="open-webui ollama" ;;
         *)        services="{{name}}" ;;
     esac
     for svc in $services; do
@@ -383,6 +386,7 @@ remove name:
         forgejo)   services="forgejo-runner forgejo forgejo-db" ;;
         temporal)  services="temporal-ui temporal-server temporal-db" ;;
         bookstack) services="bookstack bookstack-db" ;;
+        ai)        services="open-webui ollama" ;;
         *)        services="{{name}}" ;;
     esac
     for svc in $services; do
