@@ -79,3 +79,8 @@ changes.exousia.local {
 	import authelia
 	reverse_proxy changedetection:5000
 }
+
+status.exousia.local {
+	tls internal
+	reverse_proxy uptime-kuma:3001
+}

@@ -271,7 +271,6 @@ disengage name:
 remove name:
     #!/bin/bash
     set -euo pipefail
-    just disengage "{{name}}"
     _expand_group_reverse() {
         case "$1" in
             forgejo)   echo "forgejo-runner forgejo forgejo-db" ;;
@@ -286,13 +285,14 @@ remove name:
     }
     services=$(_expand_group_reverse "{{name}}")
     for svc in $services; do
+        systemctl --user stop "${svc}.service" 2>/dev/null || true
         rm -f ~/.config/containers/systemd/${svc}.container
         rm -f ~/.config/containers/systemd/${svc}.volume
         rm -f ~/.config/containers/systemd/${svc}.network
         rm -f ~/.config/containers/systemd/${svc}-*.volume
     done
     systemctl --user daemon-reload
-    echo "{{name}} removed."
+    echo "{{name}} removed (won't start on reboot)."
 
 # Show status of a quadlet (group-aware)
 report name:

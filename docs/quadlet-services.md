@@ -211,6 +211,11 @@ Lifecycle: `just engage uptime-kuma` / `just disengage uptime-kuma`
 
 Accessible at `https://kuma.exousia.local`. First start creates admin account.
 
+**Status page:** A public status page is available at `https://status.exousia.local`
+(no SSO). Monitors use container DNS names (e.g. `http://forgejo:3000`) on the
+shared `exousia.network`, grouped into Applications and Infrastructure. SMTP
+notifications are configured via Proton Mail.
+
 ### Authelia (SSO authentication, 1 service)
 
 | Service | Image | Host Port | Network Alias | Depends On |
@@ -286,7 +291,8 @@ with configurable check intervals and notifications.
 | 3000 | Forgejo | HTTP |
 | 3080 | Open WebUI | HTTP |
 | 5000 | Container Registry | HTTP |
-| 3030 | Homepage | HTTP |
+| 3001 | Uptime Kuma | HTTP |
+| 3030 | Dashy | HTTP |
 | 6875 | BookStack | HTTP |
 | 7233 | Temporal Server | gRPC |
 | 8000 | Paperless-ngx | HTTP |
