@@ -16,6 +16,7 @@ Environment=PAPERLESS_DBNAME=paperless
 Environment=PAPERLESS_DBUSER=paperless
 Environment=PAPERLESS_DBPASS=paperless
 Environment=PAPERLESS_URL=https://paperless.exousia.local
+Environment=PAPERLESS_ALLOWED_HOSTS=paperless.exousia.local,docs.exousia.local
 EnvironmentFile=%h/.config/paperless/smtp.env
 Label=io.containers.autoupdate=registry
 

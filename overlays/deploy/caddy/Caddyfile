@@ -20,8 +20,10 @@ forgejo.exousia.local {
 	reverse_proxy forgejo:3000
 }
 
-paperless.exousia.local {
+paperless.exousia.local, docs.exousia.local {
 	tls internal
+	@api path /api/*
+	reverse_proxy @api paperless:8000
 	import authelia
 	reverse_proxy paperless:8000
 }
@@ -46,12 +48,6 @@ temporal.exousia.local {
 registry.exousia.local {
 	tls internal
 	reverse_proxy registry:5000
-}
-
-docs.exousia.local {
-	tls internal
-	import authelia
-	reverse_proxy bookstack:8080
 }
 
 home.exousia.local {

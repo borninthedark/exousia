@@ -106,6 +106,7 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 - **[quadlet-syntax.md](quadlet-syntax.md)** -- Quadlet file syntax, directives, and patterns for creating new services
 - **[forgejo-runner.md](forgejo-runner.md)** -- Forgejo Actions runner setup, registration, and Podman integration
 - **[forgejo-issues.md](forgejo-issues.md)** -- Issue tracking, labels, milestones, and agent integration
+- **[paperless-integration.md](paperless-integration.md)** -- Paperless-ngx API access, bulk upload, and Caddy config
 - **[resource-tuning.md](resource-tuning.md)** -- Quadlet and runner resource allocation profiles and monitoring
 
 - **[plan-temporal-orchestration.md](plan-temporal-orchestration.md)** -- Temporal agent orchestration architecture and workflow design
