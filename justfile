@@ -190,7 +190,7 @@ install name:
     _expand_group() {
         case "$1" in
             forgejo)   echo "forgejo-db forgejo forgejo-runner" ;;
-            temporal)  echo "temporal-db temporal-server temporal-ui" ;;
+            temporal)  echo "temporal-db temporal-server temporal-ui exousia-worker" ;;
             bookstack) echo "bookstack-db bookstack" ;;
             ai)        echo "ollama open-webui" ;;
             paperless) echo "paperless-db paperless-redis paperless" ;;
@@ -240,10 +240,19 @@ engage name:
     }
     services=$(_expand_group "{{name}}")
     just install "{{name}}"
-    # Start the last service (systemd dependencies pull in the rest)
-    last_svc="${services##* }"
-    systemctl --user start "${last_svc}.service"
-    echo "{{name}} engaged."
+    # Start each service in order; skip failures (e.g. image not yet built)
+    failed=""
+    for svc in $services; do
+        if ! systemctl --user start "${svc}.service" 2>/dev/null; then
+            echo "WARNING: ${svc}.service failed to start (image missing?)" >&2
+            failed="${failed} ${svc}"
+        fi
+    done
+    if [ -n "$failed" ]; then
+        echo "{{name}} engaged (with failures:${failed})."
+    else
+        echo "{{name}} engaged."
+    fi
 
 # Disengage a quadlet: stop service but keep files (restarts on reboot)
 disengage name:
@@ -300,7 +309,7 @@ report name:
     _expand_group() {
         case "$1" in
             forgejo)   echo "forgejo-db forgejo forgejo-runner" ;;
-            temporal)  echo "temporal-db temporal-server temporal-ui" ;;
+            temporal)  echo "temporal-db temporal-server temporal-ui exousia-worker" ;;
             bookstack) echo "bookstack-db bookstack" ;;
             ai)        echo "ollama open-webui" ;;
             paperless) echo "paperless-db paperless-redis paperless" ;;
@@ -321,7 +330,7 @@ logs name:
     _expand_group() {
         case "$1" in
             forgejo)   echo "forgejo-db forgejo forgejo-runner" ;;
-            temporal)  echo "temporal-db temporal-server temporal-ui" ;;
+            temporal)  echo "temporal-db temporal-server temporal-ui exousia-worker" ;;
             bookstack) echo "bookstack-db bookstack" ;;
             ai)        echo "ollama open-webui" ;;
             paperless) echo "paperless-db paperless-redis paperless" ;;
