@@ -229,6 +229,61 @@ Accessible at `https://kuma.exousia.local`. First start creates admin account.
 shared `exousia.network`, grouped into Applications and Infrastructure. SMTP
 notifications are configured via Proton Mail.
 
+**Adding a monitor:** When a new service is added, create a matching Uptime Kuma
+monitor via Socket.IO. Use an existing monitor as a template — HTTP for services
+with a web endpoint, TCP port for everything else.
+
+```python
+import socketio, time
+
+sio = socketio.Client()
+logged_in = False
+
+@sio.event
+def connect():
+    global logged_in
+    def cb(r):
+        global logged_in
+        logged_in = r.get('ok', False)
+    sio.emit('login', {'username': '<user>', 'password': '<pass>'}, callback=cb)
+
+sio.connect('http://localhost:3001')
+time.sleep(2)
+
+if logged_in:
+    # TCP port monitor (preferred — avoids TLS/redirect issues)
+    monitor = {
+        'type': 'port',
+        'name': 'Immich',
+        'hostname': 'immich',          # container DNS name
+        'port': 2283,                  # container port
+        'interval': 60,
+        'retryInterval': 60,
+        'maxretries': 3,
+        'accepted_statuscodes': ['200-299'],
+        'conditions': '[]',
+    }
+    # HTTP monitor alternative:
+    # monitor = {
+    #     'type': 'http',
+    #     'name': 'Forgejo',
+    #     'url': 'http://forgejo:3000',
+    #     'interval': 60,
+    #     'retryInterval': 60,
+    #     'maxretries': 3,
+    #     'accepted_statuscodes': ['200-299'],
+    # }
+    def add_cb(r):
+        print(f"added: {r}")
+    sio.emit('add', monitor, callback=add_cb)
+    time.sleep(2)
+
+sio.disconnect()
+```
+
+After adding a monitor, update the status page groups to include it (see
+`tools/` or run via the Uptime Kuma web UI).
+
 ### Authelia (SSO authentication, 1 service)
 
 | Service | Image | Host Port | Network Alias | Depends On |
@@ -457,7 +512,7 @@ just logs <name>         # Follow journal logs
 |-------|------------|
 | `forgejo` | `forgejo-db`, `forgejo`, `forgejo-runner` |
 | `ai` | `ollama`, `open-webui` |
-| `temporal` | `temporal-db`, `temporal-server`, `temporal-ui` |
+| `temporal` | `temporal-db`, `temporal-server`, `temporal-ui`, `exousia-worker` |
 | `bookstack` | `bookstack-db`, `bookstack` |
 | `paperless` | `paperless-db`, `paperless-redis`, `paperless` |
 | `immich` | `immich-db`, `immich-redis`, `immich-ml`, `immich` |
