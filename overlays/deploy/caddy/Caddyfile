@@ -56,11 +56,6 @@ home.exousia.local {
 	reverse_proxy dashy:8080
 }
 
-kuma.exousia.local {
-	tls internal
-	import authelia
-	reverse_proxy uptime-kuma:3001
-}
 
 photos.exousia.local {
 	tls internal

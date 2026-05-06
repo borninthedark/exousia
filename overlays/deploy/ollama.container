@@ -1,5 +1,5 @@
 [Unit]
-Description=Ollama local LLM inference server (Qwen3)
+Description=Ollama local LLM inference server
 
 [Container]
 Image=docker.io/ollama/ollama:latest
@@ -13,6 +13,7 @@ Label=io.containers.autoupdate=registry
 Restart=always
 TimeoutStartSec=900
 ExecStartPost=/usr/bin/podman exec ollama ollama pull qwen3:8b
+ExecStartPost=/usr/bin/podman exec ollama ollama pull llama3.2:1b
 
 # [Install]
 # WantedBy=default.target
