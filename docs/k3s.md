@@ -123,5 +123,6 @@ destroys it.
 ## Monitoring
 
 - Uptime Kuma: TCP monitor on `k3s:6443`
-- Dashy: `https://k3s.exousia.local` (Infrastructure section)
+- Dashy: `https://k3s.exousia.local` (Infrastructure section, status check
+  disabled — K3s API requires mTLS which Dashy cannot perform)
 - Status page: included in Infrastructure group
