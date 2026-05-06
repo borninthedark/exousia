@@ -229,7 +229,7 @@ engage name:
     _expand_group() {
         case "$1" in
             forgejo)   echo "forgejo-db forgejo forgejo-runner" ;;
-            temporal)  echo "temporal-db temporal-server temporal-ui" ;;
+            temporal)  echo "temporal-db temporal-server temporal-ui exousia-worker" ;;
             bookstack) echo "bookstack-db bookstack" ;;
             ai)        echo "ollama open-webui" ;;
             paperless) echo "paperless-db paperless-redis paperless" ;;
@@ -252,7 +252,7 @@ disengage name:
     _expand_group_reverse() {
         case "$1" in
             forgejo)   echo "forgejo-runner forgejo forgejo-db" ;;
-            temporal)  echo "temporal-ui temporal-server temporal-db" ;;
+            temporal)  echo "exousia-worker temporal-ui temporal-server temporal-db" ;;
             bookstack) echo "bookstack bookstack-db" ;;
             ai)        echo "open-webui ollama" ;;
             paperless) echo "paperless paperless-redis paperless-db" ;;
@@ -274,7 +274,7 @@ remove name:
     _expand_group_reverse() {
         case "$1" in
             forgejo)   echo "forgejo-runner forgejo forgejo-db" ;;
-            temporal)  echo "temporal-ui temporal-server temporal-db" ;;
+            temporal)  echo "exousia-worker temporal-ui temporal-server temporal-db" ;;
             bookstack) echo "bookstack bookstack-db" ;;
             ai)        echo "open-webui ollama" ;;
             paperless) echo "paperless paperless-redis paperless-db" ;;

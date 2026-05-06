@@ -31,6 +31,7 @@ graph TD
         TDB["temporal-db<br/>postgres:15"]
         TS["Temporal Server<br/>:7233"]
         TU["Temporal UI<br/>:8233"]
+        EW["exousia-worker"]
     end
 
     subgraph K3S["Kubernetes"]
@@ -78,6 +79,7 @@ graph TD
     NET --> OLL --> OWU
     NET --> K3
     NET --> TDB --> TS --> TU
+    TS --> EW
     NET --> BSDB --> BS
     NET --> DY
     NET --> PPDB --> PP
@@ -142,20 +144,31 @@ Open WebUI connects to Ollama via `http://ollama:11434` on the shared network.
 Accessible at `https://ai.exousia.local`. First start creates the database
 and requires admin account setup.
 
-### Temporal (workflow orchestration, 3 services)
+### Temporal (workflow orchestration, 4 services)
 
 | Service | Image | Host Port | Network Alias | Depends On |
 |---------|-------|-----------|---------------|------------|
 | `temporal-db` | `postgres:15-alpine` | - | `temporal-db` | `exousia.network` |
 | `temporal-server` | `temporalio/auto-setup:latest` | 7233 | `temporal` | `temporal-db` |
 | `temporal-ui` | `temporalio/ui:latest` | 8233 | `temporal-ui` | `temporal-server` |
+| `exousia-worker` | `localhost/exousia-worker:latest` | - | `exousia-worker` | `temporal-server`, `ollama` |
 
 Lifecycle: `just engage temporal` / `just disengage temporal`
 
-Dependency chain: `exousia.network` -> `temporal-db` -> `temporal-server` -> `temporal-ui`
+Dependency chain: `exousia.network` -> `temporal-db` -> `temporal-server` -> `temporal-ui` + `exousia-worker`
 
-The auto-setup image creates DB schemas on first boot. Workers connect to
-`localhost:7233` (host) or `temporal:7233` (network).
+The auto-setup image creates DB schemas on first boot. The `exousia-worker`
+runs Python workflows on the `exousia` task queue:
+
+- **BackupWorkflow** — scheduled volume snapshots with pruning
+- **DocSyncWorkflow** — sync docs from all workspaces to Paperless-ngx
+- **HealthCheckWorkflow** — deep HTTP health checks with alerting
+- **LLMPipelineWorkflow** — multi-agent orchestration (Claude, Codex, Gemini, Ollama)
+
+Build the worker image: `podman build -t localhost/exousia-worker:latest workers/temporal/`
+
+Config: `~/.config/exousia-worker/env` (API keys for Anthropic, OpenAI, Google).
+See `workers/temporal/README.md` for full details.
 
 ### BookStack (documentation, 2 services)
 

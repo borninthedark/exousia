@@ -1,0 +1,28 @@
+[Unit]
+Description=Exousia Temporal worker
+After=temporal-server.service ollama.service
+Requires=temporal-server.service
+
+[Container]
+Image=localhost/exousia-worker:latest
+ContainerName=exousia-worker
+Network=exousia.network:alias=exousia-worker
+Volume=%h/Workspaces/exousia/docs:/workspace/docs:ro,z
+Volume=%h/Workspaces/witness:/workspace/witness:ro,z
+Volume=%h/Workspaces/sap-c02:/workspace/sap-c02:ro,z
+Volume=%h/Workspaces/scs-c03:/workspace/scs-c03:ro,z
+Volume=%h/Workspaces/ccsp:/workspace/ccsp:ro,z
+Volume=exousia-backups.volume:/backups
+EnvironmentFile=%h/.config/exousia-worker/env
+Environment=TEMPORAL_HOST=temporal-server:7233
+Environment=PAPERLESS_API_URL=http://paperless:8000/api
+Environment=PAPERLESS_HOST=paperless.exousia.local
+Environment=OLLAMA_URL=http://ollama:11434
+Environment=DOCS_WATCH_DIR=/workspace/docs
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+# [Install]
+# WantedBy=default.target
