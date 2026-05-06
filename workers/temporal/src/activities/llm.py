@@ -205,10 +205,10 @@ class LLMActivities:
         responses: list[AgentResponse],
         prompt: str,
     ) -> AgentResponse:
-        """Use Claude to synthesize multiple agent responses into one."""
+        """Use Gemini to synthesize multiple agent responses into one."""
         summary = "\n\n".join(f"## {r.agent.value} ({r.model})\n{r.content}" for r in responses)
         synthesis_task = AgentTask(
-            agent=Agent.CLAUDE,
+            agent=Agent.GEMINI,
             system=(
                 "You are synthesizing responses from multiple AI agents. "
                 "Combine their insights, resolve contradictions, and produce "
@@ -217,5 +217,5 @@ class LLMActivities:
             ),
             prompt=f"Original question: {prompt}\n\nAgent responses:\n{summary}",
         )
-        result: AgentResponse = await self.dispatch_claude(synthesis_task)
+        result: AgentResponse = await self.dispatch_gemini(synthesis_task)
         return result
