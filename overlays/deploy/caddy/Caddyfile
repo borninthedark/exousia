@@ -79,3 +79,13 @@ status.exousia.local {
 	tls internal
 	reverse_proxy uptime-kuma:3001
 }
+
+k3s.exousia.local {
+	tls internal
+	import authelia
+	reverse_proxy https://k3s:6443 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}

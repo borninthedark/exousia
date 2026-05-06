@@ -533,6 +533,143 @@ just engage k3s          # Single service, no group expansion
 just dns-setup           # Trust Caddy CA + configure systemd-resolved
 ```
 
+## Service Onboarding Checklist
+
+When adding a new service to the stack, follow these steps in order:
+
+### 1. Create Quadlet Files
+
+Create `.container` and `.volume` files in `overlays/deploy/`:
+
+```ini
+# overlays/deploy/my-service.container
+[Unit]
+Description=My Service
+After=exousia.network
+
+[Container]
+Image=docker.io/vendor/my-service:latest
+ContainerName=my-service
+Volume=my-service-data.volume:/data
+Network=exousia.network:alias=my-service
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
+```
+
+```ini
+# overlays/deploy/my-service-data.volume
+[Volume]
+```
+
+Key rules:
+
+- Always include `[Install]\nWantedBy=default.target` for auto-start persistence
+- Use `exousia.network:alias=<name>` for container DNS resolution
+- Bind host ports to `127.0.0.1` only (Caddy handles external access)
+- Add `Label=io.containers.autoupdate=registry` for auto-update support
+
+### 2. Add to justfile Groups (if multi-service)
+
+If the service is part of a multi-container stack, add a group definition to the
+`justfile`. Single services don't need a group — they work by name directly.
+
+```bash
+# In the justfile group expansion block:
+"my-stack") services="my-stack-db my-stack" ;;
+```
+
+### 3. Add Container Image Policy
+
+If the image comes from a new registry namespace, add it to
+`/etc/containers/policy.json` on the host and to the build image's policy at
+`overlays/base/configs/containers/policy.json`.
+
+### 4. Add Caddy Reverse Proxy Route
+
+Add a site block to `overlays/deploy/caddy/Caddyfile`:
+
+```caddyfile
+my-service.exousia.local {
+    tls internal
+    import authelia
+    reverse_proxy my-service:8080
+}
+```
+
+- Use `import authelia` for SSO-protected services
+- Omit `import authelia` for public APIs or auth endpoints
+- For HTTPS backends, add `transport http { tls_insecure_skip_verify }`
+
+### 5. Add CoreDNS Record
+
+Add the hostname to `overlays/deploy/caddy/hosts` (or whichever zone file
+CoreDNS uses) so `*.exousia.local` resolves to the Caddy host.
+
+### 6. Add Dashy Dashboard Entry
+
+Edit `~/.config/dashy/conf.yml` and add the service to the appropriate section:
+
+```yaml
+- title: My Service
+  url: https://my-service.exousia.local
+  icon: fas fa-cog
+  description: Short description
+```
+
+Use [Font Awesome](https://fontawesome.com/icons) or
+[Simple Icons](https://simpleicons.org/) (`si-` prefix) for icons.
+
+### 7. Add Uptime Kuma Monitor
+
+Create a monitor via the Uptime Kuma web UI at `https://status.exousia.local`
+or via Socket.IO script. Use TCP port monitors for reliability (avoids TLS and
+redirect issues):
+
+```python
+monitor = {
+    'type': 'port',
+    'name': 'My Service',
+    'hostname': 'my-service',   # container DNS name
+    'port': 8080,               # container port
+    'interval': 60,
+    'retryInterval': 60,
+    'maxretries': 3,
+    'accepted_statuscodes': ['200-299'],
+    'conditions': '[]',
+}
+```
+
+After adding the monitor, add it to the appropriate status page group
+(Applications or Infrastructure) via the Kuma web UI.
+
+### 8. Update Documentation
+
+Add the service to this file (`docs/quadlet-services.md`):
+
+- Service table in the appropriate section (or create a new section)
+- Port summary table
+- Persistent volumes table
+- Container image policy table (if new namespace)
+- SSO table in the Authelia section (protected vs unprotected)
+
+### Quick Reference
+
+| Step | File/Location | Required? |
+|------|--------------|-----------|
+| Quadlet `.container` + `.volume` | `overlays/deploy/` | Always |
+| justfile group | `justfile` | Multi-service only |
+| Image policy | `/etc/containers/policy.json` | New namespace only |
+| Caddy route | `overlays/deploy/caddy/Caddyfile` | Web-accessible services |
+| CoreDNS record | CoreDNS zone/hosts file | Web-accessible services |
+| Dashy entry | `~/.config/dashy/conf.yml` | Always |
+| Uptime Kuma monitor | Kuma web UI or Socket.IO | Always |
+| Documentation | `docs/quadlet-services.md` | Always |
+
 ---
 
 **[Back to Documentation Index](README.md)** | **[Back to Main README](../README.md)**
