@@ -1,6 +1,6 @@
 # Exousia CI Status
 
-> Last updated: 2026-05-06 14:52:37 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/25442442627)
+> Last updated: 2026-05-07 04:09:40 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/25475399047)
 
 ## Pipeline: Urahara
 
@@ -20,5 +20,5 @@
 | Image Type | fedora-sway-atomic |
 | Fedora Version | 44 |
 | Window Manager | sway |
-| Commit | `9af1f785` |
+| Commit | `34f2720f` |
 | Triggered By | schedule |
