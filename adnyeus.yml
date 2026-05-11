@@ -268,6 +268,12 @@ modules:
       - src: overlays/base/systemd/system/user@.service.d/
         dst: /usr/lib/systemd/system/user@.service.d/
         mode: "0644"
+      - src: overlays/base/systemd/user/mirror-base-image.service
+        dst: /usr/lib/systemd/user/mirror-base-image.service
+        mode: "0644"
+      - src: overlays/base/systemd/user/mirror-base-image.timer
+        dst: /usr/lib/systemd/user/mirror-base-image.timer
+        mode: "0644"
 
   # Quadlet deploy overlay — ships as a self-hosted podman app baseline.
   # Users install via `just engage <app>` which copies from here to
@@ -299,6 +305,7 @@ modules:
         # chezmoi-init.service and chezmoi-update.timer are enabled by the chezmoi module
         - ensure-user-flathub-remote.service
         - update-user-flatpaks.timer
+        - mirror-base-image.timer
     default-target: graphical.target
 
   # Note: bluebuild-default-flatpaks-system.service is automatically enabled
