@@ -284,6 +284,17 @@ sio.disconnect()
 After adding a monitor, update the status page groups to include it (see
 `tools/` or run via the Uptime Kuma web UI).
 
+**Stale DNS after service restarts:** Uptime Kuma's Node.js process caches DNS
+lookups. If a monitored container is restarted and gets a new IP, Kuma will
+report `ENOTFOUND` until its cache expires. Fix by restarting Kuma:
+
+```bash
+systemctl --user restart uptime-kuma.service
+```
+
+This applies any time a monitored service is restarted — Kuma itself must be
+restarted afterward to pick up the new container IPs.
+
 ### Authelia (SSO authentication, 1 service)
 
 | Service | Image | Host Port | Network Alias | Depends On |
