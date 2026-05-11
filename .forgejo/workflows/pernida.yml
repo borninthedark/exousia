@@ -278,25 +278,18 @@ jobs:
             --enable-plymouth \
             --verbose
 
-      - name: Resolve fastest base image source
+      - name: Resolve base image source
         run: |
           FVER="${{ needs.defaults.outputs.primary_version }}"
-          BASE="quay.io/fedora/fedora-sway-atomic:${FVER}"
+          LOCAL="registry:5000/fedora-sway-atomic:${FVER}"
+          UPSTREAM="quay.io/fedora/fedora-sway-atomic:${FVER}"
 
-          # Priority: local registry > GHCR mirror > quay.io (upstream)
-          if skopeo inspect --tls-verify=false "docker://registry:5000/fedora-sway-atomic:${FVER}" >/dev/null 2>&1; then
-            MIRROR="registry:5000/fedora-sway-atomic:${FVER}"
+          # Blueprint defaults to local mirror; fall back if unavailable
+          if skopeo inspect --tls-verify=false "docker://${LOCAL}" >/dev/null 2>&1; then
             echo "Using local registry mirror"
-          elif skopeo inspect "docker://ghcr.io/borninthedark/fedora-sway-atomic:${FVER}" >/dev/null 2>&1; then
-            MIRROR="ghcr.io/borninthedark/fedora-sway-atomic:${FVER}"
-            echo "Using GHCR mirror"
           else
-            MIRROR=""
-            echo "No mirror available — using quay.io upstream"
-          fi
-
-          if [ -n "${MIRROR}" ]; then
-            sed -i "s|FROM ${BASE}|FROM ${MIRROR}|" Dockerfile.generated
+            echo "Local mirror unavailable — falling back to quay.io upstream"
+            sed -i "s|FROM ${LOCAL}|FROM ${UPSTREAM}|" Dockerfile.generated
           fi
 
       - name: Build image with buildah
