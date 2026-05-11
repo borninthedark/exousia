@@ -7,9 +7,9 @@ description: DevSecOps-hardened Fedora bootc image with Sway desktop
 image-version: 44
 
 # Base image configuration
-# Upstream: quay.io/fedora/fedora-sway-atomic:44
-# Local mirror kept in sync by mirror-base-image.timer (weekly)
-base-image: registry:5000/fedora-sway-atomic:44
+# Local mirror (registry:5000) kept in sync by mirror-base-image.timer (weekly).
+# Forgejo workflow substitutes this with the local mirror at build time.
+base-image: quay.io/fedora/fedora-sway-atomic:44
 image-type: fedora-sway-atomic
 
 # Desktop environment selection

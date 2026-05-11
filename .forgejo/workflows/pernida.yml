@@ -281,15 +281,15 @@ jobs:
       - name: Resolve base image source
         run: |
           FVER="${{ needs.defaults.outputs.primary_version }}"
-          LOCAL="registry:5000/fedora-sway-atomic:${FVER}"
           UPSTREAM="quay.io/fedora/fedora-sway-atomic:${FVER}"
+          LOCAL="registry:5000/fedora-sway-atomic:${FVER}"
 
-          # Blueprint defaults to local mirror; fall back if unavailable
+          # Use local mirror if available, otherwise keep upstream
           if skopeo inspect --tls-verify=false "docker://${LOCAL}" >/dev/null 2>&1; then
             echo "Using local registry mirror"
+            sed -i "s|FROM ${UPSTREAM}|FROM ${LOCAL}|" Dockerfile.generated
           else
-            echo "Local mirror unavailable — falling back to quay.io upstream"
-            sed -i "s|FROM ${LOCAL}|FROM ${UPSTREAM}|" Dockerfile.generated
+            echo "Local mirror unavailable — using quay.io upstream"
           fi
 
       - name: Build image with buildah
