@@ -1,0 +1,21 @@
+[Unit]
+Description=Immich PostgreSQL with pgvecto.rs
+
+[Container]
+Image=ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+ContainerName=immich-db
+Network=exousia.network:alias=immich-db
+Environment=POSTGRES_DB=immich
+Environment=POSTGRES_USER=immich
+Environment=POSTGRES_PASSWORD=immich
+Environment=POSTGRES_INITDB_ARGS=--data-checksums
+Volume=immich-db-data.volume:/var/lib/postgresql/data
+ShmSize=128m
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=Paperless-ngx Redis broker
+
+[Container]
+Image=docker.io/library/redis:8
+ContainerName=paperless-redis
+Volume=paperless-redis-data.volume:/data
+Network=exousia.network:alias=paperless-redis
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

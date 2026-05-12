@@ -1,0 +1,30 @@
+[project]
+name = "exousia-temporal-worker"
+version = "0.1.0"
+description = "Temporal worker for Exousia homelab automation"
+requires-python = ">=3.12"
+dependencies = [
+    "temporalio>=1.9.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.25",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.isort]
+profile = "black"
+known_first_party = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

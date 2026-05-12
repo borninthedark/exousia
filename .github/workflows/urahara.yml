@@ -69,9 +69,9 @@ permissions:
   pull-requests: write
 
 jobs:
-  # -- Read defaults and build version matrix --
-  defaults:
-    name: "Resolve Defaults"
+  # -- Muramasa (Zanpakutō) — Resolve build defaults and version matrix --
+  muramasa:
+    name: "Muramasa (Defaults)"
     runs-on: ubuntu-latest
     outputs:
       primary_version: ${{ steps.read.outputs.version }}
@@ -128,42 +128,42 @@ jobs:
   # -- Hiyori (Build) runs after both pass, once per version --
   hiyori:
     name: "Hiyori (${{ matrix.image_type }}/f${{ matrix.distro_version }})"
-    needs: [defaults, hikifune, uhin]
+    needs: [muramasa, hikifune, uhin]
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork != true
     strategy:
       fail-fast: false
       matrix:
-        distro_version: ${{ fromJSON(needs.defaults.outputs.versions) }}
-        image_type: ${{ fromJSON(needs.defaults.outputs.image_types) }}
+        distro_version: ${{ fromJSON(needs.muramasa.outputs.versions) }}
+        image_type: ${{ fromJSON(needs.muramasa.outputs.image_types) }}
     uses: ./.github/workflows/hiyori.yml
     with:
       image_type: ${{ matrix.image_type }}
       distro_version: ${{ matrix.distro_version }}
       enable_plymouth: ${{ inputs.enable_plymouth == '' && true || inputs.enable_plymouth }}
-      is_primary: ${{ matrix.distro_version == needs.defaults.outputs.primary_version && matrix.image_type == 'fedora-sway-atomic' }}
+      is_primary: ${{ matrix.distro_version == needs.muramasa.outputs.primary_version && matrix.image_type == 'fedora-sway-atomic' }}
     secrets: inherit
     permissions:
       contents: write
       packages: write
       id-token: write
 
-  # -- Sealed Boot (optional, after Hiyori) --
-  sealed:
-    name: "Sealed (f${{ matrix.distro_version }})"
-    needs: [defaults, hiyori]
+  # -- Ulquiorra (Sealed Boot, optional, after Hiyori) --
+  ulquiorra:
+    name: "Ulquiorra (f${{ matrix.distro_version }})"
+    needs: [muramasa, hiyori]
     if: >-
       inputs.enable_sealed == true &&
       github.event_name != 'pull_request' &&
-      contains(needs.defaults.outputs.image_types, 'fedora-bootc')
+      contains(needs.muramasa.outputs.image_types, 'fedora-bootc')
     strategy:
       fail-fast: false
       matrix:
-        distro_version: ${{ fromJSON(needs.defaults.outputs.versions) }}
-    uses: ./.github/workflows/sealed.yml
+        distro_version: ${{ fromJSON(needs.muramasa.outputs.versions) }}
+    uses: ./.github/workflows/ulquiorra.yml
     with:
       base_image: ghcr.io/borninthedark/exousia:bootc-f${{ matrix.distro_version }}
       distro_version: ${{ matrix.distro_version }}
-      is_primary: ${{ matrix.distro_version == needs.defaults.outputs.primary_version }}
+      is_primary: ${{ matrix.distro_version == needs.muramasa.outputs.primary_version }}
     secrets: inherit
     permissions:
       contents: read
@@ -173,7 +173,7 @@ jobs:
   # -- Gate: summary of all jobs --
   gate:
     name: "Gate (Summary)"
-    needs: [hikifune, uhin, hiyori, sealed]
+    needs: [hikifune, uhin, hiyori, ulquiorra]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -186,14 +186,14 @@ jobs:
           echo "| Hikifune (CI) | ${{ needs.hikifune.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Uhin (Security) | ${{ needs.uhin.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Hiyori (Build) | ${{ needs.hiyori.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Sealed Boot | ${{ needs.sealed.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ulquiorra (Sealed Boot) | ${{ needs.ulquiorra.result }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if any job failed
         if: >-
           needs.hikifune.result == 'failure' ||
           needs.uhin.result == 'failure' ||
           needs.hiyori.result == 'failure' ||
-          (needs.sealed.result == 'failure')
+          (needs.ulquiorra.result == 'failure')
         run: exit 1
 
       - name: Checkout (for gh CLI)
@@ -237,7 +237,7 @@ jobs:
           | Hikifune (CI) | ${{ needs.hikifune.result }} |
           | Uhin (Security) | ${{ needs.uhin.result }} |
           | Hiyori (Build) | ${{ needs.hiyori.result }} |
-          | Sealed Boot | ${{ needs.sealed.result }} |
+          | Ulquiorra (Sealed Boot) | ${{ needs.ulquiorra.result }} |
 
           ### Commits
           HEREDOC

@@ -1,0 +1,24 @@
+[Unit]
+Description=Immich photo management server
+After=immich-db.service immich-redis.service immich-ml.service
+Requires=immich-db.service immich-redis.service
+
+[Container]
+Image=ghcr.io/immich-app/immich-server:release
+ContainerName=immich
+Network=exousia.network:alias=immich
+PublishPort=127.0.0.1:2283:2283
+Volume=immich-upload.volume:/usr/src/app/upload
+Environment=DB_HOSTNAME=immich-db
+Environment=DB_DATABASE_NAME=immich
+Environment=DB_USERNAME=immich
+Environment=DB_PASSWORD=immich
+Environment=REDIS_HOSTNAME=immich-redis
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

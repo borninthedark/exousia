@@ -10,7 +10,7 @@ PublishPort=127.0.0.1:3080:8080
 Volume=open-webui-data.volume:/app/backend/data
 Network=exousia.network:alias=open-webui
 Environment=OLLAMA_BASE_URL=http://ollama:11434
-Environment=WEBUI_URL=https://webui.exousia.local
+Environment=WEBUI_URL=https://ai.exousia.local
 Environment=RAG_EMBEDDING_MODEL=
 Environment=WEBUI_AUTH=true
 Label=io.containers.autoupdate=registry
@@ -19,5 +19,5 @@ Label=io.containers.autoupdate=registry
 Restart=always
 TimeoutStartSec=300
 
-# [Install]
-# WantedBy=default.target
+[Install]
+WantedBy=default.target

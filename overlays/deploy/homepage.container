@@ -1,0 +1,18 @@
+[Unit]
+Description=Homepage dashboard
+
+[Container]
+Image=ghcr.io/gethomepage/homepage:latest
+ContainerName=homepage
+Network=exousia.network:alias=homepage
+PublishPort=127.0.0.1:3030:3000
+Volume=%h/.config/homepage:/app/config:z
+Environment=HOMEPAGE_ALLOWED_HOSTS=home.exousia.local
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,23 @@
+[Unit]
+Description=Headscale coordination server
+
+[Container]
+Image=ghcr.io/juanfont/headscale:latest
+ContainerName=headscale
+Network=exousia.network:alias=headscale
+PublishPort=127.0.0.1:8080:8080
+PublishPort=127.0.0.1:9090:9090
+Volume=%h/.config/headscale:/etc/headscale:z,ro
+Volume=headscale-data.volume:/var/lib/headscale
+AddCapability=SYS_ADMIN
+ReadOnly=true
+Tmpfs=/var/run/headscale
+Exec=serve
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

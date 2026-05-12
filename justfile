@@ -64,26 +64,6 @@ clean:
 validate:
     uv run python -m generator --config adnyeus.yml --validate
 
-# Run CI linting checks
-ci-lint:
-    #!/bin/bash
-    set -euo pipefail
-    echo "==> Running CI linting checks..."
-    uv run black --check tools/
-    uv run isort --check-only tools/
-    uv run ruff check tools/
-    uv run pylint tools/*.py || true
-    uv run mypy tools/ || true
-    echo "==> CI linting complete"
-
-# Run CI tests
-ci-test:
-    #!/bin/bash
-    set -euo pipefail
-    echo "==> Running CI tests..."
-    uv run pytest tools/ -v --tb=short --cov=tools --cov-report=term
-    echo "==> CI tests complete"
-
 # Run pre-commit hooks
 pre-commit:
     uv run pre-commit run --all-files
@@ -196,136 +176,123 @@ local-test:
     TEST_IMAGE_TAG="localhost:5000/exousia:{{tag}}" buildah unshare -- bats tests/image_content.bats
 
 # ---------------------------------------------------------------------------
-# Quadlets — infrastructure (all apps)
+# Quadlet Lifecycle
 # ---------------------------------------------------------------------------
 
-# Copy all quadlets to ~/.config/containers/systemd/
-quadlet-install:
+# Shared helpers: _expand_group outputs service list, _deploy_dir finds source
+# These are shell functions inlined in recipes since just doesn't support
+# cross-recipe return values.
+
+# Install a quadlet: copy files for reboot persistence without starting
+install name:
     #!/bin/bash
     set -euo pipefail
-    mkdir -p ~/.config/containers/systemd/
-    cp overlays/deploy/*.container ~/.config/containers/systemd/ 2>/dev/null || true
-    cp overlays/deploy/*.volume ~/.config/containers/systemd/ 2>/dev/null || true
-    cp overlays/deploy/*.network ~/.config/containers/systemd/ 2>/dev/null || true
-    systemctl --user daemon-reload
-    echo "Quadlets installed. Services are disabled by default."
-    echo "Use app-specific targets to start (e.g. just plane-start)."
-
-# Remove all quadlets and stop services
-quadlet-uninstall:
-    #!/bin/bash
-    systemctl --user stop plane-proxy plane-live plane-admin plane-space plane-web \
-        plane-migrator plane-beat-worker plane-worker plane-api \
-        plane-minio plane-mq plane-redis plane-db 2>/dev/null || true
-    systemctl --user stop temporal-ui temporal-server temporal-db 2>/dev/null || true
-    systemctl --user reset-failed 2>/dev/null || true
-    rm -f ~/.config/containers/systemd/plane-*.container
-    rm -f ~/.config/containers/systemd/plane-*-data.volume
-    rm -f ~/.config/containers/systemd/temporal-*.container
-    rm -f ~/.config/containers/systemd/temporal-*-data.volume
-    rm -f ~/.config/containers/systemd/freebsd.container
-    rm -f ~/.config/containers/systemd/exousia.network
-    systemctl --user daemon-reload
-    echo "All quadlets removed."
-
-# ---------------------------------------------------------------------------
-# Plane (project management — 13 services)
-# ---------------------------------------------------------------------------
-
-plane_services_infra := "plane-db plane-redis plane-mq plane-minio"
-plane_services_backend := "plane-api plane-worker plane-beat-worker plane-migrator"
-plane_services_frontend := "plane-web plane-space plane-admin plane-live plane-proxy"
-plane_services_all := plane_services_infra + " " + plane_services_backend + " " + plane_services_frontend
-plane_env_src := "overlays/deploy/plane.env.example"
-plane_env_dst := "/etc/exousia/plane/plane.env"
-
-# Set up Plane env file and copy quadlets
-plane-install: quadlet-install
-    #!/bin/bash
-    set -euo pipefail
-    if [ ! -f "{{plane_env_dst}}" ]; then
-        echo "==> Installing Plane env file..."
-        sudo mkdir -p /etc/exousia/plane
-        sudo cp "{{plane_env_src}}" "{{plane_env_dst}}"
-        echo "Edit {{plane_env_dst}} — change SECRET_KEY and MINIO_ROOT_PASSWORD."
+    _expand_group() {
+        case "$1" in
+            forgejo)   echo "forgejo-db forgejo forgejo-runner" ;;
+            temporal)  echo "temporal-db temporal-server temporal-ui exousia-worker" ;;
+            bookstack) echo "bookstack-db bookstack" ;;
+            ai)        echo "ollama open-webui" ;;
+            paperless) echo "paperless-db paperless-redis paperless" ;;
+            immich)    echo "immich-db immich-redis immich-ml immich" ;;
+            dns)       echo "coredns caddy" ;;
+            *)         echo "$1" ;;
+        esac
+    }
+    services=$(_expand_group "{{name}}")
+    if [ -d "overlays/deploy" ]; then
+        deploy_dir="overlays/deploy"
+    elif [ -d "/usr/share/exousia/quadlets" ]; then
+        deploy_dir="/usr/share/exousia/quadlets"
     else
-        echo "{{plane_env_dst}} already exists, skipping."
+        echo "ERROR: no deploy overlay found" >&2; exit 1
     fi
-    echo "Run 'just plane-start' when ready."
-
-# Start Plane in dependency order
-plane-start:
-    systemctl --user start plane-proxy.service
-    @echo "Plane started — http://localhost:8080"
-
-# Stop Plane (reverse order)
-plane-stop:
-    #!/bin/bash
-    systemctl --user stop {{plane_services_all}} 2>/dev/null || true
-    systemctl --user reset-failed 2>/dev/null || true
-    echo "Plane stopped."
-
-# Show Plane service status
-plane-status:
-    #!/bin/bash
-    systemctl --user status {{plane_services_all}} --no-pager 2>/dev/null || true
-
-# Follow Plane logs
-plane-logs:
-    #!/bin/bash
-    units=""
-    for svc in {{plane_services_all}}; do
-        units="$units -u $svc"
-    done
-    journalctl --user $units -f
-
-# ---------------------------------------------------------------------------
-# Standalone containers (just start <name>, just stop <name>, etc.)
-# ---------------------------------------------------------------------------
-
-# Enable a quadlet: copy its files, reload systemd, and start the service
-# Service groups (forgejo, temporal) expand to their full stacks automatically
-engage name:
-    #!/bin/bash
-    set -euo pipefail
-    # Expand service groups to their component services
-    case "{{name}}" in
-        forgejo)  services="forgejo-db forgejo forgejo-runner" ;;
-        temporal) services="temporal-db temporal-server temporal-ui" ;;
-        *)        services="{{name}}" ;;
-    esac
     mkdir -p ~/.config/containers/systemd/
     for svc in $services; do
         for ext in container volume network; do
-            src="overlays/deploy/${svc}.${ext}"
-            if [ -f "$src" ]; then
-                cp "$src" ~/.config/containers/systemd/
-                echo "Copied ${src}"
-            fi
+            src="${deploy_dir}/${svc}.${ext}"
+            [ -f "$src" ] && cp "$src" ~/.config/containers/systemd/ && echo "Installed ${src}"
         done
-        # Also copy associated data volumes (e.g. ollama-data.volume)
-        for vol in overlays/deploy/${svc}-*.volume; do
+        for vol in "${deploy_dir}/${svc}"-*.volume; do
             [ -f "$vol" ] || continue
             cp "$vol" ~/.config/containers/systemd/
-            echo "Copied ${vol}"
+            echo "Installed ${vol}"
         done
     done
     systemctl --user daemon-reload
-    # Start the last service (dependencies pull in the rest)
-    last_svc="${services##* }"
-    systemctl --user start "${last_svc}.service"
-    echo "{{name}} engaged (persists across reboots via WantedBy=default.target)."
+    echo "{{name}} installed (starts on next boot)."
 
-# Disable a quadlet: stop the service and remove its files
-# Service groups expand in reverse order for clean shutdown
+# Engage a quadlet: install + start now
+engage name:
+    #!/bin/bash
+    set -euo pipefail
+    _expand_group() {
+        case "$1" in
+            forgejo)   echo "forgejo-db forgejo forgejo-runner" ;;
+            temporal)  echo "temporal-db temporal-server temporal-ui exousia-worker" ;;
+            bookstack) echo "bookstack-db bookstack" ;;
+            ai)        echo "ollama open-webui" ;;
+            paperless) echo "paperless-db paperless-redis paperless" ;;
+            immich)    echo "immich-db immich-redis immich-ml immich" ;;
+            dns)       echo "coredns caddy" ;;
+            *)         echo "$1" ;;
+        esac
+    }
+    services=$(_expand_group "{{name}}")
+    just install "{{name}}"
+    # Start each service in order; skip failures (e.g. image not yet built)
+    failed=""
+    for svc in $services; do
+        if ! systemctl --user start "${svc}.service" 2>/dev/null; then
+            echo "WARNING: ${svc}.service failed to start (image missing?)" >&2
+            failed="${failed} ${svc}"
+        fi
+    done
+    if [ -n "$failed" ]; then
+        echo "{{name}} engaged (with failures:${failed})."
+    else
+        echo "{{name}} engaged."
+    fi
+
+# Disengage a quadlet: stop service but keep files (restarts on reboot)
 disengage name:
     #!/bin/bash
     set -euo pipefail
-    case "{{name}}" in
-        forgejo)  services="forgejo-runner forgejo forgejo-db" ;;
-        temporal) services="temporal-ui temporal-server temporal-db" ;;
-        *)        services="{{name}}" ;;
-    esac
+    _expand_group_reverse() {
+        case "$1" in
+            forgejo)   echo "forgejo-runner forgejo forgejo-db" ;;
+            temporal)  echo "exousia-worker temporal-ui temporal-server temporal-db" ;;
+            bookstack) echo "bookstack bookstack-db" ;;
+            ai)        echo "open-webui ollama" ;;
+            paperless) echo "paperless paperless-redis paperless-db" ;;
+            immich)    echo "immich immich-ml immich-redis immich-db" ;;
+            dns)       echo "caddy coredns" ;;
+            *)         echo "$1" ;;
+        esac
+    }
+    services=$(_expand_group_reverse "{{name}}")
+    for svc in $services; do
+        systemctl --user stop "${svc}.service" 2>/dev/null || true
+    done
+    echo "{{name}} disengaged (will restart on reboot)."
+
+# Remove a quadlet: stop + delete files (opposite of install/engage)
+remove name:
+    #!/bin/bash
+    set -euo pipefail
+    _expand_group_reverse() {
+        case "$1" in
+            forgejo)   echo "forgejo-runner forgejo forgejo-db" ;;
+            temporal)  echo "exousia-worker temporal-ui temporal-server temporal-db" ;;
+            bookstack) echo "bookstack bookstack-db" ;;
+            ai)        echo "open-webui ollama" ;;
+            paperless) echo "paperless paperless-redis paperless-db" ;;
+            immich)    echo "immich immich-ml immich-redis immich-db" ;;
+            dns)       echo "caddy coredns" ;;
+            *)         echo "$1" ;;
+        esac
+    }
+    services=$(_expand_group_reverse "{{name}}")
     for svc in $services; do
         systemctl --user stop "${svc}.service" 2>/dev/null || true
         rm -f ~/.config/containers/systemd/${svc}.container
@@ -334,59 +301,48 @@ disengage name:
         rm -f ~/.config/containers/systemd/${svc}-*.volume
     done
     systemctl --user daemon-reload
-    echo "{{name}} disengaged."
+    echo "{{name}} removed (won't start on reboot)."
 
-# Start a standalone quadlet
-start name:
-    systemctl --user start {{name}}.service
+# Show status of a quadlet (group-aware)
+report name:
+    #!/bin/bash
+    _expand_group() {
+        case "$1" in
+            forgejo)   echo "forgejo-db forgejo forgejo-runner" ;;
+            temporal)  echo "temporal-db temporal-server temporal-ui exousia-worker" ;;
+            bookstack) echo "bookstack-db bookstack" ;;
+            ai)        echo "ollama open-webui" ;;
+            paperless) echo "paperless-db paperless-redis paperless" ;;
+            immich)    echo "immich-db immich-redis immich-ml immich" ;;
+            dns)       echo "coredns caddy" ;;
+            *)         echo "$1" ;;
+        esac
+    }
+    services=$(_expand_group "{{name}}")
+    for svc in $services; do
+        systemctl --user status "${svc}.service" --no-pager 2>/dev/null || true
+        echo ""
+    done
 
-# Stop a standalone quadlet
-stop name:
-    systemctl --user stop {{name}}.service
-
-# Show status of a standalone quadlet
-status name:
-    systemctl --user status {{name}}.service --no-pager
-
-# Follow logs of a standalone quadlet
+# Follow logs of a quadlet (group-aware)
 logs name:
-    journalctl --user -u {{name}}.service -f
-
-# ---------------------------------------------------------------------------
-# Temporal (workflow orchestration — 3 services, opt-in via engage)
-# ---------------------------------------------------------------------------
-
-temporal_services := "temporal-db temporal-server temporal-ui"
-
-# Engage and start the full Temporal stack
-temporal-start:
     #!/bin/bash
-    set -euo pipefail
-    for svc in {{temporal_services}}; do
-        just engage "$svc"
-    done
-    echo "Temporal started — UI: http://localhost:8233, gRPC: localhost:7233"
-
-# Stop and disengage the full Temporal stack
-temporal-stop:
-    #!/bin/bash
-    set -euo pipefail
-    for svc in temporal-ui temporal-server temporal-db; do
-        just disengage "$svc"
-    done
-    echo "Temporal stopped and disengaged."
-
-# Show Temporal service status
-temporal-status:
-    #!/bin/bash
-    systemctl --user status {{temporal_services}} --no-pager 2>/dev/null || true
-
-# Follow Temporal logs
-temporal-logs:
-    #!/bin/bash
+    _expand_group() {
+        case "$1" in
+            forgejo)   echo "forgejo-db forgejo forgejo-runner" ;;
+            temporal)  echo "temporal-db temporal-server temporal-ui exousia-worker" ;;
+            bookstack) echo "bookstack-db bookstack" ;;
+            ai)        echo "ollama open-webui" ;;
+            paperless) echo "paperless-db paperless-redis paperless" ;;
+            immich)    echo "immich-db immich-redis immich-ml immich" ;;
+            dns)       echo "coredns caddy" ;;
+            *)         echo "$1" ;;
+        esac
+    }
+    services=$(_expand_group "{{name}}")
     units=""
-    for svc in {{temporal_services}}; do
-        units="$units -u $svc"
+    for svc in $services; do
+        units="$units -u ${svc}.service"
     done
     journalctl --user $units -f
 
@@ -394,10 +350,8 @@ temporal-logs:
 # DNS + Reverse Proxy (CoreDNS + Caddy)
 # ---------------------------------------------------------------------------
 
-dns_services := "coredns caddy"
-
 # Start CoreDNS + Caddy with config setup and systemd-resolved integration
-dns-start:
+dns-setup:
     #!/bin/bash
     set -euo pipefail
     # Copy config files (remove first — :z relabel changes ownership)
@@ -408,8 +362,7 @@ dns-start:
     cp overlays/deploy/coredns/exousia.local.zone ~/.config/coredns/
     cp overlays/deploy/caddy/Caddyfile ~/.config/caddy/
     # Engage quadlets
-    just engage coredns
-    just engage caddy
+    just engage dns
     # Configure systemd-resolved for .exousia.local
     if [ ! -f /etc/systemd/resolved.conf.d/exousia-local.conf ]; then
         sudo mkdir -p /etc/systemd/resolved.conf.d
@@ -430,55 +383,3 @@ dns-trust-ca:
         sudo tee /etc/pki/ca-trust/source/anchors/caddy-local.crt >/dev/null
     sudo update-ca-trust
     echo "Caddy root CA trusted."
-
-# Stop and disengage DNS + proxy
-dns-stop:
-    #!/bin/bash
-    set -euo pipefail
-    for svc in caddy coredns; do
-        just disengage "$svc"
-    done
-    echo "DNS + proxy stopped."
-
-# Show DNS + proxy status
-dns-status:
-    #!/bin/bash
-    systemctl --user status {{dns_services}} --no-pager 2>/dev/null || true
-
-# Follow DNS + proxy logs
-dns-logs:
-    #!/bin/bash
-    journalctl --user -u coredns.service -u caddy.service -f
-
-# ---------------------------------------------------------------------------
-# Forgejo (git forge — 3 services)
-# ---------------------------------------------------------------------------
-
-forgejo_services_all := "forgejo-db forgejo forgejo-runner"
-
-# Engage and start the full Forgejo stack (db + app + runner)
-forgejo-start:
-    #!/bin/bash
-    set -euo pipefail
-    for svc in {{forgejo_services_all}}; do
-        just engage "$svc"
-    done
-    echo "Forgejo started — http://localhost:3000"
-
-# Stop and disengage the full Forgejo stack
-forgejo-stop:
-    #!/bin/bash
-    set -euo pipefail
-    for svc in forgejo-runner forgejo forgejo-db; do
-        just disengage "$svc"
-    done
-    echo "Forgejo stopped and disengaged."
-
-# Show Forgejo service status
-forgejo-status:
-    #!/bin/bash
-    systemctl --user status {{forgejo_services_all}} --no-pager 2>/dev/null || true
-
-# Follow Forgejo logs
-forgejo-logs:
-    journalctl --user -u forgejo.service -f

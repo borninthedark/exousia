@@ -216,12 +216,12 @@ just temporal-stop              # Stop and disengage Temporal
 just temporal-status            # Show Temporal service status
 just temporal-logs              # Follow Temporal logs
 
-# Standalone containers (pattern rules)
-just engage <name>             # Enable a quadlet: copy files, reload, start (e.g. just engage ollama)
-just disengage <name>          # Disable a quadlet: stop service, remove files
-just start <name>              # Start any quadlet (e.g. just start freebsd)
-just stop <name>               # Stop a standalone quadlet
-just status <name>             # Show status of a standalone quadlet
+# Quadlet lifecycle
+just install <name>            # Copy files for reboot persistence (no start)
+just engage <name>             # Install + start now (e.g. just engage ollama)
+just disengage <name>          # Stop now, keep files (restarts on reboot)
+just remove <name>             # Stop + delete files (opposite of install)
+just report <name>             # Show status of a standalone quadlet
 just logs <name>               # Follow logs of a standalone quadlet
 
 # Infrastructure
@@ -320,6 +320,12 @@ just disengage open-webui
 ```
 
 ## DNS + Reverse Proxy (Local Service Resolution)
+
+> **Note:** `overlays/deploy/` is NOT built into the OCI image. These are
+> host-side quadlet definitions deployed via `just engage` / `just dns-start`.
+
+The naming convention is `<app>.<hostname>.local` — since the machine
+hostname is `exousia`, all services resolve as `*.exousia.local`.
 
 CoreDNS and Caddy form a two-layer local service discovery and TLS
 termination stack. The full request flow:
@@ -562,6 +568,50 @@ systemctl --user daemon-reload
 systemctl --user restart forgejo-runner
 ```
 
+### Forgejo Actions workflow troubleshooting
+
+Unlike GitHub Actions, Forgejo doesn't surface workflow logs as easily.
+Use the API to inspect run status and job logs.
+
+**List recent workflow runs:**
+
+```bash
+TOKEN=$(awk '/password/{print $2}' ~/.netrc)
+curl -s 'http://localhost:3000/api/v1/repos/uryu/exousia/actions/runs?limit=5' \
+  -H "Authorization: token ${TOKEN}" | \
+  python3 -c "
+import json, sys
+runs = json.load(sys.stdin).get('workflow_runs', [])
+runs.sort(key=lambda r: r['id'], reverse=True)
+for r in runs[:5]:
+    print(f'ID:{r[\"id\"]} | {r[\"status\"]:>10} | {r[\"title\"][:60]}')
+"
+```
+
+**Get job logs for a specific run:**
+
+```bash
+curl -s "http://localhost:3000/api/v1/repos/uryu/exousia/actions/runs/${RUN_ID}/jobs" \
+  -H "Authorization: token ${TOKEN}" | python3 -m json.tool
+```
+
+**View logs in the browser:**
+
+```text
+https://forgejo.exousia.local/uryu/exousia/actions/runs/<RUN_ID>
+```
+
+**Common failures:**
+
+- **`apt-get` / network failures in job containers:** The runner's job
+  containers need outbound internet. If `archive.ubuntu.com` is unreachable,
+  it's usually transient (DNS restart, network blip). Retrigger with an
+  empty commit: `git commit --allow-empty -m "ci: retrigger" && git push forgejo HEAD`
+- **Job stuck as `running`:** The runner may have crashed. Check
+  `journalctl --user -u forgejo-runner -n 50` and restart if needed.
+- **`WORKFLOW-*` networks accumulating:** Stale job container networks.
+  Clean with `podman network prune`.
+
 ### Port conflicts
 
 Default ports: Forgejo 3000/2222, Registry 5000. Check for conflicts:
@@ -649,6 +699,12 @@ The `just dns-start` target handles this automatically.
 
 **Resolution not working after dns-start:**
 
+DNS troubleshooting tools available on the host (from `base-pentest`
+bundle and systemd):
+
+- `resolvectl` — query systemd-resolved directly
+- `dig` / `nslookup` / `host` — from `bind-utils`
+
 Verify systemd-resolved is forwarding `.exousia.local` queries:
 
 ```bash
@@ -656,6 +712,9 @@ resolvectl domain
 # Should show "~exousia.local" on one of the links
 
 resolvectl query forgejo.exousia.local
+
+# Or test CoreDNS directly, bypassing resolved:
+dig @127.0.0.1 -p 5354 forgejo.exousia.local A +short
 ```
 
 If the domain routing is missing, check the drop-in exists:

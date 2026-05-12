@@ -139,7 +139,7 @@ systemd-boot.
 
 ## CI Pipeline
 
-The sealed build is a separate workflow (`sealed.yml`) called by Urahara
+The sealed build is a separate workflow (`ulquiorra.yml`) called by Urahara
 after Hiyori builds the base image. Enable it via the `enable_sealed`
 workflow dispatch input.
 

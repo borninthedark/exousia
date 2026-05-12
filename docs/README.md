@@ -31,7 +31,7 @@ Exousia uses two parallel CI/CD pipelines named after BLEACH factions:
 | **Uhin** | `uhin.yml` | 12th -- Security: Hadolint, Checkov, Trivy config scan, Bandit, OSV-Scanner |
 | **Hiyori** | `hiyori.yml` | 12th -- Build, Trivy scan artifact, SBOM submission, Cosign, semver release ([matrix builds](matrix-builds.md)) |
 | **Kon** | `kon.yml` | 12th -- Advanced CodeQL analysis for Python and GitHub Actions |
-| **Sealed** | `sealed.yml` | 12th -- Sealed boot: wraps base image with signed boot chain, composefs, UKI |
+| **Ulquiorra** | `ulquiorra.yml` | Arrancar (Espada 4) -- Sealed boot: wraps base image with signed boot chain, composefs, UKI |
 | **Nemu** | `nemu.yml` | 12th -- Post-CI: refreshes tracked `STATUS.md` from the latest main-branch Urahara run |
 | **Mayuri** | `mayuri.yml` | 12th -- Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
 | **Yoruichi** | `yoruichi.yml` | 2nd -- Base Image Mirror: weekly mirror of `quay.io/fedora/fedora-sway-atomic` to GHCR |
@@ -103,7 +103,10 @@ Secrets are passed to reusable workflows via `secrets: inherit` in Urahara.
 - **[package-management-and-container-builds.md](package-management-and-container-builds.md)** -- Typed package-set model and resolved build-plan direction
 - **[local-build-pipeline.md](local-build-pipeline.md)** -- Quadlet services, local build, GHCR publication, and local registry mirroring
 - **[quadlet-services.md](quadlet-services.md)** -- Comprehensive quadlet service map, dependencies, ports, and volumes
+- **[quadlet-syntax.md](quadlet-syntax.md)** -- Quadlet file syntax, directives, and patterns for creating new services
 - **[forgejo-runner.md](forgejo-runner.md)** -- Forgejo Actions runner setup, registration, and Podman integration
+- **[forgejo-issues.md](forgejo-issues.md)** -- Issue tracking, labels, milestones, and agent integration
+- **[paperless-integration.md](paperless-integration.md)** -- Paperless-ngx API access, bulk upload, and Caddy config
 - **[resource-tuning.md](resource-tuning.md)** -- Quadlet and runner resource allocation profiles and monitoring
 
 - **[plan-temporal-orchestration.md](plan-temporal-orchestration.md)** -- Temporal agent orchestration architecture and workflow design

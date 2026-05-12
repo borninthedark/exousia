@@ -1,0 +1,10 @@
+[Unit]
+Description=Mirror base image to local registry
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=SRC=docker://quay.io/fedora/fedora-sway-atomic:44
+Environment=DST=docker://localhost:5000/fedora-sway-atomic:44
+ExecStart=/usr/bin/skopeo copy --dest-tls-verify=false ${SRC} ${DST}

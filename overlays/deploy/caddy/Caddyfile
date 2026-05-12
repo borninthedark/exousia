@@ -2,14 +2,30 @@
 	local_certs
 }
 
+(authelia) {
+	forward_auth authelia:9091 {
+		uri /api/authz/forward-auth
+		copy_headers Remote-User Remote-Groups Remote-Email Remote-Name
+	}
+}
+
+auth.exousia.local {
+	tls internal
+	reverse_proxy authelia:9091
+}
+
 forgejo.exousia.local {
 	tls internal
+	import authelia
 	reverse_proxy forgejo:3000
 }
 
-plane.exousia.local {
+paperless.exousia.local, docs.exousia.local {
 	tls internal
-	reverse_proxy plane-proxy:8080
+	@api path /api/*
+	reverse_proxy @api paperless:8000
+	import authelia
+	reverse_proxy paperless:8000
 }
 
 ollama.exousia.local {
@@ -17,17 +33,59 @@ ollama.exousia.local {
 	reverse_proxy ollama:11434
 }
 
-webui.exousia.local {
+ai.exousia.local {
 	tls internal
-	reverse_proxy open-webui:3080
+	import authelia
+	reverse_proxy open-webui:8080
 }
 
 temporal.exousia.local {
 	tls internal
-	reverse_proxy temporal-ui:8233
+	import authelia
+	reverse_proxy temporal-ui:8080
 }
 
 registry.exousia.local {
 	tls internal
 	reverse_proxy registry:5000
+}
+
+home.exousia.local {
+	tls internal
+	import authelia
+	reverse_proxy dashy:8080
+}
+
+
+photos.exousia.local {
+	tls internal
+	import authelia
+	reverse_proxy immich:2283
+}
+
+headscale.exousia.local {
+	tls internal
+	import authelia
+	reverse_proxy headscale:8080
+}
+
+changes.exousia.local {
+	tls internal
+	import authelia
+	reverse_proxy changedetection:5000
+}
+
+status.exousia.local {
+	tls internal
+	reverse_proxy uptime-kuma:3001
+}
+
+k3s.exousia.local {
+	tls internal
+	import authelia
+	reverse_proxy https://k3s:6443 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
 }

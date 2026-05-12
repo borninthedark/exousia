@@ -39,7 +39,7 @@ Bounts, and Fullbringers. Role assignments are thematic.
 | `uhin.yml` | `soifon.yml` | Role stays: security |
 | `hiyori.yml` | `kenpachi.yml` | Split: build only (sign/release extracted) |
 | *(new)* | `byakuya.yml` | Extracted: sign + release from hiyori |
-| `sealed.yml` | `ulquiorra.yml` | Role stays: sealed boot |
+| `ulquiorra.yml` | `ulquiorra.yml` | Role stays: sealed boot |
 | `kon.yml` | `szayel.yml` | Role stays: CodeQL |
 | `mayuri.yml` | `tsukishima.yml` | Role stays: dotfiles watcher |
 | `nemu.yml` | `yukio.yml` | Role stays: post-CI status |

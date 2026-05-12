@@ -1,0 +1,17 @@
+[Unit]
+Description=Dashy dashboard
+
+[Container]
+Image=ghcr.io/lissy93/dashy:latest
+ContainerName=dashy
+Network=exousia.network:alias=dashy
+PublishPort=127.0.0.1:3030:8080
+Volume=%h/.config/dashy:/app/user-data:z
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

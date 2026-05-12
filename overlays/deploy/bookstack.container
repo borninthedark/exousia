@@ -1,0 +1,27 @@
+[Unit]
+Description=BookStack documentation platform
+After=bookstack-db.service
+Requires=bookstack-db.service
+
+[Container]
+Image=docker.io/solidnerd/bookstack:24.12.1
+ContainerName=bookstack
+Network=exousia.network:alias=bookstack
+PublishPort=127.0.0.1:6875:8080
+Volume=bookstack-data.volume:/var/www/bookstack/storage/uploads
+Volume=bookstack-files.volume:/var/www/bookstack/public/uploads
+Environment=DB_HOST=bookstack-db
+Environment=DB_PORT=3306
+Environment=DB_DATABASE=bookstack
+Environment=DB_USERNAME=bookstack
+Environment=DB_PASSWORD=bookstack
+EnvironmentFile=%h/.config/bookstack/bookstack.env
+Environment=APP_URL=https://docs.exousia.local
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

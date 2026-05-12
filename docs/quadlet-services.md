@@ -31,26 +31,46 @@ graph TD
         TDB["temporal-db<br/>postgres:15"]
         TS["Temporal Server<br/>:7233"]
         TU["Temporal UI<br/>:8233"]
+        EW["exousia-worker"]
     end
 
     subgraph K3S["Kubernetes"]
         K3["K3s<br/>:6443/:80/:443"]
     end
 
-    subgraph PLANE["Plane Stack"]
-        PDB["plane-db<br/>postgres:15"]
-        PRD["plane-redis<br/>valkey:7"]
-        PMQ["plane-mq<br/>rabbitmq:3"]
-        PMN["plane-minio<br/>:9000/:9090"]
-        PA["plane-api"]
-        PW["plane-worker"]
-        PBW["plane-beat-worker"]
-        PMG["plane-migrator"]
-        PWB["plane-web"]
-        PS["plane-space"]
-        PAD["plane-admin"]
-        PL["plane-live"]
-        PP["plane-proxy<br/>:8080"]
+    subgraph DOCS["Documentation"]
+        BSDB["bookstack-db<br/>mariadb:11"]
+        BS["BookStack<br/>:6875"]
+    end
+
+    subgraph DASH["Dashboard"]
+        DY["Dashy<br/>:3030"]
+    end
+
+    subgraph PAPER["Paperless Stack"]
+        PPDB["paperless-db<br/>postgres:18"]
+        PPR["paperless-redis<br/>redis:8"]
+        PP["Paperless-ngx<br/>:8000"]
+    end
+
+    subgraph IMMICH["Immich Stack"]
+        IDB["immich-db<br/>postgres:14+pgvecto"]
+        IR["immich-redis<br/>redis:8"]
+        IML["immich-ml"]
+        IM["Immich<br/>:2283"]
+    end
+
+    subgraph AUTH["Authentication"]
+        AU["Authelia<br/>:9091"]
+    end
+
+    subgraph MON["Monitoring"]
+        UK["Uptime Kuma<br/>:3001"]
+        CD["changedetection<br/>:5001"]
+    end
+
+    subgraph VPN["VPN"]
+        HS["Headscale<br/>:8080"]
     end
 
     NET --> REG
@@ -59,11 +79,18 @@ graph TD
     NET --> OLL --> OWU
     NET --> K3
     NET --> TDB --> TS --> TU
-    NET --> PDB & PRD & PMQ & PMN --> PA
-    PA --> PW & PBW & PMG
-    PA --> PWB --> PS & PAD
-    PA & PRD --> PL
-    PWB & PS & PAD & PL & PA --> PP
+    TS --> EW
+    NET --> BSDB --> BS
+    NET --> DY
+    NET --> PPDB --> PP
+    NET --> PPR --> PP
+    NET --> IDB --> IM
+    NET --> IR --> IM
+    NET --> IML --> IM
+    NET --> AU
+    NET --> UK
+    NET --> CD
+    NET --> HS
 ```
 
 ## Service Groups
@@ -92,7 +119,7 @@ ingress). kubeconfig is available at `k3s-data` volume or via
 | `forgejo` | `forgejo/forgejo:14.0.2` | 3000, 2222 | `forgejo` | `forgejo-db` |
 | `forgejo-runner` | `code.forgejo.org/forgejo/runner:9.1.1` | - | `forgejo-runner` | `forgejo`, `podman.socket` |
 
-Lifecycle: `just forgejo-start` / `just forgejo-stop`
+Lifecycle: `just engage forgejo` / `just disengage forgejo`
 
 Dependency chain: `exousia.network` -> `forgejo-db` -> `forgejo` -> `forgejo-runner`
 
@@ -109,64 +136,231 @@ setup instructions.
 | `ollama` | `ollama/ollama:latest` | 11434 | `ollama` | `exousia.network` |
 | `open-webui` | `open-webui/open-webui:main` | 3080 | `open-webui` | `ollama` |
 
-Lifecycle: `just engage ollama` / `just engage open-webui`
+Lifecycle: `just engage ai` / `just disengage ai`
 
 Dependency chain: `exousia.network` -> `ollama` -> `open-webui`
 
 Open WebUI connects to Ollama via `http://ollama:11434` on the shared network.
-First start creates the database and requires admin account setup at
-`http://localhost:3080`.
+Accessible at `https://ai.exousia.local`. First start creates the database
+and requires admin account setup.
 
-### Temporal (workflow orchestration, 3 services)
+### Temporal (workflow orchestration, 4 services)
 
 | Service | Image | Host Port | Network Alias | Depends On |
 |---------|-------|-----------|---------------|------------|
 | `temporal-db` | `postgres:15-alpine` | - | `temporal-db` | `exousia.network` |
 | `temporal-server` | `temporalio/auto-setup:latest` | 7233 | `temporal` | `temporal-db` |
 | `temporal-ui` | `temporalio/ui:latest` | 8233 | `temporal-ui` | `temporal-server` |
+| `exousia-worker` | `localhost/exousia-worker:latest` | - | `exousia-worker` | `temporal-server`, `ollama` |
 
-Lifecycle: `just temporal-start` / `just temporal-stop`
+Lifecycle: `just engage temporal` / `just disengage temporal`
 
-Dependency chain: `exousia.network` -> `temporal-db` -> `temporal-server` -> `temporal-ui`
+Dependency chain: `exousia.network` -> `temporal-db` -> `temporal-server` -> `temporal-ui` + `exousia-worker`
 
-The auto-setup image creates DB schemas on first boot. Workers connect to
-`localhost:7233` (host) or `temporal:7233` (network).
+The auto-setup image creates DB schemas on first boot. The `exousia-worker`
+runs Python workflows on the `exousia` task queue:
 
-### Plane (project management, 13 services)
+- **BackupWorkflow** — scheduled volume snapshots with pruning
+- **DocSyncWorkflow** — sync docs from all workspaces to Paperless-ngx
+- **HealthCheckWorkflow** — deep HTTP health checks with alerting
+- **LLMPipelineWorkflow** — multi-agent orchestration (Claude, Codex, Gemini, Ollama)
+
+Build the worker image: `podman build -t localhost/exousia-worker:latest workers/temporal/`
+
+Config: `~/.config/exousia-worker/env` (API keys for Anthropic, OpenAI, Google).
+See `workers/temporal/README.md` for full details.
+
+### BookStack (documentation, 2 services)
 
 | Service | Image | Host Port | Network Alias | Depends On |
 |---------|-------|-----------|---------------|------------|
-| `plane-db` | `postgres:15.7-alpine` | - | - | `exousia.network` |
-| `plane-redis` | `valkey/valkey:7.2.5-alpine` | - | - | `exousia.network` |
-| `plane-mq` | `rabbitmq:3.13.6-management-alpine` | 15672 | - | `exousia.network` |
-| `plane-minio` | `minio/minio:latest` | 9000, 9090 | - | `exousia.network` |
-| `plane-api` | `makeplane/plane-backend:stable` | - | `api` | db, redis, mq, minio |
-| `plane-worker` | `makeplane/plane-backend:stable` | - | - | api, db, redis, mq, minio |
-| `plane-beat-worker` | `makeplane/plane-backend:stable` | - | - | api, db, redis, mq, minio |
-| `plane-migrator` | `makeplane/plane-backend:stable` | - | - | db, redis, mq, minio |
-| `plane-web` | `makeplane/plane-frontend:stable` | - | `web` | api, worker |
-| `plane-space` | `makeplane/plane-space:stable` | - | `space` | api, worker, web |
-| `plane-admin` | `makeplane/plane-admin:stable` | - | `admin` | api, web |
-| `plane-live` | `makeplane/plane-live:stable` | - | `live` | api, redis |
-| `plane-proxy` | `makeplane/plane-proxy:stable` | 8080 | - | web, space, admin, live, api |
+| `bookstack-db` | `mariadb:11` | - | `bookstack-db` | `exousia.network` |
+| `bookstack` | `solidnerd/bookstack:24.12.1` | 6875 | `bookstack` | `bookstack-db` |
 
-Lifecycle: `just plane-install` (first time) / `just plane-start` / `just plane-stop`
+Lifecycle: `just engage bookstack` / `just remove bookstack`
 
-Dependency chain:
+Dependency chain: `exousia.network` -> `bookstack-db` -> `bookstack`
 
-```text
-exousia.network
-  └─> plane-db, plane-redis, plane-mq, plane-minio  (data tier)
-        └─> plane-api, plane-migrator                (backend tier)
-              └─> plane-worker, plane-beat-worker     (async tier)
-              └─> plane-web                           (frontend tier)
-                    └─> plane-space, plane-admin       (sub-frontends)
-              └─> plane-live                          (websocket)
-                    └─> plane-proxy                   (reverse proxy)
+Accessible at `https://docs.exousia.local`. First start creates the database;
+default admin credentials are `admin@admin.com` / `password` — change immediately.
+
+### Paperless-ngx (document management, 3 services)
+
+| Service | Image | Host Port | Network Alias | Depends On |
+|---------|-------|-----------|---------------|------------|
+| `paperless-db` | `postgres:18` | - | `paperless-db` | `exousia.network` |
+| `paperless-redis` | `redis:8` | - | `paperless-redis` | `exousia.network` |
+| `paperless` | `ghcr.io/paperless-ngx/paperless-ngx:latest` | 8000 | `paperless` | `paperless-db`, `paperless-redis` |
+
+Lifecycle: `just engage paperless` / `just disengage paperless`
+
+Dependency chain: `exousia.network` -> `paperless-db` + `paperless-redis` -> `paperless`
+
+Accessible at `https://paperless.exousia.local`. First start requires creating a
+superuser: `podman exec -it paperless python3 manage.py createsuperuser`.
+
+### Immich (photo management, 4 services)
+
+| Service | Image | Host Port | Network Alias | Depends On |
+|---------|-------|-----------|---------------|------------|
+| `immich-db` | `ghcr.io/immich-app/postgres:14-vectorchord` | - | `immich-db` | `exousia.network` |
+| `immich-redis` | `redis:8` | - | `immich-redis` | `exousia.network` |
+| `immich-ml` | `ghcr.io/immich-app/immich-machine-learning:release` | - | `immich-ml` | `immich-redis` |
+| `immich` | `ghcr.io/immich-app/immich-server:release` | 2283 | `immich` | `immich-db`, `immich-redis` |
+
+Lifecycle: `just engage immich` / `just disengage immich`
+
+Dependency chain: `exousia.network` -> `immich-db` + `immich-redis` -> `immich-ml` -> `immich`
+
+Accessible at `https://photos.exousia.local`. First start presents account creation.
+
+### Uptime Kuma (monitoring, 1 service)
+
+| Service | Image | Host Port | Network Alias | Depends On |
+|---------|-------|-----------|---------------|------------|
+| `uptime-kuma` | `louislam/uptime-kuma:2` | 3001 | `uptime-kuma` | `exousia.network` |
+
+Lifecycle: `just engage uptime-kuma` / `just disengage uptime-kuma`
+
+Accessible at `https://kuma.exousia.local`. First start creates admin account.
+
+**Status page:** A public status page is available at `https://status.exousia.local`
+(no SSO). Monitors use container DNS names (e.g. `http://forgejo:3000`) on the
+shared `exousia.network`, grouped into Applications and Infrastructure. SMTP
+notifications are configured via Proton Mail.
+
+**Adding a monitor:** When a new service is added, create a matching Uptime Kuma
+monitor via Socket.IO. Use an existing monitor as a template — HTTP for services
+with a web endpoint, TCP port for everything else.
+
+```python
+import socketio, time
+
+sio = socketio.Client()
+logged_in = False
+
+@sio.event
+def connect():
+    global logged_in
+    def cb(r):
+        global logged_in
+        logged_in = r.get('ok', False)
+    sio.emit('login', {'username': '<user>', 'password': '<pass>'}, callback=cb)
+
+sio.connect('http://localhost:3001')
+time.sleep(2)
+
+if logged_in:
+    # TCP port monitor (preferred — avoids TLS/redirect issues)
+    monitor = {
+        'type': 'port',
+        'name': 'Immich',
+        'hostname': 'immich',          # container DNS name
+        'port': 2283,                  # container port
+        'interval': 60,
+        'retryInterval': 60,
+        'maxretries': 3,
+        'accepted_statuscodes': ['200-299'],
+        'conditions': '[]',
+    }
+    # HTTP monitor alternative:
+    # monitor = {
+    #     'type': 'http',
+    #     'name': 'Forgejo',
+    #     'url': 'http://forgejo:3000',
+    #     'interval': 60,
+    #     'retryInterval': 60,
+    #     'maxretries': 3,
+    #     'accepted_statuscodes': ['200-299'],
+    # }
+    def add_cb(r):
+        print(f"added: {r}")
+    sio.emit('add', monitor, callback=add_cb)
+    time.sleep(2)
+
+sio.disconnect()
 ```
 
-Plane requires an env file at `/etc/exousia/plane/plane.env`. Run
-`just plane-install` on first setup to create it from the template.
+After adding a monitor, update the status page groups to include it (see
+`tools/` or run via the Uptime Kuma web UI).
+
+**Stale DNS after service restarts:** Uptime Kuma's Node.js process caches DNS
+lookups. If a monitored container is restarted and gets a new IP, Kuma will
+report `ENOTFOUND` until its cache expires. Fix by restarting Kuma:
+
+```bash
+systemctl --user restart uptime-kuma.service
+```
+
+This applies any time a monitored service is restarted — Kuma itself must be
+restarted afterward to pick up the new container IPs.
+
+### Authelia (SSO authentication, 1 service)
+
+| Service | Image | Host Port | Network Alias | Depends On |
+|---------|-------|-----------|---------------|------------|
+| `authelia` | `ghcr.io/authelia/authelia:latest` | 9091 | `authelia` | `exousia.network` |
+
+Lifecycle: `just engage authelia` / `just disengage authelia`
+
+Accessible at `https://auth.exousia.local`. Config at `~/.config/authelia/`.
+
+**SSO integration:** All web UIs are protected via Caddy `forward_auth`. The
+Caddyfile uses an `(authelia)` snippet imported per-site:
+
+```caddyfile
+(authelia) {
+    forward_auth authelia:9091 {
+        uri /api/authz/forward-auth
+        copy_headers Remote-User Remote-Groups Remote-Email Remote-Name
+    }
+}
+```
+
+| Protected | Unprotected (no SSO) |
+|-----------|---------------------|
+| Forgejo, Paperless, Open WebUI, Temporal, BookStack, Dashy, Uptime Kuma, Immich, Headscale, changedetection | `auth.exousia.local` (self), `ollama.exousia.local` (API), `registry.exousia.local` (API) |
+
+**SMTP notifications:** Proton Mail SMTP (`smtp.protonmail.ch:465`) via
+`info@princetonstrong.online`. Token stored in `~/.config/authelia/smtp.env`
+(loaded via `EnvironmentFile`). OTP codes for password resets are emailed.
+Filesystem fallback (if SMTP is down): codes written to
+`~/.config/authelia/notification.txt`.
+
+**User database:** `~/.config/authelia/users_database.yml` (file-based, argon2
+hashed passwords). Manage via Authelia web UI or edit the file directly.
+
+**Config files (not in version control):**
+
+| File | Purpose |
+|------|---------|
+| `~/.config/authelia/configuration.yml` | Main config (server, session, storage, notifier) |
+| `~/.config/authelia/users_database.yml` | User accounts + hashed passwords |
+| `~/.config/authelia/smtp.env` | Proton SMTP token |
+| `~/.config/authelia/db.sqlite3` | Session/storage state |
+
+### Headscale (VPN coordination, 1 service)
+
+| Service | Image | Host Port | Network Alias | Depends On |
+|---------|-------|-----------|---------------|------------|
+| `headscale` | `ghcr.io/juanfont/headscale:latest` | 8080, 9090 | `headscale` | `exousia.network` |
+
+Lifecycle: `just engage headscale` / `just disengage headscale`
+
+Accessible at `https://headscale.exousia.local`. Config at `~/.config/headscale/`.
+Self-hosted Tailscale control plane. Create users with
+`podman exec headscale headscale users create <name>`.
+
+### changedetection.io (website monitoring, 1 service)
+
+| Service | Image | Host Port | Network Alias | Depends On |
+|---------|-------|-----------|---------------|------------|
+| `changedetection` | `ghcr.io/dgtlmoon/changedetection.io:latest` | 5001 | `changedetection` | `exousia.network` |
+
+Lifecycle: `just engage changedetection` / `just disengage changedetection`
+
+Accessible at `https://changes.exousia.local`. Monitors web pages for changes
+with configurable check intervals and notifications.
 
 ## Port Summary
 
@@ -176,14 +370,19 @@ Plane requires an env file at `/etc/exousia/plane/plane.env`. Run
 | 3000 | Forgejo | HTTP |
 | 3080 | Open WebUI | HTTP |
 | 5000 | Container Registry | HTTP |
+| 3001 | Uptime Kuma | HTTP |
+| 3030 | Dashy | HTTP |
+| 6875 | BookStack | HTTP |
 | 7233 | Temporal Server | gRPC |
-| 8080 | Plane Proxy | HTTP |
+| 8000 | Paperless-ngx | HTTP |
+| 8080 | Headscale | HTTP |
 | 8233 | Temporal UI | HTTP |
-| 9000 | Plane MinIO API | HTTP |
-| 9090 | Plane MinIO Console | HTTP |
+| 9090 | Headscale metrics | HTTP |
+| 9091 | Authelia | HTTP |
+| 2283 | Immich | HTTP |
+| 5001 | changedetection.io | HTTP |
 | 6443 | K3s API Server | HTTPS |
 | 11434 | Ollama | HTTP |
-| 15672 | Plane RabbitMQ Console | HTTP |
 
 All ports bind to `127.0.0.1` only (no external exposure).
 
@@ -199,13 +398,23 @@ All ports bind to `127.0.0.1` only (no external exposure).
 | `ollama-data` | Ollama | `/root/.ollama` |
 | `open-webui-data` | Open WebUI | `/app/backend/data` |
 | `temporal-db-data` | Temporal DB | `/var/lib/postgresql/data` |
-| `plane-db-data` | Plane DB | `/var/lib/postgresql/data` |
-| `plane-redis-data` | Plane Redis | `/data` |
-| `plane-mq-data` | Plane RabbitMQ | `/var/lib/rabbitmq` |
-| `plane-minio-data` | Plane MinIO | `/data` |
+| `paperless-db-data` | Paperless DB | `/var/lib/postgresql` |
+| `paperless-redis-data` | Paperless Redis | `/data` |
+| `paperless-data` | Paperless-ngx | `/usr/src/paperless/data` |
+| `paperless-media` | Paperless-ngx | `/usr/src/paperless/media` |
+| `immich-db-data` | Immich DB | `/var/lib/postgresql/data` |
+| `immich-redis-data` | Immich Redis | `/data` |
+| `immich-ml-cache` | Immich ML | `/cache` |
+| `immich-upload` | Immich | `/usr/src/app/upload` |
+| `uptime-kuma-data` | Uptime Kuma | `/app/data` |
+| `changedetection-data` | changedetection.io | `/datastore` |
+| `headscale-data` | Headscale | `/var/lib/headscale` |
 | `buildah-layers` | Forgejo Runner (job containers) | `/var/lib/containers/storage` |
 | `caddy-data` | Caddy | `/data` (TLS certs + CA) |
 | `caddy-config` | Caddy | `/config` (runtime config) |
+| `bookstack-data` | BookStack | `/var/www/bookstack/storage/uploads` |
+| `bookstack-files` | BookStack | `/var/www/bookstack/public/uploads` |
+| `bookstack-db-data` | BookStack DB | `/var/lib/mysql` |
 
 ## Container Image Policy
 
@@ -214,18 +423,24 @@ Each registry namespace must be explicitly allowlisted:
 
 | Namespace | Required By |
 |-----------|-------------|
-| `docker.io/library` | postgres, rabbitmq, registry, caddy |
+| `docker.io/library` | postgres, mariadb, registry, caddy |
+| `docker.io/solidnerd` | BookStack |
 | `docker.io/ollama` | Ollama |
 | `docker.io/temporalio` | Temporal server, Temporal UI |
-| `docker.io/makeplane` | Plane services |
-| `docker.io/minio` | Plane MinIO |
-| `docker.io/valkey` | Plane Redis (Valkey) |
 | `docker.io/coredns` | CoreDNS |
 | `codeberg.org/forgejo` | Forgejo |
 | `code.forgejo.org/forgejo` | Forgejo Runner |
 | `docker.io/catthehacker` | Forgejo Runner job containers (`ubuntu:act-latest`) |
 | `docker.io/rancher` | K3s lightweight Kubernetes |
 | `ghcr.io/borninthedark` | Exousia images (sigstore-signed) |
+| `ghcr.io/gethomepage` | Homepage dashboard (disabled) |
+| `ghcr.io/lissy93` | Dashy dashboard |
+| `ghcr.io/paperless-ngx` | Paperless-ngx |
+| `ghcr.io/immich-app` | Immich server, ML, postgres |
+| `ghcr.io/authelia` | Authelia SSO |
+| `ghcr.io/juanfont` | Headscale |
+| `ghcr.io/dgtlmoon` | changedetection.io |
+| `docker.io/louislam` | Uptime Kuma |
 | `ghcr.io/open-webui` | Open WebUI |
 | `quay.io/fedora` | Base image mirror for CI builds |
 | `localhost:5000` | Local registry (`bootc switch`, skopeo) |
@@ -233,30 +448,238 @@ Each registry namespace must be explicitly allowlisted:
 The build image's policy (`overlays/base/configs/containers/policy.json`)
 allows all of `docker.io` and `quay.io` — no per-namespace rules needed there.
 
-## Lifecycle Commands
+## Prerequisites: Networking & Storage
+
+All quadlet services share a single Podman network and use named volumes for
+persistent storage. Both are declared as quadlet unit files — systemd creates
+them automatically when a dependent service starts.
+
+### Network
+
+The shared network is defined in `exousia.network` (quadlet `.network` file):
+
+```ini
+[Network]
+NetworkName=exousia
+Subnet=10.89.1.0/24
+```
+
+Every `.container` quadlet references this network:
+
+```ini
+Network=exousia.network:alias=<service-name>
+```
+
+The `:alias=` suffix registers the container's DNS name on the network, allowing
+inter-container resolution (e.g., `forgejo` can reach `forgejo-db` by name).
+
+### Volumes
+
+Each service's persistent data lives in a named volume declared as a `.volume`
+quadlet file (e.g., `forgejo-data.volume`). These files are minimal:
+
+```ini
+[Volume]
+```
+
+Containers reference them by filename:
+
+```ini
+Volume=forgejo-data.volume:/data
+```
+
+Systemd resolves `.volume` references to `podman volume create` calls on first
+use. Data persists across container restarts and removals — only an explicit
+`podman volume rm` destroys it.
+
+### Login Linger
+
+For user-scoped quadlets to run without an active login session:
 
 ```bash
-# Individual services (any quadlet)
-just engage <name>       # Copy files, reload systemd, start
-just disengage <name>    # Stop, remove files, reload systemd
-just start <name>        # Start (must be engaged)
-just stop <name>         # Stop (keeps files)
-just status <name>       # Show systemd status
-just logs <name>         # Follow journal logs
-
-# App-specific stacks
-just forgejo-start       # Start Forgejo (3 services)
-just forgejo-stop        # Stop Forgejo
-just temporal-start      # Engage + start Temporal (3 services)
-just temporal-stop       # Disengage Temporal
-just plane-install       # First-time: create env file + install quadlets
-just plane-start         # Start Plane (13 services)
-just plane-stop          # Stop Plane
-
-# Bulk operations
-just quadlet-install     # Copy ALL quadlet files to systemd
-just quadlet-uninstall   # Stop + remove ALL quadlets
+loginctl enable-linger $USER
 ```
+
+This is a one-time setup. Without it, all user services stop when you log out.
+
+## Lifecycle Commands
+
+All lifecycle commands are group-aware — pass a service group name to operate on
+the entire stack, or a single service name for individual control.
+
+```bash
+# Quadlet lifecycle (works with groups or individual services)
+just install <name>      # Copy files for reboot persistence (no start)
+just engage <name>       # Install + start now
+just disengage <name>    # Stop now, keep files (restarts on reboot)
+just remove <name>       # Stop + delete files (opposite of install)
+just report <name>       # Show systemd status
+just logs <name>         # Follow journal logs
+```
+
+**Service groups:**
+
+| Group | Expands To |
+|-------|------------|
+| `forgejo` | `forgejo-db`, `forgejo`, `forgejo-runner` |
+| `ai` | `ollama`, `open-webui` |
+| `temporal` | `temporal-db`, `temporal-server`, `temporal-ui`, `exousia-worker` |
+| `bookstack` | `bookstack-db`, `bookstack` |
+| `paperless` | `paperless-db`, `paperless-redis`, `paperless` |
+| `immich` | `immich-db`, `immich-redis`, `immich-ml`, `immich` |
+| `dns` | `coredns`, `caddy` |
+
+**Examples:**
+
+```bash
+just engage forgejo      # Install + start all 3 Forgejo services
+just disengage ai        # Stop Ollama + Open WebUI
+just logs temporal       # Follow logs for entire Temporal stack
+just engage k3s          # Single service, no group expansion
+```
+
+**One-time setup commands:**
+
+```bash
+just dns-setup           # Trust Caddy CA + configure systemd-resolved
+```
+
+## Service Onboarding Checklist
+
+When adding a new service to the stack, follow these steps in order:
+
+### 1. Create Quadlet Files
+
+Create `.container` and `.volume` files in `overlays/deploy/`:
+
+```ini
+# overlays/deploy/my-service.container
+[Unit]
+Description=My Service
+After=exousia.network
+
+[Container]
+Image=docker.io/vendor/my-service:latest
+ContainerName=my-service
+Volume=my-service-data.volume:/data
+Network=exousia.network:alias=my-service
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
+```
+
+```ini
+# overlays/deploy/my-service-data.volume
+[Volume]
+```
+
+Key rules:
+
+- Always include `[Install]\nWantedBy=default.target` for auto-start persistence
+- Use `exousia.network:alias=<name>` for container DNS resolution
+- Bind host ports to `127.0.0.1` only (Caddy handles external access)
+- Add `Label=io.containers.autoupdate=registry` for auto-update support
+
+### 2. Add to justfile Groups (if multi-service)
+
+If the service is part of a multi-container stack, add a group definition to the
+`justfile`. Single services don't need a group — they work by name directly.
+
+```bash
+# In the justfile group expansion block:
+"my-stack") services="my-stack-db my-stack" ;;
+```
+
+### 3. Add Container Image Policy
+
+If the image comes from a new registry namespace, add it to
+`/etc/containers/policy.json` on the host and to the build image's policy at
+`overlays/base/configs/containers/policy.json`.
+
+### 4. Add Caddy Reverse Proxy Route
+
+Add a site block to `overlays/deploy/caddy/Caddyfile`:
+
+```caddyfile
+my-service.exousia.local {
+    tls internal
+    import authelia
+    reverse_proxy my-service:8080
+}
+```
+
+- Use `import authelia` for SSO-protected services
+- Omit `import authelia` for public APIs or auth endpoints
+- For HTTPS backends, add `transport http { tls_insecure_skip_verify }`
+
+### 5. Add CoreDNS Record
+
+Add the hostname to `overlays/deploy/caddy/hosts` (or whichever zone file
+CoreDNS uses) so `*.exousia.local` resolves to the Caddy host.
+
+### 6. Add Dashy Dashboard Entry
+
+Edit `~/.config/dashy/conf.yml` and add the service to the appropriate section:
+
+```yaml
+- title: My Service
+  url: https://my-service.exousia.local
+  icon: fas fa-cog
+  description: Short description
+```
+
+Use [Font Awesome](https://fontawesome.com/icons) or
+[Simple Icons](https://simpleicons.org/) (`si-` prefix) for icons.
+
+### 7. Add Uptime Kuma Monitor
+
+Create a monitor via the Uptime Kuma web UI at `https://status.exousia.local`
+or via Socket.IO script. Use TCP port monitors for reliability (avoids TLS and
+redirect issues):
+
+```python
+monitor = {
+    'type': 'port',
+    'name': 'My Service',
+    'hostname': 'my-service',   # container DNS name
+    'port': 8080,               # container port
+    'interval': 60,
+    'retryInterval': 60,
+    'maxretries': 3,
+    'accepted_statuscodes': ['200-299'],
+    'conditions': '[]',
+}
+```
+
+After adding the monitor, add it to the appropriate status page group
+(Applications or Infrastructure) via the Kuma web UI.
+
+### 8. Update Documentation
+
+Add the service to this file (`docs/quadlet-services.md`):
+
+- Service table in the appropriate section (or create a new section)
+- Port summary table
+- Persistent volumes table
+- Container image policy table (if new namespace)
+- SSO table in the Authelia section (protected vs unprotected)
+
+### Quick Reference
+
+| Step | File/Location | Required? |
+|------|--------------|-----------|
+| Quadlet `.container` + `.volume` | `overlays/deploy/` | Always |
+| justfile group | `justfile` | Multi-service only |
+| Image policy | `/etc/containers/policy.json` | New namespace only |
+| Caddy route | `overlays/deploy/caddy/Caddyfile` | Web-accessible services |
+| CoreDNS record | CoreDNS zone/hosts file | Web-accessible services |
+| Dashy entry | `~/.config/dashy/conf.yml` | Always |
+| Uptime Kuma monitor | Kuma web UI or Socket.IO | Always |
+| Documentation | `docs/quadlet-services.md` | Always |
 
 ---
 
