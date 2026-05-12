@@ -1,24 +1,24 @@
 # Exousia CI Status
 
-> Last updated: 2026-05-11 15:39:27 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/25680280448)
+> Last updated: 2026-05-12 00:46:23 UTC | [View Run](https://github.com/borninthedark/exousia/actions/runs/25705784430)
 
 ## Pipeline: Urahara
 
 | Captain | Division | Role | Status |
 |---------|----------|------|--------|
 | Hikifune | 12th | CI: lint + test | success |
-| Uhin | 12th | Security scanning | failure |
-| Hiyori | 12th | Build & Release | skipped |
+| Uhin | 12th | Security scanning | success |
+| Hiyori | 12th | Build & Release | success |
 
-**Result:** failure
+**Result:** success
 
 ## Build
 
 | Property | Value |
 |----------|-------|
-| Version | `v0.31.0` |
+| Version | `v0.32.0` |
 | Image Type | fedora-sway-atomic |
 | Fedora Version | 44 |
 | Window Manager | sway |
-| Commit | `1e878145` |
-| Triggered By | schedule |
+| Commit | `9475615e` |
+| Triggered By | push |
