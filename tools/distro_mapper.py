@@ -7,6 +7,8 @@ Maps image types to package manager distros for the dependency transpiler.
 This ensures package validation uses the correct package manager for each build.
 """
 
+import sys
+
 # ImageType to distro mapping (Fedora only)
 IMAGE_TYPE_TO_DISTRO = {
     "fedora-bootc": "fedora",
@@ -114,4 +116,4 @@ def main():
 
 
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())

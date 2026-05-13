@@ -399,7 +399,7 @@ graph TD
     A["Urahara<br/>(orchestrator)"] --> B["Hikifune<br/>(CI: lint+test)"]
     A --> C["Uhin<br/>(security scan)"]
     B & C --> D["Hiyori<br/>(build, sign, release)"]
-    D --> E["Gate"]
+    D --> E["Cirucci<br/>(gate)"]
     E --> F["Nemu<br/>(status report)"]
 ```
 
@@ -555,6 +555,8 @@ versioning.
 - [openSUSEway](https://github.com/openSUSE/openSUSEway) for Sway enhancements and config references
 - [Universal Blue](https://universal-blue.org/) and [BlueBuild](https://blue-build.org/) for container-native workflows
 - [fedora-atomic-desktops-sealed](https://github.com/travier/fedora-atomic-desktops-sealed) by Timothée Ravier for sealed bootc image patterns and sigstore verification reference
+- [Project Hummingbird](https://hummingbird-project.io/) (Fedora / Red Hat) for the [Agentic SDLC](https://hummingbird-project.io/docs/agentic-sdlc/) framework and supply chain practices adopted in this project
+- [Konflux CI](https://github.com/konflux-ci/konflux-ci) for SBOM, SLSA provenance, and policy-as-code patterns
 - [Buildah](https://buildah.io/), [Podman](https://podman.io/), [Skopeo](https://github.com/containers/skopeo), [Docker](https://www.docker.com/)
 - [Maple Mono](https://github.com/subframe7536/maple-font) by subframe7536 for the terminal and UI font
 - [Kripton GTK Theme](https://github.com/EliverLara/Kripton) by EliverLara for the desktop color scheme
