@@ -10,8 +10,10 @@ This acts as a "transpiler" for package management, translating package queries
 on Fedora (dnf) into standardized dependency information.
 """
 
+import contextlib
 import json
 import subprocess
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
@@ -237,13 +239,11 @@ class PackageDependencyTranspiler:
     def _detect_distro(self) -> PackageManagerInterface:
         """Auto-detect the current distribution."""
         # Try to read /etc/os-release
-        try:
+        with contextlib.suppress(FileNotFoundError):
             with open("/etc/os-release") as f:
                 content = f.read().lower()
                 if "fedora" in content or "rhel" in content or "centos" in content:
                     return self.checkers["fedora"]
-        except FileNotFoundError:
-            pass
 
         # Fall back to checking which package manager is available
         for checker in self.checkers.values():
@@ -398,4 +398,4 @@ Examples:
 
 
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())

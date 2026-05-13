@@ -1053,9 +1053,9 @@ class TestGeneratorComprehensive:
         """Test the sys.path.insert branch in ModuleProcessorsMixin."""
         gen = _make_generator()
 
-        import generator.generator
-
-        tools_dir = str(Path(generator.generator.__file__).parent.parent)
+        mod = sys.modules[ContainerfileGenerator.__module__]
+        assert mod.__file__ is not None
+        tools_dir = str(Path(mod.__file__).parent.parent)
 
         original_path = sys.path.copy()
         try:
