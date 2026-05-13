@@ -535,3 +535,31 @@ jobs:
           CODEBERG_URL="https://borninthedark:${CODEBERG_TOKEN}@codeberg.org/borninthedark/exousia.git"
           git push "${CODEBERG_URL}" "${BRANCH}:${BRANCH}" --force
           echo "Pushed ${BRANCH} to Codeberg"
+
+      - name: Sync docs to Paperless
+        if: >-
+          needs.bambietta.result == 'success' &&
+          needs.askin.result == 'success'
+        env:
+          PAPERLESS_TOKEN: ${{ secrets.PAPERLESS_TOKEN }}
+        run: |
+          git clone --single-branch --branch "${GITHUB_REF_NAME}" \
+            "${{ github.server_url }}/${{ github.repository }}.git" /tmp/docs-repo
+          cd /tmp/docs-repo
+
+          API="http://paperless:8000/api"
+          TAG_ID=1  # exousia
+
+          # Upload each markdown doc in docs/
+          for doc in $(find docs/ -name '*.md' -type f); do
+            TITLE=$(basename "${doc}" .md)
+            echo "Uploading ${doc} as '${TITLE}'"
+            curl -s -X POST \
+              -H "Authorization: Token ${PAPERLESS_TOKEN}" \
+              -F "document=@${doc}" \
+              -F "title=exousia/${TITLE}" \
+              -F "tags=${TAG_ID}" \
+              "${API}/documents/post_document/" || \
+              echo "::warning::Failed to upload ${doc}"
+          done
+          echo "Doc sync complete"
