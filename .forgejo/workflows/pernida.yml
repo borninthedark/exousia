@@ -551,17 +551,51 @@ jobs:
 
           API="http://paperless:8000/api"
           TAG_ID=1  # exousia
+          AUTH="Authorization: Token ${PAPERLESS_TOKEN}"
 
-          # Upload each markdown doc in docs/
           for doc in $(find docs/ -name '*.md' -type f); do
-            TITLE=$(basename "${doc}" .md)
-            echo "Uploading ${doc} as '${TITLE}'"
-            curl -s -X POST \
-              -H "Authorization: Token ${PAPERLESS_TOKEN}" \
+            TITLE="exousia/$(basename "${doc}" .md)"
+            HASH=$(sha256sum "${doc}" | cut -d' ' -f1)
+
+            # Check if document already exists by title
+            EXISTING=$(curl -s -H "${AUTH}" \
+              "${API}/documents/?title__iexact=${TITLE}&tags__id=${TAG_ID}" \
+              | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          results = data.get('results', [])
+          if results:
+              doc = results[0]
+              print(f'{doc[\"id\"]}|{doc.get(\"notes\", \"\")}')
+          " 2>/dev/null || echo "")
+
+            DOC_ID=$(echo "${EXISTING}" | cut -d'|' -f1)
+            OLD_HASH=$(echo "${EXISTING}" | cut -d'|' -f2)
+
+            if [ -n "${DOC_ID}" ] && [ "${OLD_HASH}" = "${HASH}" ]; then
+              echo "Skipping ${doc} — unchanged (${HASH:0:12})"
+              continue
+            fi
+
+            if [ -n "${DOC_ID}" ]; then
+              echo "Updating ${doc} — content changed"
+              curl -s -X DELETE -H "${AUTH}" "${API}/documents/${DOC_ID}/" || true
+            else
+              echo "Uploading ${doc} — new document"
+            fi
+
+            # Upload and store hash in notes for future diffing
+            RESP=$(curl -s -X POST -H "${AUTH}" \
               -F "document=@${doc}" \
-              -F "title=exousia/${TITLE}" \
+              -F "title=${TITLE}" \
               -F "tags=${TAG_ID}" \
-              "${API}/documents/post_document/" || \
-              echo "::warning::Failed to upload ${doc}"
+              "${API}/documents/post_document/")
+            NEW_ID=$(echo "${RESP}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null || echo "")
+
+            if [ -n "${NEW_ID}" ] && [ "${NEW_ID}" != "None" ]; then
+              curl -s -X PATCH -H "${AUTH}" -H "Content-Type: application/json" \
+                -d "{\"notes\": \"${HASH}\"}" \
+                "${API}/documents/${NEW_ID}/" > /dev/null || true
+            fi
           done
           echo "Doc sync complete"
