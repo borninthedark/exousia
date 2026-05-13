@@ -8,13 +8,15 @@
 #
 # Flow (uryu/* branches only):
 #   Bambietta + Askin (parallel) -> Gremmy (build + push :local/:latest to registry)
-#   -> Gate pushes branch to GitHub (triggers Urahara on GitHub side)
+#   -> Jugram pushes branch to GitHub (triggers Urahara on GitHub side)
 #
 # Vandenreich Pipeline:
 #   Pernida    -> Orchestrator (this file — all jobs inlined)
 #   Bambietta  -> CI: lint + test
 #   Askin      -> Security scanning
 #   Gremmy     -> Build & push to local registry
+#   Lille      -> Integration test + policy gate
+#   Jugram     -> Summary + promotion to GitHub/Codeberg
 #
 # Requires GHCR_PAT and CODEBERG_TOKEN in Forgejo Actions secrets.
 
@@ -344,7 +346,7 @@ jobs:
         id: sbom
         run: |
           TAG="${{ steps.build.outputs.tag }}"
-          trivy image --format cyclonedx --tls-verify=false \
+          trivy image --format cyclonedx --insecure \
             -o sbom-cyclonedx.json \
             "${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}"
           echo "Generated SBOM: $(wc -c < sbom-cyclonedx.json) bytes"
@@ -353,7 +355,7 @@ jobs:
         id: trivy
         run: |
           TAG="${{ steps.build.outputs.tag }}"
-          trivy image --severity CRITICAL,HIGH --exit-code 1 --tls-verify=false \
+          trivy image --severity CRITICAL,HIGH --exit-code 1 --insecure \
             --format json -o trivy-results.json \
             "${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}" || true
 
@@ -418,9 +420,9 @@ jobs:
           echo "| Provenance | SLSA v1 |" >> $GITHUB_STEP_SUMMARY
           echo "| Critical CVEs | ${{ steps.trivy.outputs.critical_count }} |" >> $GITHUB_STEP_SUMMARY
 
-  # -- Verify: integration test + policy gate --
-  verify:
-    name: "Verify (Integration)"
+  # -- Lille (X — The X-Axis): integration test + policy gate --
+  lille:
+    name: "Lille (Verify)"
     needs: [defaults, gremmy]
     if: needs.gremmy.result == 'success'
     runs-on: ubuntu-latest
@@ -437,7 +439,7 @@ jobs:
         run: |
           FVER="f${{ needs.defaults.outputs.primary_version }}"
           skopeo inspect --tls-verify=false \
-            "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}" > /tmp/inspect.json
+            "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}" > /tmp/inspect.json || true
           DIGEST=$(python3 -c "import json; print(json.load(open('/tmp/inspect.json'))['Digest'])")
           echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
           echo "Image digest: ${DIGEST}"
@@ -446,7 +448,7 @@ jobs:
         id: policy_cve
         run: |
           FVER="f${{ needs.defaults.outputs.primary_version }}"
-          trivy image --severity CRITICAL --exit-code 0 --tls-verify=false \
+          trivy image --severity CRITICAL --exit-code 0 --insecure \
             --format json -o /tmp/trivy-critical.json \
             "${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}"
 
@@ -483,10 +485,10 @@ jobs:
           echo "| Critical CVEs | ${{ steps.policy_cve.outputs.critical }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Image metadata valid | passed |" >> $GITHUB_STEP_SUMMARY
 
-  # -- Gate: summary + promotion --
-  gate:
-    name: "Gate (Summary)"
-    needs: [bambietta, askin, gremmy, verify]
+  # -- Jugram (B — The Balance): summary + promotion --
+  jugram:
+    name: "Jugram (Gate)"
+    needs: [bambietta, askin, gremmy, lille]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -499,14 +501,14 @@ jobs:
           echo "| Bambietta (E) | CI: lint + test | ${{ needs.bambietta.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Askin (D) | Security scanning | ${{ needs.askin.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Gremmy (V) | Build & push | ${{ needs.gremmy.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Verify | Integration + policy | ${{ needs.verify.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lille (X) | Integration + policy | ${{ needs.lille.result }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if any job failed
         if: >-
           needs.bambietta.result == 'failure' ||
           needs.askin.result == 'failure' ||
           needs.gremmy.result == 'failure' ||
-          needs.verify.result == 'failure'
+          needs.lille.result == 'failure'
         run: exit 1
 
       - name: Push to remotes (GitHub + Codeberg)
@@ -514,7 +516,7 @@ jobs:
           needs.bambietta.result == 'success' &&
           needs.askin.result == 'success' &&
           needs.gremmy.result == 'success' &&
-          needs.verify.result == 'success'
+          needs.lille.result == 'success'
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
           CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}

@@ -399,7 +399,7 @@ graph TD
     A["Urahara<br/>(orchestrator)"] --> B["Hikifune<br/>(CI: lint+test)"]
     A --> C["Uhin<br/>(security scan)"]
     B & C --> D["Hiyori<br/>(build, sign, release)"]
-    D --> E["Gate"]
+    D --> E["Cirucci<br/>(gate)"]
     E --> F["Nemu<br/>(status report)"]
 ```
 

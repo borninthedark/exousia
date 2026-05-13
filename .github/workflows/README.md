@@ -9,7 +9,7 @@ Two parallel CI/CD pipelines named after BLEACH factions:
 
 | Captain | File | Role |
 |---------|------|------|
-| **Urahara** | `urahara.yml` | Orchestrator: calls Muramasa, Hikifune + Uhin in parallel, then Hiyori, then gate |
+| **Urahara** | `urahara.yml` | Orchestrator: calls Muramasa, Hikifune + Uhin in parallel, then Hiyori, then Cirucci |
 | **Muramasa** | (inline job) | Defaults resolver: reads blueprint, builds version/type matrix |
 | **Hikifune** | `hikifune.yml` | CI: Ruff, Black, isort, pytest |
 | **Uhin** | `uhin.yml` | Security: file-structure gate, overlay Bats, Hadolint, Checkov, Trivy config scan, Bandit, OSV-Scanner |
@@ -18,6 +18,8 @@ Two parallel CI/CD pipelines named after BLEACH factions:
 | **Nemu** | `nemu.yml` | Post-CI: commits refreshed `STATUS.md` with the latest orchestration result |
 | **Mayuri** | `mayuri.yml` | Dotfiles watcher: polls `borninthedark/dotfiles`, triggers Urahara on change |
 | **Ulquiorra** | `ulquiorra.yml` | Sealed boot: wraps base image with signed systemd-boot, UKI, and composefs |
+| **Cirucci** | (inline in `urahara.yml`) | Gate: pipeline summary, promotion PRs for feature branches |
+| **Yoruichi** | `yoruichi.yml` | Base image mirror: weekly sync of upstream Fedora images to GHCR |
 
 ### Image Tags (GitHub / GHCR)
 
@@ -33,9 +35,9 @@ Two parallel CI/CD pipelines named after BLEACH factions:
 ### Pipeline Flow
 
 ```text
-Urahara -> Muramasa (defaults) -> Hikifune + Uhin (parallel) -> Hiyori -> Ulquiorra (optional) -> Gate
-                                                                                                    |
-Nemu (on Urahara completion, main only) <-----------------------------------------------------------+
+Urahara -> Muramasa (defaults) -> Hikifune + Uhin (parallel) -> Hiyori -> Ulquiorra (optional) -> Cirucci (gate)
+                                                                                                       |
+Nemu (on Urahara completion, main only) <--------------------------------------------------------------+
 
 Mayuri (scheduled, independent) -> triggers Urahara if dotfiles changed
 ```
@@ -45,14 +47,14 @@ Mayuri (scheduled, independent) -> triggers Urahara if dotfiles changed
 ```text
 Feature branch (uryu/*):
   Urahara -> Muramasa -> Hikifune + Uhin (parallel) -> Hiyori (skipped on forks)
-    -> Gate creates promotion PR to main
+    -> Cirucci creates promotion PR to main
 
 Main branch:
   Urahara -> Muramasa -> Hikifune + Uhin (parallel) -> Hiyori (:prod on GHCR)
-    -> Ulquiorra (optional) -> Gate
+    -> Ulquiorra (optional) -> Cirucci (gate)
 ```
 
-On successful feature branch pushes, the Gate job auto-creates a PR to
+On successful feature branch pushes, Cirucci auto-creates a PR to
 merge the branch into `main`. If a PR already exists, it skips creation.
 
 ### Triggers
@@ -69,6 +71,8 @@ merge the branch into `main`. If a PR already exists, it skips creation.
 | **Bambietta** | The Explode (E) | CI: Ruff, Black, isort, pytest |
 | **Askin** | The Deathdealing (D) | Security: file-structure, overlay Bats, Hadolint, Checkov, Trivy, Bandit, OSV-Scanner |
 | **Gremmy** | The Visionary (V) | Build with buildah, push to local registry (`localhost:5000`) |
+| **Lille** | The X-Axis (X) | Integration test + policy gate (CVE threshold, image metadata) |
+| **Jugram** | The Balance (B) | Summary + promotion to GitHub/Codeberg, Paperless doc sync |
 
 All Vandenreich jobs are inlined into `pernida.yml` (not separate
 `workflow_call` files) to avoid a Forgejo label dispatch bug where called
@@ -88,27 +92,25 @@ workflow jobs receive empty runner labels and never get picked up.
 ```text
 Feature branch (uryu/*):
   Pernida -> Bambietta + Askin (parallel) -> Gremmy (:dev to local registry)
-    -> Gate creates promotion PR to Forgejo main
-
-Pull request (to main):
-  Pernida -> Bambietta + Askin (parallel) -> Gremmy (build-only smoke test)
+    -> Lille (verify) -> Jugram (gate) pushes to GitHub/Codeberg
 
 Main branch:
   Pernida -> Bambietta + Askin (parallel) -> Gremmy (:dev to local registry)
-    -> Gate pushes to GitHub main -> triggers Urahara -> Hiyori (:prod on GHCR)
+    -> Lille (verify) -> Jugram (gate) pushes to GitHub main
+    -> triggers Urahara -> Hiyori (:prod on GHCR)
 ```
 
 ### Promotion Strategy
 
 The Vandenreich pipeline implements a two-stage promotion model:
 
-1. **Feature → Forgejo main**: On successful feature branch builds, the Gate
-   job creates a pull request in Forgejo to merge the feature branch into
+1. **Feature → Forgejo main**: On successful feature branch builds, Jugram
+   creates a pull request in Forgejo to merge the feature branch into
    `main`. This gives the developer a chance to review and merge. If a PR
    already exists for the branch, it is not duplicated.
 
-2. **Forgejo main → GitHub main**: On successful `main` builds, the Gate
-   job pushes Forgejo's `main` to GitHub via `git push --force-with-lease`.
+2. **Forgejo main → GitHub main**: On successful `main` builds, Jugram
+   pushes Forgejo's `main` to GitHub via `git push --force-with-lease`.
    This triggers the GitHub-side Urahara pipeline, which builds the `:prod`
    image on GHCR.
 
@@ -134,7 +136,7 @@ Configure in Forgejo: **Repository Settings → Actions → Secrets**.
 |---------|----------------------|----------------------|
 | Registry | GHCR (`ghcr.io`) | Local (`localhost:5000`) |
 | Image signing | Cosign (OIDC keyless) | Not applicable |
-| SBOM | Submitted to GitHub Dependency Graph | Not applicable |
+| SBOM | Submitted to GitHub Dependency Graph | CycloneDX via Trivy (local) |
 | CodeQL | Yes (Kon) | Not available |
 | Status report | Nemu commits STATUS.md | Not applicable |
 | Marketplace actions | SHA-pinned | Replaced with binary installs |

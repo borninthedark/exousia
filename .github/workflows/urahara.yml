@@ -1,5 +1,5 @@
 # Kisuke Urahara - 12th Division - Orchestrator
-# Calls Hikifune (CI) + Uhin (Security) in parallel, then Hiyori, then gate.
+# Calls Hikifune (CI) + Uhin (Security) in parallel, then Hiyori, then Cirucci (gate).
 #
 # 12th Division Pipeline:
 #   Urahara  -> Orchestrator
@@ -170,9 +170,9 @@ jobs:
       packages: write
       id-token: write
 
-  # -- Gate: summary of all jobs --
-  gate:
-    name: "Gate (Summary)"
+  # -- Cirucci: summary + promotion --
+  cirucci:
+    name: "Cirucci (Gate)"
     needs: [hikifune, uhin, hiyori, ulquiorra]
     runs-on: ubuntu-latest
     if: always()
