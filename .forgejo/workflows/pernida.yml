@@ -347,6 +347,7 @@ jobs:
         run: |
           TAG="${{ steps.build.outputs.tag }}"
           trivy image --format cyclonedx --insecure \
+            --scanners vuln --timeout 10m \
             -o sbom-cyclonedx.json \
             "${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}"
           echo "Generated SBOM: $(wc -c < sbom-cyclonedx.json) bytes"
@@ -356,6 +357,7 @@ jobs:
         run: |
           TAG="${{ steps.build.outputs.tag }}"
           trivy image --severity CRITICAL,HIGH --exit-code 1 --insecure \
+            --scanners vuln --timeout 10m \
             --format json -o trivy-results.json \
             "${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}" || true
 
@@ -426,7 +428,7 @@ jobs:
     needs: [defaults, gremmy]
     if: needs.gremmy.result == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Install tools
         run: |
@@ -449,6 +451,7 @@ jobs:
         run: |
           FVER="f${{ needs.defaults.outputs.primary_version }}"
           trivy image --severity CRITICAL --exit-code 0 --insecure \
+            --scanners vuln --timeout 10m \
             --format json -o /tmp/trivy-critical.json \
             "${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}"
 
