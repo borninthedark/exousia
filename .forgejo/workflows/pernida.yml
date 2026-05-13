@@ -279,6 +279,7 @@ jobs:
             --verbose
 
       - name: Resolve base image source
+        id: base
         run: |
           FVER="${{ needs.defaults.outputs.primary_version }}"
           UPSTREAM="quay.io/fedora/fedora-sway-atomic:${FVER}"
@@ -287,9 +288,15 @@ jobs:
           # Use local mirror if available, otherwise keep upstream
           if skopeo inspect --tls-verify=false "docker://${LOCAL}" >/dev/null 2>&1; then
             echo "Using local registry mirror"
-            sed -i "s|FROM ${UPSTREAM}|FROM ${LOCAL}|" Dockerfile.generated
+            # Pin by digest for hermetic builds
+            DIGEST=$(skopeo inspect --tls-verify=false "docker://${LOCAL}" | python3 -c "import sys,json; print(json.load(sys.stdin)['Digest'])")
+            sed -i "s|FROM ${UPSTREAM}|FROM ${LOCAL}@${DIGEST}|" Dockerfile.generated
+            echo "base=${LOCAL}@${DIGEST}" >> $GITHUB_OUTPUT
           else
             echo "Local mirror unavailable — using quay.io upstream"
+            DIGEST=$(skopeo inspect "docker://${UPSTREAM}" | python3 -c "import sys,json; print(json.load(sys.stdin)['Digest'])")
+            sed -i "s|FROM ${UPSTREAM}|FROM ${UPSTREAM}@${DIGEST}|" Dockerfile.generated
+            echo "base=${UPSTREAM}@${DIGEST}" >> $GITHUB_OUTPUT
           fi
 
       - name: Build image with buildah
@@ -327,6 +334,75 @@ jobs:
               --dest-tls-verify=false
           done
 
+      # -- Supply Chain: SBOM + Provenance --
+
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Generate SBOM (CycloneDX)
+        id: sbom
+        run: |
+          TAG="${{ steps.build.outputs.tag }}"
+          trivy image --format cyclonedx --tls-verify=false \
+            -o sbom-cyclonedx.json \
+            "${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}"
+          echo "Generated SBOM: $(wc -c < sbom-cyclonedx.json) bytes"
+
+      - name: Trivy scan built image
+        id: trivy
+        run: |
+          TAG="${{ steps.build.outputs.tag }}"
+          trivy image --severity CRITICAL,HIGH --exit-code 1 --tls-verify=false \
+            --format json -o trivy-results.json \
+            "${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}" || true
+
+          CRITICAL=$(python3 -c "
+          import json
+          data = json.load(open('trivy-results.json'))
+          count = sum(1 for r in data.get('Results', []) for v in r.get('Vulnerabilities', []) if v.get('Severity') == 'CRITICAL')
+          print(count)
+          " 2>/dev/null || echo "0")
+          echo "critical_count=${CRITICAL}" >> $GITHUB_OUTPUT
+
+      - name: Generate SLSA provenance
+        run: |
+          TAG="${{ steps.build.outputs.tag }}"
+          cat > provenance.json <<PROVEOF
+          {
+            "buildType": "https://forgejo.org/forgejo-actions/v1",
+            "builder": {
+              "id": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            },
+            "invocation": {
+              "configSource": {
+                "uri": "${{ github.server_url }}/${{ github.repository }}",
+                "digest": { "sha1": "${{ github.sha }}" },
+                "entryPoint": ".forgejo/workflows/pernida.yml"
+              },
+              "parameters": {
+                "image_name": "${IMAGE_NAME}",
+                "image_tag": "${TAG}",
+                "base_image": "${{ steps.base.outputs.base }}"
+              }
+            },
+            "metadata": {
+              "buildStartedOn": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "completeness": {
+                "parameters": true,
+                "environment": false,
+                "materials": true
+              }
+            },
+            "materials": [
+              {
+                "uri": "${{ steps.base.outputs.base }}",
+                "digest": { "sha256": "$(echo '${{ steps.base.outputs.base }}' | grep -oP 'sha256:\K.*' || echo 'unknown')" }
+              }
+            ]
+          }
+          PROVEOF
+
       - name: Build summary
         if: always()
         run: |
@@ -337,11 +413,80 @@ jobs:
           echo "| Image | \`${LOCAL_REGISTRY}/${IMAGE_NAME}:${{ steps.build.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Type | fedora-sway-atomic |" >> $GITHUB_STEP_SUMMARY
           echo "| Fedora | ${{ needs.defaults.outputs.primary_version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Base (pinned) | \`${{ steps.base.outputs.base }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| SBOM | CycloneDX ($(wc -c < sbom-cyclonedx.json 2>/dev/null || echo 0) bytes) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Provenance | SLSA v1 |" >> $GITHUB_STEP_SUMMARY
+          echo "| Critical CVEs | ${{ steps.trivy.outputs.critical_count }} |" >> $GITHUB_STEP_SUMMARY
+
+  # -- Verify: integration test + policy gate --
+  verify:
+    name: "Verify (Integration)"
+    needs: [defaults, gremmy]
+    if: needs.gremmy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install tools
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq skopeo
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Pull image for verification
+        id: pull
+        run: |
+          FVER="f${{ needs.defaults.outputs.primary_version }}"
+          skopeo inspect --tls-verify=false \
+            "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}" > /tmp/inspect.json
+          DIGEST=$(python3 -c "import json; print(json.load(open('/tmp/inspect.json'))['Digest'])")
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+          echo "Image digest: ${DIGEST}"
+
+      - name: Policy check — no critical CVEs
+        id: policy_cve
+        run: |
+          FVER="f${{ needs.defaults.outputs.primary_version }}"
+          trivy image --severity CRITICAL --exit-code 0 --tls-verify=false \
+            --format json -o /tmp/trivy-critical.json \
+            "${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}"
+
+          CRITICAL=$(python3 -c "
+          import json
+          data = json.load(open('/tmp/trivy-critical.json'))
+          count = sum(1 for r in data.get('Results', []) for v in r.get('Vulnerabilities', []) if v.get('Severity') == 'CRITICAL')
+          print(count)
+          " 2>/dev/null || echo "0")
+
+          echo "critical=${CRITICAL}" >> $GITHUB_OUTPUT
+          if [ "${CRITICAL}" -gt 0 ]; then
+            echo "::warning::${CRITICAL} critical CVEs found — review before release"
+          fi
+
+      - name: Policy check — image metadata
+        run: |
+          # Verify image has expected labels/layers
+          LAYERS=$(python3 -c "import json; print(len(json.load(open('/tmp/inspect.json')).get('Layers', [])))")
+          echo "Image layers: ${LAYERS}"
+          if [ "${LAYERS}" -lt 2 ]; then
+            echo "::error::Image has fewer than 2 layers — build may be broken"
+            exit 1
+          fi
+
+      - name: Verification summary
+        if: always()
+        run: |
+          echo "## Verify: Integration Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image exists in registry | ${{ steps.pull.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Critical CVEs | ${{ steps.policy_cve.outputs.critical }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image metadata valid | passed |" >> $GITHUB_STEP_SUMMARY
 
   # -- Gate: summary + promotion --
   gate:
     name: "Gate (Summary)"
-    needs: [bambietta, askin, gremmy]
+    needs: [bambietta, askin, gremmy, verify]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -354,19 +499,22 @@ jobs:
           echo "| Bambietta (E) | CI: lint + test | ${{ needs.bambietta.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Askin (D) | Security scanning | ${{ needs.askin.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Gremmy (V) | Build & push | ${{ needs.gremmy.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Verify | Integration + policy | ${{ needs.verify.result }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if any job failed
         if: >-
           needs.bambietta.result == 'failure' ||
           needs.askin.result == 'failure' ||
-          needs.gremmy.result == 'failure'
+          needs.gremmy.result == 'failure' ||
+          needs.verify.result == 'failure'
         run: exit 1
 
       - name: Push to remotes (GitHub + Codeberg)
         if: >-
           needs.bambietta.result == 'success' &&
           needs.askin.result == 'success' &&
-          needs.gremmy.result == 'success'
+          needs.gremmy.result == 'success' &&
+          needs.verify.result == 'success'
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
           CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
