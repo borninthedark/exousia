@@ -1,0 +1,24 @@
+[Unit]
+Description=Forgejo Actions runner (witness)
+After=forgejo.service
+Requires=forgejo.service
+
+[Container]
+Image=code.forgejo.org/forgejo/runner:9.1.1
+ContainerName=forgejo-runner-witness
+Volume=forgejo-runner-witness-data.volume:/data:U
+Volume=%t/podman/podman.sock:/var/run/docker.sock:ro
+Network=exousia.network:alias=forgejo-runner-witness
+Label=io.containers.autoupdate=registry
+UserNS=keep-id
+SecurityLabelDisable=true
+
+WorkingDir=/data
+Exec=forgejo-runner -c /data/config.yaml daemon
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target
