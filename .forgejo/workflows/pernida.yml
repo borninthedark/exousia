@@ -23,6 +23,7 @@
 name: "Pernida — Orchestrator"
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "30 15 * * *"  # daily 11:30 ET (15:30 UTC), after base image mirror at 07:30
   push:
