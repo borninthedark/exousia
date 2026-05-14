@@ -23,6 +23,8 @@
 name: "Pernida — Orchestrator"
 
 on:
+  schedule:
+    - cron: "30 15 * * *"  # daily 11:30 ET (15:30 UTC), after base image mirror at 07:30
   push:
     branches: ["uryu/*"]
     paths-ignore:
