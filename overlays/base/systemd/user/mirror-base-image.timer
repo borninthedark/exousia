@@ -1,10 +1,9 @@
 [Unit]
-Description=Mirror base image weekly
+Description=Mirror base image daily
 
 [Timer]
-OnCalendar=weekly
+OnCalendar=*-*-* 07:30:00
 Persistent=true
-RandomizedDelaySec=1h
 
 [Install]
 WantedBy=timers.target
