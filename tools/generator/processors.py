@@ -273,9 +273,12 @@ class ModuleProcessorsMixin:
         self.lines.append("# hadolint ignore=DL3041,SC2086")
         self.lines.append("RUN set -euxo pipefail; \\")
 
-        # Install dnf5
+        # Install dnf5 and disable flaky repos
         self.lines.append("    dnf install -y dnf5 dnf5-plugins && \\")
         self.lines.append("    rm -f /usr/bin/dnf && ln -s /usr/bin/dnf5 /usr/bin/dnf; \\")
+        self.lines.append(
+            "    dnf config-manager setopt 'fedora-updates-archive.enabled=0' || true; \\"
+        )
 
         # Add repositories (RPMFusion for Fedora)
         if self.context.distro == "fedora":
