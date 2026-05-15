@@ -64,9 +64,6 @@ modules:
       - src: overlays/base/tmpfiles/package-state-dirs.conf
         dst: /usr/lib/tmpfiles.d/package-state-dirs.conf
         mode: "0644"
-      - src: overlays/sway/repos/
-        dst: /etc/yum.repos.d/
-        mode: "0644"
       - src: overlays/base/configs/
         dst: /etc/
         mode: "0644"
