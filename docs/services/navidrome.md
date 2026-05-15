@@ -11,7 +11,7 @@ Self-hosted music streaming server with Subsonic API support.
 | Port | `4533` |
 | URL | `https://sound.exousia.local` |
 | Network | `exousia.network` |
-| Music path | `/var/home/uryu/Music` (read-only mount) |
+| Music path | `/var/home/uryu/Music` (read-only mount, `:z` SELinux relabel) |
 | Data volume | `navidrome-data` |
 | Auto-update | Yes (`io.containers.autoupdate=registry`) |
 
