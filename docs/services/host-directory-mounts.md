@@ -8,7 +8,7 @@ Services that mount host directories for media ingestion and library access.
 |---------|-----------|----------------|------|---------|
 | Navidrome | `~/Music` | `/music` | read-only | Music library |
 | Immich | `~/Pictures` | `/usr/src/app/external/pictures` | read-only | External photo library |
-| Paperless | `~/Documents` | `/usr/src/paperless/consume` | read-only | Document consumption |
+| Paperless | `~/Documents` | `/usr/src/paperless/consume` | read-write | Document consumption |
 
 ## SELinux
 
@@ -59,8 +59,12 @@ Paperless automatically watches `/usr/src/paperless/consume` for new
 files. Any document placed in `~/Documents` will be ingested on the
 next consumption cycle (default: every ~10 minutes).
 
-The mount is read-only, so Paperless cannot delete consumed files from
-the host. Processed documents are stored in the `paperless-media` volume.
+The mount is read-write because Paperless's init script requires
+ownership of the consume directory. By default, Paperless deletes
+files from the consume directory after ingestion. To preserve
+originals in `~/Documents`, set `PAPERLESS_CONSUMER_DELETE_DUPLICATES=false`
+and `PAPERLESS_CONSUMER_ENABLE_BARCODES=false` in the quadlet, or
+configure consumption behavior via the web UI.
 
 ### Navidrome — Music Library
 
