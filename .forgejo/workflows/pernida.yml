@@ -445,24 +445,46 @@ jobs:
           TAG="${{ steps.build.outputs.tag }}"
           IMAGE="${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}"
 
-          # Base64-encode SBOM and provenance for annotation storage
-          SBOM_B64=$(base64 -w0 sbom-cyclonedx.json)
-          PROV_B64=$(base64 -w0 provenance.json)
+          # Push SBOM and provenance as separate OCI artifacts
+          # (inline base64 annotations exceed ARG_MAX for large SBOMs)
+          SBOM_TAG="${TAG}-sbom"
+          PROV_TAG="${TAG}-provenance"
 
-          # Annotate the image in local container storage
+          # Create minimal OCI images carrying the attestation files
+          CTR_SBOM=$(buildah from scratch)
+          buildah copy "${CTR_SBOM}" sbom-cyclonedx.json /sbom-cyclonedx.json
+          buildah config \
+            --annotation "org.opencontainers.image.ref.name=${TAG}" \
+            --annotation "org.opencontainers.image.description=CycloneDX SBOM" \
+            "${CTR_SBOM}"
+          buildah commit "${CTR_SBOM}" "${LOCAL_REGISTRY}/${IMAGE_NAME}:${SBOM_TAG}"
+          buildah rm "${CTR_SBOM}"
+
+          CTR_PROV=$(buildah from scratch)
+          buildah copy "${CTR_PROV}" provenance.json /provenance.json
+          buildah config \
+            --annotation "org.opencontainers.image.ref.name=${TAG}" \
+            --annotation "org.opencontainers.image.description=SLSA Provenance" \
+            "${CTR_PROV}"
+          buildah commit "${CTR_PROV}" "${LOCAL_REGISTRY}/${IMAGE_NAME}:${PROV_TAG}"
+          buildah rm "${CTR_PROV}"
+
+          # Add lightweight annotations pointing to the attestation tags
           CTR=$(buildah from --pull=false "${IMAGE}")
           buildah config \
-            --annotation "org.opencontainers.image.sbom.cyclonedx=${SBOM_B64}" \
-            --annotation "org.opencontainers.image.provenance.slsa=${PROV_B64}" \
+            --annotation "org.opencontainers.image.sbom=${LOCAL_REGISTRY}/${IMAGE_NAME}:${SBOM_TAG}" \
+            --annotation "org.opencontainers.image.provenance=${LOCAL_REGISTRY}/${IMAGE_NAME}:${PROV_TAG}" \
             "${CTR}"
           buildah commit "${CTR}" "${IMAGE}"
           buildah rm "${CTR}"
 
-          # Re-push the annotated tag
-          skopeo copy \
-            "containers-storage:${IMAGE}" \
-            "docker://${IMAGE}" \
-            --dest-tls-verify=false
+          # Push all three tags
+          for T in "${TAG}" "${SBOM_TAG}" "${PROV_TAG}"; do
+            skopeo copy \
+              "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:${T}" \
+              "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:${T}" \
+              --dest-tls-verify=false
+          done
 
       - name: Build summary
         if: always()

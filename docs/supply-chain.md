@@ -27,18 +27,21 @@ Every build generates a Software Bill of Materials in CycloneDX JSON
 format using Trivy. The SBOM is:
 
 - Generated in the Gremmy build job
-- Base64-encoded and attached to the image as an OCI annotation
-  (`org.opencontainers.image.sbom.cyclonedx`)
-- Travels with the image through registry pushes
+- Stored as a separate OCI artifact tagged `<image-tag>-sbom`
+- Referenced from the main image via the `org.opencontainers.image.sbom` annotation
 
 To extract the SBOM from a built image:
 
 ```bash
-skopeo inspect --tls-verify=false docker://registry:5000/exousia:latest \
-  | python3 -c "import sys,json,base64; \
-    ann=json.load(sys.stdin).get('Annotations',{}); \
-    print(base64.b64decode(ann.get('org.opencontainers.image.sbom.cyclonedx','')).decode())" \
-  | python3 -m json.tool
+# Get the SBOM artifact tag from the image annotation
+SBOM_REF=$(skopeo inspect --tls-verify=false docker://registry:5000/exousia:latest \
+  | python3 -c "import sys,json; print(json.load(sys.stdin).get('Annotations',{}).get('org.opencontainers.image.sbom',''))")
+
+# Copy the SBOM artifact and extract the file
+ID=$(podman create --tls-verify=false "${SBOM_REF}")
+podman cp "${ID}":/sbom-cyclonedx.json sbom-cyclonedx.json
+podman rm "${ID}"
+python3 -m json.tool sbom-cyclonedx.json
 ```
 
 ### 3. SLSA Provenance
@@ -51,8 +54,9 @@ A SLSA v1 provenance document is generated for each build, capturing:
 - **Parameters** — image name, tag, base image
 - **Materials** — base image URI + digest
 
-The provenance is attached to the image as an OCI annotation
-(`org.opencontainers.image.provenance.slsa`).
+The provenance is stored as a separate OCI artifact tagged `<image-tag>-provenance`
+and referenced from the main image via the `org.opencontainers.image.provenance`
+annotation.
 
 ### 4. OCI Image Labels
 
