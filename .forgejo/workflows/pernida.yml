@@ -281,6 +281,12 @@ jobs:
           apt-get update -qq
           apt-get install -y -qq buildah skopeo
 
+      - name: Authenticate to GHCR (for RPM override images)
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        run: |
+          echo "${GHCR_PAT}" | buildah login ghcr.io -u borninthedark --password-stdin
+
       - name: Transpile YAML blueprint
         id: transpile
         run: |
