@@ -66,6 +66,9 @@ originals in `~/Documents`, set `PAPERLESS_CONSUMER_DELETE_DUPLICATES=false`
 and `PAPERLESS_CONSUMER_ENABLE_BARCODES=false` in the quadlet, or
 configure consumption behavior via the web UI.
 
+All documents consumed from `~/Documents` are automatically tagged
+with `local-import` via `PAPERLESS_CONSUMER_TAGS=local-import`.
+
 ### Navidrome — Music Library
 
 Navidrome scans `/music` on a configurable schedule (`ND_SCANSCHEDULE=1h`).
