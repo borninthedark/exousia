@@ -131,6 +131,12 @@ jobs:
             ${{ inputs.is_primary && format('{0}:latest', steps.image.outputs.image) || '' }}
             ${{ steps.tag.outputs.rolling == 'true' && format('{0}:{1}', steps.image.outputs.image, steps.tag.outputs.rolling_tag) || '' }}
             ${{ steps.tag.outputs.rolling == 'true' && inputs.is_primary && format('{0}:current', steps.image.outputs.image) || '' }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+            org.opencontainers.image.title=${{ github.event.repository.name }}
+            org.opencontainers.image.description=Fedora Sway Atomic custom image
           build-args: |
             FEDORA_VERSION=${{ steps.config.outputs.build_version }}
             IMAGE_TYPE=${{ steps.config.outputs.build_image_type }}
@@ -195,7 +201,18 @@ jobs:
       TRIVY_PASSWORD: ${{ secrets.GHCR_PAT }}
       TRIVY_USERNAME: ${{ github.repository_owner }}
     steps:
-      - name: Trivy vulnerability scan
+      - name: Trivy vulnerability scan (CRITICAL — enforced)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
+        with:
+          image-ref: ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
+          format: table
+          output: trivy-critical.txt
+          hide-progress: true
+          severity: CRITICAL
+          exit-code: 1
+
+      - name: Trivy vulnerability scan (HIGH — advisory)
+        if: always()
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           image-ref: ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
@@ -221,7 +238,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: trivy-image-scan-${{ needs.build.outputs.image_tag }}
-          path: trivy-results.txt
+          path: |
+            trivy-critical.txt
+            trivy-results.txt
           retention-days: 14
 
       - name: Upload SBOM artifact
