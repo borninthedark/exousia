@@ -11,7 +11,7 @@ Self-hosted music streaming server with Subsonic API support.
 | Port | `4533` |
 | URL | `https://sound.exousia.local` |
 | Network | `exousia.network` |
-| Music path | `/var/home/uryu/Music` (read-only mount, `:z` SELinux relabel) |
+| Music path | `/var/home/uryu/Music/Navidrome` (read-only mount, `:z` SELinux relabel) |
 | Data volume | `navidrome-data` |
 | Auto-update | Yes (`io.containers.autoupdate=registry`) |
 
@@ -66,5 +66,5 @@ Navidrome implements the Subsonic API. Compatible clients:
 
 1. Navigate to `https://sound.exousia.local`
 2. Create the admin user on the setup page
-3. Drop music files into `~/Music/`
+3. Drop music files into `~/Music/Navidrome/`
 4. Library scans automatically every hour, or trigger manually from Settings

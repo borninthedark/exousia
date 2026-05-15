@@ -6,9 +6,9 @@ Services that mount host directories for media ingestion and library access.
 
 | Service | Host Path | Container Path | Mode | Purpose |
 |---------|-----------|----------------|------|---------|
-| Navidrome | `~/Music` | `/music` | read-only | Music library |
-| Immich | `~/Pictures` | `/usr/src/app/external/pictures` | read-only | External photo library |
-| Paperless | `~/Documents` | `/usr/src/paperless/consume` | read-write | Document consumption |
+| Navidrome | `~/Music/Navidrome` | `/music` | read-only | Music library |
+| Immich | `~/Pictures/Immich` | `/usr/src/app/external/pictures` | read-only | External photo library |
+| Paperless | `~/Documents/Paperless` | `/usr/src/paperless/consume` | read-write | Document consumption |
 
 ## SELinux
 
@@ -17,7 +17,7 @@ relabeling. Without this flag, SELinux enforcing mode blocks container
 access to `user_home_t` labeled files.
 
 ```ini
-Volume=%h/Pictures:/usr/src/app/external/pictures:ro,z
+Volume=%h/Pictures/Immich:/usr/src/app/external/pictures:ro,z
 ```
 
 The `:z` flag tells podman to relabel the host directory with
@@ -56,21 +56,21 @@ stay on disk, thumbnails and metadata are stored in the upload volume.
 ### Paperless — Consume Directory
 
 Paperless automatically watches `/usr/src/paperless/consume` for new
-files. Any document placed in `~/Documents` will be ingested on the
+files. Any document placed in `~/Documents/Paperless` will be ingested on the
 next consumption cycle (default: every ~10 minutes).
 
 The mount is read-write because Paperless's init script requires
 ownership of the consume directory. By default, Paperless deletes
 files from the consume directory after ingestion. To preserve
-originals in `~/Documents`, set `PAPERLESS_CONSUMER_DELETE_DUPLICATES=false`
+originals in `~/Documents/Paperless`, set `PAPERLESS_CONSUMER_DELETE_DUPLICATES=false`
 and `PAPERLESS_CONSUMER_ENABLE_BARCODES=false` in the quadlet, or
 configure consumption behavior via the web UI.
 
-All documents consumed from `~/Documents` are automatically tagged
+All documents consumed from `~/Documents/Paperless` are automatically tagged
 with `local-import` via `PAPERLESS_CONSUMER_TAGS=local-import`.
 
 ### Navidrome — Music Library
 
 Navidrome scans `/music` on a configurable schedule (`ND_SCANSCHEDULE=1h`).
-Drop music files into `~/Music/` and they will appear in the library
+Drop music files into `~/Music/Navidrome/` and they will appear in the library
 within an hour, or trigger a manual scan from **Settings > Scan Library**.
