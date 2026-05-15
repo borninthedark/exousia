@@ -17,8 +17,6 @@ spec:
     - pipewire-jack-audio-connection-kit
     - pipewire-plugin-libcamera
     - realtime-setup
-    - tuned
-    - tuned-profiles-realtime
     - ardour
     - lmms
     - rosegarden
