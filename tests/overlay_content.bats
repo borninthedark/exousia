@@ -336,14 +336,6 @@ assert_has_shebang() {
 }
 
 # ============================================================
-# Sway repos
-# ============================================================
-
-@test "nwg-shell repo definition should exist" {
-    assert_file_exists "$OVERLAY_ROOT/sway/repos/nwg-shell.repo"
-}
-
-# ============================================================
 # Quadlet definitions (deploy)
 # ============================================================
 

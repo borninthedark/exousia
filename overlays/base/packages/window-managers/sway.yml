@@ -77,7 +77,6 @@ spec:
     - adwaita-gtk2-theme
     - gnome-themes-extra
     - qt6ct
-    - nwg-look
     - python3-i3ipc
     - wl-clipboard
     - cliphist
