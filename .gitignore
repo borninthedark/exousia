@@ -17,6 +17,9 @@ custom-pkgs/README.md
 .venv/
 venv/
 
+# uv cache
+.uv-cache/
+
 # Python cache and bytecode
 __pycache__/
 .pytest_cache/
