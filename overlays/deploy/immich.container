@@ -16,6 +16,12 @@ Environment=DB_PASSWORD=immich
 Environment=REDIS_HOSTNAME=immich-redis
 Label=io.containers.autoupdate=registry
 
+HealthCmd=["curl", "-f", "http://localhost:2283/api/server/ping"]
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=15s
+
 [Service]
 Restart=always
 TimeoutStartSec=300

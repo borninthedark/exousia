@@ -1,0 +1,28 @@
+[Unit]
+Description=Beszel monitoring agent
+After=beszel.service
+
+[Container]
+Image=docker.io/henrygd/beszel-agent:latest
+ContainerName=beszel-agent
+Network=exousia.network:alias=beszel-agent
+SecurityLabelDisable=true
+PublishPort=127.0.0.1:45876:45876
+Volume=/run/user/1000/podman/podman.sock:/var/run/docker.sock:ro
+Environment=LISTEN=45876
+EnvironmentFile=%h/.config/beszel/agent.env
+Environment=DOCKER_HOST=unix:///var/run/docker.sock
+Label=io.containers.autoupdate=registry
+
+HealthCmd=["test", "-e", "/proc/1/status"]
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=10s
+
+[Service]
+Restart=always
+TimeoutStartSec=60
+
+[Install]
+WantedBy=default.target

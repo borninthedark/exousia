@@ -16,6 +16,12 @@ SecurityLabelDisable=true
 WorkingDir=/data
 Exec=forgejo-runner -c /data/config.yaml daemon
 
+HealthCmd=["cat", "/proc/1/status"]
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=10s
+
 [Service]
 Restart=always
 TimeoutStartSec=300

@@ -16,6 +16,12 @@ SecurityLabelDisable=true
 AddCapability=NET_ADMIN NET_RAW SYS_ADMIN
 PodmanArgs=--privileged
 
+HealthCmd=["wget", "-qO", "/dev/null", "--no-check-certificate", "https://127.0.0.1:6443/healthz"]
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=30s
+
 [Service]
 Restart=always
 TimeoutStartSec=300

@@ -1,0 +1,31 @@
+[Unit]
+Description=Fluent Bit log shipper to OpenObserve
+After=openobserve.service
+
+[Container]
+Image=docker.io/fluent/fluent-bit:latest
+ContainerName=fluent-bit
+Network=exousia.network:alias=fluent-bit
+PublishPort=127.0.0.1:2020:2020
+UserNS=keep-id
+GroupAdd=keep-groups
+SecurityLabelDisable=true
+Volume=%h/.config/fluent-bit/fluent-bit.yaml:/fluent-bit/etc/fluent-bit.yaml:ro
+Volume=/var/log/journal:/var/log/journal:ro
+Volume=systemd-fluent-bit-buffer:/var/log/fluent-bit:z
+EnvironmentFile=%h/.config/openobserve/openobserve.env
+Exec=/fluent-bit/bin/fluent-bit -c /fluent-bit/etc/fluent-bit.yaml
+Label=io.containers.autoupdate=registry
+HealthCmd=wget -qO /dev/null http://localhost:2020/api/v1/health
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=10s
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=60
+
+[Install]
+WantedBy=default.target

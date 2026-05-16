@@ -11,6 +11,12 @@ PublishPort=127.0.0.1:5354:53/udp
 Volume=%h/.config/coredns:/etc/coredns:ro,z
 Exec=-conf /etc/coredns/Corefile
 
+HealthCmd=["true"]
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=15s
+
 [Service]
 Restart=always
 

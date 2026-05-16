@@ -13,6 +13,12 @@ Volume=forgejo-db-data.volume:/var/lib/postgresql/data
 Network=exousia.network:alias=forgejo-db
 Label=io.containers.autoupdate=registry
 
+HealthCmd=["pg_isready", "-U", "forgejo"]
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=15s
+
 [Service]
 Restart=always
 TimeoutStartSec=300
