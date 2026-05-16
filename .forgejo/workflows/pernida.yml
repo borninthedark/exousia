@@ -519,7 +519,16 @@ jobs:
         run: |
           apt-get update -qq
           apt-get install -y -qq skopeo
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v${TRIVY_VERSION}/contrib/install.sh | sh -s -- -b /usr/local/bin v${TRIVY_VERSION}
+          TRIVY_VERSION=$(curl -sL "https://api.github.com/repos/aquasecurity/trivy/releases/latest" | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))")
+          curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
+          curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_checksums.txt" -o /tmp/trivy_checksums.txt
+          EXPECTED=$(grep "Linux-64bit.tar.gz" /tmp/trivy_checksums.txt | awk '{print $1}')
+          ACTUAL=$(sha256sum /tmp/trivy.tar.gz | awk '{print $1}')
+          if [ "${EXPECTED}" != "${ACTUAL}" ]; then
+            echo "::error::Trivy checksum mismatch"
+            exit 1
+          fi
+          tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
 
       - name: Pull image for verification
         id: pull
