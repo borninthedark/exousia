@@ -11,4 +11,10 @@ metadata:
 
 spec:
   stage: build
-  overrides: []
+  overrides:
+    - package: nwg-look
+      version: ">= 1.1.1"
+      image: ghcr.io/borninthedark/nwg-look-rpms:1.1.1
+      reason: Eliminate COPR dependency — built from GitHub release source
+      replaces:
+        - nwg-look

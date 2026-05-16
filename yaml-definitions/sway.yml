@@ -77,13 +77,6 @@ modules:
         dst: /usr/share/plymouth/themes/bgrt-better-luks/
         mode: "0644"
 
-  # Custom repositories
-  - type: files
-    files:
-      - src: overlays/sway/repos/
-        dst: /etc/yum.repos.d/
-        mode: "0644"
-
   # Base configurations (PAM, polkit, tmpfiles)
   - type: files
     files:

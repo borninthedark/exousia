@@ -1,0 +1,24 @@
+# Build nwg-look RPM from source and export as OCI artifact
+# Usage: podman build -t ghcr.io/borninthedark/nwg-look-rpms:1.1.1 rpms/nwg-look/
+FROM quay.io/fedora/fedora:44 AS builder
+
+ARG NWG_LOOK_VERSION=1.1.1
+
+RUN dnf install -y \
+        rpm-build rpmdevtools \
+        golang gcc gtk3-devel \
+    && dnf clean all
+
+RUN rpmdev-setuptree
+
+COPY nwg-look.spec /root/rpmbuild/SPECS/
+
+RUN curl -sfL \
+    "https://github.com/nwg-piotr/nwg-look/archive/v${NWG_LOOK_VERSION}/nwg-look-${NWG_LOOK_VERSION}.tar.gz" \
+    -o /root/rpmbuild/SOURCES/nwg-look-${NWG_LOOK_VERSION}.tar.gz
+
+RUN rpmbuild -bb /root/rpmbuild/SPECS/nwg-look.spec
+
+# Final stage: minimal image with just the RPMs at /rpms/
+FROM scratch
+COPY --from=builder /root/rpmbuild/RPMS/ /rpms/

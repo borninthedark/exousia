@@ -366,10 +366,6 @@ get_package_manager() {
     assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/rpmfusion-nonfree.repo"
 }
 
-@test "Custom repositories should be configured" {
-    assert_file_exists "$MOUNT_POINT/etc/yum.repos.d/nwg-shell.repo"
-}
-
 # --- Key packages ---
 
 @test "DNF5 should be installed and symlinked as default dnf" {

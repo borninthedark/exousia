@@ -23,6 +23,9 @@
 name: "Pernida — Orchestrator"
 
 on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 15 * * *"  # daily 11:30 ET (15:30 UTC), after base image mirror at 07:30
   push:
     branches: ["uryu/*"]
     paths-ignore:
@@ -37,6 +40,7 @@ on:
 env:
   LOCAL_REGISTRY: registry:5000
   IMAGE_NAME: exousia
+
 
 jobs:
   # -- Resolve Defaults --
@@ -205,9 +209,19 @@ jobs:
             --soft-fail \
             --skip-check CKV_DOCKER_2,CKV_DOCKER_3
 
-      - name: Install Trivy
+      - name: Install Trivy (latest, checksum-verified)
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          TRIVY_VERSION=$(curl -sL "https://api.github.com/repos/aquasecurity/trivy/releases/latest" | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))")
+          echo "Installing Trivy v${TRIVY_VERSION}"
+          curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
+          curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_checksums.txt" -o /tmp/trivy_checksums.txt
+          EXPECTED=$(grep "Linux-64bit.tar.gz" /tmp/trivy_checksums.txt | awk '{print $1}')
+          ACTUAL=$(sha256sum /tmp/trivy.tar.gz | awk '{print $1}')
+          if [ "${EXPECTED}" != "${ACTUAL}" ]; then
+            echo "::error::Trivy checksum mismatch: expected ${EXPECTED}, got ${ACTUAL}"
+            exit 1
+          fi
+          tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
 
       - name: Trivy config scan
         run: |
@@ -267,6 +281,12 @@ jobs:
           apt-get update -qq
           apt-get install -y -qq buildah skopeo
 
+      - name: Authenticate to GHCR (for RPM override images)
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        run: |
+          echo "${GHCR_PAT}" | buildah login ghcr.io -u borninthedark --password-stdin
+
       - name: Transpile YAML blueprint
         id: transpile
         run: |
@@ -310,7 +330,15 @@ jobs:
 
           VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 
+          BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
           buildah bud --layers --tls-verify=false \
+            --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --label "org.opencontainers.image.created=${BUILD_DATE}" \
+            --label "org.opencontainers.image.version=${VERSION}" \
+            --label "org.opencontainers.image.title=${IMAGE_NAME}" \
+            --label "org.opencontainers.image.base.name=${{ steps.base.outputs.base }}" \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}" \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}" \
             -t "${LOCAL_REGISTRY}/${IMAGE_NAME}:${VERSION}" \
@@ -338,9 +366,19 @@ jobs:
 
       # -- Supply Chain: SBOM + Provenance --
 
-      - name: Install Trivy
+      - name: Install Trivy (latest, checksum-verified)
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          TRIVY_VERSION=$(curl -sL "https://api.github.com/repos/aquasecurity/trivy/releases/latest" | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))")
+          echo "Installing Trivy v${TRIVY_VERSION}"
+          curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
+          curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_checksums.txt" -o /tmp/trivy_checksums.txt
+          EXPECTED=$(grep "Linux-64bit.tar.gz" /tmp/trivy_checksums.txt | awk '{print $1}')
+          ACTUAL=$(sha256sum /tmp/trivy.tar.gz | awk '{print $1}')
+          if [ "${EXPECTED}" != "${ACTUAL}" ]; then
+            echo "::error::Trivy checksum mismatch: expected ${EXPECTED}, got ${ACTUAL}"
+            exit 1
+          fi
+          tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
 
       - name: Generate SBOM (CycloneDX)
         id: sbom
@@ -407,6 +445,53 @@ jobs:
           }
           PROVEOF
 
+      - name: Attach SBOM + provenance to image
+        if: github.event_name != 'pull_request'
+        run: |
+          TAG="${{ steps.build.outputs.tag }}"
+          IMAGE="${LOCAL_REGISTRY}/${IMAGE_NAME}:${TAG}"
+
+          # Push SBOM and provenance as separate OCI artifacts
+          # (inline base64 annotations exceed ARG_MAX for large SBOMs)
+          SBOM_TAG="${TAG}-sbom"
+          PROV_TAG="${TAG}-provenance"
+
+          # Create minimal OCI images carrying the attestation files
+          CTR_SBOM=$(buildah from scratch)
+          buildah copy "${CTR_SBOM}" sbom-cyclonedx.json /sbom-cyclonedx.json
+          buildah config \
+            --annotation "org.opencontainers.image.ref.name=${TAG}" \
+            --annotation "org.opencontainers.image.description=CycloneDX SBOM" \
+            "${CTR_SBOM}"
+          buildah commit "${CTR_SBOM}" "${LOCAL_REGISTRY}/${IMAGE_NAME}:${SBOM_TAG}"
+          buildah rm "${CTR_SBOM}"
+
+          CTR_PROV=$(buildah from scratch)
+          buildah copy "${CTR_PROV}" provenance.json /provenance.json
+          buildah config \
+            --annotation "org.opencontainers.image.ref.name=${TAG}" \
+            --annotation "org.opencontainers.image.description=SLSA Provenance" \
+            "${CTR_PROV}"
+          buildah commit "${CTR_PROV}" "${LOCAL_REGISTRY}/${IMAGE_NAME}:${PROV_TAG}"
+          buildah rm "${CTR_PROV}"
+
+          # Add lightweight annotations pointing to the attestation tags
+          CTR=$(buildah from --pull=false "${IMAGE}")
+          buildah config \
+            --annotation "org.opencontainers.image.sbom=${LOCAL_REGISTRY}/${IMAGE_NAME}:${SBOM_TAG}" \
+            --annotation "org.opencontainers.image.provenance=${LOCAL_REGISTRY}/${IMAGE_NAME}:${PROV_TAG}" \
+            "${CTR}"
+          buildah commit "${CTR}" "${IMAGE}"
+          buildah rm "${CTR}"
+
+          # Push all three tags
+          for T in "${TAG}" "${SBOM_TAG}" "${PROV_TAG}"; do
+            skopeo copy \
+              "containers-storage:${LOCAL_REGISTRY}/${IMAGE_NAME}:${T}" \
+              "docker://${LOCAL_REGISTRY}/${IMAGE_NAME}:${T}" \
+              --dest-tls-verify=false
+          done
+
       - name: Build summary
         if: always()
         run: |
@@ -434,7 +519,16 @@ jobs:
         run: |
           apt-get update -qq
           apt-get install -y -qq skopeo
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          TRIVY_VERSION=$(curl -sL "https://api.github.com/repos/aquasecurity/trivy/releases/latest" | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))")
+          curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
+          curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_checksums.txt" -o /tmp/trivy_checksums.txt
+          EXPECTED=$(grep "Linux-64bit.tar.gz" /tmp/trivy_checksums.txt | awk '{print $1}')
+          ACTUAL=$(sha256sum /tmp/trivy.tar.gz | awk '{print $1}')
+          if [ "${EXPECTED}" != "${ACTUAL}" ]; then
+            echo "::error::Trivy checksum mismatch"
+            exit 1
+          fi
+          tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
 
       - name: Pull image for verification
         id: pull
@@ -455,16 +549,36 @@ jobs:
             --format json -o /tmp/trivy-critical.json \
             "${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}"
 
-          CRITICAL=$(python3 -c "
-          import json
-          data = json.load(open('/tmp/trivy-critical.json'))
-          count = sum(1 for r in data.get('Results', []) for v in r.get('Vulnerabilities', []) if v.get('Severity') == 'CRITICAL')
-          print(count)
-          " 2>/dev/null || echo "0")
+          # CVEs allowlisted while waiting on upstream Fedora package updates.
+          # Remove entries as soon as the fix lands in Fedora repos.
+          # CVE-2026-33186: grpc-go authz bypass in podman/buildah, fix needs grpc v1.79.3
 
-          echo "critical=${CRITICAL}" >> $GITHUB_OUTPUT
-          if [ "${CRITICAL}" -gt 0 ]; then
-            echo "::warning::${CRITICAL} critical CVEs found — review before release"
+          BLOCKED=$(python3 << 'PYEOF'
+          import json, sys
+          allowlist = {"CVE-2026-33186"}
+          data = json.load(open("/tmp/trivy-critical.json"))
+          blocked = []
+          allowed = []
+          for r in data.get("Results", []):
+              for v in r.get("Vulnerabilities", []):
+                  if v.get("Severity") == "CRITICAL":
+                      cve = v["VulnerabilityID"]
+                      if cve in allowlist:
+                          allowed.append(cve)
+                      else:
+                          blocked.append(f'{cve} ({v.get("PkgName","?")})')
+          if allowed:
+              print(f"Allowlisted: {len(allowed)} ({', '.join(sorted(set(allowed)))})", file=sys.stderr)
+          if blocked:
+              print(f"Blocked: {', '.join(blocked)}", file=sys.stderr)
+          print(len(blocked))
+          PYEOF
+          )
+
+          echo "critical=${BLOCKED}" >> $GITHUB_OUTPUT
+          if [ "${BLOCKED}" -gt 0 ]; then
+            echo "::error::${BLOCKED} critical CVE(s) found — blocking release"
+            exit 1
           fi
 
       - name: Policy check — image metadata

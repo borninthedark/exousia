@@ -118,7 +118,6 @@ Validates package repository setup.
 **Tests:**
 
 - RPM Fusion repositories present and enabled
-- Custom repositories configured (nwg-shell)
 
 ### 6. Package Installation
 

@@ -76,8 +76,6 @@ overlays/
 │   │   │   └── environment          # Session environment variables
 │   │   ├── swaylock/config           # Lock screen configuration
 │   │   └── xdg/waybar/              # System-level waybar config + style
-│   ├── repos/
-│   │   └── nwg-shell.repo           # Additional package repository
 │   ├── scripts/
 │   │   ├── runtime/                  # Scripts installed to the image
 │   │   │   ├── layered-include       # Config include helper

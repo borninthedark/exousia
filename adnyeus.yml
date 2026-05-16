@@ -7,7 +7,7 @@ description: DevSecOps-hardened Fedora bootc image with Sway desktop
 image-version: 44
 
 # Base image configuration
-# Local mirror (registry:5000) kept in sync by mirror-base-image.timer (weekly).
+# Local mirror (registry:5000) kept in sync by mirror-base-image.timer (daily 07:30).
 # Forgejo workflow substitutes this with the local mirror at build time.
 base-image: quay.io/fedora/fedora-sway-atomic:44
 image-type: fedora-sway-atomic
@@ -63,9 +63,6 @@ modules:
         mode: "0644"
       - src: overlays/base/tmpfiles/package-state-dirs.conf
         dst: /usr/lib/tmpfiles.d/package-state-dirs.conf
-        mode: "0644"
-      - src: overlays/sway/repos/
-        dst: /etc/yum.repos.d/
         mode: "0644"
       - src: overlays/base/configs/
         dst: /etc/
