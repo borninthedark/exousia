@@ -549,16 +549,40 @@ jobs:
             --format json -o /tmp/trivy-critical.json \
             "${LOCAL_REGISTRY}/${IMAGE_NAME}:${FVER}"
 
-          CRITICAL=$(python3 -c "
-          import json
-          data = json.load(open('/tmp/trivy-critical.json'))
-          count = sum(1 for r in data.get('Results', []) for v in r.get('Vulnerabilities', []) if v.get('Severity') == 'CRITICAL')
-          print(count)
-          " 2>/dev/null || echo "0")
+          # CVEs allowlisted while waiting on upstream Fedora package updates.
+          # Each entry must have a comment explaining why it's allowed.
+          # Remove entries as soon as the fix lands in Fedora repos.
+          ALLOWLIST="
+            CVE-2026-33186  # grpc-go authz bypass — in podman/buildah, fix needs grpc v1.79.3
+          "
 
-          echo "critical=${CRITICAL}" >> $GITHUB_OUTPUT
-          if [ "${CRITICAL}" -gt 0 ]; then
-            echo "::error::${CRITICAL} critical CVE(s) found — blocking release"
+          CRITICAL=$(python3 -c "
+          import json, sys
+          allowlist = set(l.split('#')[0].strip() for l in '''${ALLOWLIST}'''.strip().splitlines() if l.split('#')[0].strip())
+          data = json.load(open('/tmp/trivy-critical.json'))
+          blocked = []
+          allowed = []
+          for r in data.get('Results', []):
+              for v in r.get('Vulnerabilities', []):
+                  if v.get('Severity') == 'CRITICAL':
+                      cve = v['VulnerabilityID']
+                      if cve in allowlist:
+                          allowed.append(cve)
+                      else:
+                          blocked.append(cve)
+          if allowed:
+              print(f'Allowlisted: {len(allowed)} ({", ".join(sorted(set(allowed)))})', file=sys.stderr)
+          print(len(blocked))
+          " 2>&1)
+
+          # Extract just the count (last line of output)
+          BLOCKED=$(echo "${CRITICAL}" | tail -1)
+          # Print advisory lines
+          echo "${CRITICAL}" | head -n -1
+
+          echo "critical=${BLOCKED}" >> $GITHUB_OUTPUT
+          if [ "${BLOCKED}" -gt 0 ]; then
+            echo "::error::${BLOCKED} critical CVE(s) found — blocking release"
             exit 1
           fi
 
