@@ -247,8 +247,8 @@ jobs:
               for r in data.get('Results', []):
                   for v in r.get('Vulnerabilities', []):
                       if v.get('Severity') == 'CRITICAL':
-                          f.write(f\"{v['VulnerabilityID']}  {v.get('PkgName','?')} {v.get('InstalledVersion','?')} -> {v.get('FixedVersion','n/a')}\n\")
-                          f.write(f\"  {v.get('Title','')[:120]}\n\n\")
+                          f.write(f\"{v['VulnerabilityID']}  {v.get('PkgName','?')} {v.get('InstalledVersion','?')} -> {v.get('FixedVersion','n/a')}\\n\")
+                          f.write(f\"  {v.get('Title','')[:120]}\\n\\n\")
           "
 
           if [ "${BLOCKED}" -gt 0 ]; then
