@@ -201,15 +201,60 @@ jobs:
       TRIVY_PASSWORD: ${{ secrets.GHCR_PAT }}
       TRIVY_USERNAME: ${{ github.repository_owner }}
     steps:
-      - name: Trivy vulnerability scan (CRITICAL — enforced)
+      - name: Trivy vulnerability scan (CRITICAL)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           image-ref: ${{ needs.build.outputs.image_ref }}:${{ needs.build.outputs.image_tag }}
-          format: table
-          output: trivy-critical.txt
+          format: json
+          output: trivy-critical.json
           hide-progress: true
           severity: CRITICAL
-          exit-code: 1
+          exit-code: 0
+
+      - name: Policy check — no critical CVEs
+        run: |
+          # CVEs allowlisted while waiting on upstream Fedora package updates.
+          # Remove entries as soon as the fix lands in Fedora repos.
+          # CVE-2026-33186: grpc-go authz bypass in podman/buildah, fix needs grpc v1.79.3
+
+          BLOCKED=$(python3 << 'PYEOF'
+          import json, sys
+          allowlist = {"CVE-2026-33186"}
+          data = json.load(open("trivy-critical.json"))
+          blocked = []
+          allowed = []
+          for r in data.get("Results", []):
+              for v in r.get("Vulnerabilities", []):
+                  if v.get("Severity") == "CRITICAL":
+                      cve = v["VulnerabilityID"]
+                      if cve in allowlist:
+                          allowed.append(cve)
+                      else:
+                          blocked.append(f'{cve} ({v.get("PkgName","?")})')
+          if allowed:
+              print(f"Allowlisted: {len(allowed)} ({', '.join(sorted(set(allowed)))})", file=sys.stderr)
+          if blocked:
+              print(f"Blocked: {', '.join(blocked)}", file=sys.stderr)
+          print(len(blocked))
+          PYEOF
+          )
+
+          # Produce table output for the artifact/summary from JSON
+          python3 -c "
+          import json
+          data = json.load(open('trivy-critical.json'))
+          with open('trivy-critical.txt', 'w') as f:
+              for r in data.get('Results', []):
+                  for v in r.get('Vulnerabilities', []):
+                      if v.get('Severity') == 'CRITICAL':
+                          f.write(f\"{v['VulnerabilityID']}  {v.get('PkgName','?')} {v.get('InstalledVersion','?')} -> {v.get('FixedVersion','n/a')}\n\")
+                          f.write(f\"  {v.get('Title','')[:120]}\n\n\")
+          "
+
+          if [ "${BLOCKED}" -gt 0 ]; then
+            echo "::error::${BLOCKED} critical CVE(s) found — blocking release"
+            exit 1
+          fi
 
       - name: Trivy vulnerability scan (HIGH — advisory)
         if: always()
