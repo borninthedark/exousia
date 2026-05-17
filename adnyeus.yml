@@ -78,6 +78,9 @@ modules:
       - src: overlays/sway/configs/plymouth/themes/bgrt-better-luks/
         dst: /usr/share/plymouth/themes/bgrt-better-luks/
         mode: "0644"
+      - src: overlays/base/configs/plymouth/plymouthd.conf
+        dst: /etc/plymouth/plymouthd.conf
+        mode: "0644"
 
   # Executables (base tools, sway setup/runtime scripts, session entry points)
   - type: files
