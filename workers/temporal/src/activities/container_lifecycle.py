@@ -1,9 +1,15 @@
-"""Container lifecycle activities — image updates, rolling restarts, rollback."""
+"""Container lifecycle activities — image updates, rolling restarts, rollback.
+
+Uses Podman REST API via socket — no subprocess calls.
+"""
 
 import asyncio
 from dataclasses import dataclass
 
 from temporalio import activity
+
+from src.clients.podman import PodmanClient
+from src.clients.systemd import SystemdClient
 
 
 @dataclass
@@ -25,117 +31,56 @@ class RestartResult:
 class ContainerLifecycleActivities:
     """Manage container image updates and rolling restarts."""
 
+    def __init__(self) -> None:
+        self.podman = PodmanClient()
+        self.systemd = SystemdClient()
+
     @activity.defn
     async def check_updates(self) -> list[UpdateResult]:
         """Check which containers have newer images available."""
-        proc = await asyncio.create_subprocess_exec(
-            "podman",
-            "auto-update",
-            "--dry-run",
-            "--format",
-            "{{.Unit}} {{.Image}} {{.Updated}}",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, _ = await proc.communicate()
-        results = []
-        for line in stdout.decode().strip().splitlines():
-            if not line.strip():
-                continue
-            parts = line.split()
-            if len(parts) >= 3:
-                unit = parts[0].replace(".service", "")
-                image = parts[1]
-                updated = parts[2].lower() == "true"
-                results.append(
-                    UpdateResult(
-                        container=unit,
-                        updated=updated,
-                        new_image=image if updated else None,
-                    )
-                )
-        return results
+        updates = await self.podman.check_image_updates()
+        return [
+            UpdateResult(
+                container=u["container"],
+                updated=True,
+                new_image=u["image"],
+            )
+            for u in updates
+        ]
 
     @activity.defn
     async def pull_image(self, image: str) -> str:
         """Pull the latest version of an image."""
-        proc = await asyncio.create_subprocess_exec(
-            "podman",
-            "pull",
-            image,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await proc.communicate()
-        if proc.returncode != 0:
-            raise RuntimeError(f"pull failed: {stderr.decode()}")
-        activity.logger.info(f"Pulled {image}")
-        return stdout.decode().strip().splitlines()[-1]
+        image_id = await self.podman.pull_image(image)
+        activity.logger.info(f"Pulled {image} -> {image_id}")
+        return image_id
 
     @activity.defn
     async def restart_service(self, service: str) -> RestartResult:
-        """Restart a systemd user service and verify health."""
-        proc = await asyncio.create_subprocess_exec(
-            "systemctl",
-            "--user",
-            "restart",
-            service,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        _, stderr = await proc.communicate()
-        if proc.returncode != 0:
-            return RestartResult(
-                container=service,
-                healthy=False,
-                error=stderr.decode(),
-            )
+        """Restart a container and verify health."""
+        success = await self.systemd.restart_container(service)
+        if not success:
+            return RestartResult(container=service, healthy=False, error="restart failed")
 
         # Wait for healthcheck to settle
         await asyncio.sleep(15)
 
-        # Check health status
-        proc = await asyncio.create_subprocess_exec(
-            "podman",
-            "healthcheck",
-            "run",
-            service,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        await proc.communicate()
-        healthy = proc.returncode == 0
-
+        # Check health via Podman API
+        healthy = await self.podman.healthcheck_run(service)
         return RestartResult(container=service, healthy=healthy)
 
     @activity.defn
     async def prune_images(self) -> str:
         """Remove dangling and unused images after updates."""
-        proc = await asyncio.create_subprocess_exec(
-            "podman", "image", "prune", "-af",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await proc.communicate()
-        reclaimed = stdout.decode().strip()
-        activity.logger.info(f"Image prune: {reclaimed or 'nothing to prune'}")
-        return reclaimed
+        pruned = await self.podman.prune_images()
+        activity.logger.info(f"Image prune: {len(pruned)} images removed")
+        return f"{len(pruned)} images pruned"
 
     @activity.defn
     async def rollback_service(self, service: str) -> RestartResult:
         """Rollback a service by restarting with the previous image."""
-        # Podman keeps the previous image; just restart
-        proc = await asyncio.create_subprocess_exec(
-            "systemctl",
-            "--user",
-            "restart",
-            service,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        _, stderr = await proc.communicate()
-        if proc.returncode != 0:
-            return RestartResult(container=service, healthy=False, error=stderr.decode())
-
+        success = await self.systemd.restart_container(service)
+        if not success:
+            return RestartResult(container=service, healthy=False, error="rollback restart failed")
         await asyncio.sleep(10)
         return RestartResult(container=service, healthy=True)

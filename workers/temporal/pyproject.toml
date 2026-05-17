@@ -5,8 +5,9 @@ description = "Temporal worker for Exousia homelab automation"
 requires-python = ">=3.12"
 dependencies = [
     "temporalio>=1.9.0",
-    "httpx>=0.27.0",
+    "httpx[http2]>=0.27.0",
     "pydantic>=2.0",
+    "zstandard>=0.23.0",
 ]
 
 [project.optional-dependencies]

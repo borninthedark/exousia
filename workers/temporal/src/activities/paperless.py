@@ -7,6 +7,8 @@ from pathlib import Path
 import httpx
 from temporalio import activity
 
+from src.clients.forgejo import ForgejoClient
+
 
 @dataclass
 class DocSyncConfig:
@@ -29,6 +31,7 @@ class PaperlessActivities:
 
     def __init__(self, config: DocSyncConfig):
         self.config = config
+        self.forgejo = ForgejoClient()
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -171,50 +174,32 @@ class PaperlessActivities:
     async def create_forgejo_issue_from_doc(self, doc: dict[str, str]) -> str:
         """Create a Forgejo issue linked to a Paperless document."""
         title = f"Action required: {doc['title']}"
-        body = f"""## Document Action Item
-
-**Document:** [{doc['title']}]({doc['url']})
-**Created:** {doc.get('created', 'unknown')}
-**Paperless ID:** {doc['id']}
-
----
-This issue was auto-created from a Paperless document tagged `actionable`.
-When resolved, the document will be re-tagged as `completed`.
-"""
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                "http://forgejo:3000/api/v1/repos/uryu/exousia/issues",
-                headers={"Authorization": "token 8275ed637720a8fbb59607a35e68783111b86880"},
-                json={"title": title, "body": body, "labels": []},
-            )
-            if resp.status_code in (200, 201):
-                return str(resp.json().get("html_url", ""))
-            raise RuntimeError(f"Failed to create issue: {resp.status_code}")
+        body = (
+            f"## Document Action Item\n\n"
+            f"**Document:** [{doc['title']}]({doc['url']})\n"
+            f"**Created:** {doc.get('created', 'unknown')}\n"
+            f"**Paperless ID:** {doc['id']}\n\n"
+            f"---\n"
+            f"This issue was auto-created from a Paperless document tagged `actionable`.\n"
+            f"When resolved, the document will be re-tagged as `completed`.\n"
+        )
+        return await self.forgejo.create_issue(title, body)
 
     @activity.defn
     async def check_closed_issues_for_docs(self) -> list[dict[str, str]]:
         """Find closed Forgejo issues that reference Paperless doc IDs."""
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(
-                "http://forgejo:3000/api/v1/repos/uryu/exousia/issues",
-                headers={"Authorization": "token 8275ed637720a8fbb59607a35e68783111b86880"},
-                params={"state": "closed", "type": "issues", "limit": "50"},
-            )
-            if resp.status_code != 200:
-                return []
-
-            closed_docs = []
-            for issue in resp.json():
-                body = issue.get("body", "")
-                if "Paperless ID:" in body:
-                    # Extract doc ID from body
-                    for line in body.splitlines():
-                        if "Paperless ID:" in line:
-                            doc_id = line.split("Paperless ID:")[-1].strip()
-                            closed_docs.append(
-                                {
-                                    "doc_id": doc_id,
-                                    "issue_url": issue.get("html_url", ""),
-                                }
-                            )
-            return closed_docs
+        closed_issues = await self.forgejo.get_closed_issues()
+        closed_docs = []
+        for issue in closed_issues:
+            body = issue.get("body", "")
+            if "Paperless ID:" in body:
+                for line in body.splitlines():
+                    if "Paperless ID:" in line:
+                        doc_id = line.split("Paperless ID:")[-1].strip()
+                        closed_docs.append(
+                            {
+                                "doc_id": doc_id,
+                                "issue_url": issue.get("html_url", ""),
+                            }
+                        )
+        return closed_docs

@@ -7,6 +7,7 @@ Requires=temporal-server.service
 Image=localhost/exousia-worker:latest
 ContainerName=exousia-worker
 Network=exousia.network:alias=exousia-worker
+Volume=/run/user/1000/podman/podman.sock:/var/run/podman/podman.sock:ro
 Volume=%h/Workspaces/exousia/docs:/workspace/docs:ro,z
 Volume=%h/Workspaces/witness:/workspace/witness:ro,z
 Volume=%h/Workspaces/sap-c02:/workspace/sap-c02:ro,z
