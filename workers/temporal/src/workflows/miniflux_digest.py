@@ -6,7 +6,7 @@ from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
     from src.activities.llm import AgentResponse, AgentTask, Agent, LLMActivities
-    from src.activities.operations import OperationsActivities
+    from src.activities.miniflux import MinifluxActivities
 
 
 @workflow.defn
@@ -19,12 +19,12 @@ class MinifluxDigestWorkflow:
 
     @workflow.run
     async def run(self) -> str:
-        ops = OperationsActivities()
+        miniflux = MinifluxActivities()
         llm = LLMActivities.__new__(LLMActivities)
 
         # 1. Fetch unread entries
         entries = await workflow.execute_activity_method(
-            ops.fetch_unread_entries,
+            miniflux.fetch_unread_entries,
             20,
             start_to_close_timeout=timedelta(seconds=30),
         )
@@ -56,7 +56,7 @@ class MinifluxDigestWorkflow:
         # 4. Mark as read
         entry_ids = [e["id"] for e in entries]
         await workflow.execute_activity_method(
-            ops.mark_entries_read,
+            miniflux.mark_entries_read,
             entry_ids,
             start_to_close_timeout=timedelta(seconds=15),
         )

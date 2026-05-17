@@ -9,7 +9,8 @@ from temporalio.common import RetryPolicy
 with workflow.unsafe.imports_passed_through():
     from src.activities.backup import BackupActivities, BackupResult, VolumeSnapshot
     from src.activities.health import HealthActivities, HealthResult, SERVICES
-    from src.activities.operations import AlertPayload, OperationsActivities
+    from src.activities.alert import AlertActivities, AlertPayload
+    from src.activities.operations import OperationsActivities
 
 
 @workflow.defn
@@ -28,6 +29,7 @@ class DRDrillWorkflow:
         backup = BackupActivities()
         health = HealthActivities()
         ops = OperationsActivities()
+        alert = AlertActivities()
         timeout = timedelta(minutes=30)
         retry = RetryPolicy(maximum_attempts=2)
 
@@ -145,7 +147,7 @@ class DRDrillWorkflow:
         # 7. Send report
         severity = "warning" if issues else "info"
         await workflow.execute_activity_method(
-            ops.send_email_alert,
+            alert.send_email_alert,
             AlertPayload(title="DR Drill Report", body=report, severity=severity),
             start_to_close_timeout=timedelta(seconds=30),
         )

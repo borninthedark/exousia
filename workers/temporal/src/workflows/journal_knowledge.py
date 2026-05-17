@@ -6,7 +6,7 @@ from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
     from src.activities.llm import Agent, AgentResponse, AgentTask, LLMActivities
-    from src.activities.operations import OperationsActivities
+    from src.activities.observe import ObserveActivities
 
 
 @workflow.defn
@@ -19,12 +19,12 @@ class JournalKnowledgeWorkflow:
 
     @workflow.run
     async def run(self) -> str:
-        ops = OperationsActivities()
+        observe = ObserveActivities()
         llm = LLMActivities.__new__(LLMActivities)
 
         # 1. Get today's important logs (priority <= 4 = notice and above)
         logs = await workflow.execute_activity_method(
-            ops.query_daily_logs,
+            observe.query_daily_logs,
             start_to_close_timeout=timedelta(seconds=30),
         )
 

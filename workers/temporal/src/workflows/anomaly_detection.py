@@ -6,7 +6,9 @@ from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
     from src.activities.incident import IncidentActivities, IncidentContext
-    from src.activities.operations import AlertPayload, OperationsActivities
+    from src.activities.alert import AlertActivities, AlertPayload
+    from src.activities.operations import OperationsActivities
+    from src.activities.observe import ObserveActivities
 
 # Error threshold: if a container has more than this many errors in 15 min, alert
 ERROR_THRESHOLD = 50
@@ -23,11 +25,12 @@ class AnomalyDetectionWorkflow:
     @workflow.run
     async def run(self) -> dict:
         ops = OperationsActivities()
+        observe = ObserveActivities()
         incident_acts = IncidentActivities()
 
         # 1. Check error rates
         error_counts: dict[str, int] = await workflow.execute_activity_method(
-            ops.check_error_rate,
+            observe.check_error_rate,
             15,
             start_to_close_timeout=timedelta(seconds=30),
         )

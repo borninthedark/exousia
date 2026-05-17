@@ -6,7 +6,9 @@ from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
     from src.activities.health import HealthActivities, HealthResult
-    from src.activities.operations import AlertPayload, OperationsActivities
+    from src.activities.alert import AlertActivities, AlertPayload
+    from src.activities.operations import OperationsActivities
+    from src.activities.observe import ObserveActivities
 
 
 @workflow.defn
@@ -24,6 +26,8 @@ class HealthReportWorkflow:
     async def run(self) -> str:
         health = HealthActivities()
         ops = OperationsActivities()
+        alert = AlertActivities()
+        observe = ObserveActivities()
         timeout = timedelta(seconds=30)
 
         # 1. Run health checks on all services
@@ -43,7 +47,7 @@ class HealthReportWorkflow:
 
         # 2. Get error rates from OpenObserve (last 7 days)
         error_rates: dict[str, int] = await workflow.execute_activity_method(
-            ops.check_error_rate,
+            observe.check_error_rate,
             10080,  # 7 days in minutes
             start_to_close_timeout=timeout,
         )
@@ -75,7 +79,7 @@ class HealthReportWorkflow:
 
         # 5. Send email
         await workflow.execute_activity_method(
-            ops.send_email_alert,
+            alert.send_email_alert,
             AlertPayload(
                 title="Weekly Health Report",
                 body=report,

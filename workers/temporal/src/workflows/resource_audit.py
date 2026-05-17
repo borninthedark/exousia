@@ -6,7 +6,9 @@ from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
     from src.activities.container_lifecycle import ContainerLifecycleActivities
-    from src.activities.operations import AlertPayload, OperationsActivities
+    from src.activities.alert import AlertActivities, AlertPayload
+    from src.activities.operations import OperationsActivities
+    from src.activities.observe import ObserveActivities
 
 
 @workflow.defn
@@ -20,6 +22,8 @@ class ResourceAuditWorkflow:
     @workflow.run
     async def run(self) -> str:
         ops = OperationsActivities()
+        alert = AlertActivities()
+        observe = ObserveActivities()
         lifecycle = ContainerLifecycleActivities()
         timeout = timedelta(seconds=60)
 
@@ -38,7 +42,7 @@ class ResourceAuditWorkflow:
 
         # 3. Get error rates (30 days)
         error_rates: dict[str, int] = await workflow.execute_activity_method(
-            ops.check_error_rate,
+            observe.check_error_rate,
             43200,  # 30 days in minutes
             start_to_close_timeout=timeout,
         )
@@ -96,7 +100,7 @@ class ResourceAuditWorkflow:
 
         # 7. Send report
         await workflow.execute_activity_method(
-            ops.send_email_alert,
+            alert.send_email_alert,
             AlertPayload(
                 title="Monthly Resource Audit",
                 body=report,

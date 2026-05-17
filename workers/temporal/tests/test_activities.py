@@ -10,6 +10,8 @@ from src.activities.cve_check import CVECheckActivities
 from src.activities.health import HealthActivities, ServiceTarget
 from src.activities.incident import IncidentActivities, IncidentContext
 from src.activities.llm import Agent, AgentConfig, AgentTask, LLMActivities
+from src.activities.miniflux import MinifluxActivities
+from src.activities.observe import ObserveActivities
 from src.activities.operations import OperationsActivities
 from src.activities.paperless import DocSyncConfig, PaperlessActivities
 from src.clients.forgejo import ForgejoClient
@@ -335,24 +337,12 @@ class TestOperationsActivities:
         return act
 
     @pytest.mark.asyncio
-    async def test_fetch_unread_entries(self, activities):
-        client = make_async_client(
-            json_data={
-                "entries": [
-                    {
-                        "id": 1,
-                        "title": "Test Article",
-                        "url": "http://example.com",
-                        "feed": {"title": "Test Feed"},
-                        "content": "body",
-                    }
-                ]
-            }
+    async def test_scan_running_images_delegation(self, activities):
+        activities.podman.list_containers = AsyncMock(
+            return_value=[{"name": "test", "image": "test:latest"}]
         )
-        with patch("httpx.AsyncClient", return_value=client):
-            entries = await activities.fetch_unread_entries(10)
-        assert len(entries) == 1
-        assert entries[0]["title"] == "Test Article"
+        results = await activities.scan_running_images()
+        assert len(results) == 1
 
     @pytest.mark.asyncio
     async def test_scan_running_images(self, activities):
@@ -374,6 +364,56 @@ class TestOperationsActivities:
         assert len(prs) == 1
 
     @pytest.mark.asyncio
+    async def test_check_python_deps(self, activities):
+        mock_proc = AsyncMock()
+        mock_proc.communicate.return_value = (
+            b'[{"name":"httpx","version":"0.27.0","latest_version":"0.28.0"}]',
+            b"",
+        )
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            deps = await activities.check_python_deps()
+        assert len(deps) == 1
+        assert deps[0].package == "httpx"
+
+
+# --- Miniflux Activities ---
+
+
+class TestMinifluxActivities:
+    @pytest.fixture
+    def activities(self):
+        return MinifluxActivities()
+
+    @pytest.mark.asyncio
+    async def test_fetch_unread_entries(self, activities):
+        client = make_async_client(
+            json_data={
+                "entries": [
+                    {
+                        "id": 1,
+                        "title": "Test Article",
+                        "url": "http://example.com",
+                        "feed": {"title": "Test Feed"},
+                        "content": "body",
+                    }
+                ]
+            }
+        )
+        with patch("httpx.AsyncClient", return_value=client):
+            entries = await activities.fetch_unread_entries(10)
+        assert len(entries) == 1
+        assert entries[0]["title"] == "Test Article"
+
+
+# --- Observe Activities ---
+
+
+class TestObserveActivities:
+    @pytest.fixture
+    def activities(self):
+        return ObserveActivities()
+
+    @pytest.mark.asyncio
     async def test_check_error_rate(self, activities):
         client = make_async_client(
             json_data={"hits": [
@@ -385,26 +425,6 @@ class TestOperationsActivities:
             rates = await activities.check_error_rate(15)
         assert rates["k3s"] == 5000
         assert rates["forgejo"] == 100
-
-    @pytest.mark.asyncio
-    async def test_create_forgejo_issue(self, activities):
-        activities.forgejo.create_issue = AsyncMock(return_value="http://issue/10")
-        url = await activities.create_forgejo_issue("title", "body")
-        assert url == "http://issue/10"
-
-    @pytest.mark.asyncio
-    async def test_get_latest_tag(self, activities):
-        activities.forgejo.get_latest_tag = AsyncMock(return_value="v0.5.0")
-        tag = await activities.get_latest_tag()
-        assert tag == "v0.5.0"
-
-    @pytest.mark.asyncio
-    async def test_get_commits_since_tag(self, activities):
-        activities.forgejo.get_commits_since_tag = AsyncMock(
-            return_value=["feat: new thing", "fix: bug"]
-        )
-        commits = await activities.get_commits_since_tag("v0.5.0")
-        assert len(commits) == 2
 
 
 # --- Paperless Activities ---

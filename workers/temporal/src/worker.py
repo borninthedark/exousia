@@ -7,12 +7,15 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from src.activities import (
+    AlertActivities,
     BackupActivities,
     ContainerLifecycleActivities,
     CVECheckActivities,
     HealthActivities,
     IncidentActivities,
     LLMActivities,
+    MinifluxActivities,
+    ObserveActivities,
     OperationsActivities,
     PaperlessActivities,
 )
@@ -64,12 +67,15 @@ def build_activities() -> list:
     )
 
     return [
+        AlertActivities(),
         BackupActivities(),
         ContainerLifecycleActivities(),
         CVECheckActivities(),
         HealthActivities(),
         IncidentActivities(),
         LLMActivities(llm_config),
+        MinifluxActivities(),
+        ObserveActivities(),
         OperationsActivities(),
         PaperlessActivities(paperless_config),
     ]

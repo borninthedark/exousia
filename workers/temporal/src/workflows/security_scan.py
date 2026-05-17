@@ -5,7 +5,8 @@ from datetime import timedelta
 from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
-    from src.activities.operations import AlertPayload, OperationsActivities, ScanResult
+    from src.activities.alert import AlertActivities, AlertPayload
+    from src.activities.operations import OperationsActivities, ScanResult
 
 
 @workflow.defn
@@ -19,6 +20,7 @@ class SecurityScanWorkflow:
     @workflow.run
     async def run(self) -> dict:
         ops = OperationsActivities()
+        alert = AlertActivities()
 
         # 1. Scan all running images
         results: list[ScanResult] = await workflow.execute_activity_method(
@@ -56,7 +58,7 @@ class SecurityScanWorkflow:
 
             # Also email alert for critical
             await workflow.execute_activity_method(
-                ops.send_email_alert,
+                alert.send_email_alert,
                 AlertPayload(
                     title=f"{total_critical} critical CVEs found",
                     body=body,
