@@ -111,8 +111,15 @@ class ContainerLifecycleWorkflow:
             # Wait between tiers for stability
             await workflow.sleep(timedelta(seconds=10))
 
+        # 4. Prune old images
+        pruned = await workflow.execute_activity_method(
+            activities.prune_images,
+            start_to_close_timeout=timedelta(minutes=5),
+        )
+
         return {
             "updates": len(updatable),
             "restarted": restarted,
             "rollbacks": rollbacks,
+            "pruned": pruned,
         }

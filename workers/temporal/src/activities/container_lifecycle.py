@@ -109,6 +109,19 @@ class ContainerLifecycleActivities:
         return RestartResult(container=service, healthy=healthy)
 
     @activity.defn
+    async def prune_images(self) -> str:
+        """Remove dangling and unused images after updates."""
+        proc = await asyncio.create_subprocess_exec(
+            "podman", "image", "prune", "-af",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        reclaimed = stdout.decode().strip()
+        activity.logger.info(f"Image prune: {reclaimed or 'nothing to prune'}")
+        return reclaimed
+
+    @activity.defn
     async def rollback_service(self, service: str) -> RestartResult:
         """Rollback a service by restarting with the previous image."""
         # Podman keeps the previous image; just restart
