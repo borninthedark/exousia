@@ -13,18 +13,27 @@ from src.activities import (
     HealthActivities,
     IncidentActivities,
     LLMActivities,
+    OperationsActivities,
     PaperlessActivities,
 )
 from src.activities.llm import AgentConfig
 from src.activities.paperless import DocSyncConfig
 from src.workflows import (
+    AnomalyDetectionWorkflow,
     BackupWorkflow,
+    BaseImageMirrorWorkflow,
+    ChangelogWorkflow,
     ContainerLifecycleWorkflow,
     CVECheckWorkflow,
+    DepsUpdateWorkflow,
     DocSyncWorkflow,
     HealthCheckWorkflow,
     IncidentResponseWorkflow,
+    JournalKnowledgeWorkflow,
     LLMPipelineWorkflow,
+    MinifluxDigestWorkflow,
+    PRReviewWorkflow,
+    SecurityScanWorkflow,
     SyncDirectoryWorkflow,
     TicketSyncWorkflow,
 )
@@ -40,7 +49,7 @@ def build_activities() -> list:
         token=os.getenv("PAPERLESS_TOKEN", ""),
         host=os.getenv("PAPERLESS_HOST", "paperless.exousia.local"),
         watch_dir=os.getenv("DOCS_WATCH_DIR", "/workspace/docs"),
-        tag_map={},  # populated dynamically by DocSyncWorkflow
+        tag_map={},
     )
 
     llm_config = AgentConfig(
@@ -58,6 +67,7 @@ def build_activities() -> list:
         HealthActivities(),
         IncidentActivities(),
         LLMActivities(llm_config),
+        OperationsActivities(),
         PaperlessActivities(paperless_config),
     ]
 
@@ -77,14 +87,22 @@ async def main():
         client,
         task_queue=TASK_QUEUE,
         workflows=[
+            AnomalyDetectionWorkflow,
             BackupWorkflow,
+            BaseImageMirrorWorkflow,
+            ChangelogWorkflow,
             ContainerLifecycleWorkflow,
             CVECheckWorkflow,
+            DepsUpdateWorkflow,
             DocSyncWorkflow,
-            SyncDirectoryWorkflow,
             HealthCheckWorkflow,
             IncidentResponseWorkflow,
+            JournalKnowledgeWorkflow,
             LLMPipelineWorkflow,
+            MinifluxDigestWorkflow,
+            PRReviewWorkflow,
+            SecurityScanWorkflow,
+            SyncDirectoryWorkflow,
             TicketSyncWorkflow,
         ],
         activities=all_activities,
