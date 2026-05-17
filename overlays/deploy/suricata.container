@@ -1,0 +1,28 @@
+[Unit]
+Description=Suricata IDS — passive network intrusion detection
+After=network-online.target
+
+[Container]
+Image=docker.io/jasonish/suricata:latest
+ContainerName=suricata
+Network=host
+SecurityLabelDisable=true
+AddCapability=NET_RAW NET_ADMIN SYS_NICE
+PodmanArgs=--privileged
+Volume=systemd-suricata-data:/var/lib/suricata:z
+Volume=%h/.config/suricata/logs:/var/log/suricata:z
+Exec=-i wlo1 --af-packet
+Label=io.containers.autoupdate=registry
+HealthCmd=pgrep suricata || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=30s
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

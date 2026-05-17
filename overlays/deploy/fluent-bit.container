@@ -12,6 +12,7 @@ GroupAdd=keep-groups
 SecurityLabelDisable=true
 Volume=%h/.config/fluent-bit/fluent-bit.yaml:/fluent-bit/etc/fluent-bit.yaml:ro
 Volume=/var/log/journal:/var/log/journal:ro
+Volume=/var/log/suricata:/var/log/suricata:ro
 Volume=systemd-fluent-bit-buffer:/var/log/fluent-bit:z
 EnvironmentFile=%h/.config/openobserve/openobserve.env
 Exec=/fluent-bit/bin/fluent-bit -c /fluent-bit/etc/fluent-bit.yaml
