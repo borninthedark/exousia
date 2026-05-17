@@ -9,6 +9,8 @@ ContainerName=immich
 Network=exousia.network:alias=immich
 PublishPort=127.0.0.1:2283:2283
 Volume=immich-upload.volume:/usr/src/app/upload
+Volume=%h/Pictures/immich:/usr/src/app/external/pictures:ro,z
+Volume=%h/Videos/immich:/usr/src/app/external/videos:ro,z
 Environment=DB_HOSTNAME=immich-db
 Environment=DB_DATABASE_NAME=immich
 Environment=DB_USERNAME=immich
