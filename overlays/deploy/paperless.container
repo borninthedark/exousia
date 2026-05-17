@@ -21,7 +21,7 @@ Environment=PAPERLESS_CSRF_TRUSTED_ORIGINS=https://paperless.exousia.local,https
 EnvironmentFile=%h/.config/paperless/smtp.env
 Label=io.containers.autoupdate=registry
 
-HealthCmd=["curl", "-f", "http://localhost:8000/api/"]
+HealthCmd=curl -f http://localhost:8000/api/ || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

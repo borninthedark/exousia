@@ -10,11 +10,6 @@ Volume=systemd-openobserve-data:/data:z
 EnvironmentFile=%h/.config/openobserve/openobserve.env
 Environment=ZO_DATA_DIR=/data
 Label=io.containers.autoupdate=registry
-HealthCmd=["wget", "-qO", "/dev/null", "http://localhost:5080/healthz"]
-HealthInterval=30s
-HealthTimeout=5s
-HealthRetries=3
-HealthStartPeriod=15s
 
 [Service]
 Restart=always

@@ -21,7 +21,7 @@ Environment=FORGEJO__database__NAME=forgejo
 Environment=FORGEJO__database__USER=forgejo
 Environment=FORGEJO__database__PASSWD=forgejo
 
-HealthCmd=["wget", "-qO-", "--spider", "http://localhost:3000/api/healthz"]
+HealthCmd=wget -qO- --spider http://localhost:3000/api/healthz || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

@@ -9,7 +9,7 @@ PublishPort=127.0.0.1:3030:8080
 Volume=%h/.config/dashy:/app/user-data:z
 Label=io.containers.autoupdate=registry
 
-HealthCmd=["wget", "-qO", "/dev/null", "http://localhost:8080"]
+HealthCmd=wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

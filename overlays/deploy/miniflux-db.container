@@ -8,7 +8,7 @@ Network=exousia.network:alias=miniflux-db
 Volume=systemd-miniflux-db-data:/var/lib/postgresql/data:z
 EnvironmentFile=%h/.config/miniflux/miniflux-db.env
 Label=io.containers.autoupdate=registry
-HealthCmd=pg_isready -U miniflux
+HealthCmd=pg_isready -U miniflux || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

@@ -10,7 +10,7 @@ Volume=%h/.config/authelia:/config:z
 EnvironmentFile=%h/.config/authelia/smtp.env
 Label=io.containers.autoupdate=registry
 
-HealthCmd=["wget", "-qO", "/dev/null", "http://localhost:9091/api/health"]
+HealthCmd=wget -qO /dev/null http://localhost:9091/api/health || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

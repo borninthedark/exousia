@@ -8,7 +8,7 @@ Network=exousia.network:alias=immich-redis
 Volume=immich-redis-data.volume:/data
 Label=io.containers.autoupdate=registry
 
-HealthCmd=["redis-cli", "ping"]
+HealthCmd=redis-cli ping || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

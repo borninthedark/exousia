@@ -12,7 +12,7 @@ Network=exousia.network:alias=registry
 Label=io.containers.autoupdate=registry
 Environment=REGISTRY_STORAGE_DELETE_ENABLED=true
 
-HealthCmd=["wget", "-qO-", "--spider", "http://localhost:5000/v2/"]
+HealthCmd=wget -qO- --spider http://localhost:5000/v2/ || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

@@ -14,7 +14,7 @@ Environment=EMBEDDING_ENGINE=ollama
 Environment=EMBEDDING_MODEL_PREF=nomic-embed-text
 Environment=VECTOR_DB=lancedb
 Label=io.containers.autoupdate=registry
-HealthCmd=curl -f http://localhost:3001/api/ping
+HealthCmd=curl -f http://localhost:3001/api/ping || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

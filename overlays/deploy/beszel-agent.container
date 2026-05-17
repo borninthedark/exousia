@@ -14,12 +14,6 @@ EnvironmentFile=%h/.config/beszel/agent.env
 Environment=DOCKER_HOST=unix:///var/run/docker.sock
 Label=io.containers.autoupdate=registry
 
-HealthCmd=["test", "-e", "/proc/1/status"]
-HealthInterval=30s
-HealthTimeout=5s
-HealthRetries=3
-HealthStartPeriod=10s
-
 [Service]
 Restart=always
 TimeoutStartSec=60

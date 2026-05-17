@@ -16,7 +16,7 @@ SecurityLabelDisable=true
 AddCapability=NET_ADMIN NET_RAW SYS_ADMIN
 PodmanArgs=--privileged
 
-HealthCmd=["wget", "-qO", "/dev/null", "--no-check-certificate", "https://127.0.0.1:6443/healthz"]
+HealthCmd=kubectl get --raw /healthz || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

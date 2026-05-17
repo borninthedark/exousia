@@ -16,7 +16,7 @@ Environment=POSTGRES_SEEDS=temporal-db
 Environment=SKIP_DYNAMIC_CONFIG_SETUP=true
 Label=io.containers.autoupdate=registry
 
-HealthCmd=["wget", "-qO", "/dev/null", "http://0.0.0.0:7233/health"]
+HealthCmd=wget -q -O /dev/null http://127.0.0.1:7233/ || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

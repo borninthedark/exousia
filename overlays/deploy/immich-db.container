@@ -13,7 +13,7 @@ Volume=immich-db-data.volume:/var/lib/postgresql/data
 ShmSize=128m
 Label=io.containers.autoupdate=registry
 
-HealthCmd=["pg_isready", "-U", "postgres"]
+HealthCmd=pg_isready -U postgres || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

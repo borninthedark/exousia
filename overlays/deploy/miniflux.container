@@ -12,7 +12,7 @@ EnvironmentFile=%h/.config/miniflux/miniflux.env
 Environment=RUN_MIGRATIONS=1
 Environment=CREATE_ADMIN=1
 Label=io.containers.autoupdate=registry
-HealthCmd=["wget", "-qO", "/dev/null", "http://localhost:8080/healthcheck"]
+HealthCmd=wget -qO /dev/null http://localhost:8080/healthcheck || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

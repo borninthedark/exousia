@@ -9,7 +9,7 @@ Volume=ollama-data.volume:/root/.ollama
 Network=exousia.network:alias=ollama
 Label=io.containers.autoupdate=registry
 
-HealthCmd=["test", "-e", "/proc/1/status"]
+HealthCmd=true
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

@@ -16,11 +16,6 @@ Volume=systemd-fluent-bit-buffer:/var/log/fluent-bit:z
 EnvironmentFile=%h/.config/openobserve/openobserve.env
 Exec=/fluent-bit/bin/fluent-bit -c /fluent-bit/etc/fluent-bit.yaml
 Label=io.containers.autoupdate=registry
-HealthCmd=wget -qO /dev/null http://localhost:2020/api/v1/health
-HealthInterval=30s
-HealthTimeout=5s
-HealthRetries=3
-HealthStartPeriod=10s
 
 [Service]
 Restart=always

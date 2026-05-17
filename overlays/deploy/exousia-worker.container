@@ -20,7 +20,7 @@ Environment=PAPERLESS_HOST=paperless.exousia.local
 Environment=OLLAMA_URL=http://ollama:11434
 Environment=DOCS_WATCH_DIR=/workspace/docs
 
-HealthCmd=["cat", "/proc/1/status"]
+HealthCmd=cat /proc/1/status || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3

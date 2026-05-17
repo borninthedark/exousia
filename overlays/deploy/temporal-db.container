@@ -13,7 +13,7 @@ Environment=POSTGRES_PASSWORD=temporal
 Environment=POSTGRES_DB=temporal
 Label=io.containers.autoupdate=registry
 
-HealthCmd=["pg_isready", "-U", "temporal"]
+HealthCmd=pg_isready -U temporal || exit 1
 HealthInterval=30s
 HealthTimeout=5s
 HealthRetries=3
