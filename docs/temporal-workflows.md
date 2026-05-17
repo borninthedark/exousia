@@ -228,9 +228,9 @@ temporal workflow start \
 | `llama3.2:1b` | Ollama (local) | Fast tasks: digests, quick reviews |
 | `qwen3:8b` | Ollama (local) | Reasoning: diagnosis, planning |
 | `qwen2.5-coder:1.5b` | Ollama (local) | Code generation/review |
-| Claude | Anthropic API | Complex reasoning (if API key set) |
-| Gemini | Google AI API | Research, analysis (key already set) |
-| GPT-4o | OpenAI API | Code generation (if API key set) |
+| Claude | Anthropic API | Complex reasoning |
+| Gemini | Google AI API | Research, analysis |
+| GPT-4o | OpenAI API | Code generation |
 
 ## Tests
 
