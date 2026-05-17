@@ -246,6 +246,7 @@ modules:
         mkdir -p /usr/lib/dracut/dracut.conf.d
         echo 'add_dracutmodules+=" plymouth ostree "' > /usr/lib/dracut/dracut.conf.d/plymouth.conf
         echo 'add_dracutmodules+=" fido2 "' > /usr/lib/dracut/dracut.conf.d/fido2.conf
+        echo 'force_drivers+=" simpledrm "' > /usr/lib/dracut/dracut.conf.d/simpledrm.conf
         plymouth-set-default-theme bgrt-better-luks
         for kdir in /usr/lib/modules/*/; do
           kver=$(basename "$kdir")
