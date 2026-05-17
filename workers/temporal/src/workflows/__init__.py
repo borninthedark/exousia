@@ -16,6 +16,7 @@ from .llm_pipeline import LLMPipelineWorkflow
 from .miniflux_digest import MinifluxDigestWorkflow
 from .pr_review import PRReviewWorkflow
 from .resource_audit import ResourceAuditWorkflow
+from .security_posture import SecurityPostureWorkflow
 from .security_scan import SecurityScanWorkflow
 from .ticket_sync import TicketSyncWorkflow
 
@@ -38,6 +39,7 @@ __all__ = [
     "MinifluxDigestWorkflow",
     "PRReviewWorkflow",
     "ResourceAuditWorkflow",
+    "SecurityPostureWorkflow",
     "SecurityScanWorkflow",
     "SyncDirectoryWorkflow",
     "TicketSyncWorkflow",

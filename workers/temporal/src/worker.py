@@ -19,6 +19,7 @@ from src.activities import (
     ObserveActivities,
     OperationsActivities,
     PaperlessActivities,
+    SecurityActivities,
     VikunjaActivities,
 )
 from src.activities.llm import AgentConfig
@@ -41,6 +42,7 @@ from src.workflows import (
     MinifluxDigestWorkflow,
     PRReviewWorkflow,
     ResourceAuditWorkflow,
+    SecurityPostureWorkflow,
     SecurityScanWorkflow,
     SyncDirectoryWorkflow,
     TicketSyncWorkflow,
@@ -81,6 +83,7 @@ def build_activities() -> list:
         ObserveActivities(),
         OperationsActivities(),
         PaperlessActivities(paperless_config),
+        SecurityActivities(),
         VikunjaActivities(),
     ]
 
@@ -118,6 +121,7 @@ async def main():
             MinifluxDigestWorkflow,
             PRReviewWorkflow,
             ResourceAuditWorkflow,
+            SecurityPostureWorkflow,
             SecurityScanWorkflow,
             SyncDirectoryWorkflow,
             TicketSyncWorkflow,
