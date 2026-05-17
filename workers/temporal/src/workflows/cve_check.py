@@ -57,7 +57,7 @@ class CVECheckWorkflow:
             body += "\nRemove from `pernida.yml` (Lille) and `hiyori.yml` (scan step)."
 
             await workflow.execute_activity_method(
-                activities.create_forgejo_issue,
+                activities.create_cve_issue,
                 args=[f"CVE allowlist cleanup: {', '.join(removable)}", body],
                 start_to_close_timeout=timedelta(seconds=30),
             )
@@ -76,7 +76,7 @@ class CVECheckWorkflow:
             body += "\nInvestigate and either fix or add to allowlist with justification."
 
             await workflow.execute_activity_method(
-                activities.create_forgejo_issue,
+                activities.create_cve_issue,
                 args=[f"New critical CVEs: {', '.join(new_cves[:3])}", body],
                 start_to_close_timeout=timedelta(seconds=30),
             )

@@ -15,10 +15,11 @@ class PodmanClient:
 
     def __init__(self, socket_path: str = "/var/run/podman/podman.sock"):
         self.base = "http://d"  # dummy host, overridden by UDS transport
-        self.transport = httpx.AsyncHTTPTransport(uds=socket_path)
+        self.socket_path = socket_path
 
     def _client(self) -> httpx.AsyncClient:
-        return httpx.AsyncClient(transport=self.transport, base_url=self.base, timeout=300.0)
+        transport = httpx.AsyncHTTPTransport(uds=self.socket_path)
+        return httpx.AsyncClient(transport=transport, base_url=self.base, timeout=300.0)
 
     async def list_containers(self) -> list[dict[str, str]]:
         """List running containers with name and image."""

@@ -130,7 +130,7 @@ class CVECheckActivities:
         activity.logger.info("CVE scan delegated to CI pipeline (Lille/Hiyori)")
         return []
 
-    @activity.defn
-    async def create_forgejo_issue(self, title: str, body: str) -> str:
+    @activity.defn(name="create_cve_issue")
+    async def create_cve_issue(self, title: str, body: str) -> str:
         """Create a Forgejo issue for CVE remediation tracking."""
         return await self.forgejo.create_issue(title, body)

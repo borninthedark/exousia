@@ -18,11 +18,12 @@ class SystemdClient:
     """
 
     def __init__(self, socket_path: str = "/var/run/podman/podman.sock"):
-        self.transport = httpx.AsyncHTTPTransport(uds=socket_path)
+        self.socket_path = socket_path
         self.base = "http://d"
 
     def _client(self) -> httpx.AsyncClient:
-        return httpx.AsyncClient(transport=self.transport, base_url=self.base, timeout=120.0)
+        transport = httpx.AsyncHTTPTransport(uds=self.socket_path)
+        return httpx.AsyncClient(transport=transport, base_url=self.base, timeout=120.0)
 
     async def restart_container(self, name: str) -> bool:
         """Restart a container by name. Returns True on success."""
