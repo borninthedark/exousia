@@ -10,12 +10,6 @@ Network=exousia.network:alias=immich-ml
 Volume=immich-ml-cache.volume:/cache
 Label=io.containers.autoupdate=registry
 
-HealthCmd=pgrep gunicorn || exit 1
-HealthInterval=30s
-HealthTimeout=5s
-HealthRetries=3
-HealthStartPeriod=30s
-
 [Service]
 Restart=always
 TimeoutStartSec=300
