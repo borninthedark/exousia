@@ -40,8 +40,8 @@ class AutonomousAgentWorkflow:
     async def run(self, task_id: int = 0) -> AgentResult:
         agent = AgentActivities()
         vikunja = VikunjaActivities()
-        timeout = timedelta(seconds=120)
-        retry = RetryPolicy(maximum_attempts=2)
+        timeout = timedelta(seconds=300)
+        retry = RetryPolicy(maximum_attempts=3)
 
         # 1. Get task — either specified or next available
         if task_id > 0:

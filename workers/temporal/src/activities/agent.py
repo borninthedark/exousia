@@ -38,7 +38,7 @@ class AgentActivities:
 
     def __init__(self) -> None:
         self.ollama_url = os.getenv("OLLAMA_URL", "http://ollama:11434")
-        self.planning_model = os.getenv("AGENT_PLANNING_MODEL", "qwen3:8b")
+        self.planning_model = os.getenv("AGENT_PLANNING_MODEL", "llama3.2:1b")
         self.coding_model = os.getenv("AGENT_CODING_MODEL", "qwen2.5-coder:1.5b")
         self.forgejo = ForgejoClient()
         self.vikunja = VikunjaClient()
