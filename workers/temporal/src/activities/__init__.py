@@ -9,6 +9,7 @@ from .miniflux import MinifluxActivities
 from .observe import ObserveActivities
 from .operations import OperationsActivities
 from .paperless import PaperlessActivities
+from .vikunja import VikunjaActivities
 
 __all__ = [
     "AlertActivities",
@@ -22,4 +23,5 @@ __all__ = [
     "ObserveActivities",
     "OperationsActivities",
     "PaperlessActivities",
+    "VikunjaActivities",
 ]

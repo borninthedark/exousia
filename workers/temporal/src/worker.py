@@ -18,6 +18,7 @@ from src.activities import (
     ObserveActivities,
     OperationsActivities,
     PaperlessActivities,
+    VikunjaActivities,
 )
 from src.activities.llm import AgentConfig
 from src.activities.paperless import DocSyncConfig
@@ -78,6 +79,7 @@ def build_activities() -> list:
         ObserveActivities(),
         OperationsActivities(),
         PaperlessActivities(paperless_config),
+        VikunjaActivities(),
     ]
 
 
