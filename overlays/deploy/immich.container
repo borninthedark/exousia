@@ -16,6 +16,7 @@ Environment=DB_DATABASE_NAME=immich
 Environment=DB_USERNAME=immich
 Environment=DB_PASSWORD=immich
 Environment=REDIS_HOSTNAME=immich-redis
+Environment=MACHINE_LEARNING_URL=http://immich-ml:3003
 Label=io.containers.autoupdate=registry
 
 HealthCmd=curl -f http://localhost:2283/api/server/ping || exit 1
