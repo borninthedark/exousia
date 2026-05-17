@@ -19,6 +19,7 @@ class CVECheckWorkflow:
     @workflow.run
     async def run(self) -> CVECheckResult:
         activities = CVECheckActivities()
+        vikunja = VikunjaActivities()
         timeout = timedelta(seconds=60)
 
         # 1. Check upstream releases (GitHub)
@@ -60,6 +61,11 @@ class CVECheckWorkflow:
                 activities.create_cve_issue,
                 args=[f"CVE allowlist cleanup: {', '.join(removable)}", body],
                 start_to_close_timeout=timedelta(seconds=30),
+            )
+            await workflow.execute_activity_method(
+                vikunja.create_ops_task,
+                args=[f"Remove CVE allowlist: {", ".join(removable)}", body, 4],
+                start_to_close_timeout=timedelta(seconds=15),
             )
             workflow.logger.info(f"Created issue for removable CVEs: {removable}")
 

@@ -7,6 +7,7 @@ from temporalio import workflow
 with workflow.unsafe.imports_passed_through():
     from src.activities.health import HealthActivities, HealthResult
     from src.activities.alert import AlertActivities, AlertPayload
+    from src.activities.vikunja import VikunjaActivities
     from src.activities.operations import OperationsActivities
     from src.activities.observe import ObserveActivities
 

@@ -6,6 +6,7 @@ from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
     from src.activities.operations import DepUpdate, OperationsActivities
+    from src.activities.vikunja import VikunjaActivities
 
 
 @workflow.defn
@@ -19,6 +20,7 @@ class DepsUpdateWorkflow:
     @workflow.run
     async def run(self) -> dict:
         ops = OperationsActivities()
+        vikunja = VikunjaActivities()
 
         # 1. Check Python deps
         outdated: list[DepUpdate] = await workflow.execute_activity_method(
@@ -40,6 +42,12 @@ class DepsUpdateWorkflow:
             ops.create_forgejo_issue,
             args=[f"deps: {len(outdated)} packages outdated", body],
             start_to_close_timeout=timedelta(seconds=30),
+        )
+
+        await workflow.execute_activity_method(
+            vikunja.create_ops_task,
+            args=[f"Update {len(outdated)} outdated dependencies", body, 2],
+            start_to_close_timeout=timedelta(seconds=15),
         )
 
         workflow.logger.info(f"Created issue for {len(outdated)} outdated deps")

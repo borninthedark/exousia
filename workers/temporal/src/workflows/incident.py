@@ -20,6 +20,7 @@ class IncidentResponseWorkflow:
     @workflow.run
     async def run(self, context: IncidentContext) -> RemediationResult:
         activities = IncidentActivities()
+        vikunja = VikunjaActivities()
 
         # 1. Gather recent logs from OpenObserve
         context.logs = await workflow.execute_activity_method(
@@ -59,12 +60,17 @@ class IncidentResponseWorkflow:
                 retry_policy=RetryPolicy(maximum_attempts=2),
             )
 
-            # If restart failed, escalate to issue
+            # If restart failed, escalate to issue + Vikunja task
             if not result.success:
                 result = await workflow.execute_activity_method(
                     activities.create_incident_issue,
                     context,
                     start_to_close_timeout=timedelta(seconds=30),
+                )
+                await workflow.execute_activity_method(
+                    vikunja.create_ops_task,
+                    args=[f"Incident: {context.container} — restart failed", context.diagnosis or "", 4],
+                    start_to_close_timeout=timedelta(seconds=15),
                 )
             return result
 
@@ -77,10 +83,15 @@ class IncidentResponseWorkflow:
             )
 
         else:
-            # investigate — create issue for human
+            # investigate — create issue + Vikunja task for human
             result = await workflow.execute_activity_method(
                 activities.create_incident_issue,
                 context,
                 start_to_close_timeout=timedelta(seconds=30),
+            )
+            await workflow.execute_activity_method(
+                vikunja.create_ops_task,
+                args=[f"Investigate: {context.container} — {context.trigger}", context.diagnosis or "", 4],
+                start_to_close_timeout=timedelta(seconds=15),
             )
             return result
