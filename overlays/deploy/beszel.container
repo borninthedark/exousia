@@ -1,0 +1,21 @@
+[Unit]
+Description=Beszel monitoring hub
+
+[Container]
+Image=docker.io/henrygd/beszel:latest
+ContainerName=beszel
+Network=exousia.network:alias=beszel
+PublishPort=127.0.0.1:8090:8090
+Volume=systemd-beszel-data:/beszel_data:z
+Volume=%h/.config/beszel/caddy-root-ca.crt:/etc/ssl/certs/caddy-root-ca.crt:ro,z
+Environment=APP_URL=https://monitor.exousia.local
+Environment=USER_CREATION=true
+Environment=SSL_CERT_FILE=/etc/ssl/certs/caddy-root-ca.crt
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

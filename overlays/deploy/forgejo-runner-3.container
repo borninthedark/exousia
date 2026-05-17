@@ -1,0 +1,33 @@
+[Unit]
+Description=Forgejo Actions runner (3)
+After=forgejo.service
+Requires=forgejo.service
+
+[Container]
+Image=code.forgejo.org/forgejo/runner:9.1.1
+ContainerName=forgejo-runner-3
+Volume=forgejo-runner-3-data.volume:/data:U
+Volume=%t/podman/podman.sock:/var/run/docker.sock:ro
+Network=exousia.network:alias=forgejo-runner-3
+Label=io.containers.autoupdate=registry
+UserNS=keep-id
+SecurityLabelDisable=true
+PodmanArgs=--cpus=2 --memory=8g
+
+# Registration is a manual one-time step — see docs/forgejo-runner.md
+# After registering, the runner state persists in /data/.runner
+WorkingDir=/data
+Exec=forgejo-runner -c /data/config.yaml daemon
+
+HealthCmd=cat /proc/1/status || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=10s
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

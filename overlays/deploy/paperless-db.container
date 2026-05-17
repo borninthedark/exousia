@@ -11,6 +11,12 @@ Volume=paperless-db-data.volume:/var/lib/postgresql
 Network=exousia.network:alias=paperless-db
 Label=io.containers.autoupdate=registry
 
+HealthCmd=pg_isready -U paperless || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=15s
+
 [Service]
 Restart=always
 TimeoutStartSec=300

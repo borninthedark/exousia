@@ -9,12 +9,21 @@ ContainerName=immich
 Network=exousia.network:alias=immich
 PublishPort=127.0.0.1:2283:2283
 Volume=immich-upload.volume:/usr/src/app/upload
+Volume=%h/Pictures/immich:/usr/src/app/external/pictures:ro,z
+Volume=%h/Videos/immich:/usr/src/app/external/videos:ro,z
 Environment=DB_HOSTNAME=immich-db
 Environment=DB_DATABASE_NAME=immich
 Environment=DB_USERNAME=immich
 Environment=DB_PASSWORD=immich
 Environment=REDIS_HOSTNAME=immich-redis
+Environment=MACHINE_LEARNING_URL=http://immich-ml:3003
 Label=io.containers.autoupdate=registry
+
+HealthCmd=curl -f http://localhost:2283/api/server/ping || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=15s
 
 [Service]
 Restart=always

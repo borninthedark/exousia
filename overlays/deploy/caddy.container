@@ -13,6 +13,12 @@ Volume=%h/.config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro,z
 Volume=caddy-data.volume:/data
 Volume=caddy-config.volume:/config
 
+HealthCmd=pidof caddy || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=15s
+
 [Service]
 Restart=always
 

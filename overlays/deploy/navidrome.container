@@ -1,0 +1,28 @@
+[Unit]
+Description=Navidrome Music Server
+After=network-online.target
+
+[Container]
+Image=docker.io/deluan/navidrome:latest
+ContainerName=navidrome
+Volume=navidrome-data.volume:/data
+Volume=/var/home/uryu/Music/Navidrome:/music:ro,z
+Network=exousia.network:alias=navidrome
+Environment=ND_SCANSCHEDULE=1h
+Environment=ND_LOGLEVEL=info
+Environment=ND_BASEURL=/
+Label=io.containers.autoupdate=registry
+UserNS=keep-id
+PublishPort=127.0.0.1:4533:4533
+HealthCmd=wget -qO- --spider http://localhost:4533/ping || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=15s
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

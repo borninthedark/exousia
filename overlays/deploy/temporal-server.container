@@ -16,6 +16,12 @@ Environment=POSTGRES_SEEDS=temporal-db
 Environment=SKIP_DYNAMIC_CONFIG_SETUP=true
 Label=io.containers.autoupdate=registry
 
+HealthCmd=pgrep temporal-server || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=30s
+
 [Service]
 Restart=always
 TimeoutStartSec=300

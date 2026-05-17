@@ -7,6 +7,7 @@ Requires=temporal-server.service
 Image=localhost/exousia-worker:latest
 ContainerName=exousia-worker
 Network=exousia.network:alias=exousia-worker
+Volume=/run/user/1000/podman/podman.sock:/var/run/podman/podman.sock:ro
 Volume=%h/Workspaces/exousia/docs:/workspace/docs:ro,z
 Volume=%h/Workspaces/witness:/workspace/witness:ro,z
 Volume=%h/Workspaces/sap-c02:/workspace/sap-c02:ro,z
@@ -19,6 +20,12 @@ Environment=PAPERLESS_API_URL=http://paperless:8000/api
 Environment=PAPERLESS_HOST=paperless.exousia.local
 Environment=OLLAMA_URL=http://ollama:11434
 Environment=DOCS_WATCH_DIR=/workspace/docs
+
+HealthCmd=cat /proc/1/status || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=10s
 
 [Service]
 Restart=always

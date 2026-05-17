@@ -8,6 +8,12 @@ Volume=paperless-redis-data.volume:/data
 Network=exousia.network:alias=paperless-redis
 Label=io.containers.autoupdate=registry
 
+HealthCmd=redis-cli ping || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=10s
+
 [Service]
 Restart=always
 TimeoutStartSec=120

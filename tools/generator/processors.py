@@ -289,7 +289,7 @@ class ModuleProcessorsMixin:
             self.lines.append(
                 "    dnf install -y https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm; \\"
             )
-            self.lines.append("    dnf config-manager setopt fedora-cisco-openh264.enabled=1; \\")
+            self.lines.append("    dnf config-manager setopt fedora-cisco-openh264.enabled=0; \\")
 
         # Install package groups (for Fedora-based distros)
         if group_removals and self.context.distro == "fedora":

@@ -1,0 +1,29 @@
+[Unit]
+Description=Miniflux RSS reader
+After=miniflux-db.service
+Requires=miniflux-db.service
+
+[Container]
+Image=ghcr.io/miniflux/miniflux:latest
+ContainerName=miniflux
+Network=exousia.network:alias=miniflux
+PublishPort=127.0.0.1:8085:8080
+EnvironmentFile=%h/.config/miniflux/miniflux.env
+Environment=RUN_MIGRATIONS=1
+Environment=CREATE_ADMIN=1
+Label=io.containers.autoupdate=registry
+HealthCmd=wget -qO /dev/null http://localhost:8080/healthcheck || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=15s
+
+[Service]
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

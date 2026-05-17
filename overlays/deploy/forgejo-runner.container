@@ -12,11 +12,18 @@ Network=exousia.network:alias=forgejo-runner
 Label=io.containers.autoupdate=registry
 UserNS=keep-id
 SecurityLabelDisable=true
+PodmanArgs=--cpus=2 --memory=8g
 
 # Registration is a manual one-time step — see docs/forgejo-runner.md
 # After registering, the runner state persists in /data/.runner
 WorkingDir=/data
 Exec=forgejo-runner -c /data/config.yaml daemon
+
+HealthCmd=cat /proc/1/status || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=10s
 
 [Service]
 Restart=always

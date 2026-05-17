@@ -1,0 +1,22 @@
+[Unit]
+Description=Vikunja PostgreSQL database
+
+[Container]
+Image=docker.io/library/postgres:15-alpine
+ContainerName=vikunja-db
+Network=exousia.network:alias=vikunja-db
+Volume=systemd-vikunja-db-data:/var/lib/postgresql/data:z
+EnvironmentFile=%h/.config/vikunja/vikunja-db.env
+Label=io.containers.autoupdate=registry
+HealthCmd=pg_isready -U vikunja || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=15s
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

@@ -9,6 +9,12 @@ PublishPort=127.0.0.1:5001:5000
 Volume=changedetection-data.volume:/datastore
 Label=io.containers.autoupdate=registry
 
+HealthCmd=python3 -c import urllib.request; urllib.request.urlopen('http://localhost:5000') || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=15s
+
 [Service]
 Restart=always
 TimeoutStartSec=120

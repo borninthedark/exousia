@@ -1,0 +1,29 @@
+[Unit]
+Description=CrowdSec security engine
+After=caddy.service
+
+[Container]
+Image=docker.io/crowdsecurity/crowdsec:latest
+ContainerName=crowdsec
+Network=exousia.network:alias=crowdsec
+PublishPort=127.0.0.1:8180:8080
+Volume=%h/.config/crowdsec/config:/etc/crowdsec:z
+Volume=systemd-crowdsec-data:/var/lib/crowdsec/data:z
+Volume=/var/log/journal:/var/log/journal:ro
+SecurityLabelDisable=true
+Environment=COLLECTIONS=crowdsecurity/linux crowdsecurity/sshd crowdsecurity/caddy crowdsecurity/http-cve
+Environment=TZ=America/New_York
+Label=io.containers.autoupdate=registry
+HealthCmd=pgrep crowdsec || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=30s
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

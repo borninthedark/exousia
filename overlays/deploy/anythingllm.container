@@ -1,0 +1,29 @@
+[Unit]
+Description=AnythingLLM knowledge base and AI agent platform
+
+[Container]
+Image=ghcr.io/mintplex-labs/anything-llm:latest
+ContainerName=anythingllm
+Network=exousia.network:alias=anythingllm
+PublishPort=127.0.0.1:3002:3001
+Volume=systemd-anythingllm-data:/app/server/storage:z
+Environment=STORAGE_DIR=/app/server/storage
+Environment=LLM_PROVIDER=ollama
+Environment=OLLAMA_BASE_PATH=http://ollama:11434
+Environment=EMBEDDING_ENGINE=ollama
+Environment=EMBEDDING_MODEL_PREF=nomic-embed-text
+Environment=VECTOR_DB=lancedb
+Label=io.containers.autoupdate=registry
+HealthCmd=curl -f http://localhost:3001/api/ping || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=30s
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

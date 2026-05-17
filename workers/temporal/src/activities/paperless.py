@@ -7,6 +7,8 @@ from pathlib import Path
 import httpx
 from temporalio import activity
 
+from src.clients.forgejo import ForgejoClient
+
 
 @dataclass
 class DocSyncConfig:
@@ -29,6 +31,7 @@ class PaperlessActivities:
 
     def __init__(self, config: DocSyncConfig):
         self.config = config
+        self.forgejo = ForgejoClient()
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -106,3 +109,97 @@ class PaperlessActivities:
             )
             resp.raise_for_status()
             return {t["name"]: t["id"] for t in resp.json()["results"]}
+
+    @activity.defn
+    async def get_documents_by_tag(self, tag_name: str) -> list[dict[str, str]]:
+        """Get documents with a specific tag (e.g., 'actionable')."""
+        async with httpx.AsyncClient() as client:
+            # First get the tag ID
+            tags = await self.list_tags()
+            tag_id = tags.get(tag_name)
+            if not tag_id:
+                return []
+
+            resp = await client.get(
+                f"{self.config.api_url}/documents/",
+                headers=self._headers(),
+                params={"tags__id": tag_id},
+            )
+            resp.raise_for_status()
+            docs = []
+            for doc in resp.json().get("results", []):
+                docs.append(
+                    {
+                        "id": str(doc["id"]),
+                        "title": doc["title"],
+                        "created": doc.get("created", ""),
+                        "url": f"https://{self.config.host}/documents/{doc['id']}/details",
+                    }
+                )
+            return docs
+
+    @activity.defn
+    async def update_document_tags(
+        self, doc_id: str, add_tags: list[str], remove_tags: list[str]
+    ) -> bool:
+        """Add or remove tags from a document."""
+        async with httpx.AsyncClient() as client:
+            tags = await self.list_tags()
+
+            # Get current document
+            resp = await client.get(
+                f"{self.config.api_url}/documents/{doc_id}/",
+                headers=self._headers(),
+            )
+            resp.raise_for_status()
+            current_tags = set(resp.json().get("tags", []))
+
+            # Modify tags
+            for tag_name in add_tags:
+                if tag_name in tags:
+                    current_tags.add(tags[tag_name])
+            for tag_name in remove_tags:
+                if tag_name in tags:
+                    current_tags.discard(tags[tag_name])
+
+            # Update
+            resp = await client.patch(
+                f"{self.config.api_url}/documents/{doc_id}/",
+                headers=self._headers(),
+                json={"tags": list(current_tags)},
+            )
+            return bool(resp.status_code == 200)
+
+    @activity.defn
+    async def create_forgejo_issue_from_doc(self, doc: dict[str, str]) -> str:
+        """Create a Forgejo issue linked to a Paperless document."""
+        title = f"Action required: {doc['title']}"
+        body = (
+            f"## Document Action Item\n\n"
+            f"**Document:** [{doc['title']}]({doc['url']})\n"
+            f"**Created:** {doc.get('created', 'unknown')}\n"
+            f"**Paperless ID:** {doc['id']}\n\n"
+            f"---\n"
+            f"This issue was auto-created from a Paperless document tagged `actionable`.\n"
+            f"When resolved, the document will be re-tagged as `completed`.\n"
+        )
+        return await self.forgejo.create_issue(title, body)
+
+    @activity.defn
+    async def check_closed_issues_for_docs(self) -> list[dict[str, str]]:
+        """Find closed Forgejo issues that reference Paperless doc IDs."""
+        closed_issues = await self.forgejo.get_closed_issues()
+        closed_docs = []
+        for issue in closed_issues:
+            body = issue.get("body", "")
+            if "Paperless ID:" in body:
+                for line in body.splitlines():
+                    if "Paperless ID:" in line:
+                        doc_id = line.split("Paperless ID:")[-1].strip()
+                        closed_docs.append(
+                            {
+                                "doc_id": doc_id,
+                                "issue_url": issue.get("html_url", ""),
+                            }
+                        )
+        return closed_docs

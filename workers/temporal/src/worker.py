@@ -6,15 +6,47 @@ import os
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-from src.activities import BackupActivities, HealthActivities, LLMActivities, PaperlessActivities
+from src.activities import (
+    AgentActivities,
+    AlertActivities,
+    BackupActivities,
+    ContainerLifecycleActivities,
+    CVECheckActivities,
+    HealthActivities,
+    IncidentActivities,
+    LLMActivities,
+    MinifluxActivities,
+    ObserveActivities,
+    OperationsActivities,
+    PaperlessActivities,
+    SecurityActivities,
+    VikunjaActivities,
+)
 from src.activities.llm import AgentConfig
 from src.activities.paperless import DocSyncConfig
 from src.workflows import (
+    AnomalyDetectionWorkflow,
+    AutonomousAgentWorkflow,
     BackupWorkflow,
+    BaseImageMirrorWorkflow,
+    ChangelogWorkflow,
+    ContainerLifecycleWorkflow,
+    CVECheckWorkflow,
+    DepsUpdateWorkflow,
+    DRDrillWorkflow,
     DocSyncWorkflow,
     HealthCheckWorkflow,
+    HealthReportWorkflow,
+    IncidentResponseWorkflow,
+    JournalKnowledgeWorkflow,
     LLMPipelineWorkflow,
+    MinifluxDigestWorkflow,
+    PRReviewWorkflow,
+    ResourceAuditWorkflow,
+    SecurityPostureWorkflow,
+    SecurityScanWorkflow,
     SyncDirectoryWorkflow,
+    TicketSyncWorkflow,
 )
 
 TASK_QUEUE = "exousia"
@@ -28,7 +60,7 @@ def build_activities() -> list:
         token=os.getenv("PAPERLESS_TOKEN", ""),
         host=os.getenv("PAPERLESS_HOST", "paperless.exousia.local"),
         watch_dir=os.getenv("DOCS_WATCH_DIR", "/workspace/docs"),
-        tag_map={},  # populated dynamically by DocSyncWorkflow
+        tag_map={},
     )
 
     llm_config = AgentConfig(
@@ -40,10 +72,20 @@ def build_activities() -> list:
     )
 
     return [
+        AgentActivities(),
+        AlertActivities(),
         BackupActivities(),
-        PaperlessActivities(paperless_config),
+        ContainerLifecycleActivities(),
+        CVECheckActivities(),
         HealthActivities(),
+        IncidentActivities(),
         LLMActivities(llm_config),
+        MinifluxActivities(),
+        ObserveActivities(),
+        OperationsActivities(),
+        PaperlessActivities(paperless_config),
+        SecurityActivities(),
+        VikunjaActivities(),
     ]
 
 
@@ -62,11 +104,28 @@ async def main():
         client,
         task_queue=TASK_QUEUE,
         workflows=[
+            AnomalyDetectionWorkflow,
+            AutonomousAgentWorkflow,
             BackupWorkflow,
+            BaseImageMirrorWorkflow,
+            ChangelogWorkflow,
+            ContainerLifecycleWorkflow,
+            CVECheckWorkflow,
+            DepsUpdateWorkflow,
+            DRDrillWorkflow,
             DocSyncWorkflow,
-            SyncDirectoryWorkflow,
             HealthCheckWorkflow,
+            HealthReportWorkflow,
+            IncidentResponseWorkflow,
+            JournalKnowledgeWorkflow,
             LLMPipelineWorkflow,
+            MinifluxDigestWorkflow,
+            PRReviewWorkflow,
+            ResourceAuditWorkflow,
+            SecurityPostureWorkflow,
+            SecurityScanWorkflow,
+            SyncDirectoryWorkflow,
+            TicketSyncWorkflow,
         ],
         activities=all_activities,
     )

@@ -1,0 +1,19 @@
+[Unit]
+Description=OpenObserve log aggregation and observability
+
+[Container]
+Image=public.ecr.aws/zinclabs/openobserve:latest
+ContainerName=openobserve
+Network=exousia.network:alias=openobserve
+PublishPort=127.0.0.1:5080:5080
+Volume=systemd-openobserve-data:/data:z
+EnvironmentFile=%h/.config/openobserve/openobserve.env
+Environment=ZO_DATA_DIR=/data
+Label=io.containers.autoupdate=registry
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target
