@@ -1,14 +1,14 @@
 [Unit]
-Description=Forgejo Actions runner
+Description=Forgejo Actions runner (3)
 After=forgejo.service
 Requires=forgejo.service
 
 [Container]
 Image=code.forgejo.org/forgejo/runner:9.1.1
-ContainerName=forgejo-runner
-Volume=forgejo-runner-data.volume:/data:U
+ContainerName=forgejo-runner-3
+Volume=forgejo-runner-3-data.volume:/data:U
 Volume=%t/podman/podman.sock:/var/run/docker.sock:ro
-Network=exousia.network:alias=forgejo-runner
+Network=exousia.network:alias=forgejo-runner-3
 Label=io.containers.autoupdate=registry
 UserNS=keep-id
 SecurityLabelDisable=true

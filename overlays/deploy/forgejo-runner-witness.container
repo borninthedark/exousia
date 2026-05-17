@@ -12,6 +12,7 @@ Network=exousia.network:alias=forgejo-runner-witness
 Label=io.containers.autoupdate=registry
 UserNS=keep-id
 SecurityLabelDisable=true
+PodmanArgs=--cpus=2 --memory=8g
 
 WorkingDir=/data
 Exec=forgejo-runner -c /data/config.yaml daemon
