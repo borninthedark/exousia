@@ -26,6 +26,7 @@ from src.activities.llm import AgentConfig
 from src.activities.paperless import DocSyncConfig
 from src.workflows import (
     AnomalyDetectionWorkflow,
+    AutonomousAgentWorkflow,
     BackupWorkflow,
     BaseImageMirrorWorkflow,
     ChangelogWorkflow,
