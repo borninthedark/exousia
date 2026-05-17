@@ -24,5 +24,7 @@ Restart=always
 RestartSec=5
 TimeoutStartSec=120
 
-[Install]
-WantedBy=default.target
+# [Install]
+# WantedBy=default.target
+# NOTE: Suricata runs as rootful container at /etc/containers/systemd/suricata.container
+# This rootless quadlet is kept for reference only
