@@ -11,7 +11,7 @@ PublishPort=127.0.0.1:6443:6443
 Network=exousia.network:alias=k3s
 Label=io.containers.autoupdate=registry
 Environment=K3S_KUBECONFIG_MODE=644
-Exec=server --disable=traefik --tls-san=localhost --tls-san=exousia
+Exec=server --disable=traefik --tls-san=localhost --tls-san=exousia --tls-san=k3s --tls-san=0.0.0.0
 SecurityLabelDisable=true
 AddCapability=NET_ADMIN NET_RAW SYS_ADMIN
 PodmanArgs=--privileged
