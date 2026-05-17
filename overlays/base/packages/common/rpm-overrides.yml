@@ -21,6 +21,6 @@ spec:
     - package: openh264
       version: ">= 2.6.0"
       image: ghcr.io/borninthedark/openh264-rpms:2.6.0
-      reason: Cisco CDN unreliable — cached RPM from Fedora cisco-openh264 repo
+      reason: RPM override for build reliability
       replaces:
         - openh264
