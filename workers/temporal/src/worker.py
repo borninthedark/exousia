@@ -6,15 +6,27 @@ import os
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-from src.activities import BackupActivities, HealthActivities, LLMActivities, PaperlessActivities
+from src.activities import (
+    BackupActivities,
+    ContainerLifecycleActivities,
+    CVECheckActivities,
+    HealthActivities,
+    IncidentActivities,
+    LLMActivities,
+    PaperlessActivities,
+)
 from src.activities.llm import AgentConfig
 from src.activities.paperless import DocSyncConfig
 from src.workflows import (
     BackupWorkflow,
+    ContainerLifecycleWorkflow,
+    CVECheckWorkflow,
     DocSyncWorkflow,
     HealthCheckWorkflow,
+    IncidentResponseWorkflow,
     LLMPipelineWorkflow,
     SyncDirectoryWorkflow,
+    TicketSyncWorkflow,
 )
 
 TASK_QUEUE = "exousia"
@@ -41,9 +53,12 @@ def build_activities() -> list:
 
     return [
         BackupActivities(),
-        PaperlessActivities(paperless_config),
+        ContainerLifecycleActivities(),
+        CVECheckActivities(),
         HealthActivities(),
+        IncidentActivities(),
         LLMActivities(llm_config),
+        PaperlessActivities(paperless_config),
     ]
 
 
@@ -63,10 +78,14 @@ async def main():
         task_queue=TASK_QUEUE,
         workflows=[
             BackupWorkflow,
+            ContainerLifecycleWorkflow,
+            CVECheckWorkflow,
             DocSyncWorkflow,
             SyncDirectoryWorkflow,
             HealthCheckWorkflow,
+            IncidentResponseWorkflow,
             LLMPipelineWorkflow,
+            TicketSyncWorkflow,
         ],
         activities=all_activities,
     )
