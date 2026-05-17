@@ -1,3 +1,4 @@
+from .agent import AgentActivities
 from .alert import AlertActivities
 from .backup import BackupActivities
 from .container_lifecycle import ContainerLifecycleActivities
@@ -12,6 +13,7 @@ from .paperless import PaperlessActivities
 from .vikunja import VikunjaActivities
 
 __all__ = [
+    "AgentActivities",
     "AlertActivities",
     "BackupActivities",
     "ContainerLifecycleActivities",

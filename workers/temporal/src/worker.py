@@ -7,6 +7,7 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from src.activities import (
+    AgentActivities,
     AlertActivities,
     BackupActivities,
     ContainerLifecycleActivities,
@@ -68,6 +69,7 @@ def build_activities() -> list:
     )
 
     return [
+        AgentActivities(),
         AlertActivities(),
         BackupActivities(),
         ContainerLifecycleActivities(),
@@ -99,6 +101,7 @@ async def main():
         task_queue=TASK_QUEUE,
         workflows=[
             AnomalyDetectionWorkflow,
+            AutonomousAgentWorkflow,
             BackupWorkflow,
             BaseImageMirrorWorkflow,
             ChangelogWorkflow,

@@ -1,4 +1,5 @@
 from .anomaly_detection import AnomalyDetectionWorkflow
+from .autonomous_agent import AutonomousAgentWorkflow
 from .backup import BackupWorkflow
 from .base_image_mirror import BaseImageMirrorWorkflow
 from .changelog import ChangelogWorkflow
@@ -20,6 +21,7 @@ from .ticket_sync import TicketSyncWorkflow
 
 __all__ = [
     "AnomalyDetectionWorkflow",
+    "AutonomousAgentWorkflow",
     "BackupWorkflow",
     "BaseImageMirrorWorkflow",
     "ChangelogWorkflow",
