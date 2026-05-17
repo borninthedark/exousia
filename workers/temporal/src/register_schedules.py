@@ -16,8 +16,8 @@ async def main():
         {
             "id": "container-lifecycle",
             "workflow": "ContainerLifecycleWorkflow",
-            "cron": "0 4 * * 0",  # Sunday 4 AM
-            "memo": "Weekly container image updates with rolling restart",
+            "cron": "30 9 * * *",  # Sunday 4 AM
+            "memo": "Daily container image updates with rolling restart",
         },
         {
             "id": "cve-check",

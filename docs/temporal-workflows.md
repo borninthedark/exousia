@@ -6,7 +6,7 @@ Automated operational workflows running on the `exousia` task queue.
 
 | Schedule ID | Cron | Workflow | Description |
 |---|---|---|---|
-| `container-lifecycle` | `0 4 * * 0` (Sun 4 AM) | ContainerLifecycleWorkflow | Image updates + rolling restart with rollback |
+| `container-lifecycle` | `30 9 * * *` (Daily 9:30 AM) | ContainerLifecycleWorkflow | Image updates + rolling restart with rollback |
 | `cve-check` | `0 8 * * *` (Daily 8 AM) | CVECheckWorkflow | Check if allowlisted CVEs are fixed upstream |
 | `ticket-sync` | `*/15 * * * *` | TicketSyncWorkflow | Paperless "actionable" → Forgejo issue sync |
 | `health-check` | `*/5 * * * *` | HealthCheckWorkflow | Deep HTTP health verification of all services |
