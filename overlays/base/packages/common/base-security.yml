@@ -12,6 +12,7 @@ spec:
   packages:
     - pam-u2f
     - pamu2fcfg
+    - libfido2
     - lynis
     - openssl
     - aide
