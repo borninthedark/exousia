@@ -1,0 +1,29 @@
+[Unit]
+Description=Vikunja project management
+After=vikunja-db.service
+Requires=vikunja-db.service
+
+[Container]
+Image=docker.io/vikunja/vikunja:latest
+ContainerName=vikunja
+Network=exousia.network:alias=vikunja
+PublishPort=127.0.0.1:3456:3456
+Volume=systemd-vikunja-files:/app/vikunja/files:z
+EnvironmentFile=%h/.config/vikunja/vikunja.env
+Label=io.containers.autoupdate=registry
+UserNS=keep-id
+HealthCmd=wget -q -O /dev/null http://localhost:3456/api/v1/info || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=15s
+
+[Service]
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target
