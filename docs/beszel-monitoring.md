@@ -97,21 +97,23 @@ polling interval (~1 minute).
 Beszel reports container health status from Podman's healthcheck mechanism. All
 quadlets in `overlays/deploy/` have `HealthCmd` directives. Key patterns:
 
-| Service type | HealthCmd format |
-|---|---|
-| HTTP (with wget) | `wget -qO /dev/null http://localhost:PORT/path` |
-| HTTP (with curl) | `curl -f http://localhost:PORT/path` |
-| PostgreSQL | `pg_isready -U <user>` |
-| Redis | `redis-cli ping` |
-| Process-only | `test -e /proc/1/status` |
-| Python (no wget/curl) | `python3 -c "import urllib.request; ..."` |
+| Service type | HealthCmd format | Example |
+|---|---|---|
+| HTTP (with wget) | `wget -q -O /dev/null URL \|\| exit 1` | dashy, forgejo |
+| HTTP (with curl) | `curl -f URL \|\| exit 1` | immich, paperless, open-webui |
+| PostgreSQL | `pg_isready -U <user> \|\| exit 1` | forgejo-db, paperless-db |
+| Redis | `redis-cli ping \|\| exit 1` | immich-redis, paperless-redis |
+| Process check | `pgrep <process> \|\| exit 1` | temporal-server, immich-ml |
+| No shell (scratch) | None (remove HealthCmd) | beszel, coredns, openobserve |
 
 Important notes:
 
-- Do NOT append `|| exit 1` — it breaks podman's arg parsing
-- Podman quadlets properly quote multi-word commands (spaces → `\x20`)
-- Use the tool available in the image (check with `podman exec <name> which wget curl`)
-- Minimal/scratch images (beszel, coredns, ollama) use process checks or `true`
+- `|| exit 1` is REQUIRED — it forces `CMD-SHELL` mode (without it, podman uses `CMD` exec mode which fails on multi-word commands)
+- Exception: scratch/distroless containers with no `/bin/sh` cannot have healthchecks at all — remove all `Health*` directives
+- BusyBox wget: use `-q -O /dev/null` (not `-qO` — BusyBox parses flags differently)
+- Temporal-server binds to container IP, not localhost — HTTP checks fail, use `pgrep`
+- immich-ml is slow to start (ML model loading) — use process check, not HTTP
+- Check available tools: `podman exec <name> which wget curl python3 pgrep`
 
 ## Image Policy
 
